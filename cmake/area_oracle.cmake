@@ -47,8 +47,16 @@ if(AADP_BUILD_TESTS)
   set_tests_properties(aadp_oracle_values_current PROPERTIES LABELS "oracle")
 endif()
 
+aadp_library(aadp_oracle_lib
+  SOURCES src/oracle/plan.cpp src/oracle/references.cpp
+  LINK aadp_rng)
+
 aadp_test(aadp_quadrature_test
   SOURCES tests/oracle/quadrature_test.cpp
   LINK aadp_quadrature_lib
   LABELS oracle)
 target_include_directories(aadp_quadrature_test PRIVATE "${PROJECT_SOURCE_DIR}/tools/quadrature")
+aadp_test(aadp_decoder_test
+  SOURCES tests/oracle/decoder_test.cpp
+  LINK aadp_oracle_lib
+  LABELS oracle fast)
