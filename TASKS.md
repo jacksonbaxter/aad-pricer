@@ -15,8 +15,8 @@ Each phase ends with a phase report and waits for a go-ahead. Every commit build
 - [x] QuantLib engine mapping, comparison protocol, build plan
 - [x] `BENCHMARKS.md`, `TASKS.md`, `NOTES.md` first versions
 - [x] Session lead re-opens every source behind a target, and re-runs the derived reference values
-- [ ] Narrow search on the gaps left by the search budget: Metal throughput, QuantLib speed, raw SVI fit error
-- [ ] Clear remaining `UNCONFIRMED` entries, or say why they stay
+- [x] Narrow search on the gaps left by the search budget: Metal throughput, QuantLib speed, raw SVI fit error
+- [x] Clear remaining `UNCONFIRMED` entries, or say why they stay
 - [ ] Phase report
 
 ## Phase 2: Harness
@@ -150,6 +150,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [ ] Calendar: numerical crossing check between slices
 - [ ] Tests on known violators: Vogt, the slope 2.25 counterexample, a constructed crossing pair
 - [ ] Report input butterfly counts beside fit violations. Do not repair silently
+- [ ] Report per-slice implied-vol RMSE by the `SVI-11` formula, unweighted, beside the weighted objective
 - [ ] eSSVI as an optional arbitrage-free comparison, reporting what it costs in fit error
 - [ ] Time interpolation: Gatheral-Jacquier Lemma 5.1, or eSSVI scheme
 - [ ] Dupire local variance as ∂T w / g, on the tape. Count any floored points and report them
