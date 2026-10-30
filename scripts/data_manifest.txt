@@ -1,0 +1,4 @@
+# Pinned captures of the TAIFEX open data files, trade date 2024-11-15.
+# Each line: name, URL, sha256. The raw bytes are never committed. See NOTICE.
+DailyMarketReportOpt.csv https://web.archive.org/web/20241117234312id_/https://www.taifex.com.tw/data_gov/taifex_open_data.asp?data_name=DailyMarketReportOpt fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e
+DailyMarketReportFut.csv https://web.archive.org/web/20241117151236id_/https://www.taifex.com.tw/data_gov/taifex_open_data.asp?data_name=DailyMarketReportFut 168814667736745df0774c16e8e95b976e4b3f671e9cc3bda5e10e20ae2313b7
