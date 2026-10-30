@@ -1,0 +1,303 @@
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <fstream>
+#include <limits>
+#include <string>
+#include <vector>
+
+#include "platform/affinity.hpp"
+#include "platform/cacheline.hpp"
+#include "platform/cpu_info.hpp"
+#include "platform/fp_state.hpp"
+#include "platform/host_label.hpp"
+#include "platform/memory_info.hpp"
+#include "platform/perf_counters.hpp"
+#include "platform/simd_info.hpp"
+
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+#if defined(__linux__)
+#include <sched.h>
+#endif
+
+namespace aadp::platform {
+namespace {
+
+TEST(HostLabel, RecognisesTheTwoHosts) {
+  EXPECT_EQ(classify_host("macOS", "Apple M4 Max"), kHostMacM4Max);
+  EXPECT_EQ(classify_host("Linux", "AMD Ryzen Embedded V1605B with Radeon Vega Gfx"),
+            kHostLinuxZen1);
+  EXPECT_EQ(classify_host("Linux", "AMD Ryzen Embedded V1605B"), kHostLinuxZen1);
+}
+
+TEST(HostLabel, EverythingElseIsOther) {
+  EXPECT_EQ(classify_host("macOS", "Apple M4 Pro"), kHostOther);
+  EXPECT_EQ(classify_host("macOS", "Apple M4"), kHostOther);
+  EXPECT_EQ(classify_host("macOS", "AMD Ryzen Embedded V1605B"), kHostOther);
+  EXPECT_EQ(classify_host("Linux", "Apple M4 Max"), kHostOther);
+  EXPECT_EQ(classify_host("Linux", "AMD Ryzen Embedded V1605BX"), kHostOther);
+  EXPECT_EQ(classify_host("Linux", "unknown"), kHostOther);
+  EXPECT_EQ(classify_host("", ""), kHostOther);
+}
+
+TEST(CpuInfoParse, ReadsTheX86ModelName) {
+  EXPECT_EQ(parse_cpuinfo_model("processor\t: 0\nvendor_id\t: AuthenticAMD\n"
+                                "model name\t: AMD Ryzen Embedded V1605B with Radeon Vega Gfx\n"
+                                "stepping\t: 1\n\nprocessor\t: 1\nmodel name\t: other\n"),
+            "AMD Ryzen Embedded V1605B with Radeon Vega Gfx");
+}
+
+TEST(CpuInfoParse, FallsBackToImplementerAndPartOnArm64) {
+  EXPECT_EQ(parse_cpuinfo_model("processor\t: 0\nCPU implementer\t: 0x41\nCPU part\t: 0xd0b\n"),
+            "arm64 implementer 0x41 part 0xd0b");
+}
+
+TEST(CpuInfoParse, ReturnsEmptyWhenThereIsNothing) {
+  EXPECT_EQ(parse_cpuinfo_model(""), "");
+  EXPECT_EQ(parse_cpuinfo_model("processor\t: 0\nmodel name\t:\n"), "");
+}
+
+TEST(Midr, FormatsAndRefuses) {
+  EXPECT_EQ(describe_midr("0x00000000410fd0b1\n"), "arm64 midr_el1 0x00000000410fd0b1");
+  EXPECT_FALSE(describe_midr("").has_value());
+  EXPECT_FALSE(describe_midr("garbage").has_value());
+  EXPECT_FALSE(describe_midr("0x").has_value());
+}
+
+TEST(OsDescription, ReadsOsRelease) {
+  const std::string text = "NAME=\"X\"\nPRETTY_NAME=\"Some Linux 13\"\nVERSION_ID=13\n";
+  EXPECT_EQ(parse_os_release_field(text, "PRETTY_NAME"), "Some Linux 13");
+  EXPECT_EQ(parse_os_release_field(text, "VERSION_ID"), "13");
+  EXPECT_EQ(parse_os_release_field(text, "MISSING"), "");
+}
+
+TEST(OsDescription, WithholdsADistributionNamedLikeTheHost) {
+  EXPECT_EQ(describe_linux_os("Some Linux 13", "13", "box"), "Some Linux 13");
+  const std::string withheld = describe_linux_os("Tuxbox GNU/Linux 13 (x)", "13", "tuxbox");
+  EXPECT_EQ(withheld.find("Tuxbox"), std::string::npos);
+  EXPECT_EQ(withheld.find("tuxbox"), std::string::npos);
+  EXPECT_NE(withheld.find("13"), std::string::npos);
+  EXPECT_EQ(describe_linux_os("", "", "box"), "Linux");
+}
+
+TEST(CpuInfo, ReadsThisMachine) {
+  const CpuInfo info = read_cpu_info();
+  EXPECT_FALSE(info.os.empty());
+  EXPECT_FALSE(info.kernel.empty());
+  EXPECT_FALSE(info.arch.empty());
+  EXPECT_NE(info.cpu_model, "unknown");
+  EXPECT_GT(info.logical_cpus, 0);
+}
+
+TEST(CpuInfo, KernelFieldNeverHoldsTheNodeName) {
+  const std::string hostname = short_hostname();
+  ASSERT_FALSE(hostname.empty());
+  EXPECT_EQ(read_cpu_info().kernel.find(hostname), std::string::npos);
+}
+
+TEST(Cacheline, MatchesWhatTheMachineReports) {
+#if defined(__APPLE__)
+  std::int64_t line = 0;
+  std::size_t size = sizeof(line);
+  ASSERT_EQ(sysctlbyname("hw.cachelinesize", &line, &size, nullptr, 0), 0);
+  EXPECT_EQ(static_cast<std::size_t>(line), kCacheLineBytes);
+#else
+  std::ifstream in("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size");
+  std::size_t line = 0;
+  if (in >> line) {
+    EXPECT_EQ(line, kCacheLineBytes);
+  }
+#endif
+}
+
+TEST(FpState, DecodesFpcr) {
+  EXPECT_FALSE(decode_fpcr(0).ftz);
+  EXPECT_FALSE(decode_fpcr(0).daz);
+  EXPECT_TRUE(decode_fpcr(1U << 24).ftz);
+  EXPECT_TRUE(decode_fpcr(1U << 24).daz);
+  EXPECT_FALSE(decode_fpcr(1U).ftz);
+  EXPECT_TRUE(decode_fpcr(1U).daz);
+  // Rounding mode and default NaN bits are not flush bits.
+  EXPECT_FALSE(decode_fpcr((3U << 22) | (1U << 25)).ftz);
+  EXPECT_EQ(decode_fpcr(0).register_name, "FPCR");
+}
+
+TEST(FpState, DecodesMxcsr) {
+  EXPECT_FALSE(decode_mxcsr(0x1f80).ftz);
+  EXPECT_FALSE(decode_mxcsr(0x1f80).daz);
+  EXPECT_TRUE(decode_mxcsr(0x1f80 | (1U << 15)).ftz);
+  EXPECT_FALSE(decode_mxcsr(0x1f80 | (1U << 15)).daz);
+  EXPECT_TRUE(decode_mxcsr(0x1f80 | (1U << 6)).daz);
+  EXPECT_EQ(decode_mxcsr(0).register_name, "MXCSR");
+}
+
+TEST(FpState, DefaultStateIsClean) {
+  const auto state = check_fp_state();
+  ASSERT_TRUE(state.has_value()) << state.error();
+#if defined(__x86_64__)
+  EXPECT_EQ(state->register_name, "MXCSR");
+#else
+  EXPECT_EQ(state->register_name, "FPCR");
+#endif
+}
+
+// Sets the real register, so this shows both the read and the failure.
+TEST(FpState, FailsWithFlushToZeroSet) {
+  const std::uint64_t saved = read_fp_state().raw;
+#if defined(__x86_64__)
+  const std::uint64_t flush_bit = std::uint64_t{1} << 15;
+#else
+  const std::uint64_t flush_bit = std::uint64_t{1} << 24;
+#endif
+  write_fp_register(saved | flush_bit);
+  const FpState seen = read_fp_state();
+  const auto checked = check_fp_state();
+  volatile double smallest_normal = std::numeric_limits<double>::min();
+  const double flushed = smallest_normal * 0.5;
+  write_fp_register(saved);
+
+  EXPECT_TRUE(seen.ftz);
+  ASSERT_FALSE(checked.has_value());
+  EXPECT_NE(checked.error().find("FTZ"), std::string::npos);
+  EXPECT_EQ(flushed, 0.0) << "the register was set but did not flush";
+  EXPECT_TRUE(check_fp_state().has_value());
+}
+
+TEST(Simd, ReportsATargetAndLanes) {
+  EXPECT_FALSE(simd_target_name().empty());
+  EXPECT_GT(simd_double_lanes(), 0U);
+}
+
+TEST(MemoryInfo, PeakRssIsAtLeastWhatThisTestTouches) {
+  constexpr std::size_t kBytes = std::size_t{1} << 24;
+  std::vector<char> block(kBytes);
+  volatile char* touch = block.data();
+  for (std::size_t i = 0; i < kBytes; i += 4096) {
+    touch[i] = 1;
+  }
+  const std::uint64_t peak = peak_rss_bytes();
+  EXPECT_GE(peak, kBytes) << "unit error, or the block was not touched";
+  EXPECT_LT(peak, std::uint64_t{1} << 40) << "units are wrong";
+}
+
+TEST(PerfCounters, ASumHasACounterOnlyIfEveryRegionHadIt) {
+  PerfCounterReport total;
+  PerfCounterReport region;
+  region.source = "s";
+  region.cycles = 10;
+  region.instructions = 20;
+  region.time_enabled_ns = 5;
+  region.time_running_ns = 5;
+  accumulate(total, region);
+  accumulate(total, region);
+  EXPECT_EQ(total.cycles, 20U);
+  EXPECT_EQ(total.instructions, 40U);
+  EXPECT_NE(describe_counters(total).find("not multiplexed"), std::string::npos);
+
+  PerfCounterReport missing;
+  missing.source = "s";
+  missing.note = "denied";
+  accumulate(total, missing);
+  EXPECT_FALSE(total.cycles.has_value());
+  EXPECT_FALSE(total.instructions.has_value());
+  EXPECT_NE(describe_counters(total).find("denied"), std::string::npos);
+}
+
+TEST(PerfCounters, SaysWhenTheGroupWasMultiplexedAndDoesNotScale) {
+  PerfCounterReport report;
+  report.cycles = 100;
+  report.time_enabled_ns = 10;
+  report.time_running_ns = 5;
+  EXPECT_NE(describe_counters(report).find("MULTIPLEXED"), std::string::npos);
+  EXPECT_EQ(report.cycles, 100U);
+}
+
+TEST(Affinity, FormatsCpuLists) {
+  EXPECT_EQ(format_cpu_list(std::vector<int>{}), "none");
+  EXPECT_EQ(format_cpu_list(std::vector<int>{4}), "4");
+  EXPECT_EQ(format_cpu_list(std::vector<int>{0, 1, 2, 3}), "0-3");
+  EXPECT_EQ(format_cpu_list(std::vector<int>{0, 2, 3, 7}), "0,2-3,7");
+}
+
+#if defined(__APPLE__)
+TEST(Affinity, MacOsNeverClaimsAPin) {
+  const AffinityState state = read_affinity();
+  EXPECT_FALSE(state.pinned);
+  EXPECT_EQ(pinning_state_text(state), "not pinned");
+  EXPECT_TRUE(state.cpus.empty());
+  EXPECT_NE(state.qos_class.find("not a pin"), std::string::npos);
+  EXPECT_FALSE(pin_to_cpu(0).has_value());
+}
+
+TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
+  PerfCounterSession session;
+  session.start();
+  volatile double sum = 0;
+  for (int i = 0; i < 1'000'000; ++i) {
+    sum = sum + 1.0;
+  }
+  const PerfCounterReport report = session.stop();
+  EXPECT_EQ(report.source, "proc_pid_rusage");
+  EXPECT_NE(report.scope.find("process-wide"), std::string::npos);
+  ASSERT_TRUE(report.cycles.has_value()) << report.note;
+  ASSERT_TRUE(report.instructions.has_value()) << report.note;
+  EXPECT_GT(*report.instructions, 1'000'000U);
+}
+#endif
+
+#if defined(__linux__)
+TEST(Affinity, ReadsTheRealMask) {
+  const AffinityState state = read_affinity();
+  EXPECT_FALSE(state.cpus.empty());
+  ASSERT_TRUE(state.current.has_value());
+  EXPECT_EQ(state.pinned, state.cpus.size() == 1);
+}
+
+TEST(Affinity, PinsAndReadsBackThenRestores) {
+  const AffinityState before = read_affinity();
+  const int cpu = before.cpus.back();
+  const auto pinned = pin_to_cpu(cpu);
+  ASSERT_TRUE(pinned.has_value()) << pinned.error();
+  EXPECT_TRUE(pinned->pinned);
+  EXPECT_EQ(pinned->cpus, std::vector<int>{cpu});
+  EXPECT_EQ(pinned->current, cpu);
+
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  for (const int allowed : before.cpus) {
+    CPU_SET(allowed, &mask);
+  }
+  ASSERT_EQ(sched_setaffinity(0, sizeof(mask), &mask), 0);
+}
+
+TEST(Affinity, RefusesACpuThatDoesNotExist) {
+  EXPECT_FALSE(pin_to_cpu(100000).has_value());
+  EXPECT_FALSE(pin_to_cpu(CPU_SETSIZE - 1).has_value());
+}
+
+// Passes either way on a host that forbids counters, but only with a stated reason.
+TEST(PerfCounters, LinuxCountersCountOrSayWhyNot) {
+  PerfCounterSession session;
+  session.start();
+  volatile double sum = 0;
+  for (int i = 0; i < 1'000'000; ++i) {
+    sum = sum + 1.0;
+  }
+  const PerfCounterReport report = session.stop();
+  EXPECT_EQ(report.source, "perf_event_open");
+  EXPECT_NE(report.scope.find("user space only"), std::string::npos);
+  EXPECT_FALSE(report.note.empty());
+  if (report.cycles && report.instructions) {
+    EXPECT_GT(*report.instructions, 1'000'000U);
+    EXPECT_GT(*report.cycles, 100'000U);
+  } else {
+    EXPECT_FALSE(report.cycles.has_value());
+    EXPECT_FALSE(report.instructions.has_value());
+  }
+}
+#endif
+
+}  // namespace
+}  // namespace aadp::platform
