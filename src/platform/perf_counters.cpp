@@ -95,6 +95,11 @@ void PerfCounterSession::start() {
     return;
   }
   ioctl(leader_fd_, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+  std::uint64_t data[5] = {};
+  if (read(leader_fd_, data, sizeof(data)) == static_cast<ssize_t>(sizeof(data))) {
+    start_enabled_ns_ = data[1];
+    start_running_ns_ = data[2];
+  }
   ioctl(leader_fd_, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
 }
 
@@ -118,8 +123,8 @@ PerfCounterReport PerfCounterSession::stop() {
     report.note = "short read from the counter group";
     return report;
   }
-  report.time_enabled_ns = data[1];
-  report.time_running_ns = data[2];
+  report.time_enabled_ns = data[1] - start_enabled_ns_;
+  report.time_running_ns = data[2] - start_running_ns_;
   if (report.time_running_ns == 0) {
     report.note = "counters never ran (time_running is 0)";
     return report;

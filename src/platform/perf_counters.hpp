@@ -46,6 +46,9 @@ class PerfCounterSession {
 #if defined(__linux__)
   int leader_fd_ = -1;
   int instructions_fd_ = -1;
+  // The reset ioctl clears counts but not these, so a region's times are differences.
+  std::uint64_t start_enabled_ns_ = 0;
+  std::uint64_t start_running_ns_ = 0;
 #else
   std::uint64_t start_cycles_ = 0;
   std::uint64_t start_instructions_ = 0;

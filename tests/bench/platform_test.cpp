@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <limits>
@@ -248,6 +249,29 @@ TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
 #endif
 
 #if defined(__linux__)
+// Found on debian: the times kept growing across regions, while the counts did not.
+TEST(PerfCounters, EachRegionReportsItsOwnTimes) {
+  PerfCounterSession session;
+  const auto spin = [](std::uint64_t ns) {
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < std::chrono::nanoseconds(ns)) {
+    }
+  };
+  session.start();
+  spin(30'000'000);
+  const PerfCounterReport first = session.stop();
+  if (!first.cycles) {
+    GTEST_SKIP() << "counters unavailable: " << first.note;
+  }
+  session.start();
+  spin(1'000'000);
+  const PerfCounterReport second = session.stop();
+  ASSERT_TRUE(second.cycles.has_value()) << second.note;
+  EXPECT_GE(first.time_enabled_ns, 30'000'000U);
+  EXPECT_LT(second.time_enabled_ns, first.time_enabled_ns / 2);
+  EXPECT_LT(*second.cycles, *first.cycles / 2);
+}
+
 TEST(Affinity, ReadsTheRealMask) {
   const AffinityState state = read_affinity();
   EXPECT_FALSE(state.cpus.empty());
