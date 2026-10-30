@@ -33,3 +33,22 @@ aadp_test(aadp_thread_invariance_test
   SOURCES tests/oracle/thread_invariance_test.cpp
   LINK aadp_rng aadp_test_support
   LABELS oracle fast threads)
+
+aadp_library(aadp_quadrature_lib
+  SOURCES tools/quadrature/quadrature.cpp
+  LINK aadp_rng aadp_test_support)
+aadp_tool(aadp_quadrature
+  SOURCES tools/quadrature/main.cpp
+  LINK aadp_quadrature_lib)
+if(AADP_BUILD_TESTS)
+  add_test(NAME aadp_oracle_values_current
+    COMMAND aadp_quadrature --check references/oracle_values.csv
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_oracle_values_current PROPERTIES LABELS "oracle")
+endif()
+
+aadp_test(aadp_quadrature_test
+  SOURCES tests/oracle/quadrature_test.cpp
+  LINK aadp_quadrature_lib
+  LABELS oracle)
+target_include_directories(aadp_quadrature_test PRIVATE "${PROJECT_SOURCE_DIR}/tools/quadrature")
