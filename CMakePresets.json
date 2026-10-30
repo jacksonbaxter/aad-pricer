@@ -1,0 +1,130 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_FLAGS": "-ffp-contract=off",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off"
+      }
+    },
+    {
+      "name": "optimised",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG"
+      }
+    },
+    {
+      "name": "instrumented",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "-O1 -g -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O1 -g -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release, baseline SIMD",
+      "inherits": "optimised"
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_FLAGS_DEBUG": "-O0 -g",
+        "CMAKE_CXX_FLAGS_DEBUG": "-O0 -g"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan and UBSan",
+      "inherits": "instrumented",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-ffp-contract=off -fsanitize=address,undefined -fno-sanitize-recover=all",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off -fsanitize=address,undefined -fno-sanitize-recover=all"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "TSan",
+      "inherits": "instrumented",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-ffp-contract=off -fsanitize=thread",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off -fsanitize=thread"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "libFuzzer with ASan and UBSan",
+      "inherits": "instrumented",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-ffp-contract=off -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=all",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off -fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=all",
+        "AADP_BUILD_FUZZERS": "ON",
+        "AADP_BUILD_TESTS": "OFF",
+        "AADP_BUILD_BENCHMARKS": "OFF"
+      }
+    },
+    {
+      "name": "release-gcc",
+      "displayName": "Release with g++ (Linux)",
+      "inherits": "optimised",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "release-avx2",
+      "displayName": "Release, AVX2 with FMA (x86-64)",
+      "inherits": "optimised",
+      "cacheVariables": { "AADP_SIMD_TARGET": "avx2" }
+    },
+    {
+      "name": "release-avx512",
+      "displayName": "Release, AVX-512 (x86-64, build-only)",
+      "description": "No host here can run AVX-512, so this preset has no test preset.",
+      "inherits": "optimised",
+      "cacheVariables": { "AADP_SIMD_TARGET": "avx512" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "release", "configurePreset": "release" },
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "asan-ubsan", "configurePreset": "asan-ubsan" },
+    { "name": "tsan", "configurePreset": "tsan" },
+    { "name": "fuzz", "configurePreset": "fuzz" },
+    { "name": "release-gcc", "configurePreset": "release-gcc" },
+    { "name": "release-avx2", "configurePreset": "release-avx2" },
+    { "name": "release-avx512", "configurePreset": "release-avx512" }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    { "name": "release", "inherits": "test-base", "configurePreset": "release" },
+    { "name": "debug", "inherits": "test-base", "configurePreset": "debug" },
+    { "name": "asan-ubsan", "inherits": "test-base", "configurePreset": "asan-ubsan" },
+    { "name": "tsan", "inherits": "test-base", "configurePreset": "tsan" },
+    { "name": "fuzz", "inherits": "test-base", "configurePreset": "fuzz" },
+    { "name": "release-gcc", "inherits": "test-base", "configurePreset": "release-gcc" },
+    { "name": "release-avx2", "inherits": "test-base", "configurePreset": "release-avx2" }
+  ]
+}
