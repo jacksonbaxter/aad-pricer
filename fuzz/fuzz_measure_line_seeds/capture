@@ -1,0 +1,4 @@
+measure.sh: start load1=0.30 host=seedbox at=2026-10-30T15:00:00Z
+some benchmark noise
+measure.sh: restored governor=schedutil
+measure.sh: end load1=0.41 exit=0 at=2026-10-30T15:00:09Z

@@ -1,0 +1,1 @@
+measure.sh: end load1=0.1 exit=1 at=2026-10-30T15:00:09Z cpus=0-7,9 governor=performance,schedutil freq_khz=cpu0:1000,cpu1:unavailable perf_event_paranoid=

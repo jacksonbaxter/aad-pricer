@@ -88,3 +88,18 @@ if(TARGET aadp_bench_cli)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_run_bench_script PROPERTIES LABELS "unit;cli")
 endif()
+
+aadp_fuzz(fuzz_measure_line
+  SOURCES fuzz/fuzz_measure_line.cpp
+  LINK aadp_results
+  CORPUS fuzz/fuzz_measure_line_seeds)
+
+aadp_fuzz(fuzz_results_file
+  SOURCES fuzz/fuzz_results_file.cpp
+  LINK aadp_results
+  CORPUS fuzz/fuzz_results_file_seeds)
+
+aadp_fuzz(fuzz_results_json
+  SOURCES fuzz/fuzz_results_json.cpp
+  LINK aadp_results
+  CORPUS fuzz/fuzz_results_json_seeds)

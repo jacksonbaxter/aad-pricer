@@ -1,0 +1,1 @@
+{"context": {"date": "2026-01-02T03:04:06+00:00", "host_name": "seedbox", "executable": "./bench", "num_cpus": 8, "load_avg": [0.31, 0.2, 0.1]}, "benchmarks": [{"name": "x/mean", "run_name": "x", "aggregate_name": "mean", "real_time": 4.1005000000000000e+03, "iterations": 3}]}

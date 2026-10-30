@@ -1,0 +1,1 @@
+[NaN, Infinity, -Infinity, true, false, null, 0, -0.5e-3, "a\n\u00e9"]

@@ -1,0 +1,1 @@
+measure.sh: start load1=0.30 host=seedbox at=2026-10-30T15:00:00Z cpus=4 governor=performance freq_khz=cpu4:3500000 perf_event_paranoid=2

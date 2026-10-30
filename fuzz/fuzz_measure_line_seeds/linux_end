@@ -1,0 +1,1 @@
+measure.sh: end load1=0.41 exit=0 at=2026-10-30T15:00:09Z cpus=4 governor=performance freq_khz=cpu4:3400000 perf_event_paranoid=2
