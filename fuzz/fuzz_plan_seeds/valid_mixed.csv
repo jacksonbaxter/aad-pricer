@@ -1,0 +1,13 @@
+# synthetic plan
+#! K=3
+#! alpha_F=0.01
+#! B=4
+#! critical=4.1
+#! ceiling_factor=1.65
+#! fd_b_factor=2
+#! pilot_seed=1
+#! measured_seed=2
+id,instrument,greek,reference,N,B,seed,se_ceiling,b,status
+X.value,european:S0=100;K=100;H=0;sigma=0.2;r=0.05;q=0;T=1;m=1;type=call;spot=0,value,REF1,400,4,2,0.1,0,run
+X.vega,one_step:S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=4;type=call;spot=0,vega,FD:0.0001,400,4,2,0.01,1e-7,run
+Z.a,svi-surface:asian,d_a_slice05,phase3,-,4,-,-,-,awaiting-phase3

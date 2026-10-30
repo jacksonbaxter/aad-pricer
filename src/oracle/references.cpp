@@ -41,9 +41,7 @@ std::expected<ReferenceTable, decode::DecodeError> DecodeReferences(std::string_
     ++number;
     if (line.size() > decode::kMaxLineBytes) return Fail(number, "line too long");
     if (!line.empty() && line.front() == '#') {
-      if (!decode::IsField(line.substr(1)) && line.find(',') == std::string_view::npos) {
-        return Fail(number, "bad comment");
-      }
+      if (!decode::IsPrintable(line)) return Fail(number, "bad comment");
       table.comments.emplace_back(line);
       continue;
     }

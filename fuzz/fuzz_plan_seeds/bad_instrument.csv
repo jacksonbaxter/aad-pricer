@@ -1,0 +1,10 @@
+#! K=3
+#! alpha_F=0.01
+#! B=4
+#! critical=4.1
+#! ceiling_factor=1.65
+#! fd_b_factor=2
+#! pilot_seed=1
+#! measured_seed=2
+id,instrument,greek,reference,N,B,seed,se_ceiling,b,status
+X,bridge:S0=1;K=1;H=2;sigma=1;r=0;q=0;T=1;m=1;type=call;spot=0,value,REF,400,4,2,0.1,0,run

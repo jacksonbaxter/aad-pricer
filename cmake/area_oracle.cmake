@@ -37,6 +37,7 @@ aadp_test(aadp_thread_invariance_test
 aadp_library(aadp_quadrature_lib
   SOURCES tools/quadrature/quadrature.cpp
   LINK aadp_rng aadp_test_support)
+target_include_directories(aadp_quadrature_lib PUBLIC "${PROJECT_SOURCE_DIR}/tools/quadrature")
 aadp_tool(aadp_quadrature
   SOURCES tools/quadrature/main.cpp
   LINK aadp_quadrature_lib)
@@ -55,8 +56,19 @@ aadp_test(aadp_quadrature_test
   SOURCES tests/oracle/quadrature_test.cpp
   LINK aadp_quadrature_lib
   LABELS oracle)
-target_include_directories(aadp_quadrature_test PRIVATE "${PROJECT_SOURCE_DIR}/tools/quadrature")
 aadp_test(aadp_decoder_test
   SOURCES tests/oracle/decoder_test.cpp
   LINK aadp_oracle_lib
   LABELS oracle fast)
+
+aadp_fuzz(aadp_fuzz_plan
+  SOURCES fuzz/fuzz_plan.cpp
+  LINK aadp_oracle_lib
+  LABELS oracle
+  CORPUS fuzz/fuzz_plan_seeds)
+aadp_fuzz(aadp_fuzz_references
+  SOURCES fuzz/fuzz_references.cpp
+  LINK aadp_oracle_lib
+  LABELS oracle
+  CORPUS fuzz/fuzz_references_seeds)
+

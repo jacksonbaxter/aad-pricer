@@ -92,6 +92,10 @@ TEST(DecodePlan, RejectsEachBadInputWithAnErrorValue) {
        Directives() + kColumns + RunRow().substr(0, RunRow().size() - 1) + "\r\n" + kAwaitingRow},
       {"embedded NUL", d + kColumns + std::string("a\0b,x,y,z,-,4,-,-,-,awaiting-phase3\n", 36)},
       {"long line", d + kColumns + std::string(5000, 'a') + "\n"},
+      // Found by fuzz_plan: this used to pass as a comment, so a K stated here changed nothing.
+      {"directive after columns", d + kColumns + "#! K=9\n"},
+      {"directive without space", "#!K=1\n" + d + kColumns},
+      {"control byte in comment", "# a\tb\n" + d + kColumns},
   };
   for (const BadCase& c : cases) {
     EXPECT_FALSE(DecodePlan(c.input).has_value()) << c.name;
@@ -186,6 +190,7 @@ TEST(DecodeReferences, RejectsBadInput) {
            kRefHeader + "O1,p,1,0,m,s\nO1,p,2,0,m,s\n",
            kRefHeader + "O1,p,1,0,m,s\r\n",
            kRefHeader + std::string(5000, 'x') + "\n",
+           "# a\tb,c\n" + kRefHeader + "O1,p,1,0,m,s\n",
        }) {
     EXPECT_FALSE(DecodeReferences(bad).has_value()) << bad;
   }

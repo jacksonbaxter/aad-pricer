@@ -60,12 +60,16 @@ inline bool IsToken(std::string_view text) {
   return true;
 }
 
-// Printable ASCII without the separator, so a field can never change the column count.
-inline bool IsField(std::string_view text) {
+inline bool IsPrintable(std::string_view text) {
   for (const char c : text) {
-    if (c < ' ' || c > '~' || c == ',') return false;
+    if (c < ' ' || c > '~') return false;
   }
   return true;
+}
+
+// Without the separator, so a field can never change the column count.
+inline bool IsField(std::string_view text) {
+  return IsPrintable(text) && text.find(',') == std::string_view::npos;
 }
 
 inline std::vector<std::string_view> Split(std::string_view text, char separator) {

@@ -148,7 +148,10 @@ std::expected<Plan, decode::DecodeError> DecodePlan(std::string_view input) {
   for (const std::string_view line : decode::Lines(input)) {
     ++number;
     if (line.size() > decode::kMaxLineBytes) return Fail(number, "line too long");
-    if (!header_seen && line.starts_with(kDirectivePrefix)) {
+    // A directive anywhere else would read as binding and change nothing.
+    if (line.starts_with("#!")) {
+      if (header_seen) return Fail(number, "directive after the columns line");
+      if (!line.starts_with(kDirectivePrefix)) return Fail(number, "bad directive");
       if (const auto problem =
               ApplyDirective(line.substr(kDirectivePrefix.size()), plan.header, directives)) {
         return Fail(number, *problem);
@@ -156,9 +159,7 @@ std::expected<Plan, decode::DecodeError> DecodePlan(std::string_view input) {
       continue;
     }
     if (!line.empty() && line.front() == '#') {
-      for (const char c : line) {
-        if (c < ' ' || c > '~') return Fail(number, "bad comment");
-      }
+      if (!decode::IsPrintable(line)) return Fail(number, "bad comment");
       plan.comments.emplace_back(line);
       continue;
     }

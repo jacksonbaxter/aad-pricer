@@ -1,0 +1,9 @@
+#! K=3
+#! alpha_F=0.01
+#! B=4
+#! critical=4.1
+#! ceiling_factor=1.65
+#! fd_b_factor=2
+#! pilot_seed=1
+#! measured_seed=2
+id,instrument,greek,reference,N,B,seed,se_ceiling,b,status

@@ -1,0 +1,4 @@
+# synthetic references
+id,parameters,value,b,method,source
+A,S0=1;K=2,0.5,1e-09,closed form,made-up source
+B.delta,S0=3;K=4,-12.75,0,two methods,made-up source

@@ -1,0 +1,10 @@
+#! K=3
+#! alpha_F=0.01
+#! B=4
+#! critical=4.1
+#! ceiling_factor=1.65
+#! fd_b_factor=2
+#! pilot_seed=1
+#! measured_seed=2
+id,instrument,greek,reference,N,B,seed,se_ceiling,b,status
+A,arithmetic:S0=90;K=87;H=0;sigma=0.13;r=0.025;q=0.06;T=0.91666666666666663;m=1;type=put;spot=1,theta,FD:1e-4,8,4,99,1.5,0,run
