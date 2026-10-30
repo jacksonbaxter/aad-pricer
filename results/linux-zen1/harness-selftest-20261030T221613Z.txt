@@ -1,0 +1,229 @@
+aadp-results 1
+claim: none
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.113+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fa0
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997958866.8
+timer_calibration_spread: 0.000001
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 24.176
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 3
+batches_per_repetition: 20000
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 93166a082dda88fde5fda6c93ed0c55ae3a2e788
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-10-30T22:16:13Z
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3593034
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 468767972
+perf_instructions: 264723026
+perf_counters_note: time_enabled_ns=131135292 time_running_ns=131135292 not multiplexed
+peak_rss_bytes: 5271552
+measure_start: measure.sh: start load1=1.07 at=2026-10-30T22:16:13Z cpus=4 governor=performance freq_khz=cpu4:2738997 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.06 exit=0 at=2026-10-30T22:16:13Z cpus=4 governor=performance freq_khz=cpu4:3273251 perf_event_paranoid=2
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-10-30T16:16:13-06:00",
+    "num_cpus": 8,
+    "mhz_per_cpu": 2000,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": true,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 4194304,
+        "num_sharing": 8
+      }
+    ],
+    "load_avg": [
+      1.06885,
+      0.58252,
+      0.274902
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 2.1480176951416788e+03,
+      "cpu_time": 2.1734519999999993e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9794912837428324e+07
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 2.1733320301068115e+03,
+      "cpu_time": 2.1978404000000010e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9447870418978103e+07
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 2.1538316286481195e+03,
+      "cpu_time": 2.1819366500000019e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9714486104083464e+07
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.1583937846322028e+03,
+      "cpu_time": 2.1844096833333338e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9652423120163295e+07
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.1538316286481190e+03,
+      "cpu_time": 2.1819366500000019e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9714486104083464e+07
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.3259481102278393e+01,
+      "cpu_time": 1.2380849487843337e+01,
+      "time_unit": "ns",
+      "items_per_second": 1.8165481147168248e+05
+    },
+    {
+      "name": "harness_selftest/iterations:20000/repeats:3/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "harness_selftest/iterations:20000/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 6.1432168664893793e-03,
+      "cpu_time": 5.6678239353666424e-03,
+      "time_unit": "ns",
+      "items_per_second": 6.1261371704951616e-03
+    }
+  ]
+}
+@section histogram_harness_selftest
+unit ns
+batch_units 64
+batches 60000
+gate_ns 200.2
+timer_resolution_ns 20.020
+min 2142
+p50 2143
+p90 2153
+p99 2353
+p99.9 2803
+p99.99 5939
+max 63135
