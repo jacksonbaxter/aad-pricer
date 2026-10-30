@@ -61,6 +61,14 @@ aadp_test(aadp_decoder_test
   LINK aadp_oracle_lib
   LABELS oracle fast)
 
+aadp_library(aadp_run_oracles_lib
+  SOURCES tools/run_oracles/runner.cpp
+  LINK aadp_oracle_lib aadp_test_support)
+target_include_directories(aadp_run_oracles_lib PUBLIC "${PROJECT_SOURCE_DIR}/tools/run_oracles")
+aadp_tool(aadp_run_oracles
+  SOURCES tools/run_oracles/main.cpp
+  LINK aadp_run_oracles_lib)
+
 aadp_fuzz(aadp_fuzz_plan
   SOURCES fuzz/fuzz_plan.cpp
   LINK aadp_oracle_lib
@@ -72,3 +80,16 @@ aadp_fuzz(aadp_fuzz_references
   LABELS oracle
   CORPUS fuzz/fuzz_references_seeds)
 
+aadp_test(aadp_runner_test
+  SOURCES tests/oracle/runner_test.cpp
+  LINK aadp_run_oracles_lib
+  LABELS oracle fast)
+aadp_test(aadp_naive_barrier_test
+  SOURCES tests/oracle/naive_barrier_test.cpp
+  LINK aadp_run_oracles_lib
+  LABELS oracle)
+if(TARGET aadp_naive_barrier_test)
+  # Full size only where it is meant as evidence. Everywhere else it is a smoke test.
+  target_compile_definitions(aadp_naive_barrier_test PRIVATE
+    AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+endif()
