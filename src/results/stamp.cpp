@@ -80,6 +80,10 @@ std::expected<void, StampRefusal> check_reportable(const ResultsFile& run, const
     return refuse(StampError::kStaleCapture, "the binary did not run between the two lines");
   }
 
+  if (*run.value("process_nice") != "0") {
+    return refuse(StampError::kNiced, "ran at nice " + std::string(*run.value("process_nice")));
+  }
+
   const std::string_view pinning = *run.value("pinning_state");
   if (*run.value("host_label") == "linux-zen1" && pinning != "pinned") {
     return refuse(StampError::kNotPinned, "linux-zen1 run is not pinned");

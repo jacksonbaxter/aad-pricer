@@ -111,6 +111,7 @@ std::vector<results::HeaderField> build_header(
   add("pin_method", pin_method);
   add("observed_cpu", affinity.current ? std::to_string(*affinity.current) : "unavailable");
   add("qos_class", affinity.qos_class);
+  add("process_nice", std::to_string(platform::process_nice()));
   add("fp_register", std::string(fp.register_name));
   add("fp_state", hex(fp.raw));
   add("fp_ftz", fp.ftz ? "set" : "clear");

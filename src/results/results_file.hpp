@@ -71,6 +71,7 @@ inline constexpr auto kRunHeaderKeys = std::to_array<std::string_view>({
     "observed_cpu",
     "smt_siblings",
     "qos_class",
+    "process_nice",
     "governor",
     "cpufreq_driver",
     "frequency_khz",

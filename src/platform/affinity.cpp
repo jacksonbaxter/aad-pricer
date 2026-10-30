@@ -1,5 +1,7 @@
 #include "platform/affinity.hpp"
 
+#include <sys/resource.h>
+
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -65,6 +67,11 @@ std::expected<AffinityState, std::string> pin_to_cpu(int cpu) {
 #else
   return std::unexpected("macOS has no way to pin a thread to CPU " + std::to_string(cpu));
 #endif
+}
+
+int process_nice() {
+  errno = 0;
+  return getpriority(PRIO_PROCESS, 0);
 }
 
 std::string pinning_state_text(const AffinityState& state) {

@@ -20,6 +20,7 @@ pin_method: seed
 observed_cpu: seed
 smt_siblings: seed
 qos_class: seed
+process_nice: 0
 governor: seed
 cpufreq_driver: seed
 frequency_khz: seed

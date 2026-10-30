@@ -24,6 +24,10 @@ std::expected<AffinityState, std::string> pin_to_cpu(int cpu);
 
 std::string pinning_state_text(const AffinityState& state);
 
+// The nice value of this process. zsh runs background jobs at +5 by default, which is easy to
+// inherit without noticing and changes what a benchmark competes with.
+int process_nice();
+
 // "4", "0-3,6". Empty input gives "none".
 std::string format_cpu_list(std::span<const int> cpus);
 

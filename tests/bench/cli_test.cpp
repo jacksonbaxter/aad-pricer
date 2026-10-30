@@ -82,6 +82,14 @@ TEST(HarnessSelftest, WritesACompleteRawFile) {
   EXPECT_NE(file->value("timer_resolution_ns"), "0.000");
 }
 
+TEST(HarnessSelftest, HeaderRecordsTheNiceValue) {
+  const fs::path dir = fresh_dir();
+  ASSERT_EQ(run("nice -n 7 " + selftest(dir / "raw.txt", kFastArgs)), 0);
+  const auto file = results::parse_results_file(slurp(dir / "raw.txt"));
+  ASSERT_TRUE(file.has_value()) << file.error();
+  EXPECT_EQ(file->value("process_nice"), "7");
+}
+
 // 400 batches take milliseconds, so a count in the billions would be Google Benchmark's own
 // start-up, which spins for a second on macOS.
 TEST(HarnessSelftest, CountersCoverOnlyTheMeasuredRepetitions) {

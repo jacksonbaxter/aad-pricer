@@ -27,6 +27,7 @@ enum class StampError {
   kNoCommit,
   kNotRelease,
   kNotPinned,     // linux-zen1 numbers are pinned or they are not reported
+  kNiced,         // Ran at a priority other than the default
   kPinMismatch,   // The pinned CPU is not the one measure.sh reported on
   kStaleCapture,  // The binary did not run between the two lines
   kNoReason,      // Not reportable, and not saying why

@@ -159,6 +159,14 @@ TEST(Stamp, RefusesAnUnpinnedZen1Run) {
   expect_refused(test_case, StampError::kNotPinned);
 }
 
+TEST(Stamp, RefusesARunAtAnotherPriority) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_file();
+  testing::set_field(raw, "process_nice", "5");
+  test_case.raw = testing::text_of(raw);
+  expect_refused(test_case, StampError::kNiced);
+}
+
 TEST(Stamp, RefusesAPinOutsideWhatMeasureReportedOn) {
   StampCase test_case;
   ResultsFile raw = testing::raw_file();
