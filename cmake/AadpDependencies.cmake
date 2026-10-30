@@ -52,3 +52,36 @@ if(AADP_BUILD_TESTS OR AADP_BUILD_BENCHMARKS)
   set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(benchmark)
 endif()
+
+# 985 translation units, so optional. QuantLib tag v1.44 peels to commit
+# ab4cb476d35f7275834bc05b47d1324403d1823b. Nothing links ql_library yet.
+option(AAD_PRICER_BUILD_QUANTLIB_COMPARE "Fetch Boost and QuantLib for the comparison bench" OFF)
+if(AAD_PRICER_BUILD_QUANTLIB_COMPARE)
+  FetchContent_Declare(boost_headers
+    URL      https://github.com/boostorg/boost/releases/download/boost-1.92.0/boost-1.92.0-b2-nodocs.tar.xz
+    URL_HASH SHA256=ea7b982002cc9dfbe59b0b217b206f470dc75f3de0bb2973d844118934d82411
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE)
+  FetchContent_Declare(quantlib
+    URL      https://github.com/lballabio/QuantLib/releases/download/v1.44/QuantLib-1.44.tar.gz
+    URL_HASH SHA256=34d7787a367404447f84be6942b19fd091f1e8e45a380d3f153e6cd8c4bb8ad8
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+    SYSTEM EXCLUDE_FROM_ALL)
+
+  FetchContent_MakeAvailable(boost_headers)
+  set(BOOST_ROOT "${boost_headers_SOURCE_DIR}")
+  set(Boost_NO_SYSTEM_PATHS ON)
+  set(Boost_NO_BOOST_CMAKE ON)
+  set(QL_BUILD_TEST_SUITE OFF CACHE BOOL "" FORCE)
+  set(QL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(quantlib)
+
+  # QuantLib exports ql_library for install, and CMake rejects an exported include path
+  # inside the build tree, which is where this Boost lives.
+  foreach(_ql_property IN ITEMS INTERFACE_INCLUDE_DIRECTORIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
+    get_target_property(_ql_includes ql_library ${_ql_property})
+    list(REMOVE_ITEM _ql_includes "${boost_headers_SOURCE_DIR}")
+    set_target_properties(ql_library PROPERTIES ${_ql_property} "${_ql_includes}")
+  endforeach()
+  target_include_directories(ql_library SYSTEM INTERFACE
+    "$<BUILD_INTERFACE:${boost_headers_SOURCE_DIR}>")
+endif()
