@@ -2,12 +2,17 @@
 aadp_library(aadp_data
   SOURCES
     src/data/cp950.cpp
-    src/data/decimal.cpp)
+    src/data/decimal.cpp
+    src/data/taifex_csv.cpp
+    src/data/taifex_futures.cpp
+    src/data/taifex_options.cpp)
 
 aadp_test(aadp_data_tests
   SOURCES
     tests/data/cp950_test.cpp
     tests/data/decimal_test.cpp
+    tests/data/taifex_futures_test.cpp
+    tests/data/taifex_options_test.cpp
   LINK aadp_data)
 
 if(AADP_BUILD_TESTS)
