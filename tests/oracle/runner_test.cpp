@@ -236,6 +236,57 @@ TEST(PlanTemplate, EveryRunRowResolvesAgainstTheCommittedReferences) {
   }
 }
 
+// The pre-registered file itself. Runs nothing, so it cannot touch the measured seed.
+TEST(CommittedPlan, MatchesTheTemplateAndTheStatedRule) {
+  std::ifstream file("references/comparison_plan.csv", std::ios::binary);
+  ASSERT_TRUE(file.is_open());
+  std::ostringstream text;
+  text << file.rdbuf();
+  const auto plan = DecodePlan(text.str());
+  ASSERT_TRUE(plan.has_value());
+  EXPECT_EQ(EncodePlan(*plan), text.str());
+
+  std::ifstream reference_file("references/oracle_values.csv", std::ios::binary);
+  std::ostringstream reference_text;
+  reference_text << reference_file.rdbuf();
+  const auto references = DecodeReferences(reference_text.str());
+  ASSERT_TRUE(references.has_value());
+
+  const auto rows = PlanTemplate();
+  const PlanHeader& header = plan->header;
+  ASSERT_EQ(plan->rows.size(), rows.size());
+  EXPECT_EQ(header.declared_k, rows.size());
+  EXPECT_DOUBLE_EQ(header.alpha_f, 0.01);
+  EXPECT_EQ(header.batches, 64U);
+  EXPECT_DOUBLE_EQ(header.critical, CriticalValue(0.01, rows.size(), 64));
+  EXPECT_DOUBLE_EQ(header.ceiling_factor, kCeilingFactor);
+  EXPECT_DOUBLE_EQ(header.fd_ceiling_factor, kFdCeilingFactor);
+  EXPECT_DOUBLE_EQ(header.fd_b_factor, kFdBFactor);
+  EXPECT_NE(header.measured_seed, header.pilot_seed);
+  EXPECT_NE(header.measured_seed, header.pilot_seed + 1);  // The smoke seed.
+
+  for (std::size_t i = 0; i < rows.size(); ++i) {
+    const PlanRow& row = plan->rows[i];
+    EXPECT_EQ(row.id, rows[i].id);
+    EXPECT_EQ(row.instrument, rows[i].instrument);
+    EXPECT_EQ(row.greek, rows[i].greek);
+    EXPECT_EQ(row.reference, rows[i].reference);
+    EXPECT_EQ(row.status, rows[i].status);
+    if (row.status != RowStatus::kRun) continue;
+    EXPECT_EQ(row.paths, rows[i].paths) << row.id;
+    EXPECT_EQ(row.batches, 64U) << row.id;
+    EXPECT_EQ(row.seed, header.measured_seed) << row.id;
+    EXPECT_GT(row.se_ceiling, 0.0) << row.id;
+    if (FiniteDifferenceStep(row.reference)) {
+      EXPECT_GT(row.b, 0.0) << row.id;
+    } else {
+      const Reference* reference = references->Find(row.reference);
+      ASSERT_NE(reference, nullptr) << row.id;
+      EXPECT_EQ(row.b, reference->b) << row.id;
+    }
+  }
+}
+
 TEST(BuildPlan, AppliesTheStatedRule) {
   std::vector<PlanTemplateRow> rows = {
       {"a.value", kInstrument, "value", "REF", 6400, RowStatus::kRun},
