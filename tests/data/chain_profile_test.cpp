@@ -23,10 +23,10 @@ struct RunResult {
   int status;
 };
 
-std::string quoted(const std::string& text) { return "'" + text + "'"; }
+std::string shell_arg(const std::string& text) { return "'" + text + "'"; }
 
 RunResult run(const std::string& arguments) {
-  const std::string command = quoted(AADP_CHAIN_PROFILE_PATH) + " " + arguments + " 2>&1";
+  const std::string command = shell_arg(AADP_CHAIN_PROFILE_PATH) + " " + arguments + " 2>&1";
   FILE* pipe = popen(command.c_str(), "r");
   EXPECT_NE(pipe, nullptr);
   RunResult result{"", -1};
@@ -62,8 +62,8 @@ class ChainProfile : public ::testing::Test {
   }
 
   std::string arguments() const {
-    return "--options " + quoted((dir_ / "options.csv").string()) + " --futures " +
-           quoted((dir_ / "futures.csv").string());
+    return "--options " + shell_arg((dir_ / "options.csv").string()) + " --futures " +
+           shell_arg((dir_ / "futures.csv").string());
   }
 
   fs::path dir_;
@@ -89,14 +89,14 @@ TEST_F(ChainProfile, PrintsCountsThroughTheReaders) {
 }
 
 TEST_F(ChainProfile, MissingFileFailsAndSaysHowToGetIt) {
-  const RunResult result = run("--options " + quoted((dir_ / "no-such-file.csv").string()));
+  const RunResult result = run("--options " + shell_arg((dir_ / "no-such-file.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("scripts/fetch_data.sh"), std::string::npos) << result.output;
 }
 
 TEST_F(ChainProfile, WrongHeaderFails) {
   write_file(dir_ / "bad.csv", "not,a,header\r\n");
-  const RunResult result = run("--options " + quoted((dir_ / "bad.csv").string()));
+  const RunResult result = run("--options " + shell_arg((dir_ / "bad.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("header mismatch"), std::string::npos) << result.output;
 }

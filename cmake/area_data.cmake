@@ -45,3 +45,18 @@ if(AADP_BUILD_TESTS)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(data_fetch_script PROPERTIES LABELS "unit;fast")
 endif()
+
+aadp_fuzz(fuzz_cp950
+  SOURCES fuzz/fuzz_cp950.cpp
+  LINK aadp_data
+  CORPUS fuzz/fuzz_cp950_corpus)
+
+aadp_fuzz(fuzz_taifex_options
+  SOURCES fuzz/fuzz_taifex_options.cpp
+  LINK aadp_data
+  CORPUS fuzz/fuzz_taifex_options_corpus)
+
+aadp_fuzz(fuzz_taifex_futures
+  SOURCES fuzz/fuzz_taifex_futures.cpp
+  LINK aadp_data
+  CORPUS fuzz/fuzz_taifex_futures_corpus)
