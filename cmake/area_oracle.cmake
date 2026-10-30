@@ -25,3 +25,11 @@ aadp_test(aadp_closed_form_test
 aadp_test(aadp_tolerance_test
   SOURCES tests/oracle/tolerance_test.cpp
   LABELS oracle fast)
+aadp_test(aadp_kernels_test
+  SOURCES tests/oracle/kernels_test.cpp
+  LINK aadp_rng aadp_test_support
+  LABELS oracle fast)
+aadp_test(aadp_thread_invariance_test
+  SOURCES tests/oracle/thread_invariance_test.cpp
+  LINK aadp_rng aadp_test_support
+  LABELS oracle fast threads)
