@@ -4,7 +4,7 @@ Research findings and decisions. Later phases add what was tried, including what
 
 ## Evidence index
 
-Raw evidence is outside the repo, because third-party material is not committed: `/Users/jacksonbaxter/Repositories/quant-projects/.orchestrator/research-cache/aad-pricer/`. Evidence files record local paths as `.research/<track>/`, the location before they were moved. Read those paths relative to the cache.
+Raw evidence is outside the repo, because third-party material is not committed: it sits in the project's private research cache, `.orchestrator/research-cache/aad-pricer/`, in the folder above this repo. Evidence files record local paths as `.research/<track>/`, the location before they were moved. Read those paths relative to the cache.
 
 | Track | File | Contents |
 |---|---|---|
