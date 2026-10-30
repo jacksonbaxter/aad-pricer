@@ -14,8 +14,9 @@ Each phase ends with a phase report and waits for a go-ahead. Every commit build
 - [x] Metal GPU feasibility, float32 error mechanisms, probe
 - [x] QuantLib engine mapping, comparison protocol, build plan
 - [x] `BENCHMARKS.md`, `TASKS.md`, `NOTES.md` first versions
-- [ ] Session lead re-opens every source behind a target, and re-runs the derived reference values
-- [ ] Clear remaining `pending` and `UNCONFIRMED` entries, or say why they stay
+- [x] Session lead re-opens every source behind a target, and re-runs the derived reference values
+- [ ] Narrow search on the gaps left by the search budget: Metal throughput, QuantLib speed, raw SVI fit error
+- [ ] Clear remaining `UNCONFIRMED` entries, or say why they stay
 - [ ] Phase report
 
 ## Phase 2: Harness
@@ -45,12 +46,15 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [ ] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
 - [ ] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
 - [ ] Own `exp`, `log` and inverse-normal kernels, so libm differences do not reach results
-- [ ] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: `HWY_SCALAR` (1 lane), NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it)
+- [ ] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build
 - [ ] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON. Add a lane-width test matrix
 - [ ] Any code that depends on lane count takes it from the type, never a constant
 - [ ] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
 - [ ] Every reported benchmark runs through `.orchestrator/measure.sh` on the Mac, or `~/quant-projects/bin/measure.sh` on `debian`. Its load line goes in the results header. A results writer refuses to mark a run as reportable without it
-- [ ] `debian`: only after the orchestrator says it is ready. Sync with `debian_sync.sh`, `taskset -c 4`, `cpu5` idle, second thread on `cpu6`. Record core, governor, frequency, turbo. Cite the commit
+- [ ] `debian` is ready. Work only inside `~/quant-projects`. Measurement and Linux-only code only: development, sanitizers and fuzzing stay on the Mac. Sync the committed `HEAD` with `debian_sync.sh`, build in `~/quant-projects/aad-pricer/build`, fetch data with the repo's own script
+- [ ] `debian` runs: `~/quant-projects/bin/measure.sh taskset -c 4 <bench>`, `cpu5` idle, second thread on `cpu6`. Benchmark directly under `measure.sh`, with no wrapper that leaves background processes. Write output to a file on `debian`, never through SSH. A dropped connection kills the run, so a run with no complete output file is lost and is rerun, and `.logs/measure.log` is checked
+- [ ] Results header records core, governor, frequency, turbo. Every Linux number cites its commit
+- [ ] `perf record -g --user-callchains -e cycles:u` on `debian`. Perf cycles and TSC ticks are different units. Zen 1 `cache-misses` appears to count L2 misses: confirm in AMD's documentation and cite it before quoting the number
 
 ### Benchmarks
 
