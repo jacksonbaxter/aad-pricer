@@ -288,13 +288,15 @@ TEST(PerfCounters, LinuxCountersCountOrSayWhyNot) {
   const PerfCounterReport report = session.stop();
   EXPECT_EQ(report.source, "perf_event_open");
   EXPECT_NE(report.scope.find("user space only"), std::string::npos);
-  EXPECT_FALSE(report.note.empty());
   if (report.cycles && report.instructions) {
     EXPECT_GT(*report.instructions, 1'000'000U);
     EXPECT_GT(*report.cycles, 100'000U);
+    EXPECT_GT(report.time_running_ns, 0U);
+    EXPECT_GE(report.time_enabled_ns, report.time_running_ns);
   } else {
     EXPECT_FALSE(report.cycles.has_value());
     EXPECT_FALSE(report.instructions.has_value());
+    EXPECT_FALSE(report.note.empty());
   }
 }
 #endif
