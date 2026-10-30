@@ -60,3 +60,31 @@ aadp_bench(aadp_harness_selftest
 aadp_test(aadp_bench_unit
   SOURCES tests/bench/histogram_test.cpp tests/bench/options_test.cpp
   LINK aadp_bench_harness)
+
+aadp_tool(aadp_results_stamp
+  SOURCES tools/results_stamp/main.cpp
+  LINK aadp_results aadp_platform)
+
+aadp_tool(aadp_results_table
+  SOURCES tools/results_table/main.cpp
+  LINK aadp_results)
+
+aadp_test(aadp_bench_cli
+  SOURCES tests/bench/cli_test.cpp
+  LINK aadp_results
+  LABELS unit cli)
+
+if(TARGET aadp_bench_cli)
+  target_compile_definitions(aadp_bench_cli PRIVATE
+    AADP_TEST_SCRATCH="${_aadp_bench_scratch}/cli"
+    AADP_SELFTEST_BIN="$<TARGET_FILE:aadp_harness_selftest>"
+    AADP_STAMP_BIN="$<TARGET_FILE:aadp_results_stamp>"
+    AADP_TABLE_BIN="$<TARGET_FILE:aadp_results_table>")
+  add_dependencies(aadp_bench_cli aadp_harness_selftest aadp_results_stamp aadp_results_table)
+
+  add_test(NAME aadp_run_bench_script
+    COMMAND bash "${PROJECT_SOURCE_DIR}/tests/bench/run_bench_test.sh"
+      "$<TARGET_FILE:aadp_harness_selftest>" "${_aadp_bench_scratch}/script"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_run_bench_script PROPERTIES LABELS "unit;cli")
+endif()
