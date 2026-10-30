@@ -16,7 +16,7 @@ Each target states the number, one source with a URL that was opened, a verbatim
 | `DERIVED` | Arithmetic on sourced numbers, with the arithmetic shown. Not the source's own figure. |
 | `UNCONFIRMED` | No opened source confirms it. Where we looked is listed in section 12. |
 
-`Lead check` records whether the session lead opened the source personally, not only the subagent. `done` means the URL was re-downloaded and the quoted text was found (`verify/verify_sources.log`). `pending` means the subagent's evidence has not been re-opened yet.
+`Lead check` records that the session lead opened the source personally, not only the subagent. `done` means the URL was re-downloaded and the quoted text was found (`verify/verify_sources.log`, `verify/rerun/`), or, for scans and figures, that the value was read from the page image. Derived values marked `done` were recomputed from their scripts, with output in `verify/rerun/`.
 
 Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz counter. `linux-zen1` is the `debian` host, AMD Ryzen Embedded V1605B (Zen 1), pinned with `taskset -c 4`. Pinned headline numbers come from `linux-zen1`. Wall-time ratios are valid on `mac-m4max` if the results header says so. Metal numbers come only from `mac-m4max`. Published server-class figures will beat this embedded chip, and any such gap is reported with the hardware difference as the reason. No target is shrunk to hide it.
 
@@ -49,10 +49,10 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 
 ### AAD-4: arithmetic Asian: multiple 2.8
 
-- Source: Capriotti, "Fast Greeks by Algorithmic Differentiation", J. Computational Finance 14(3), 2011, section 5.1.2, printed p.33, Figure 9(a). http://luca-capriotti.net/pdfs/Finance/jcf_capriotti_press_web.pdf
+- Source: Capriotti, "Fast Greeks by Algorithmic Differentiation", J. Computational Finance 14(3), 2011, section 5.1.2, printed p.33, with Figure 9(a) on printed p.32, annotated ~2.8. http://luca-capriotti.net/pdfs/Finance/jcf_capriotti_press_web.pdf
 - Quote: "even for this more complicated example the extra overhead associated with the calculation of the risk is limited to approximately 180% of the cost of calculating the option value."
 - Source measured: hardware not stated | "best of" Asian, 12 observation dates, up to 20 assets, local vol, Euler; paths not stated | threads not stated | CPU ratio, delta and vega. This is a pathwise method with an adjoint payout, source-transformed by Tapenade. It is not a full adjoint of the path.
-- Class: `UNCONFIRMED` as a target for a full tape. It is the only published multiple found for an Asian on a local-vol path, and it is a partial adjoint, so holding a full tape to it is deliberately hard. The one published full-tape run on our workload gives 5.3 (`MC-2`, derived). Lead check: done for the quote; the Figure 9(a) annotation is pending.
+- Class: `UNCONFIRMED` as a target for a full tape. It is the only published multiple found for an Asian on a local-vol path, and it is a partial adjoint, so holding a full tape to it is deliberately hard. The one published full-tape run on our workload gives 5.3 (`MC-2`, derived). Lead check: done, quote and figure read from the page images.
 
 ### AAD-5: within 1.25 times a hand-written adjoint
 
@@ -73,7 +73,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Source: Capriotti, Jiang, Macrina, 2017, section 4.2, p.16. https://discovery.ucl.ac.uk/id/eprint/1523595/1/Macrina_AADMC_final.pdf
 - Quote: "the cost of bumping, for one-sided finite-difference estimators, is in general (1 + N) times the cost of as single valuation, where N is the number of model parameters"
 - Target: the measured bump time matches (1 + N), or 2N + 1 for central differences (derived), within measurement noise, and AAD's speedup is reported as bump time over AAD time at equal path count, common random numbers and the same optimisation level. Bump size is stated and chosen by experiment.
-- Class: `STRUCTURAL` formula. Lead check: pending.
+- Class: `STRUCTURAL` formula. Lead check: done.
 
 ### AAD-8: second-order Greeks: cost reported separately
 
@@ -82,7 +82,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 
 ### Theory, not targets
 
-The bound is on operation counts, not wall time. Griewank gives "the complexity ratio is exactly ω = 3" for polynomial multiplication counts (https://papers.baulab.info/papers/also/Griewank-2012.pdf, PDF p.8). Finance sources quote ω_A ∈ [3, 4] for value plus gradient. These are different models and different numerators, and the textbook that would map constants to models (Griewank & Walther) could not be opened, so no single number is "the" bound. Real tapes exceed it: dco/c++ "between 5 and 15" (https://support.nag.com/doc/techrep/pdf/tr3_14.pdf, section 4.1).
+The bound is on operation counts, not wall time. Griewank gives "the complexity ratio is exactly ω = 3" for polynomial multiplication counts (https://papers.baulab.info/papers/also/Griewank-2012.pdf, PDF p.8). Capriotti gives Cost[F & J] / Cost[F] ≤ ω_A m with ω_A ∈ [3, 4] (eq. 3.5, printed p.10, PDF p.8, read from the page image, citing Griewank 2000). These are different models and different numerators, and the textbook that would map constants to models (Griewank & Walther) could not be opened, so no single number is "the" bound. Real tapes exceed it: dco/c++ "between 5 and 15" (https://support.nag.com/doc/techrep/pdf/tr3_14.pdf, section 4.1).
 
 ## 2. Tape memory
 
@@ -91,7 +91,7 @@ Tape memory is the main practical limit of AAD, so every AAD multiple is reporte
 ### MEM-1: active type 16 bytes, statement at most 8 bytes, operand at most 12 bytes
 
 - Source: Adept at commit d0a7751, `Statement.h:28-29`, `Active.h:559-560`; CoDiPack at c25d5c1, `jacobianBaseTape.hpp:105-110`. https://github.com/rjhogan/Adept
-- Class: `STRUCTURAL`, read from source, not measured. Asserted with `static_assert`. Lead check: pending.
+- Class: `STRUCTURAL`, read from source, not measured. The 16 and 8 bytes assume Adept's default 8-byte `double`, 4-byte index and alignment padding. Asserted with `static_assert`. Lead check: done, lines read at those commits.
 
 ### MEM-2: 12k + 1 bytes per statement with linear indexing
 
@@ -99,12 +99,12 @@ Tape memory is the main practical limit of AAD, so every AAD multiple is reporte
 - Quote: "k ∗ 8 + k ∗ 4 + 1 = 12 ∗ k + 1 for each statement."
 - Class: `STRUCTURAL`. Preprint; the ACM TOMS 2019 version was not opened. Lead check: done.
 
-### MEM-3: peak tape at most 1.9 MB per path
+### MEM-3: peak memory at most 1.9 MB with a per-path tape, n = 10, and 7.1 MB at n = 222
 
-- Source: du Toit & Naumann, NAG TR 3/14, Table 1, PDF p.15. https://support.nag.com/doc/techrep/pdf/tr3_14.pdf
+- Source: Naumann & du Toit, NAG TR 3/14, Table 1, PDF p.15. https://support.nag.com/doc/techrep/pdf/tr3_14.pdf
 - Quote: "The naive approach (mc/a1s) without checkpointing yields infeasible memory requirements for gradient sizes n ≥ 22."
-- Source measured: reference computer with 3 GB, CPU not stated | European call, local vol, 10,000 paths, 360 steps, n = 10 | single thread by implication | peak memory, 1.9 MB per-path ensemble against 2 GB whole-simulation.
-- Class: `DIRECT`, vendor-affiliated. Lead check: pending for the table row.
+- Source measured: reference computer with 3 GB, CPU not stated | European call, local vol, 10,000 paths, 360 steps | single thread by implication | peak memory, table rows `10 ... 1.8s (2GB) 1.3s (1.9MB)` and `222 ... - (> 3GB) 24.4s (7.1MB)`, whole-simulation tape against per-path ensemble. The peak is for the run, not one tape, and it grows with gradient size n.
+- Class: `DIRECT`, vendor-affiliated. Compared at the same steps and a stated n. Lead check: done.
 
 ### MEM-4: per-path tape below 50 MB in the worst case
 
@@ -134,25 +134,26 @@ No source publishes paths/s for a path-dependent, CPU-only workload on Apple Sil
 
 - Source: NablaTensor blog, "How XAD and MatLogica performed". https://nablatensor.com/blog/xad-matlogica-aadc-monte-carlo-benchmark
 - Quote: "On the Asian, those figures are 1.044 and 0.197 million."
-- Source measured: x86-64, CPU unnamed, built `-O3 -DNDEBUG -mavx2 -mfma` | arithmetic Asian, 252 fixings, K=100, vol 20%, r 3%, T=1, seven spots, 300,000 paths, `std::mt19937_64`, double, cached draws | single thread | million paths/s, median of warm calls. Derived: 1.044e6 × 252 = 263 million path-steps/s.
-- Class: `CONTEXT`. Single-author blog with an interest in the result. Cached draws exclude RNG cost, so we run a cached-draw mode to compare like with like, as well as inline generation. Lead check: done.
+- Source measured: CPU and compiler unnamed in the post | arithmetic Asian, 252 fixings, K=100, vol 20%, r 3%, T=1, seven spots, 300,000 paths, double | single thread | million paths/s, median of warm calls. Derived: 1.044e6 × 252 = 263 million path-steps/s.
+- Build details are not in the post. They come from the author's harness, https://github.com/nablatensor-dev/nablatensor/tree/bench/the-same-ladder-in-cpp: `xad_CMakeLists.txt:11` has `-O3 -DNDEBUG -mavx2 -mfma` and `xad_xad_ladder.cpp:90` has `std::mt19937_64`. x86-64 is inferred from those flags.
+- Class: `CONTEXT`. Single-author blog with an interest in the result. The post's table is labelled "cached draws", but it does not say how the price-only figure got its draws. We run cached-draw and inline generation modes, so either reading can be compared. Lead check: done, post re-downloaded and the harness lines read in the subagent's copy.
 
 ### MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread
 
-- Source and quote: as `MC-1`. Derived multiple: 1.044 / 0.197 = 5.3. The post gives 0.127 million with fresh draws.
+- Source and quote: as `MC-1`. The five Greeks are "delta, strike sensitivity, vega, rho, and maturity sensitivity", one tape per path, cached draws. Derived multiple: 1.044 / 0.197 = 5.3, single thread. The post gives 0.127 million with fresh draws.
 - Class: `CONTEXT`. Lead check: done.
 
-### MC-3: same, eight threads: 1.245 million paths/s, stretch 5.41
+### MC-3: value and five Greeks, eight threads: 1.245 million paths/s, stretch 5.41
 
-- Source: same post, results table. Quote: "| XAD C++ tape, harness pool | 8 | 39.43 | 1.245" and "| MatLogica AADC | 8 | 130.76 | 5.41"
-- Class: `CONTEXT`. 5.41 is a recorded-graph JIT, not a tape, and runs through Python bindings. `mac-m4max` only, unpinned. Lead check: pending for these rows.
+- Source: same post, results table, "million paths per second for value and Greeks", cached draws. Quote: "XAD C++ tape, harness pool | 8 | 39.43 | 1.245" and "MatLogica AADC | 8 | 130.76 | 5.41" (HTML table cells, separators ours)
+- Class: `CONTEXT`. 5.41 is a recorded-graph JIT, not a tape, runs through Python bindings, and falls to 0.487 without the draw cache. `mac-m4max` only, unpinned. Lead check: done.
 
 ### MC-4: NEON European: 18.2 million paths/s, serial
 
 - Source: arXiv 2606.16059, Section 5.3, Table 1. https://arxiv.org/pdf/2606.16059
 - Quote: "Mojo serial (1 option)             54.8 ms"
 - Source measured: "a commodity Apple Silicon laptop", chip not named, "NEON SIMD width 2 for double precision" | "Monte Carlo call, 1M paths", steps, RNG and transform not stated | serial | best of five. Derived: 1e6 / 0.0548 s = 18.2 million paths/s.
-- Class: `CONTEXT`. The only Apple Silicon figure found. Preprint, European. Lead check: pending.
+- Class: `CONTEXT`. The only Apple Silicon figure found. Preprint, European. It is a floor, not a bar: the same table has NumPy at 16.6 ms and "Mojo parallelize (per option)" at 11.9 ms, so the serial row was not the fastest on that machine. Lead check: done.
 
 ## 4. Random numbers
 
@@ -174,9 +175,9 @@ Decision recorded in `NOTES.md`: Philox4x32-10 is the reference stream on scalar
 
 ### RNG-3: inverse normal: accuracy 6.0e-16 maximum relative error
 
-- Source: Wichura, Algorithm AS 241, Table 3, PDF p.4. https://csg.sph.umich.edu/abecasis/gas_power_calculator/algorithm-as-241-the-percentage-points-of-the-normal-distribution.pdf
-- Source measured: PPND16 on IBM 3081 | 50,000 values uniform on a logit scale | relative error, maximum 6.0e-16 central, 5.8e-16 tails.
-- Class: `DIRECT` for accuracy. Scanned, the value was read from a page image. Lead check: pending.
+- Source: Wichura, Algorithm AS 241, Table 3, printed p.479, PDF p.4. https://csg.sph.umich.edu/abecasis/gas_power_calculator/algorithm-as-241-the-percentage-points-of-the-normal-distribution.pdf
+- Source measured: PPND16 on IBM 3081, base 16, 14 digits | 50,000 values uniform on a logit scale, p constrained to (1e-70, 1 − 1e-15) | relative error, maximum 6.0e-16 for |p − 0.5| ≤ 0.425, 5.8e-16 beyond.
+- Class: `DIRECT` for accuracy, on non-IEEE arithmetic. We measure relative error on IEEE double against a high-precision reference, because the same polynomials can land differently there. Scanned, so there is no quotable text. Lead check: done, read from the page image.
 
 ### RNG-4: inverse normal speed: 47 cycles scalar, stretch 9 cycles vector
 
@@ -195,9 +196,11 @@ Decision recorded in `NOTES.md`: Philox4x32-10 is the reference stream on scalar
 
 ### SIMD-2: scalar and SIMD agree
 
-- Target: same stream, same results within a stated bound. Scalar is the one-lane instantiation of the same kernels, so per-path results are bit-identical within one build. Against a libm-based scalar check, relative price difference at most 2e-13 at 252 steps (derived: 252 steps × 4 ULP × 1.1e-16 = 1.1e-13, using Highway's stated 4 ULP `Log` bound, then rounded up).
+- Target: same stream, same results within a stated bound. Scalar is the one-lane instantiation (`FixedTag<double, 1>`) of the same kernels under the same static target, so per-path results are bit-identical between lane widths within one build.
+- A separate `HWY_SCALAR` build or a libm-based scalar check may differ in fused multiply-add and in kernel rounding. For those, relative price difference at most 3e-13 at 252 steps (derived: 252 steps × 5 ULP × 2.22e-16 = 2.8e-13, first order, from 4 ULP for Highway's `Log` plus 1 ULP for libm, then rounded up). This assumes one log or exp call per step. If kernels make more calls, the bound is recomputed before measuring.
 - Across architectures, results are not expected to be bit-identical, because fused multiply-add status differs by target.
-- Class: `DERIVED`, stated before measuring. Lead check: pending.
+- Source for the 4 ULP: `hwy/contrib/math/math-inl.h:2358`, "Max Error: ULP = 4", on the `Log` block. https://raw.githubusercontent.com/google/highway/master/hwy/contrib/math/math-inl.h
+- Class: `DERIVED`, stated before measuring. Lead check: done, line read in the subagent's copy, arithmetic redone.
 
 ## 6. Metal GPU
 
@@ -210,17 +213,18 @@ Metal is an additional backend, float32 only, on `mac-m4max`. AAD does not run o
 
 ### GPU-2: float32 error far below Monte Carlo standard error
 
-- Source: du Toit, Naumann et al., NAG, section 6.2, PDF p.10. https://support.nag.com/doc/techrep/pdf/adjoint-algorithmic-differentiation-of-gpu-accelerated-app.pdf
+- Source: du Toit, Lotz, Naumann, "Adjoint Algorithmic Differentiation of a GPU Accelerated Application", section 6.2, PDF p.10. https://support.nag.com/doc/techrep/pdf/adjoint-algorithmic-differentiation-of-gpu-accelerated-app.pdf
 - Quote: "the standard deviation of the Monte Carlo estimate was orders of magnitude greater than the threshold of single precision accuracy (roughly 10−6)."
+- Source measured: NVIDIA K20X | FX basket call on 10 rates, 10-factor local vol, 10,000 paths, 360 Euler steps | GPU | price comparison.
 - Target: |float32 − double| on identical uniforms at most 0.01 × SE. The factor is our reading of "orders of magnitude" and is stated before measuring.
-- Class: `CONTEXT`, different model and hardware. Lead check: pending.
+- Class: `CONTEXT`, different model and hardware. Lead check: done.
 
 ### GPU-3: paired relative difference about 1e-7
 
 - Source: NAG, section 5.4, PDF p.7, Table 3 p.8. https://support.nag.com/numeric/gpus/local-volatility-fx-basket-option-on-cpu-and-gpu.pdf
 - Quote: "one would expect the relative error between the two results to be around 1e-7. If the error is significantly worse than this, it may suggest that the calculation is unstable in single precision, or that there are significant accumulations of round off errors"
-- Published reference 4.08e-7, a reference and not a pass mark. Barrier prices may land above 1e-7 with no fault, because survival products and near-barrier steps carry larger rounding error (derived in the Metal evidence).
-- Class: `CONTEXT`. Lead check: pending.
+- Published reference: Table 3 rows `Dp 0.5892391192` and `Sp 0.5892388787`, overall relative error 4.08e-7, a reference and not a pass mark. Barrier prices may land above 1e-7 with no fault, because survival products and near-barrier steps carry larger rounding error (derived in the Metal evidence).
+- Class: `CONTEXT`. Lead check: done.
 
 ## 7. QuantLib comparison
 
@@ -267,8 +271,8 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 
 ### SVI-5: calendar check by dense numerical crossing test
 
-- Target: flags any crossing of total variance between adjacent slices, tested on a constructed crossing pair. A necessary-and-sufficient condition for two raw SVI slices is not published: Martini & Mingone leave "the question of the characterization of no Calendar Spread arbitrage" open. The check is numerical, and we say so.
-- Class: `STRUCTURAL`. Lead check: pending.
+- Target: flags any crossing of total variance between adjacent slices, tested on a constructed crossing pair. A necessary-and-sufficient condition for two raw SVI slices was not found. Martini & Mingone list as still pending "the question of the characterization of no Calendar Spread arbitrage for two SVI slices corresponding to different maturities." (https://arxiv.org/pdf/2005.03340, conclusion). The check is numerical, and we say so.
+- Class: `STRUCTURAL`. Lead check: done.
 
 ### SVI-6: fit error at most 4 bp of forward
 
@@ -304,9 +308,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 
 ## 9. Reference values for oracles
 
-Published value first, then the value we test against. A derived value comes from deterministic quadrature in the research scripts and is used only where it is more precise than, and consistent with, the publication.
-
-`pending` values have not yet been re-run by the session lead.
+Published value first, then the value we test against. A derived value comes from deterministic quadrature in the research scripts and is used only where it is more precise than, and consistent with, the publication. Phase 2 commits a quadrature tool to the repo, so these values do not stay outside it.
 
 | ID | Contract | Published | Source | Reference used | b (reference uncertainty) | Lead check |
 |---|---|---|---|---|---|---|
@@ -314,17 +316,23 @@ Published value first, then the value we test against. A derived value comes fro
 | O2 | BS rho, call K=75, S=72, q=0, r=.09, T=1, σ=.19 | 38.7325 | as O1 | closed form | 0 | done |
 | O3 | BS theta, put K=405, S=430, q=.05, r=.07, T=1/12, σ=.20 | -31.1924 per year | as O1 | closed form | 0 | done |
 | O4 | Geometric Asian, 10 fixings, S=K=100, q=.03, r=.06, σ=.20, T=1 | 5.3425606635 | QuantLib `test-suite/asianoptions.cpp:429` | closed form | 0 | done |
-| O5 | Discrete down-and-out call, S0=K=100, H=95, σ=.30, r=.10, T=.2, m=50 | 4.907 | Broadie, Glasserman, Kou 1997, Table 2.1. https://www.columbia.edu/~sk75/mfBGK.pdf | 4.9067890354 (derived) | 0.001 published | pending |
-| O6 | Delta of O5 | 0.798 | same, Table 2.4 | 0.7978141916 (derived) | 0.001 | pending |
-| O7 | Continuous down-and-out, same parameters, H=95 | 4.398 | same, Table 2.1 | closed form | 0 | done |
+| O5 | Discrete down-and-out call, S0=K=100, H=95, σ=.30, r=.10, T=.2, m=50 | 4.907 | Broadie, Glasserman, Kou 1997, Table 2.1. https://www.columbia.edu/~sk75/mfBGK.pdf | 4.9067890354 (derived) | 1e-9 | done |
+| O6 | Delta of O5 | 0.798 | same, Table 2.4 | 0.7978141916 (derived) | 1e-9 | done |
+| O7 | Continuous down-and-out, same parameters, H=95 | 4.398 | same, Table 2.1 | closed form, 4.3975025600 | 0 | done |
 | O8 | Discrete down-and-out, m=4, H=95, σ=.6, T=.2 | 9.49052 | BGK 1999, Table 1. https://business.columbia.edu/sites/default/files-efs/pubfiles/1851/connecting.pdf | 9.4905 | 1e-4 | done |
-| O9 | Discrete arithmetic Asian, n=50, K=100, S0=100, r=.0367, σ=.17801, T=1 | 4.93736 | Fusai & Meucci, Table 6. https://openaccess.city.ac.uk/id/eprint/6061/1/Pricing%20Discretely%20monitored%20asian%20Fusai_Meucci_JBF.pdf | 4.937202814482 (derived) | see note | pending |
-| O10 | Continuous arithmetic Asian, Linetsky case 5 | 0.2464156905 | Linetsky 2004, Table 3. http://users.iems.northwestern.edu/~linetsky/asian.pdf | limit check only | 1e-10 | pending |
-| O11 | Two-fixing arithmetic Asian put, identity with a vanilla | 1.393981 (derived) | exact identity | closed form | 0 | pending |
+| O9 | Discrete arithmetic Asian, n=50, K=100, S0=100, r=.0367, σ=.17801, T=1, 51 points including S0 | 4.93736 | Fusai & Meucci, Table 6. https://openaccess.city.ac.uk/id/eprint/6061/1/Pricing%20Discretely%20monitored%20asian%20Fusai_Meucci_JBF.pdf | 4.937202814482 (derived) | 1e-9 | done |
+| O10 | Continuous arithmetic Asian call, Linetsky case 5: r=.05, σ=.50, T=1, S0=K=2.0, q=0 | 0.2464156905 | Linetsky 2004, Table 3 p.866, read from the page image. http://users.iems.northwestern.edu/~linetsky/asian.pdf | limit check only | 1e-10 | done |
+| O11 | Two-fixing arithmetic Asian put, first fixing at t=0, S=90, K=87, q=.06, r=.025, σ=.13, T=11/12 | 1.3942835683, wrong | QuantLib `test-suite/asianoptions.cpp`. Exact: half a vanilla put with K=84 | 1.3939809367 (derived) | 0 | done |
 
-Note on O9: the published table does not reproduce at its printed σ. All geometric rows match closed form only at σ ≈ 0.1780163. The derived value is at the stated σ = 0.17801. Note on O10: a continuous average, reachable by a time-stepped simulator only in the limit.
+Note on O5 and O6: two independently written quadratures agree. `refvalues.py` gives 4.9067890354 and 0.7978141916 at 1,408 and at 3,060 nodes, and `crosscheck.py` gives 4.906789 and 0.79782. All five H rows round to BGK's values at 0.001 except H=99, where 2.3363868958 sits 6.1e-4 from the published 2.337, inside BGK's stated accuracy. So b comes from the quadrature, not from the publication's 0.001, which would blunt the test.
 
-Do not use QuantLib's ten-digit Levy values (`asianoptions.cpp:683-775`). The two-fixing case listed as 1.3942835683 is exactly 1.393981 (derived), a difference of 3.0e-4 hidden by a tolerance of 2e-2.
+Note on O9: the published table does not reproduce at its printed σ. All geometric rows match closed form only at σ ≈ 0.1780163, and the n=12 and n=50 arithmetic rows then come within 2e-5, so the table used an unrounded σ. The derived value is at the stated σ = 0.17801. Recursion and brute-force quadrature agree to 2.5e-14 at n=3.
+
+Note on O10: a continuous average, reachable by a time-stepped simulator only in the limit.
+
+Do not use QuantLib's ten-digit Levy values (`asianoptions.cpp:683-775`). The two-fixing case is off by 3.0e-4, which a tolerance of 2e-2 hides. Printed digits are not correct digits. O11 keeps the identity as a free test.
+
+Published table values and derived values recomputed by the lead: `verify/rerun/barrier.out`, `asian.out`, `refcheck.out`, `crosscheck.out`, `naive.out`, `critical.out`.
 
 ## 10. Tolerance rule
 
@@ -347,7 +355,13 @@ Real, free and redistributable. Licence text and full reasoning are in `NOTES.md
 - Data: TAIFEX TXO daily report, trade date 2024-11-15, data.gov.tw dataset 11320, Open Government Data License v1.0.
 - Fixed file: `https://web.archive.org/web/20241117234312id_/https://www.taifex.com.tw/data_gov/taifex_open_data.asp?data_name=DailyMarketReportOpt`, 465,662 bytes, sha256 `fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e`. Lead check: done, hash matched on a fresh download.
 - Usable surface: three expiries only, 2024-11-20, 2024-11-27, 2024-12-18 (5, 12, 33 days). Longer expiries are exchange-set marks, not market prices. Any figure that includes them is labelled so.
-- Input arbitrage, before any fit (subagent's count, lead re-run pending): 102 of 480 OTM settlement butterflies are non-convex, 45 beyond half a tick. Fit violations are always reported beside these.
+- Input arbitrage, before any fit. Fit violations are always reported beside these. Lead check: done, the profile was re-run from the fresh download, and `arb.csv`, `parity.csv` and `profile_recommended.txt` are byte-identical to the subagent's (`verify/rerun/chain/`).
+
+| Set | Butterfly triples | Non-convex | Beyond half a tick |
+|---|---|---|---|
+| Calibration set, three expiries | 168 | 51 | 23 |
+| OTM settlements, all expiries | 480 | 102 | 45 |
+| All settlements, all expiries | 984 | 200 | 55 |
 
 ## 12. Unconfirmed targets, and where we looked
 
