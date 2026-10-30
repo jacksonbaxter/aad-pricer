@@ -19,7 +19,26 @@ aadp_test(aadp_data_tests
     tests/data/taifex_options_test.cpp
   LINK aadp_data)
 
+# Skips, visibly, when data/ has no capture. See scripts/fetch_data.sh.
+aadp_test(aadp_data_realdata_tests
+  SOURCES tests/data/realdata_test.cpp
+  LINK aadp_data
+  LABELS realdata)
+
+aadp_tool(chain_profile
+  SOURCES tools/chain_profile/main.cpp
+  LINK aadp_data)
+
+aadp_test(aadp_chain_profile_tests
+  SOURCES tests/data/chain_profile_test.cpp
+  LINK aadp_data)
+
 if(AADP_BUILD_TESTS)
+  add_dependencies(aadp_chain_profile_tests chain_profile)
+  target_compile_definitions(aadp_chain_profile_tests PRIVATE
+    AADP_CHAIN_PROFILE_PATH="$<TARGET_FILE:chain_profile>"
+    AADP_DATA_TEST_SCRATCH="${PROJECT_BINARY_DIR}/data_test_scratch/chain_profile")
+
   add_test(NAME data_fetch_script
     COMMAND bash "${PROJECT_SOURCE_DIR}/tests/data/fetch_data_test.sh"
             "${PROJECT_BINARY_DIR}/data_test_scratch/fetch_data"
