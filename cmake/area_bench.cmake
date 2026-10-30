@@ -42,3 +42,21 @@ if(TARGET aadp_results_unit)
   target_compile_definitions(aadp_results_unit PRIVATE
     AADP_TEST_SCRATCH="${_aadp_bench_scratch}/results")
 endif()
+
+# Tests use the histogram gate, so this library exists whenever either kind is on.
+if(AADP_BUILD_TESTS OR AADP_BUILD_BENCHMARKS)
+  aadp_library(aadp_bench_harness
+    SOURCES bench/harness.cpp bench/latency.cpp
+    LINK aadp_platform aadp_results benchmark::benchmark
+         hdr_histogram::hdr_histogram_core_static)
+  target_include_directories(aadp_bench_harness PUBLIC "${PROJECT_SOURCE_DIR}/bench")
+endif()
+
+aadp_bench(aadp_harness_selftest
+  SOURCES bench/harness_selftest.cpp
+  LINK aadp_bench_harness
+  CUSTOM_MAIN)
+
+aadp_test(aadp_bench_unit
+  SOURCES tests/bench/histogram_test.cpp tests/bench/options_test.cpp
+  LINK aadp_bench_harness)
