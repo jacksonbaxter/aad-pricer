@@ -1,4 +1,15 @@
 # Targets for the data area. See cmake/AadpTargets.cmake for the helpers.
+aadp_library(aadp_data
+  SOURCES
+    src/data/cp950.cpp
+    src/data/decimal.cpp)
+
+aadp_test(aadp_data_tests
+  SOURCES
+    tests/data/cp950_test.cpp
+    tests/data/decimal_test.cpp
+  LINK aadp_data)
+
 if(AADP_BUILD_TESTS)
   add_test(NAME data_fetch_script
     COMMAND bash "${PROJECT_SOURCE_DIR}/tests/data/fetch_data_test.sh"
