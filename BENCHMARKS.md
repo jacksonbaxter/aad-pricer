@@ -233,12 +233,26 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 ### QL-1: speed
 
 - Target: faster than QuantLib's tuned configuration in paths/s and in RMSE² × time, on every strictly like-for-like row. The size of the gap is not a target.
-- Class: `UNCONFIRMED`. No published speed figure for QuantLib's Monte Carlo on Asian or barrier options, and no published custom-code ratio, was found on quantlib.org, Implementing QuantLib, its docs, or the XAD pages. `quantlib-benchmark` reports tasks/s and has no Asian or barrier Monte Carlo case.
+- Class: `UNCONFIRMED` as a number. This target is relative and comes from our own run. No published figure states the full setup. The nearest are `QL-3` and `QL-4`, and neither supports a ratio. `quantlib-benchmark` reports tasks/s and has no Asian or barrier Monte Carlo case.
 
 ### QL-2: accuracy
 
 - Target: on each row, distance from the stated high-precision reference (section 9) within the tolerance rule (section 10). Distance between the two engines is never the measure.
 - Class: `STRUCTURAL`.
+
+### QL-3: QuantLib Asian Monte Carlo: about 115,400 samples/s
+
+- Source: AMD Xilinx Vitis Libraries 2019.2, MCAsianEngines, Table 3. https://xilinx.github.io/Vitis_Libraries/quantitative_finance/2019.2/guide_L2/engines/MCAsianEngines.html
+- Quote: "Table 3 shows the performance improvement in comparison with CPU-based Quantlib result (Tolerance = 0.02)", with rows `SampNum 25951 33642 46805` and `CPU Execution time (us) 224911 310856 601068`.
+- Source measured: hardware, compiler, QuantLib version, steps and threads not stated | McAsianAPEngine column, 25,951 samples | CPU time in µs. Derived: 25,951 / 0.224911 s = 115,383 samples/s.
+- Class: `CONTEXT`. A vendor baseline for its own FPGA. The CPU and FPGA prices in that column differ by 0.093 (1.98441 against 1.89144), above the page's own tolerance, so the two sides may not be pricing the same thing. Lead check: done.
+
+### QL-4: QuantLib European Monte Carlo, one step: about 2.33 million paths/s
+
+- Source: AMD Xilinx Vitis Libraries 2020.1, MCEuropeanEngine benchmark. https://xilinx.github.io/Vitis_Libraries/quantitative_finance/2020.1/guide_L2/benchmarks/MCEuropeanEngine.html
+- Quote: "Baseline is Quantlib, a Widely Used C++ Open Source Library, running on platform with 2 Intel(R) Xeon(R) CPU E5-2690 v4 @3.20GHz, 8 cores per processor and 2 threads per core.", with `Baseline 20.155ms` and "workload 1 steps, 47000 paths".
+- Source measured: 2 × Xeon E5-2690 v4, compiler, QuantLib version and thread count for the run not stated | put K=40, S=36, r 6%, vol 20%, dividend 0, T=1, 1 step, 47,000 paths, tolerance 0.02 | execution time, what it includes not stated. Derived: 47,000 / 0.020155 s = 2.33 million paths/s.
+- Class: `CONTEXT`. Vendor baseline. One step says little about cost per path on an Asian or barrier. The page's prose says 488X and 1954X while its table says 380X and 1521X, and the table's own times give the latter. Lead check: done.
 
 ## 8. SVI
 
@@ -306,6 +320,14 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Context: ratios of 1.18 to 1.83 are for exact-fit rates calibrations (Henrard, https://quant.opengamma.io/Adjoint-Algorithmic-Differentiation-OpenGamma.pdf, Table 2).
 - Class: `UNCONFIRMED`. No published cost through SVI was found.
 
+### SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice
+
+- Source: Zhang, Lin, Lu, arXiv 2603.27501v1, Table 3 p.24, metric p.23. https://arxiv.org/pdf/2603.27501
+- Quote: "Suppose that at a given timestamp there are n available strike prices for implied volatility calculation, then the RMSE is defined as" √((1/n) Σ (σ_model − σ_market)²), then "the RMSE values obtained at each timestamp are aggregated, and the average RMSE is computed for each model across different underlyings and contracts." Table 3 row: "SVI 7.314×10−3 8.898×10−3 5.992×10−3 1.328×10−3" (IO202504 first).
+- Source measured: CSI 300 index options, contract IO202504, 2025-01-20 to 2025-04-17, about 88 to 1 days to expiry, 5-minute calibrations | raw SVI per slice in total variance, with a > 0, tighter than usual | in-sample, equal-weighted across strikes, no strike filter stated | mean of per-timestamp slice RMSEs. The table has no unit, so 0.73 vol points assumes vol as a decimal (derived).
+- Target: our per-slice RMSE by this formula, unweighted, for each of the three slices, beside the fitted objective, which is weighted. A mean over a contract's life is not a slice at 5 days, and short-dated slices are harder, so a miss at 5 days is reported with that reason. It says nothing about error against bid-ask.
+- Class: `CONTEXT`. Preprint, on data from a database provided by one author's institution, and a different market. A quartic polynomial and a cubic spline beat SVI on the three near contracts of the same table, so 0.73 reflects this paper's calibration and is not a floor for raw SVI. Lead check: done, table read from the page image.
+
 ## 9. Reference values for oracles
 
 Published value first, then the value we test against. A derived value comes from deterministic quadrature in the research scripts and is used only where it is more precise than, and consistent with, the publication. Phase 2 commits a quadrature tool to the repo, so these values do not stay outside it.
@@ -365,17 +387,23 @@ Real, free and redistributable. Licence text and full reasoning are in `NOTES.md
 
 ## 12. Unconfirmed targets, and where we looked
 
-The WebSearch budget ran out during research. Some absences below are therefore results of bounded searches, not proof that nothing exists. Each entry says which.
+The WebSearch budget ran out during research. A later narrow pass gave `GPU-1`, `QL-1` and the raw SVI error their first real search, at 8 searches and 6 opened pages each. Every absence below is the result of a bounded search, not proof that nothing exists.
 
 | Target | Looked in | Search state |
 |---|---|---|
 | `AAD-4` Asian full-tape multiple | Capriotti 2011, Capriotti & Giles 2024 review, Giles reports, Savine, XAD pages, NAG reports | Searched before the budget ended |
 | `AAD-8` second-order timing | Capriotti, Joshi & Yang (abstract), Giles, Savine, Huge & Savine | Searched before the budget ended |
 | `SIMD-1` NEON Monte Carlo speedup | Intel, AMD, Arm and Apple pages, Mojo preprint | Partly searched; Intel and AMD pages 404 |
-| `GPU-1` Metal Monte Carlo throughput | Apple docs and talks, philipturner/metal-benchmarks, Random123, GPU Gems | **Not searched.** Budget was gone; direct URLs only |
-| `QL-1` QuantLib speed | quantlib.org, docs, Implementing QuantLib, `Docs/`, XAD pages, FinanceBench paper | **Not searched.** Bounded walk only |
+| `GPU-1` Metal Monte Carlo throughput | Apple docs and talks, philipturner/metal-benchmarks, Random123, GPU Gems, plus the narrow pass | Searched. No option-pricing figure with a named chip. See below |
+| `QL-1` QuantLib speed | quantlib.org, docs, Implementing QuantLib, `Docs/`, XAD pages, FinanceBench paper, plus the narrow pass | Searched. `QL-3` and `QL-4` are vendor baselines. No barrier figure, and none states a full build |
 | `SVI-10` adjoint through calibration | Henrard, Christianson, Giles talks | Searched before the budget ended |
-| Raw SVI fit error on a real chain, with its error defined | Zeliade, Aurell, Corbetta, Martini-Mingone, Ackerer, Pasquazzi, FPI-SVI | The last search was refused |
+| Raw SVI error at 5 to 35 days, or against bid-ask | Zeliade, Aurell, Corbetta, Martini-Mingone, Ackerer, Pasquazzi, FPI-SVI, plus the narrow pass | Searched. `SVI-11` is the nearest. A UPF thesis on raw SVI for SPY and QQQ was behind a bot wall and is unread |
+
+What the narrow pass found for `GPU-1`, neither of which is a target:
+
+- Liu, arXiv 2401.11455v2, Table VII: "Fresh fuel 4.5E3 3.7E3 1.5E3", particles/s/Watt, on an M2 Max with Metal. https://arxiv.org/pdf/2401.11455. Neutron transport, not finance, and an efficiency: no wattage or wall time is given, so particles/s cannot be derived. Lead check: done.
+- montepath, an alpha open-source project, `benchmarks/release-results.json`: `mc_metal_european_call_native`, `"per_iteration_us": 1450.0830000000003`, 3 iterations. https://raw.githubusercontent.com/IndarKarhana/montepath/main/benchmarks/release-results.json. No chip, step count or precision, and the file does not define its work unit. Lead check: done.
+- The EPJ SNA+MC 2024 paper is the best unread lead for M3 Max figures. It was behind a CAPTCHA, which was not bypassed.
 
 ## 13. Numbers deliberately not used
 
