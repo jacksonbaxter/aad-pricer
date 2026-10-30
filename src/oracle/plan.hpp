@@ -51,6 +51,7 @@ struct PlanHeader {
   std::uint32_t batches = 0;
   double critical = 0.0;
   double ceiling_factor = 0.0;
+  double fd_ceiling_factor = 0.0;
   double fd_b_factor = 0.0;
   std::uint64_t pilot_seed = 0;
   std::uint64_t measured_seed = 0;

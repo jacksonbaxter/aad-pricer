@@ -122,6 +122,18 @@ TEST(RunPlan, AllowanceDifferentFromTheReferenceFileIsASkipAndFails) {
   EXPECT_TRUE(Has(o.text, "SKIPPED: b differs")) << o.text;
 }
 
+// Found while choosing h: both rows printed the second row's numbers. A row must never be judged
+// against a step it did not ask for.
+TEST(RunPlan, TwoStepsForOneGreekOnOnePathSetAreASkipAndFail) {
+  const std::string rows = "d1," + kInstrument + ",vega,FD:0.0001,64000,64,9,1,1e-5,run\n" + "d2," +
+                           kInstrument + ",vega,FD:0.0002,64000,64,9,1,1e-5,run\n";
+  const Outcome o = Execute(Header(2, Critical(2)) + rows, References(TrueValue()));
+  EXPECT_EQ(ExitCode(o.summary), 1);
+  EXPECT_EQ(o.summary.skipped, 1U);
+  EXPECT_TRUE(Has(o.text, "d2                 SKIPPED: another row uses a different step"))
+      << o.text;
+}
+
 TEST(RunPlan, AwaitingRowsCountInKAndAreNotRun) {
   const std::string awaiting =
       "z,svi-surface:arithmetic,d_a_d05,phase3,-,64,-,-,-,awaiting-phase3\n";

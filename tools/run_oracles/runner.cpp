@@ -144,7 +144,13 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
     group.batches = row.batches;
     group.seed = std::get<3>(key);
     if (const auto h = FiniteDifferenceStep(row.reference)) {
-      group.fd_h[GreekIndex(*DecodeGreek(row.greek)) - 1] = *h;
+      // One simulation holds one step per Greek, so a second step would silently replace it.
+      double& slot = group.fd_h[GreekIndex(*DecodeGreek(row.greek)) - 1];
+      if (slot != 0.0 && slot != *h) {
+        problems[i] = "another row uses a different step for this Greek on these paths";
+        continue;
+      }
+      slot = *h;
     }
   }
   std::map<GroupKey, Table> results;
