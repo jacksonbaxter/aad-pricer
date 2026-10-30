@@ -205,6 +205,7 @@ constexpr std::uint64_t kBarrierPaths = std::uint64_t{1} << 22;
 
 constexpr const char* kFdSpot = "FD:0.01";
 constexpr const char* kFdRate = "FD:0.0001";
+constexpr const char* kFdAsianTheta = "FD:0.001";
 
 struct GreekReference {
   const char* greek;
@@ -245,13 +246,16 @@ std::vector<PlanTemplateRow> PlanTemplate() {
   AddRows(rows, "VC", cat::kVanillaO3, kDefaultPaths, AllClosedForm("VC", "theta", "O3"));
   AddRows(rows, "GA", cat::kGeometricO4, kDefaultPaths, AllClosedForm("GA", "value", "O4"));
 
+  // At an ATM Asian dA/dT nearly cancels on a path at the kink, so h = 1e-4 leaves about 12
+  // crossings in the whole run and an unstable SE. 1e-3 is the smallest step with SE stable across
+  // four seeds (max/min 1.30, limit 1.62).
   AddRows(rows, "AA50K100", cat::kArithmeticO9, kBarrierPaths,
           {{"value", "O9"},
            {"delta", kFdSpot},
            {"vega", kFdRate},
            {"rho", kFdRate},
            {"divrho", kFdRate},
-           {"theta", kFdRate}});
+           {"theta", kFdAsianTheta}});
   AddRows(rows, "AA50K090", cat::kArithmeticN50K90, kBarrierPaths, {{"value", "AA50K090"}});
   AddRows(rows, "AA50K110", cat::kArithmeticN50K110, kBarrierPaths, {{"value", "AA50K110"}});
   AddRows(rows, "AA12K090", cat::kArithmeticN12K90, kDefaultPaths, {{"value", "AA12K090"}});
@@ -366,7 +370,12 @@ std::string EncodePilot(const std::vector<PilotRow>& rows, const PilotConfig& co
   std::string out =
       "# Pilot results, from aadp_run_oracles pilot. Seed differs from any measured seed.\n"
       "# Rule that turns these into the plan, stated with the results it produced:\n"
-      "#   se_ceiling = ceiling_factor * SE_pilot * sqrt(N_pilot / N), ceiling_factor = 1.65\n"
+      "#   se_ceiling = factor * SE_pilot * sqrt(N_pilot / N), rounded up to 3 figures\n"
+      "#   factor on reference rows = 1.65: batch means are Gaussian, so two SEs from 64 batches\n"
+      "#   have a ratio bounded by exp(critical * sqrt(2 / 126)) = 1.62 at the Bonferroni level\n"
+      "#   factor on FD rows = 3: paired differences are mostly zero with spikes where a bump\n"
+      "#   straddles the kink, so SE is less stable. sd of log(SE ratio) between pilot seeds 1729\n"
+      "#   and 12 was 0.25, not the Gaussian 0.126, and exp(critical * 0.25) = 2.9\n"
       "#   b, reference rows = the reference's own b\n"
       "#   b, FD rows = fd_b_factor * (|mean(FD(2h) - FD(h))| + critical * SE of that mean) / 3,\n"
       "#   fd_b_factor = 2, where FD(2h) - FD(h) = 3 c h^2 for central differences\n"
@@ -454,6 +463,7 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
   h.batches = pilot.config.batches;
   h.critical = CriticalValue(h.alpha_f, rows.size(), h.batches);
   h.ceiling_factor = kCeilingFactor;
+  h.fd_ceiling_factor = kFdCeilingFactor;
   h.fd_b_factor = kFdBFactor;
   h.pilot_seed = pilot.config.seed;
   h.measured_seed = measured_seed;
@@ -462,9 +472,12 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
       " emit-plan from references/pilot_results.csv, and committed before the first measured run.",
       "# K is the row count, Phase 3 rows included. Never raise a ceiling or b after seeing a"
       " measured result.",
-      "# se_ceiling = ceiling_factor * SE_pilot * sqrt(N_pilot / N), rounded up to 3 figures."
-      " ceiling_factor 1.65: exp(critical * sqrt(2 / (2 * 63))) = 1.62 is the Bonferroni bound"
-      " on the ratio of two SEs from 64 batches, rounded up.",
+      "# se_ceiling = factor * SE_pilot * sqrt(N_pilot / N), rounded up to 3 figures."
+      " ceiling_factor 1.65 on reference rows: exp(critical * sqrt(2 / 126)) = 1.62 is the"
+      " Bonferroni bound on the ratio of two SEs from 64 Gaussian batch means.",
+      "# fd_ceiling_factor 3 on FD rows: paired differences are mostly zero with spikes at the"
+      " kink. sd of log(SE ratio) between pilot seeds was 0.25 against the Gaussian 0.126, and"
+      " exp(critical * 0.25) = 2.9.",
       "# b, reference rows: the reference's own b. b, FD rows: fd_b_factor * (|mean(FD(2h) -"
       " FD(h))| + critical * SE of that mean) / 3, from the pilot's two-h check."
       " fd_b_factor 2: higher-order terms and one more pilot's worth of noise.",
@@ -488,10 +501,11 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
       const PilotRow& result = *found->second;
       out.paths = row.paths;
       out.seed = measured_seed;
+      const bool finite_difference = FiniteDifferenceStep(row.reference).has_value();
       out.se_ceiling = RoundUpToThreeFigures(
-          kCeilingFactor * result.se *
+          (finite_difference ? kFdCeilingFactor : kCeilingFactor) * result.se *
           std::sqrt(static_cast<double>(result.paths) / static_cast<double>(row.paths)));
-      if (FiniteDifferenceStep(row.reference)) {
+      if (finite_difference) {
         const double truncation =
             (std::fabs(result.two_h_mean) + h.critical * result.two_h_se) / 3.0;
         out.b = RoundUpToThreeFigures(kFdBFactor * truncation);

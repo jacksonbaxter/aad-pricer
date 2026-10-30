@@ -54,6 +54,8 @@ std::optional<std::string> ApplyDirective(std::string_view text, PlanHeader& hea
     ok = set_double(header.critical);
   } else if (key == "ceiling_factor") {
     ok = set_double(header.ceiling_factor);
+  } else if (key == "fd_ceiling_factor") {
+    ok = set_double(header.fd_ceiling_factor);
   } else if (key == "fd_b_factor") {
     ok = set_double(header.fd_b_factor);
   } else if (key == "pilot_seed") {
@@ -68,9 +70,10 @@ std::optional<std::string> ApplyDirective(std::string_view text, PlanHeader& hea
 }
 
 bool HeaderIsComplete(const std::set<std::string, std::less<>>& seen) {
-  constexpr std::array<std::string_view, 8> kRequired = {
-      "K",          "alpha_F",      "B", "critical", "ceiling_factor", "fd_b_factor",
-      "pilot_seed", "measured_seed"};
+  constexpr std::array<std::string_view, 9> kRequired = {
+      "K",           "alpha_F",        "B",
+      "critical",    "ceiling_factor", "fd_ceiling_factor",
+      "fd_b_factor", "pilot_seed",     "measured_seed"};
   return std::ranges::all_of(kRequired, [&](std::string_view key) { return seen.contains(key); });
 }
 
@@ -197,6 +200,7 @@ std::string EncodePlan(const Plan& plan) {
   directive("B", std::to_string(h.batches));
   directive("critical", FormatDouble(h.critical));
   directive("ceiling_factor", FormatDouble(h.ceiling_factor));
+  directive("fd_ceiling_factor", FormatDouble(h.fd_ceiling_factor));
   directive("fd_b_factor", FormatDouble(h.fd_b_factor));
   directive("pilot_seed", std::to_string(h.pilot_seed));
   directive("measured_seed", std::to_string(h.measured_seed));

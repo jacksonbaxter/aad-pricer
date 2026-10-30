@@ -17,6 +17,7 @@ namespace aadp::oracle_runner {
 
 // Stated in the plan header. See BuildPlan.
 inline constexpr double kCeilingFactor = 1.65;
+inline constexpr double kFdCeilingFactor = 3.0;
 inline constexpr double kFdBFactor = 2.0;
 
 struct RunOptions {
@@ -89,7 +90,8 @@ struct PilotFile {
 bool DecodePilot(std::string_view text, PilotFile& out);
 
 // Applies the stated rule:
-//   se_ceiling = ceiling_factor * SE_pilot * sqrt(N_pilot / N)
+//   se_ceiling = factor * SE_pilot * sqrt(N_pilot / N), ceiling_factor on reference rows and
+//   fd_ceiling_factor on FD rows
 //   b, reference rows = the reference's own b
 //   b, FD rows = fd_b_factor * (|mean(FD(2h) - FD(h))| + t * SE of that mean) / 3
 // Central differences have truncation c h^2, so FD(2h) - FD(h) = 3 c h^2 and a third of it is the

@@ -3,6 +3,7 @@
 #! B=4
 #! critical=4.1
 #! ceiling_factor=1.65
+#! fd_ceiling_factor=3
 #! fd_b_factor=2
 #! pilot_seed=1
 #! measured_seed=2

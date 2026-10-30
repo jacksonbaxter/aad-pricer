@@ -35,7 +35,8 @@ ReferenceTable References(double value) {
 std::string Header(std::size_t k, double critical) {
   return "#! K=" + std::to_string(k) +
          "\n#! alpha_F=0.01\n#! B=64\n#! critical=" + decode::FormatDouble(critical) +
-         "\n#! ceiling_factor=1.65\n#! fd_b_factor=2\n#! pilot_seed=7\n#! measured_seed=9\n"
+         "\n#! ceiling_factor=1.65\n#! fd_ceiling_factor=3\n#! fd_b_factor=2\n#! pilot_seed=7\n#! "
+         "measured_seed=9\n"
          "id,instrument,greek,reference,N,B,seed,se_ceiling,b,status\n";
 }
 
@@ -209,7 +210,7 @@ TEST(PlanTemplate, CoversEveryRequiredComparison) {
   EXPECT_TRUE(has("GA.value", "value", "O4"));
   EXPECT_TRUE(has("GA.vega", "vega", "GA.vega"));
   EXPECT_TRUE(has("AA50K100.value", "value", "O9"));
-  EXPECT_TRUE(has("AA50K100.theta", "theta", "FD:0.0001"));
+  EXPECT_TRUE(has("AA50K100.theta", "theta", "FD:0.001"));
   EXPECT_TRUE(has("DB095.value", "value", "O5"));
   EXPECT_TRUE(has("DB095.delta", "delta", "O6"));
   EXPECT_TRUE(has("DB095.divrho", "divrho", "FD:0.0001"));
@@ -254,6 +255,8 @@ TEST(BuildPlan, AppliesTheStatedRule) {
   EXPECT_NEAR(plan.rows[0].se_ceiling, 0.033, 1e-12);
   EXPECT_EQ(plan.rows[0].b, 0.0);
   EXPECT_EQ(plan.rows[0].seed, 9U);
+  // 3 * 0.01 * sqrt(1600 / 6400) = 0.015: FD rows take their own factor.
+  EXPECT_NEAR(plan.rows[1].se_ceiling, 0.015, 1e-12);
   const double truncation = (3e-5 + plan.header.critical * 1e-6) / 3.0;
   EXPECT_GE(plan.rows[1].b, 2.0 * truncation);
   EXPECT_LE(plan.rows[1].b, 2.0 * truncation * 1.01);

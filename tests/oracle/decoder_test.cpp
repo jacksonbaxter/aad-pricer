@@ -18,7 +18,7 @@ const std::string kInstrument =
 std::string Directives(int k = 2) {
   return "#! K=" + std::to_string(k) +
          "\n#! alpha_F=0.01\n#! B=4\n#! critical=4.1\n#! ceiling_factor=1.65\n"
-         "#! fd_b_factor=2\n#! pilot_seed=1\n#! measured_seed=2\n";
+         "#! fd_ceiling_factor=3\n#! fd_b_factor=2\n#! pilot_seed=1\n#! measured_seed=2\n";
 }
 
 const std::string kColumns = "id,instrument,greek,reference,N,B,seed,se_ceiling,b,status\n";
