@@ -1,0 +1,32 @@
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+----------------------------------------------------------------------------------------------------
+
+Third-party build dependencies. None is vendored: each is a pinned archive fetched into the build
+tree, and each keeps its own licence. Versions and hashes are in cmake/AadpDependencies.cmake.
+
+  GoogleTest, Google Benchmark, HdrHistogram_c, Highway.
+  Boost and QuantLib, only with AAD_PRICER_BUILD_QUANTLIB_COMPARE.
+
+Let's Be Rational is not in the build yet. When it joins, its notice must be preserved here.

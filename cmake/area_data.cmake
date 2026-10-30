@@ -1,6 +1,7 @@
 # Targets for the data area. See cmake/AadpTargets.cmake for the helpers.
 aadp_library(aadp_data
   SOURCES
+    src/data/attribution.cpp
     src/data/cp950.cpp
     src/data/decimal.cpp
     src/data/taifex_csv.cpp
@@ -9,6 +10,7 @@ aadp_library(aadp_data
 
 aadp_test(aadp_data_tests
   SOURCES
+    tests/data/attribution_test.cpp
     tests/data/cp950_test.cpp
     tests/data/decimal_test.cpp
     tests/data/taifex_futures_test.cpp
