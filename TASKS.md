@@ -45,7 +45,8 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
 - [x] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
 - [ ] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build
-- [ ] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON. Add a lane-width test matrix
+- [x] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON: `linux-avx2`, `linux-avx512-build` and the `macos-15` jobs. AVX-512 is build-only. See `NOTES.md`: the workflow has never executed on GitHub
+- [ ] Lane-width test matrix in CI, one job for each lane width that can run. It needs the SIMD kernels, so it waits on Phase 3
 - [x] Any code that depends on lane count takes it from the type, never a constant
 - [x] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
 - [x] Every reported benchmark runs through `.orchestrator/measure.sh` on the Mac, or `~/quant-projects/bin/measure.sh` on `debian`. Its load line goes in the results header. A results writer refuses to mark a run as reportable without it
@@ -91,10 +92,19 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### Checks and CI
 
-- [ ] ASan and UBSan with `-fno-sanitize-recover=all`. TSan for all concurrent code, including concurrent tapes
-- [ ] `.clang-tidy` checked in, clang-format pinned
-- [ ] `.github/workflows/ci.yml`: two compilers, Linux and macOS, Debug and Release, tape layout options, Metal off on non-Apple, QuantLib optional
-- [ ] Validate CI locally with actionlint from repo tooling, and by running its commands. Record plainly that it has never executed on GitHub
+- [x] ASan and UBSan with `-fno-sanitize-recover=all`. TSan for all concurrent code that exists so far, on the Mac. Concurrent tapes are checked in Phase 3, under the multi-threaded tape item
+- [x] `.clang-tidy` checked in, clang-format pinned. `scripts/run_clang_tidy.sh release fuzz` reports 78 units clean on the Mac and on Linux
+- [x] `.github/workflows/ci.yml`: two compilers, Linux and macOS, Debug and Release, QuantLib optional
+- [ ] CI compile options for tape layout, and Metal off on non-Apple. Neither is in `ci.yml`. Both depend on that work, so they belong in Phase 3, with the tape and Metal items
+- [x] Validate CI locally with actionlint from repo tooling, and by running its commands on the Mac and Linux. The Linux sanitizer and fuzz-smoke jobs have not run anywhere. Recorded plainly in `NOTES.md` that it has never executed on GitHub
+- [x] `scripts/compare_measured.py` compares the measured plan with `references/measured_results.csv`. All 90 rows match on the Mac, Linux clang, g++ 14.2 and AVX2
+- [x] The two tests that depended on the caller's nice value are fixed (9b746bb)
+- [x] Linux run at 89dbee8: clang release and debug, g++ 14.2 release and debug, AVX2 release, 364 of 364 each, 0 skipped. AVX-512 built, not run. Linux clang-tidy clean
+- [x] libstdc++ path for the data area compiled and run: g++ 14.2 release and debug at 89dbee8, with the real-file tests run, not skipped
+- [x] `scripts/scan_repo.py` scans tracked files for private content and raw data rows. Clean on the Mac and Linux
+- [x] `scripts/verify_commits.sh` builds and tests each commit of a range from an export, on the `release` preset. Proved on three commits, 2490bd0 to 556a6c8
+- [ ] Full-range `verify_commits` run
+- [x] README for this phase: status, build, checks, data, CI. The results table waits for Phase 4
 - [ ] `scripts/check.sh` runs every check
 
 ### Data

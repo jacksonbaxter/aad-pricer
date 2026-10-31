@@ -96,6 +96,87 @@ Benchmarks and hosts:
 - On `debian` the raw TSC moves in steps of 20 ticks and the smallest observed delta was 40, which is about 20 ns.
 - Google Benchmark's JSON context carries the host name and the absolute executable path, and `measure.sh` lines carry `host=`. The stamp tool drops these and refuses to write if a home path, IP address or the hostname survives. Fuzzing found two leaks in that code before it was finished.
 
+### Phase 2 checks, CI and interruptions
+
+Interruptions:
+- The session was killed at about 18:25 by the low-memory reaper during the clang-tidy step. The cause of the shortage is not established: builds were running in three repos on one Mac. 104 modified files survived, with 5 new ones, and were finished rather than redone: a1be512, 2490bd0.
+- Rules since then: at most 6 jobs across a session, and one tidy or sanitizer build at a time.
+- Later a usage limit stopped a subagent mid-run. A run it had started on the Linux host with `setsid nohup` finished on its own.
+
+Nice value:
+- `HarnessSelftest.HeaderRecordsTheNiceValue` and `aadp_run_bench_script` failed when ctest ran as a zsh background job, because `BG_NICE` sets nice 5. `process_nice` read 12 under `nice -n 7`, where the test expected 7.
+- The stamp's refusal was right and one test was wrong. Fixed in 9b746bb. The first test now adds the caller's nice to the increment, up to the ceiling, which is 20 on macOS and 19 on Linux. The bench script test now fails early in one clear line when niced.
+
+What a Mac run cannot see:
+- A Mac clang-tidy run cannot see `__linux__` branches, and tidy on the Mac removed includes those branches needed.
+- a1be512 also fails to compile under the `fuzz` preset: `fuzz_results_json.cpp` was missing `<algorithm>`. 2490bd0 fixed it. `verify_commits.sh` builds only `release`, so it would not catch this.
+- 9208e3a, 729ad02, db978e5 and 248c63c fix what the Linux and g++ builds found. 4fd86ac and 89dbee8 fix the two test failures below.
+- So the per-commit proof on the Mac does not cover Linux from a1be512 up to 4fd86ac. g++ first built and passed at 248c63c, and every Linux build first passed at 89dbee8.
+
+Which commits were built where, as far as the logs show:
+
+| Commit | Mac | Linux |
+|---|---|---|
+| a1be512 | `release`, 362 of 362, just before commit. `fuzz` does not compile | Not built |
+| 2490bd0, 556a6c8 | `verify_commits`, `release`, 362 of 362 | Not built |
+| 9b746bb | `verify_commits`, plus `debug`, `asan-ubsan` and `tsan`, 362 of 362. `fuzz` built | Not built |
+| 6480ebf | `check.sh` passed | All four release builds failed |
+| 729ad02 | | Clang `release` and AVX2 363 of 364. g++ failed to build |
+| 4fd86ac | | g++ failed to build |
+| 248c63c | `check.sh` passed | g++ 364 of 364, AVX2 364 of 364, clang `release` 363 of 364 |
+| 89dbee8 | | Every build passed, below |
+
+Blank means no complete log. Commits not listed, such as 9208e3a and db978e5, have none on either host. The Mac runs 362 tests where Linux runs 364.
+
+`misc-include-cleaner.IgnoreHeaders`, for the reasons stated in `.clang-tidy`:
+- `benchmark/.*`: `benchmark.h` is that library's public header, whatever it splits into behind it.
+- `cmath` and `__math/.*`: libc++ keeps `<cmath>` in private `__math` headers the check does not map back.
+- `sys/_types/.*`, `_time.h`, `_stdio.h`, `sys/fcntl.h`: macOS internals behind POSIX headers, which do not exist on Linux.
+- `linux-gnu/bits/.*` and glibc's `stdio.h`, `stdlib.h`, `time.h`: the same on glibc, its private `bits/` headers and the POSIX parts of the C headers behind `<cstdio>`, `<cstdlib>` and `<ctime>`.
+
+Deliberate behaviour changes in a1be512:
+- `run_git` starts git with `posix_spawnp` rather than `popen` through a shell.
+- Tool mains catch exceptions and exit with a status, rather than `std::exit` deep inside.
+- A plan row that the decoder proved valid but cannot be read again throws, where it was undefined behaviour to dereference.
+- Harness batch times round with `llround`, which has no error just below a half.
+- `fuzz_results_file` now asserts that a refusal states its reason.
+
+Test faults the Linux run found:
+- Two chain profile tests read real data by accident. They named only `--options`, so the tool also opened the default futures path. Fixed in 4fd86ac.
+- Parallel ctest processes shared a scratch file, so `SetUp` in one truncated the file another was reading. Seen once on the Linux host at `-j2`. Fixed by a scratch directory per test (89dbee8).
+
+Linux run at 89dbee8:
+- Clang release, g++ 14.2 release, AVX2 release, clang debug and g++ debug: 364 of 364 each, 0 skipped.
+- AVX-512 built, not run, because the CPU lacks it.
+- Linux clang-tidy: 78 units clean.
+- The plan's 90 rows match on the Mac, Linux clang, g++ 14.2 and AVX2, at the printed precision: 10 decimals, and 5 significant figures for SE. That is not a bit-identical claim. Those are release builds. Debug builds run a reduced smoke plan, so they have nothing to compare.
+- The AVX2 match says nothing about SIMD lanes: Highway is used only for the target report and a smoke test, and no kernel uses it yet.
+- Sanitizers and fuzzing ran on the Mac only, by rule. The Linux sanitizer and fuzz-smoke CI jobs have not been run anywhere.
+
+CI:
+- `.github/workflows/ci.yml` has never executed on GitHub.
+- actionlint ran without shellcheck and pyflakes, so it linted no shell in `run:` steps.
+- No gcc on macOS, because `release-gcc` is Linux only.
+- CI uses `g++-14`, newer than the image's default of 13. The Linux host ran 14.2.
+- One named allowed skip, `PerfCounters.EachRegionReportsItsOwnTimes`. Counters depend on the runner's kernel settings, and the test skips itself without them. It passed on the Linux host.
+- `scripts/run_tests.py` is the shared test runner for `check.sh` and CI, so both judge a run the same way. ctest alone does not fail on a skip. The runner counts a test that did not run, a disabled test and a passing test that prints a `SKIP ` line as skipped, and a skip fails the run unless a regex names it. For fuzzing it finds targets through ctest, and it stops if a file in `fuzz/` has no target.
+
+Repo scan exceptions, from `scripts/scan_repo.py`. Each is counted in the output, so none is silent:
+- Home path: a path component has to follow, a path inside a URL is not a hit, and `SYNTHETIC_HOME_PATHS` lists exact file and text pairs.
+- IPv4, by value: the three RFC 5737 documentation ranges, 127.0.0.0/8 and 0.0.0.0. A dotted run of five or more parts, or an octet above 255, is not an address.
+- IPv4, by context: text right after "section", "version" or "v" reads as a numbering. Never for private, shared or link-local ranges, which always fail.
+- IPv4, by file: `SYNTHETIC_ADDRESSES` lists exact file and address pairs.
+- User and host: a generic name, or one under three characters, is not searched for, and the output says so.
+- Private note: the one `.gitignore` line that keeps the local settings file out, and any mention of the research folder.
+- Private note, by digest: the notes file at the repo root, only while its sha256 matches a pin. Any edit fires its findings again until someone reviews it and pins the new digest. Every other kind still applies to it. Whether that file should be tracked at all is the user's open decision.
+- TAIFEX: the first line of each file is not a data row, and a row with a changed field is not caught. With no `data/` this check cannot run, and the output says so.
+
+Peak memory:
+- The plan: about 4.3 MB footprint.
+- Fuzzers: 470 to 695 MB, on the three that were measured.
+- The largest tidy process: 1.13 GB.
+- No job in this repo holds a whole trading day: the chain file is 465 KB.
+
 ## Option chain
 
 ### Result
