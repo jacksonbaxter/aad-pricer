@@ -667,6 +667,54 @@
       "mutated_exit": 1,
       "configure": ["release", "fuzz"],
       "output_files": ["build/logs/tidy/*.log"]
+    },
+    {
+      "id": "fuzz-smoke",
+      "kind": "fuzz",
+      "covers": "aadp_smoke_fuzz, scaffold target with no parser",
+      "bug": "The Highway smoke sum adds zeros instead of ones, so the lane count comes out as zero. The target ignores its input bytes and asserts only this sum, so any non-empty input shows it.",
+      "edits": [
+        {
+          "file": "src/smoke/smoke.cpp",
+          "find": "return hn::ReduceSum(d, hn::Set(d, 1.0));",
+          "replace": "return hn::ReduceSum(d, hn::Set(d, 0.0));"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_smoke_fuzz"],
+      "command": [
+        "{build}/bin/aadp_smoke_fuzz", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-smoke/",
+        "{build}/fault-fuzz/fuzz-smoke/corpus"
+      ],
+      "detect": "test",
+      "reason": "in LLVMFuzzerTestOneInput \\S*smoke_fuzz\\.cpp:8",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-smoke/*", "build/fuzz/fault-fuzz/fuzz-smoke/corpus/*"]
+    },
+    {
+      "id": "fuzz-cp950",
+      "kind": "fuzz",
+      "covers": "fuzz_cp950",
+      "bug": "An off-by-one at the top of the first trail-byte range accepts 0x7F, the DEL control byte, as the second byte of a pair.",
+      "edits": [
+        {
+          "file": "src/data/cp950.hpp",
+          "find": "return (byte >= 0x40 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xFE);",
+          "replace": "return (byte >= 0x40 && byte <= 0x7F) || (byte >= 0xA1 && byte <= 0xFE);"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_cp950"],
+      "command": [
+        "{build}/bin/fuzz_cp950", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-cp950/",
+        "{build}/fault-fuzz/fuzz-cp950/corpus", "fuzz/fuzz_cp950_corpus"
+      ],
+      "detect": "test",
+      "reason": "property failed: (units\\.has_value\\(\\) == reference\\.accepted|error\\.position == reference\\.stopped_at)",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-cp950/*", "build/fuzz/fault-fuzz/fuzz-cp950/corpus/*"]
     }
   ]
 }
