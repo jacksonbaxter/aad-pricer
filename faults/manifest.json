@@ -257,6 +257,139 @@
       "detect": "test",
       "reason": "Value of: BitIdentical\\(one, RunStub\\(c, kPaths, 2\\)\\)\\n  Actual: false\\nExpected: true",
       "timeout_s": 120
+    },
+    {
+      "id": "check-format",
+      "kind": "check",
+      "covers": "clang-format, scripts/check_format.sh",
+      "bug": "A declaration has two spaces after its type.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "  std::int64_t mantissa = 0;\n",
+          "replace": "  std::int64_t  mantissa = 0;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check_format.sh"],
+      "detect": "test",
+      "reason": "src/data/decimal\\.cpp:\\d+:\\d+: error: code should be clang-formatted",
+      "timeout_s": 120,
+      "mutated_exit": 1,
+      "git": true
+    },
+    {
+      "id": "check-data-checksum",
+      "kind": "check",
+      "covers": "data checksum, scripts/fetch_data.sh --verify",
+      "bug": "One digit of the pinned options hash differs from the capture on disk, the same state as a damaged capture.",
+      "edits": [
+        {
+          "file": "scripts/data_manifest.txt",
+          "find": "fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e",
+          "replace": "fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1f"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/fetch_data.sh", "--verify"],
+      "detect": "test",
+      "reason": "checksum mismatch: \\S*/data/DailyMarketReportOpt\\.csv",
+      "timeout_s": 60,
+      "mutated_exit": 2,
+      "data": true
+    },
+    {
+      "id": "check-data-missing-capture",
+      "kind": "check",
+      "covers": "missing capture, scripts/fetch_data.sh",
+      "bug": "The futures capture is gone: a file not yet on disk whose pinned URL no longer serves it. A file:// URL stands in for the archive, as in tests/data/fetch_data_test.sh, so nothing touches the network.",
+      "edits": [
+        {
+          "file": "scripts/data_manifest.txt",
+          "find": "DailyMarketReportFut.csv https://web.archive.org/web/20241117151236id_/https://www.taifex.com.tw/data_gov/taifex_open_data.asp?data_name=DailyMarketReportFut",
+          "replace": "CaptureThatIsGone.csv file:///nonexistent/aadp-fault/gone.csv"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/fetch_data.sh"],
+      "detect": "test",
+      "reason": "(?s)capture unavailable: CaptureThatIsGone\\.csv\\n.*Report this to the user\\.\\n.*Do not substitute any other source\\. There is no fallback URL\\.",
+      "timeout_s": 120,
+      "mutated_exit": 3,
+      "data": true
+    },
+    {
+      "id": "check-actionlint",
+      "kind": "check",
+      "covers": "actionlint on .github/workflows/ci.yml",
+      "bug": "The build job's runner comes from a matrix key that no entry defines.",
+      "edits": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "find": "    runs-on: ${{ matrix.os }}\n",
+          "replace": "    runs-on: ${{ matrix.oss }}\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["build/tools/actionlint", "-no-color", ".github/workflows/ci.yml"],
+      "detect": "test",
+      "reason": "ci\\.yml:\\d+:\\d+: property \"oss\" is not defined in object type",
+      "timeout_s": 120,
+      "mutated_exit": 1,
+      "git": true
+    },
+    {
+      "id": "check-script-keeps-going",
+      "kind": "check",
+      "covers": "scripts/check.sh: a failed step, then the steps after it",
+      "bug": "A misformatted line fails the format step, which must not stop data-verify, a later step, from running.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "  std::int64_t mantissa = 0;\n",
+          "replace": "  std::int64_t  mantissa = 0;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "format,data-verify"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+format\\s.*^PASS\\s+data-verify\\s.*^check: FAIL$",
+      "timeout_s": 120,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "git": true,
+      "data": true
+    },
+    {
+      "id": "check-repo-scan",
+      "kind": "check",
+      "covers": "scripts/scan_repo.py",
+      "bug": "A test fixture picks up a home-directory path and a whole row of the raw options file. The row is read from data/ at run time, so it is in no tracked file, and the path is escaped here so that this manifest does not fail the scan.",
+      "edits": [
+        {
+          "file": "tests/data/taifex_fixture.hpp",
+          "append": "// Row copied by hand from \u002fUsers\u002fsomeone\u002fDownloads\u002foptions.csv\n"
+        },
+        {
+          "file": "tests/data/taifex_fixture.hpp",
+          "append_line_of": "data/DailyMarketReportOpt.csv",
+          "line": 100
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "scripts/scan_repo.py"],
+      "detect": "test",
+      "reason": "(?s)^tests/data/taifex_fixture\\.hpp:13\\d: home-path$.*^tests/data/taifex_fixture\\.hpp:13\\d: taifex-row$",
+      "timeout_s": 120,
+      "mutated_exit": 1,
+      "git": true,
+      "data": true
     }
   ]
 }
