@@ -52,7 +52,9 @@ void write_file(const fs::path& path, const std::string& bytes) {
 class ChainProfile : public ::testing::Test {
  protected:
   void SetUp() override {
-    dir_ = AADP_DATA_TEST_SCRATCH;
+    // ctest runs each test as its own process, in parallel, so no two can share these files.
+    dir_ = fs::path(AADP_DATA_TEST_SCRATCH) /
+           ::testing::UnitTest::GetInstance()->current_test_info()->name();
     fs::create_directories(dir_);
     auto option = testing::option_fields();
     option[testing::kOptContract] = "TXO";
