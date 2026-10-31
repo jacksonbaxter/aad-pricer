@@ -1,0 +1,262 @@
+{
+  "schema": 1,
+  "faults": [
+    {
+      "id": "oracle-black-scholes",
+      "kind": "oracle",
+      "covers": "Black-Scholes closed form",
+      "bug": "The strike leg of the value is discounted at the dividend yield instead of the rate, which no row with r = q can see.",
+      "edits": [
+        {
+          "file": "src/oracle/black_scholes.hpp",
+          "find": "g.value = phi * (m.spot * df_q * cdf1 - strike * df_r * cdf2);",
+          "replace": "g.value = phi * (m.spot * df_q * cdf1 - strike * df_q * cdf2);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_closed_form_test"],
+      "command": ["{build}/bin/aadp_closed_form_test", "--gtest_filter=BlackScholes.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BlackScholes\\.PutCallParity",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-barrier",
+      "kind": "oracle",
+      "covers": "barrier closed form",
+      "bug": "The second power in the rebate term F has the sign of lambda flipped, so only knock-outs with a rebate are wrong.",
+      "edits": [
+        {
+          "file": "src/oracle/barrier.hpp",
+          "find": "pow(barrier_ratio, mu - lambda) * normal_cdf(eta * (z - 2.0 * lambda * sd))",
+          "replace": "pow(barrier_ratio, mu + lambda) * normal_cdf(eta * (z - 2.0 * lambda * sd))"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_closed_form_test"],
+      "command": ["{build}/bin/aadp_closed_form_test", "--gtest_filter=BarrierClosedForm.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BarrierClosedForm\\.HaugTable",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-geometric-asian",
+      "kind": "oracle",
+      "covers": "geometric Asian closed form",
+      "bug": "An off-by-one in the sum of squares, 2n - 1 for 2n + 1, shrinks the variance and vanishes as n grows.",
+      "edits": [
+        {
+          "file": "src/oracle/geometric_asian.hpp",
+          "find": "(n + 1.0) * (2.0 * n + 1.0) / 6.0",
+          "replace": "(n + 1.0) * (2.0 * n - 1.0) / 6.0"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_closed_form_test"],
+      "command": ["{build}/bin/aadp_closed_form_test", "--gtest_filter=GeometricAsian.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] GeometricAsian\\.O4TenFixings",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-quadrature",
+      "kind": "oracle",
+      "covers": "quadrature references, tools/quadrature",
+      "bug": "The log step shared by both barrier recursions drops the dividend yield from the drift, so Gauss-Legendre and Simpson still agree with each other.",
+      "edits": [
+        {
+          "file": "tools/quadrature/quadrature.cpp",
+          "find": "    drift = (in.r - in.q - 0.5 * in.sigma * in.sigma) * dt;\n    sd = in.sigma * std::sqrt(dt);\n    discount = std::exp(-in.r * dt);",
+          "replace": "    drift = (in.r - 0.5 * in.sigma * in.sigma) * dt;\n    sd = in.sigma * std::sqrt(dt);\n    discount = std::exp(-in.r * dt);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature_test"],
+      "command": ["{build}/bin/aadp_quadrature_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DiscreteBarrier\\.DividendEntersTheDrift",
+      "timeout_s": 300
+    },
+    {
+      "id": "oracle-finite-difference",
+      "kind": "oracle",
+      "covers": "finite differences, src/oracle/finite_difference.hpp",
+      "bug": "The sign that makes theta -dV/dT is dropped, so the difference returns +dV/dT.",
+      "edits": [
+        {
+          "file": "src/oracle/finite_difference.hpp",
+          "find": "return greek == Greek::kTheta ? -slope : slope;",
+          "replace": "return slope;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_kernels_test"],
+      "command": ["{build}/bin/aadp_kernels_test", "--gtest_filter=FiniteDifference.*"],
+      "detect": "test",
+      "reason": "(?s)  theta\\n    Which is: \\S+\\n  -dvdt\\n.*\\[  FAILED  \\] FiniteDifference\\.RecoversSlopeOfAKnownPayoffWithTheta",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-naive-barrier",
+      "kind": "oracle",
+      "covers": "naive barrier failing test",
+      "bug": "The product switch sends the hard indicator to the one-step survival kernel, so the naive delta quietly becomes correct.",
+      "edits": [
+        {
+          "file": "src/mc/gbm_kernels.hpp",
+          "find": "return gbm_detail::DownOutHard(c, m, uniforms);",
+          "replace": "return gbm_detail::DownOutOneStep(c, m, uniforms);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_naive_barrier_test"],
+      "command": ["{build}/bin/aadp_naive_barrier_test", "--gtest_filter=NaiveBarrier.RejectedAtEveryHForTheKnownReason"],
+      "detect": "test",
+      "reason": "Value of: against_truth\\.passed\\(\\)\\n  Actual: true\\nExpected: false",
+      "timeout_s": 600
+    },
+    {
+      "id": "oracle-tolerance",
+      "kind": "oracle",
+      "covers": "tolerance rule, condition 1",
+      "bug": "The absolute value is dropped from the distance, so an estimate any distance below the reference passes.",
+      "edits": [
+        {
+          "file": "src/oracle/tolerance.hpp",
+          "find": "result.within_bound = std::fabs(stats.mean - reference) <= result.bound;",
+          "replace": "result.within_bound = stats.mean - reference <= result.bound;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_tolerance_test"],
+      "command": ["{build}/bin/aadp_tolerance_test", "--gtest_filter=Tolerance.*"],
+      "detect": "test",
+      "reason": "(?s)r\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"distance\"\\n.*\\[  FAILED  \\] Tolerance\\.ConditionOneFailsAlone",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-se-ceiling",
+      "kind": "oracle",
+      "covers": "SE ceiling, condition 2",
+      "bug": "The ceiling is multiplied by the critical value, as the bound is, so a run over four times too noisy passes.",
+      "edits": [
+        {
+          "file": "src/oracle/tolerance.hpp",
+          "find": "result.within_ceiling = stats.standard_error <= limits.se_ceiling;",
+          "replace": "result.within_ceiling = stats.standard_error <= limits.critical * limits.se_ceiling;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_tolerance_test"],
+      "command": ["{build}/bin/aadp_tolerance_test", "--gtest_filter=Tolerance.*"],
+      "detect": "test",
+      "reason": "(?s)under\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"se-ceiling\"\\n.*\\[  FAILED  \\] Tolerance\\.CeilingIsOnTheSeItselfAndItIsInclusive",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-k-count",
+      "kind": "oracle",
+      "covers": "K count, references/comparison_plan.csv",
+      "bug": "The plan declares K = 146 for 147 rows, which would loosen the critical value of every comparison if it were believed.",
+      "edits": [
+        {
+          "file": "references/comparison_plan.csv",
+          "find": "#! K=147\n",
+          "replace": "#! K=146\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_runner_test"],
+      "command": ["{build}/bin/aadp_runner_test", "--gtest_filter=CommittedPlan.*"],
+      "detect": "test",
+      "reason": "header\\.declared_k\\n    Which is: 146\\n  rows\\.size\\(\\)\\n    Which is: 147",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-reference-drift",
+      "kind": "oracle",
+      "covers": "reference drift, references/oracle_values.csv",
+      "bug": "One reference value moves by one unit in its last printed digit, the smallest edit the file can hold.",
+      "edits": [
+        {
+          "file": "references/oracle_values.csv",
+          "find": ",0.594628659730,0e+00,",
+          "replace": ",0.594628659731,0e+00,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature"],
+      "command": ["{build}/bin/aadp_quadrature", "--check", "references/oracle_values.csv"],
+      "detect": "test",
+      "reason": "references/oracle_values\\.csv differs from the regenerated values",
+      "timeout_s": 300
+    },
+    {
+      "id": "oracle-philox",
+      "kind": "oracle",
+      "covers": "Philox4x32-10 known answers",
+      "bug": "One bit of the second Weyl constant is wrong, which the compile-time known answer refuses to build.",
+      "edits": [
+        {
+          "file": "src/rng/philox.hpp",
+          "find": "kWeyl1 = 0xBB67AE85U;",
+          "replace": "kWeyl1 = 0xBB67AE84U;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_philox_test"],
+      "command": ["{build}/bin/aadp_philox_test"],
+      "detect": "build",
+      "reason": "philox_test\\.cpp:\\d+:\\d+: error: static assertion failed",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-inverse-normal",
+      "kind": "oracle",
+      "covers": "inverse normal, AS241",
+      "bug": "One digit in the twelfth place of a middle-region coefficient is mistyped.",
+      "edits": [
+        {
+          "file": "src/rng/normal.hpp",
+          "find": "3.64784832476320460504e0",
+          "replace": "3.64784832476420460504e0"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_inverse_normal_test", "--gtest_filter=InverseNormal.MatchesErfcReferenceInEveryRegion"],
+      "detect": "test",
+      "reason": "Expected: \\(worst\\) <= \\(kTolerance\\), actual: \\S+ vs \\S+\\nmiddle 1\\.4e-11 to 0\\.075",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-n-thread",
+      "kind": "oracle",
+      "covers": "N-thread invariance, src/mc/batch_runner.hpp",
+      "bug": "The block size scales with the thread count, which changes the order of the floating-point sum and so only the low bits of each batch mean.",
+      "edits": [
+        {
+          "file": "src/mc/batch_runner.hpp",
+          "find": "  const std::uint64_t blocks_per_batch = (paths_per_batch + kPathsPerBlock - 1) / kPathsPerBlock;",
+          "replace": "  const std::uint64_t block_paths = kPathsPerBlock * config.threads;\n  const std::uint64_t blocks_per_batch = (paths_per_batch + block_paths - 1) / block_paths;"
+        },
+        {
+          "file": "src/mc/batch_runner.hpp",
+          "find": "batch * paths_per_batch + (block % blocks_per_batch) * kPathsPerBlock;",
+          "replace": "batch * paths_per_batch + (block % blocks_per_batch) * block_paths;"
+        },
+        {
+          "file": "src/mc/batch_runner.hpp",
+          "find": "std::min(first + kPathsPerBlock, (batch + 1) * paths_per_batch);",
+          "replace": "std::min(first + block_paths, (batch + 1) * paths_per_batch);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_thread_invariance_test"],
+      "command": ["{build}/bin/aadp_thread_invariance_test", "--gtest_filter=ThreadInvariance.OneTwoAndFourThreadsAreBitIdentical"],
+      "detect": "test",
+      "reason": "Value of: BitIdentical\\(one, RunStub\\(c, kPaths, 2\\)\\)\\n  Actual: false\\nExpected: true",
+      "timeout_s": 120
+    }
+  ]
+}
