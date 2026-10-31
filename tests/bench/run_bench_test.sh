@@ -9,6 +9,16 @@ script=scripts/run_bench.sh
 fast=(--batches=100 --repetitions=2 --warmup-ms=1 --gb-warmup-s=0.001)
 failures=0
 
+# The stamp refuses a niced run, and rightly, so the reportable path below cannot pass from a niced
+# shell. zsh runs background jobs at nice 5 by default. One line here, rather than four checks
+# failing on a file that was never written.
+niceness=$(ps -o ni= -p $$ | tr -d ' ')
+if [[ $niceness != 0 ]]; then
+  echo "FAILED: run_bench_test needs nice 0, it is at nice ${niceness:-unknown}:" \
+    "stamping refuses a niced run, so a clean run cannot be checked. Run it in the foreground."
+  exit 1
+fi
+
 check() {
   local what=$1
   shift

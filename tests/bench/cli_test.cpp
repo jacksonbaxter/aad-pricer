@@ -1,9 +1,11 @@
 // Runs the real binaries, because the refusals only matter if they survive the tools around
 // them: exit status, and no output file on refusal.
 #include <gtest/gtest.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <filesystem>
@@ -85,12 +87,25 @@ TEST(HarnessSelftest, WritesACompleteRawFile) {
   EXPECT_NE(file->value("timer_resolution_ns"), "0.000");
 }
 
+// Two increments, so that a constant in the header cannot pass by matching one of them. The test
+// may itself run niced, and nice adds to the caller's value up to the kernel's ceiling.
 TEST(HarnessSelftest, HeaderRecordsTheNiceValue) {
+#ifdef __APPLE__
+  constexpr int kMaxNice = 20;
+#else
+  constexpr int kMaxNice = 19;
+#endif
   const fs::path dir = fresh_dir();
-  ASSERT_EQ(run("nice -n 7 " + selftest(dir / "raw.txt", kFastArgs)), 0);
-  const auto file = results::parse_results_file(slurp(dir / "raw.txt"));
-  ASSERT_TRUE(file.has_value()) << file.error();
-  EXPECT_EQ(file->value("process_nice"), "7");
+  const int caller = getpriority(PRIO_PROCESS, 0);
+  for (const int increment : {3, 7}) {
+    const std::string text = std::to_string(increment);
+    const fs::path raw = dir / ("raw-" + text + ".txt");
+    ASSERT_EQ(run("nice -n " + text + " " + selftest(raw, kFastArgs)), 0);
+    const auto file = results::parse_results_file(slurp(raw));
+    ASSERT_TRUE(file.has_value()) << file.error();
+    EXPECT_EQ(file->value("process_nice"), std::to_string(std::min(caller + increment, kMaxNice)))
+        << "caller at nice " << caller << ", increment " << increment;
+  }
 }
 
 // 400 batches take milliseconds, so a count in the billions would be Google Benchmark's own
