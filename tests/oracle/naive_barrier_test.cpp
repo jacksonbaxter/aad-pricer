@@ -52,7 +52,8 @@ constexpr std::uint32_t kBatches = 64;
 constexpr std::uint64_t kSeed = 424242;
 constexpr std::array<double, 3> kSteps = {1.0, 0.5, 0.25};
 
-constexpr MarketParams<double> kMarket{100.0, 0.30, 0.10, 0.0, 0.2};
+constexpr MarketParams<double> kMarket{
+    .spot = 100.0, .sigma = 0.30, .r = 0.10, .q = 0.0, .maturity = 0.2};
 
 struct Row {
   double barrier;
@@ -61,16 +62,28 @@ struct Row {
   const char* naive_id;
 };
 
-constexpr Row kRows[] = {
-    {85, "DB085.value", "DB085.delta", "DB085.naive"},
-    {90, "DB090.value", "DB090.delta", "DB090.naive"},
-    {95, "O5", "O6", "DB095.naive"},
-    {97, "DB097.value", "DB097.delta", "DB097.naive"},
-    {99, "DB099.value", "DB099.delta", "DB099.naive"},
-};
+constexpr auto kRows = std::to_array<Row>({
+    {.barrier = 85,
+     .value_id = "DB085.value",
+     .delta_id = "DB085.delta",
+     .naive_id = "DB085.naive"},
+    {.barrier = 90,
+     .value_id = "DB090.value",
+     .delta_id = "DB090.delta",
+     .naive_id = "DB090.naive"},
+    {.barrier = 95, .value_id = "O5", .delta_id = "O6", .naive_id = "DB095.naive"},
+    {.barrier = 97,
+     .value_id = "DB097.value",
+     .delta_id = "DB097.delta",
+     .naive_id = "DB097.naive"},
+    {.barrier = 99,
+     .value_id = "DB099.value",
+     .delta_id = "DB099.delta",
+     .naive_id = "DB099.naive"},
+});
 
 ReferenceTable LoadReferences() {
-  std::ifstream file("references/oracle_values.csv", std::ios::binary);
+  const std::ifstream file("references/oracle_values.csv", std::ios::binary);
   std::ostringstream text;
   text << file.rdbuf();
   return *DecodeReferences(text.str());
@@ -81,9 +94,15 @@ constexpr std::size_t kStats = 5;
 using Table = std::vector<std::array<double, kStats>>;
 
 Table RunHard(double barrier) {
-  const Contract contract{Product::kDownOutHard, OptionType::kCall, 100.0, barrier, 50, false};
+  const Contract contract{.product = Product::kDownOutHard,
+                          .type = OptionType::kCall,
+                          .strike = 100.0,
+                          .barrier = barrier,
+                          .steps = 50,
+                          .include_spot = false};
   const MarketParams<Dual> active = ActiveMarket(kMarket);
-  const RunConfig config{kSeed, kPaths, kBatches, contract.steps, 8};
+  const RunConfig config{
+      .seed = kSeed, .paths = kPaths, .batches = kBatches, .steps = contract.steps, .threads = 8};
   return RunBatches<kStats>(
       config, [&](std::span<const double> u, std::array<double, kStats>& out) {
         const Dual path = DiscountedPayoff<Dual>(contract, active, u);

@@ -66,7 +66,7 @@ std::vector<std::array<double, M>> RunBatches(const RunConfig& config, const Pat
   }
 
   std::vector<std::array<double, M>> batch_means(config.batches);
-  const double divisor = static_cast<double>(paths_per_batch);
+  const auto divisor = static_cast<double>(paths_per_batch);
   for (std::size_t batch = 0; batch < batch_means.size(); ++batch) {
     std::array<double, M> sum{};
     for (std::uint64_t i = 0; i < blocks_per_batch; ++i) {

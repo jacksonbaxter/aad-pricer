@@ -2,7 +2,9 @@
 // are in results/stamp.hpp; this file does the reading and the writing.
 #include <unistd.h>
 
+#include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -27,7 +29,7 @@ constexpr std::string_view kUsage =
     "       aadp_results_stamp --print-host-label\n";
 
 std::optional<std::string> read_file(const std::string& path) {
-  std::ifstream in(path, std::ios::binary);
+  const std::ifstream in(path, std::ios::binary);
   if (!in) {
     return std::nullopt;
   }
@@ -54,7 +56,7 @@ bool write_file(const std::string& path, std::string_view text) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char* const* argv) try {
   std::string raw_path;
   std::string stderr_path;
   std::string out_path;
@@ -107,12 +109,14 @@ int main(int argc, char** argv) {
   request.captured_stderr = captured;
   request.current_host_label = aadp::platform::detect_host_label();
   request.current_hostname = aadp::platform::short_hostname();
+  // NOLINTBEGIN(concurrency-mt-unsafe): this tool has one thread and nothing calls setenv.
   if (const char* home = std::getenv("HOME"); home != nullptr) {
     request.privacy.forbidden.emplace_back(home);
   }
   if (const char* user = std::getenv("USER"); user != nullptr) {
     request.privacy.forbidden.emplace_back(user);
   }
+  // NOLINTEND(concurrency-mt-unsafe)
 
   auto stamped = aadp::results::stamp_results(request);
   if (!stamped) {
@@ -124,4 +128,7 @@ int main(int argc, char** argv) {
     return kExitRefused;
   }
   return 0;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "results_stamp: %s\n", error.what());
+  return kExitRefused;
 }

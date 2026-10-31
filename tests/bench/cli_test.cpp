@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -35,7 +36,7 @@ int run(const std::string& command) {
 }
 
 std::string slurp(const fs::path& path) {
-  std::ifstream in(path, std::ios::binary);
+  const std::ifstream in(path, std::ios::binary);
   std::ostringstream text;
   text << in.rdbuf();
   return text.str();
@@ -44,9 +45,9 @@ std::string slurp(const fs::path& path) {
 std::string quoted(const fs::path& path) { return "'" + path.string() + "'"; }
 
 std::string short_name() {
-  char name[256] = {};
-  gethostname(name, sizeof(name) - 1);
-  const std::string_view view(name);
+  std::array<char, 256> name{};
+  gethostname(name.data(), name.size() - 1);
+  const std::string_view view(name.data());
   return std::string(view.substr(0, view.find('.')));
 }
 
@@ -103,7 +104,7 @@ TEST(HarnessSelftest, CountersCoverOnlyTheMeasuredRepetitions) {
   }
 }
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 TEST(HarnessSelftest, MacOsHeaderSaysNotPinned) {
   const fs::path dir = fresh_dir();
   ASSERT_EQ(run(selftest(dir / "raw.txt", kFastArgs)), 0);
@@ -119,7 +120,7 @@ TEST(HarnessSelftest, RefusesToPretendToPinOnMacOs) {
 }
 #endif
 
-#if defined(__linux__)
+#ifdef __linux__
 TEST(HarnessSelftest, PinCpuPinsAndTheHeaderReadsItBack) {
   const fs::path dir = fresh_dir();
   ASSERT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --pin-cpu=0")), 0);

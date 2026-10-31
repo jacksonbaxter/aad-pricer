@@ -42,19 +42,23 @@ std::optional<std::string> load(std::string_view name) {
   return bytes ? std::optional<std::string>(std::move(*bytes)) : std::nullopt;
 }
 
+// A macro because GTEST_SKIP has to return from the test body itself.
+// NOLINTBEGIN(cppcoreguidelines-macro-usage,bugprone-macro-parentheses): declares a named variable.
 #define AADP_LOAD_OR_SKIP(variable, name)                                            \
   const std::optional<std::string> variable = load(name);                            \
   if (!variable) {                                                                   \
-    GTEST_SKIP() << "SKIPPED: " << (data_dir() / name).string()                      \
+    GTEST_SKIP() << "SKIPPED: " << (data_dir() / (name)).string()                    \
                  << " is absent, so this real-file test did not run. Fetch it with " \
                     "scripts/fetch_data.sh.";                                        \
   }
+// NOLINTEND(cppcoreguidelines-macro-usage,bugprone-macro-parentheses)
 
 constexpr std::string_view kOptionsFile = "DailyMarketReportOpt.csv";
 constexpr std::string_view kFuturesFile = "DailyMarketReportFut.csv";
 
-const std::vector<ExpiryForward> kPublishedForwards = {
-    {"202411", 22761.47}, {"202411W4", 22786.07}, {"202412", 22792.92}};
+const std::vector<ExpiryForward> kPublishedForwards = {{.expiry = "202411", .forward = 22761.47},
+                                                       {.expiry = "202411W4", .forward = 22786.07},
+                                                       {.expiry = "202412", .forward = 22792.92}};
 
 std::vector<OptionRow> txo_rows(const OptionsFile& file) {
   std::vector<OptionRow> rows;
@@ -68,7 +72,7 @@ TEST(RealOptions, ReadsEveryRowWithoutError) {
   const auto file = read_options(*bytes);
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->row_errors.empty()) << "first at line " << file->row_errors.front().line;
-  EXPECT_EQ(file->rows.size(), 7388u);
+  EXPECT_EQ(file->rows.size(), 7388U);
   EXPECT_TRUE(std::ranges::all_of(file->rows,
                                   [](const OptionRow& row) { return row.trade_date == 20241115; }));
 }
@@ -78,7 +82,7 @@ TEST(RealOptions, SessionCountsOfTxo) {
   const auto file = read_options(*bytes);
   ASSERT_TRUE(file.has_value());
   const auto rows = txo_rows(*file);
-  EXPECT_EQ(rows.size(), 2006u);
+  EXPECT_EQ(rows.size(), 2006U);
   const auto regular = std::ranges::count_if(
       rows, [](const OptionRow& row) { return row.session == Session::kRegular; });
   const auto after_hours = std::ranges::count_if(
@@ -137,14 +141,16 @@ TEST(RealOptions, FinalSetsMatchThePublishedCounts) {
   ASSERT_TRUE(file.has_value());
   const auto slices = select_calibration_set(file->rows, kPublishedForwards);
   ASSERT_TRUE(slices.has_value());
-  ASSERT_EQ(slices->size(), 3u);
+  ASSERT_EQ(slices->size(), 3U);
 
   struct Expected {
     std::size_t n;
     std::ptrdiff_t puts;
     std::ptrdiff_t calls;
   };
-  const std::vector<Expected> expected = {{65, 38, 27}, {51, 26, 25}, {64, 38, 26}};
+  const std::vector<Expected> expected = {{.n = 65, .puts = 38, .calls = 27},
+                                          {.n = 51, .puts = 26, .calls = 25},
+                                          {.n = 64, .puts = 38, .calls = 26}};
   for (std::size_t i = 0; i < expected.size(); ++i) {
     const CalibrationSlice& slice = (*slices)[i];
     EXPECT_EQ(slice.expiry, kPublishedForwards[i].expiry);
@@ -190,7 +196,7 @@ TEST(RealFutures, ReadsEveryRowWithoutError) {
   const auto file = read_futures(*bytes);
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->row_errors.empty()) << "first at line " << file->row_errors.front().line;
-  EXPECT_EQ(file->rows.size(), 2118u);
+  EXPECT_EQ(file->rows.size(), 2118U);
   EXPECT_TRUE(std::ranges::all_of(
       file->rows, [](const FuturesRow& row) { return row.trade_date == 20241115; }));
 }
@@ -202,7 +208,7 @@ TEST(RealFutures, SessionsAndSpreads) {
   const auto regular = std::ranges::count_if(
       file->rows, [](const FuturesRow& row) { return row.session == Session::kRegular; });
   EXPECT_EQ(regular, 1971);
-  EXPECT_EQ(file->rows.size() - static_cast<std::size_t>(regular), 147u);
+  EXPECT_EQ(file->rows.size() - static_cast<std::size_t>(regular), 147U);
   const auto spreads =
       std::ranges::count_if(file->rows, [](const FuturesRow& row) { return row.calendar_spread; });
   EXPECT_EQ(spreads, 313);

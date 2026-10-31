@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <set>
@@ -19,17 +20,17 @@ struct KnownAnswer {
   Philox4x32Output expected;
 };
 
-constexpr KnownAnswer kVectors[] = {
-    {{0x00000000, 0x00000000, 0x00000000, 0x00000000},
-     {0x00000000, 0x00000000},
-     {0x6627e8d5, 0xe169c58d, 0xbc57ac4c, 0x9b00dbd8}},
-    {{0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff},
-     {0xffffffff, 0xffffffff},
-     {0x408f276d, 0x41c83b0e, 0xa20bc7c6, 0x6d5451fd}},
-    {{0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344},
-     {0xa4093822, 0x299f31d0},
-     {0xd16cfe09, 0x94fdcceb, 0x5001e420, 0x24126ea1}},
-};
+constexpr auto kVectors = std::to_array<KnownAnswer>({
+    {.counter = {0x00000000, 0x00000000, 0x00000000, 0x00000000},
+     .key = {0x00000000, 0x00000000},
+     .expected = {0x6627e8d5, 0xe169c58d, 0xbc57ac4c, 0x9b00dbd8}},
+    {.counter = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff},
+     .key = {0xffffffff, 0xffffffff},
+     .expected = {0x408f276d, 0x41c83b0e, 0xa20bc7c6, 0x6d5451fd}},
+    {.counter = {0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344},
+     .key = {0xa4093822, 0x299f31d0},
+     .expected = {0xd16cfe09, 0x94fdcceb, 0x5001e420, 0x24126ea1}},
+});
 
 TEST(Philox, KnownAnswersTenRounds) {
   for (const KnownAnswer& v : kVectors) {

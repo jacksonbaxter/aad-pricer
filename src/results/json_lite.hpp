@@ -1,6 +1,7 @@
 // Just enough JSON to take fields out of Google Benchmark's output and to read a few values
 // back. Scalars keep their source text, so a number is written out exactly as it was read.
-#pragma once
+#ifndef AADP_RESULTS_JSON_LITE_HPP_
+#define AADP_RESULTS_JSON_LITE_HPP_
 
 #include <expected>
 #include <span>
@@ -13,7 +14,7 @@ namespace aadp::results {
 struct JsonMember;
 
 struct JsonValue {
-  enum class Kind { kObject, kArray, kString, kScalar };
+  enum class Kind : std::uint8_t { kObject, kArray, kString, kScalar };
   Kind kind = Kind::kScalar;
   std::string text;  // Scalars: the token. Strings: the contents with escapes left in place
   std::vector<JsonMember> members;
@@ -37,3 +38,5 @@ std::string write_json(const JsonValue& value);
 const JsonValue* find_member(const JsonValue& object, std::string_view key);
 
 }  // namespace aadp::results
+
+#endif  // AADP_RESULTS_JSON_LITE_HPP_

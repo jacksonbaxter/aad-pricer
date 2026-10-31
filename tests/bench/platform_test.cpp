@@ -16,10 +16,10 @@
 #include "platform/perf_counters.hpp"
 #include "platform/simd_info.hpp"
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <sys/sysctl.h>
 #endif
-#if defined(__linux__)
+#ifdef __linux__
 #include <sched.h>
 #endif
 
@@ -99,7 +99,7 @@ TEST(CpuInfo, KernelFieldNeverHoldsTheNodeName) {
 }
 
 TEST(Cacheline, MatchesWhatTheMachineReports) {
-#if defined(__APPLE__)
+#ifdef __APPLE__
   std::int64_t line = 0;
   std::size_t size = sizeof(line);
   ASSERT_EQ(sysctlbyname("hw.cachelinesize", &line, &size, nullptr, 0), 0);
@@ -137,7 +137,7 @@ TEST(FpState, DecodesMxcsr) {
 TEST(FpState, DefaultStateIsClean) {
   const auto state = check_fp_state();
   ASSERT_TRUE(state.has_value()) << state.error();
-#if defined(__x86_64__)
+#ifdef __x86_64__
   EXPECT_EQ(state->register_name, "MXCSR");
 #else
   EXPECT_EQ(state->register_name, "FPCR");
@@ -147,7 +147,7 @@ TEST(FpState, DefaultStateIsClean) {
 // Sets the real register, so this shows both the read and the failure.
 TEST(FpState, FailsWithFlushToZeroSet) {
   const std::uint64_t saved = read_fp_state().raw;
-#if defined(__x86_64__)
+#ifdef __x86_64__
   const std::uint64_t flush_bit = std::uint64_t{1} << 15;
 #else
   const std::uint64_t flush_bit = std::uint64_t{1} << 24;
@@ -155,7 +155,7 @@ TEST(FpState, FailsWithFlushToZeroSet) {
   write_fp_register(saved | flush_bit);
   const FpState seen = read_fp_state();
   const auto checked = check_fp_state();
-  volatile double smallest_normal = std::numeric_limits<double>::min();
+  const volatile double smallest_normal = std::numeric_limits<double>::min();
   const double flushed = smallest_normal * 0.5;
   write_fp_register(saved);
 
@@ -222,7 +222,7 @@ TEST(Affinity, FormatsCpuLists) {
   EXPECT_EQ(format_cpu_list(std::vector<int>{0, 2, 3, 7}), "0,2-3,7");
 }
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 TEST(Affinity, MacOsNeverClaimsAPin) {
   const AffinityState state = read_affinity();
   EXPECT_FALSE(state.pinned);
@@ -248,7 +248,7 @@ TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
 }
 #endif
 
-#if defined(__linux__)
+#ifdef __linux__
 // Found on debian: the times kept growing across regions, while the counts did not.
 TEST(PerfCounters, EachRegionReportsItsOwnTimes) {
   PerfCounterSession session;

@@ -2,6 +2,7 @@
 //
 // Exits non-zero if the methods disagree, or under --check if the file differs in any byte.
 #include <cstdio>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -11,7 +12,7 @@
 
 #include "quadrature.hpp"
 
-int main(int argc, char** argv) {
+int main(int argc, char* const* argv) try {
   if (argc != 3) {
     std::fprintf(stderr, "usage: %s --write <file> | --check <file>\n", argv[0]);
     return 2;
@@ -20,8 +21,9 @@ int main(int argc, char** argv) {
   std::vector<std::string> failures;
   const std::string csv =
       aadp::quadrature::RenderCsv(aadp::quadrature::GenerateReferences(failures));
-  for (const std::string& failure : failures)
+  for (const std::string& failure : failures) {
     std::fprintf(stderr, "DISAGREEMENT %s\n", failure.c_str());
+  }
   if (!failures.empty()) return 1;
 
   if (mode == "--write") {
@@ -30,7 +32,7 @@ int main(int argc, char** argv) {
     return file.good() ? 0 : 1;
   }
   if (mode == "--check") {
-    std::ifstream file(argv[2], std::ios::binary);
+    const std::ifstream file(argv[2], std::ios::binary);
     if (!file) {
       std::fprintf(stderr, "cannot open %s\n", argv[2]);
       return 1;
@@ -44,5 +46,8 @@ int main(int argc, char** argv) {
     return 0;
   }
   std::fprintf(stderr, "unknown mode %s\n", argv[1]);
+  return 2;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "aadp_quadrature: %s\n", error.what());
   return 2;
 }

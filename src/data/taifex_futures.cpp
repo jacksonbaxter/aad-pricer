@@ -29,27 +29,25 @@ constexpr std::array<std::string_view, 19> kHeader = {
     "\xBB\xF9\xAE\x74\xB9\xEF\xB3\xE6\xA6\xA1\xA9\x65\xB0\x55\xA6\xA8\xA5\xE6\xB6\x71",  // 價差對單式委託成交量
 };
 
-enum Column : int {
-  kDate,
-  kContract,
-  kExpiry,
-  kOpen,
-  kHigh,
-  kLow,
-  kLastTrade,
-  kChange,
-  kChangePercent,
-  kVolume,
-  kSettlement,
-  kOpenInterest,
-  kLastBestBid,
-  kLastBestAsk,
-  kHistoricalHigh,
-  kHistoricalLow,
-  kNewsHalt,
-  kSession,
-  kSpreadOrderVolume,
-};
+constexpr int kDate = 0;
+constexpr int kContract = 1;
+constexpr int kExpiry = 2;
+constexpr int kOpen = 3;
+constexpr int kHigh = 4;
+constexpr int kLow = 5;
+constexpr int kLastTrade = 6;
+constexpr int kChange = 7;
+constexpr int kChangePercent = 8;
+constexpr int kVolume = 9;
+constexpr int kSettlement = 10;
+constexpr int kOpenInterest = 11;
+constexpr int kLastBestBid = 12;
+constexpr int kLastBestAsk = 13;
+constexpr int kHistoricalHigh = 14;
+constexpr int kHistoricalLow = 15;
+constexpr int kNewsHalt = 16;
+constexpr int kSession = 17;
+constexpr int kSpreadOrderVolume = 18;
 
 // The real file has "NULL" here on after-hours outright rows, and nowhere else in the file. So it
 // counts as missing in this column only.
@@ -65,7 +63,7 @@ FuturesRow parse_row(RowFields& fields) {
   row.trade_date = fields.date(kDate);
   row.contract = fields.contract(kContract);
   row.expiry = fields.expiry(kExpiry, /*allow_spread=*/true);
-  row.calendar_spread = row.expiry.find('/') != std::string::npos;
+  row.calendar_spread = row.expiry.contains('/');
   const SignPolicy price = row.calendar_spread ? SignPolicy::kSigned : SignPolicy::kNonNegative;
   row.open_price = fields.number(kOpen, price);
   row.high_price = fields.number(kHigh, price);

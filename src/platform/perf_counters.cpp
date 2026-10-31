@@ -2,13 +2,14 @@
 
 #include <cerrno>
 #include <cstring>
+#include <system_error>
 
-#if defined(__linux__)
+#ifdef __linux__
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#elif defined(__APPLE__)
+#elifdef __APPLE__
 #include <libproc.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -46,7 +47,7 @@ std::string describe_counters(const PerfCounterReport& report) {
   return text.empty() ? "none" : text;
 }
 
-#if defined(__linux__)
+#ifdef __linux__
 namespace {
 
 constexpr const char* kSource = "perf_event_open";
@@ -71,12 +72,13 @@ int open_counter(std::uint64_t config, int group_fd) {
 PerfCounterSession::PerfCounterSession() {
   leader_fd_ = open_counter(PERF_COUNT_HW_CPU_CYCLES, -1);
   if (leader_fd_ < 0) {
-    open_error_ = std::string("perf_event_open cycles: ") + std::strerror(errno);
+    open_error_ = std::string("perf_event_open cycles: ") + std::generic_category().message(errno);
     return;
   }
   instructions_fd_ = open_counter(PERF_COUNT_HW_INSTRUCTIONS, leader_fd_);
   if (instructions_fd_ < 0) {
-    open_error_ = std::string("perf_event_open instructions: ") + std::strerror(errno);
+    open_error_ =
+        std::string("perf_event_open instructions: ") + std::generic_category().message(errno);
   }
 }
 
@@ -134,7 +136,7 @@ PerfCounterReport PerfCounterSession::stop() {
   return report;
 }
 
-#elif defined(__APPLE__)
+#elifdef __APPLE__
 
 namespace {
 
@@ -143,7 +145,8 @@ constexpr const char* kScope =
     "process-wide, user and kernel, all threads, measured repetitions only";
 
 bool read_rusage(rusage_info_v4& info) {
-  return proc_pid_rusage(getpid(), RUSAGE_INFO_V4, reinterpret_cast<rusage_info_t*>(&info)) == 0;
+  return proc_pid_rusage(getpid(), RUSAGE_INFO_V4,
+                         static_cast<rusage_info_t*>(static_cast<void*>(&info))) == 0;
 }
 
 }  // namespace
@@ -154,7 +157,7 @@ PerfCounterSession::~PerfCounterSession() = default;
 void PerfCounterSession::start() {
   rusage_info_v4 info{};
   if (!read_rusage(info)) {
-    open_error_ = std::string("proc_pid_rusage: ") + std::strerror(errno);
+    open_error_ = std::string("proc_pid_rusage: ") + std::generic_category().message(errno);
     return;
   }
   start_cycles_ = info.ri_cycles;
@@ -172,7 +175,7 @@ PerfCounterReport PerfCounterSession::stop() {
   }
   rusage_info_v4 info{};
   if (!read_rusage(info)) {
-    report.note = std::string("proc_pid_rusage: ") + std::strerror(errno);
+    report.note = std::string("proc_pid_rusage: ") + std::generic_category().message(errno);
     return report;
   }
   // A kernel that does not fill these leaves them at zero, which is missing, not a count.

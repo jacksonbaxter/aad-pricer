@@ -23,17 +23,17 @@ ReadError error_of(std::size_t column, const std::string& value) {
   const auto file = read_options(file_with(join(fields)));
   EXPECT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty()) << "accepted '" << value << "' in column " << column;
-  EXPECT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->row_errors.size(), 1U);
   return file->row_errors.empty() ? ReadError{} : file->row_errors[0];
 }
 
 TEST(OptionsReader, ReadsARowField) {
   const auto file = read_options(file_with(join(option_fields())));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(file->row_errors.empty());
   const OptionRow& row = file->rows[0];
-  EXPECT_EQ(row.line, 2u);
+  EXPECT_EQ(row.line, 2U);
   EXPECT_EQ(row.trade_date, 20240103);
   EXPECT_EQ(row.contract, "ABO");
   EXPECT_EQ(row.expiry, "202401");
@@ -60,7 +60,7 @@ TEST(OptionsReader, PreservesSessionAndRight) {
   after_hours[testing::kOptRight] = testing::kPut;
   const auto file = read_options(file_with(join(after_hours)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].session, Session::kAfterHours);
   EXPECT_EQ(file->rows[0].right, OptionRight::kPut);
 }
@@ -70,7 +70,7 @@ TEST(OptionsReader, WeeklyExpiryIsKept) {
   fields[testing::kOptExpiry] = "202401W2";
   const auto file = read_options(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].expiry, "202401W2");
 }
 
@@ -85,7 +85,7 @@ TEST(OptionsReader, DashAndEmptyAreMissing) {
     }
     const auto file = read_options(file_with(join(fields)));
     ASSERT_TRUE(file.has_value());
-    ASSERT_EQ(file->rows.size(), 1u) << "missing spelled '" << missing << "'";
+    ASSERT_EQ(file->rows.size(), 1U) << "missing spelled '" << missing << "'";
     const OptionRow& row = file->rows[0];
     EXPECT_FALSE(row.open_price);
     EXPECT_FALSE(row.high_price);
@@ -161,7 +161,7 @@ TEST(OptionsReader, WrongHeaderFailsTheWholeRead) {
   const auto file = read_options(header + "\r\n" + join(option_fields()) + "\r\n");
   ASSERT_FALSE(file.has_value());
   EXPECT_EQ(file.error().code, ErrorCode::kHeaderMismatch);
-  EXPECT_EQ(file.error().line, 1u);
+  EXPECT_EQ(file.error().line, 1U);
   EXPECT_EQ(file.error().column, 0);
 }
 
@@ -202,7 +202,7 @@ TEST(OptionsReader, BrokenHeaderEncodingFails) {
   const auto file = read_options(kOptionsHeader.substr(0, 3));
   ASSERT_FALSE(file.has_value());
   EXPECT_EQ(file.error().code, ErrorCode::kInvalidEncoding);
-  EXPECT_LT(file.error().position, 3u);
+  EXPECT_LT(file.error().position, 3U);
 }
 
 TEST(OptionsReader, WrongColumnCountIsARowError) {
@@ -212,23 +212,23 @@ TEST(OptionsReader, WrongColumnCountIsARowError) {
                             "\r\n";
   const auto file = read_options(input);
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 2u);
-  EXPECT_EQ(file->rows[0].line, 2u);
-  EXPECT_EQ(file->rows[1].line, 5u);
-  ASSERT_EQ(file->row_errors.size(), 2u);
+  EXPECT_EQ(file->rows.size(), 2U);
+  EXPECT_EQ(file->rows[0].line, 2U);
+  EXPECT_EQ(file->rows[1].line, 5U);
+  ASSERT_EQ(file->row_errors.size(), 2U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kWrongColumnCount);
-  EXPECT_EQ(file->row_errors[0].line, 3u);
+  EXPECT_EQ(file->row_errors[0].line, 3U);
   EXPECT_EQ(file->row_errors[1].code, ErrorCode::kWrongColumnCount);
-  EXPECT_EQ(file->row_errors[1].line, 4u);
+  EXPECT_EQ(file->row_errors[1].line, 4U);
 }
 
 TEST(OptionsReader, BlankLineInTheMiddleIsARowError) {
   const std::string good = join(option_fields());
   const auto file = read_options(kOptionsHeader + "\r\n" + good + "\r\n\r\n" + good + "\r\n");
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 2u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
-  EXPECT_EQ(file->row_errors[0].line, 3u);
+  EXPECT_EQ(file->rows.size(), 2U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
+  EXPECT_EQ(file->row_errors[0].line, 3U);
 }
 
 TEST(OptionsReader, RowErrorCarriesLineColumnAndPosition) {
@@ -238,11 +238,11 @@ TEST(OptionsReader, RowErrorCarriesLineColumnAndPosition) {
   const std::string input = prefix + join(bad) + "\r\n" + join(option_fields()) + "\r\n";
   const auto file = read_options(input);
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 2u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 2U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   const ReadError& error = file->row_errors[0];
   EXPECT_EQ(error.code, ErrorCode::kMalformedNumber);
-  EXPECT_EQ(error.line, 3u);
+  EXPECT_EQ(error.line, 3U);
   EXPECT_EQ(error.column, static_cast<int>(testing::kOptSettlement));
   EXPECT_EQ(input.substr(error.position, 4), "oops");
 }
@@ -253,7 +253,7 @@ TEST(OptionsReader, TrailBytesEqualToAsciiDoNotSplitOrLeak) {
   fields[testing::kOptHalt] = "\xA4|\xA4\\";
   const auto file = read_options(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(file->rows[0].news_halt_flag);
 }
 
@@ -263,10 +263,10 @@ TEST(OptionsReader, LeadByteBeforeACommaIsAnEncodingError) {
   fields[testing::kOptHalt] = "\xA4";
   const auto file = read_options(file_with(join(fields)) + join(option_fields()) + "\r\n");
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 1u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 1U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kInvalidEncoding);
-  EXPECT_EQ(file->row_errors[0].line, 2u);
+  EXPECT_EQ(file->row_errors[0].line, 2U);
 }
 
 TEST(OptionsReader, LeadByteAtLineEndDoesNotEatTheNextLine) {
@@ -274,11 +274,11 @@ TEST(OptionsReader, LeadByteAtLineEndDoesNotEatTheNextLine) {
   const std::string input = kOptionsHeader + "\r\n" + good + "\xA4\n" + good + "\r\n";
   const auto file = read_options(input);
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
-  EXPECT_EQ(file->rows[0].line, 3u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
+  EXPECT_EQ(file->rows[0].line, 3U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kInvalidEncoding);
-  EXPECT_EQ(file->row_errors[0].line, 2u);
+  EXPECT_EQ(file->row_errors[0].line, 2U);
 }
 
 TEST(OptionsReader, TruncatedPairAtEndOfInputIsARowError) {
@@ -286,8 +286,8 @@ TEST(OptionsReader, TruncatedPairAtEndOfInputIsARowError) {
   input.resize(input.size() - 1);  // Cuts the session label in half.
   const auto file = read_options(input);
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 1u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 1U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kInvalidEncoding);
   EXPECT_EQ(file->row_errors[0].position, input.size() - 1);
 }
@@ -297,8 +297,8 @@ TEST(OptionsReader, EmbeddedNulIsARowError) {
   fields[testing::kOptHalt] = std::string("a\0b", 3);
   const auto file = read_options(file_with(join(fields)) + join(option_fields()) + "\r\n");
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 1u);
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 1U);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kControlCharacter);
 }
 
@@ -308,7 +308,7 @@ TEST(OptionsReader, NulInANumberCannotTruncateIt) {
   const auto file = read_options(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty());
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kControlCharacter);
 }
 
@@ -317,7 +317,7 @@ TEST(OptionsReader, AcceptsCrlfAndLfLineEnds) {
   for (const std::string end : {"\r\n", "\n"}) {
     const auto file = read_options(kOptionsHeader + end + good + end + good + end);
     ASSERT_TRUE(file.has_value());
-    EXPECT_EQ(file->rows.size(), 2u);
+    EXPECT_EQ(file->rows.size(), 2U);
     EXPECT_TRUE(file->row_errors.empty());
   }
 }
@@ -327,7 +327,7 @@ TEST(OptionsReader, BareCrIsARowError) {
   const auto file = read_options(kOptionsHeader + "\r\n" + good + "\r" + good + "\r\n");
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty());
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kControlCharacter);
 }
 
@@ -335,14 +335,14 @@ TEST(OptionsReader, TrailingCrAtEndOfInputIsARowError) {
   const auto file = read_options(kOptionsHeader + "\r\n" + join(option_fields()) + "\r");
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty());
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kControlCharacter);
 }
 
 TEST(OptionsReader, MissingFinalNewlineStillGivesTheLastRow) {
   const auto file = read_options(kOptionsHeader + "\r\n" + join(option_fields()));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].session, Session::kRegular);
 }
 
@@ -352,14 +352,14 @@ TEST(OptionsReader, ErrorOnAnEmptyLastFieldStaysInsideTheInput) {
   const std::string input = kOptionsHeader + "\r\n" + join(fields);
   const auto file = read_options(input);
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_LT(file->row_errors[0].position, input.size());
 }
 
 TEST(OptionsReader, NumbersAreAlwaysFinite) {
   const auto file = read_options(file_with(join(option_fields())));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(std::isfinite(file->rows[0].strike));
   EXPECT_TRUE(std::isfinite(*file->rows[0].settlement_price));
 }

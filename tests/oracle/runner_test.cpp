@@ -23,7 +23,9 @@ const std::string kInstrument = catalog::kVanillaO2;
 const std::string kParameters(InstrumentParameters(kInstrument));
 
 double TrueValue() {
-  return BlackScholes(OptionType::kCall, 75.0, MarketParams<double>{72, 0.19, 0.09, 0.0, 1.0})
+  return BlackScholes(
+             OptionType::kCall, 75.0,
+             MarketParams<double>{.spot = 72, .sigma = 0.19, .r = 0.09, .q = 0.0, .maturity = 1.0})
       .value;
 }
 
@@ -57,15 +59,13 @@ Outcome Execute(const std::string& text, const ReferenceTable& references, bool 
   RunOptions options;
   options.threads = 2;
   options.smoke = smoke;
-  RunSummary summary = RunPlan(*plan, references, options, out);
-  return {summary, out.str()};
+  const RunSummary summary = RunPlan(*plan, references, options, out);
+  return {.summary = summary, .text = out.str()};
 }
 
 double Critical(std::size_t k) { return CriticalValue(0.01, k, 64); }
 
-bool Has(const std::string& text, const std::string& needle) {
-  return text.find(needle) != std::string::npos;
-}
+bool Has(const std::string& text, const std::string& needle) { return text.contains(needle); }
 
 TEST(RunPlan, CleanRowPassesAndExitsZero) {
   const Outcome o = Execute(Header(1, Critical(1)) + Row(), References(TrueValue()));
@@ -220,7 +220,7 @@ TEST(PlanTemplate, CoversEveryRequiredComparison) {
 }
 
 TEST(PlanTemplate, EveryRunRowResolvesAgainstTheCommittedReferences) {
-  std::ifstream file("references/oracle_values.csv", std::ios::binary);
+  const std::ifstream file("references/oracle_values.csv", std::ios::binary);
   std::ostringstream text;
   text << file.rdbuf();
   const auto references = DecodeReferences(text.str());
@@ -238,7 +238,7 @@ TEST(PlanTemplate, EveryRunRowResolvesAgainstTheCommittedReferences) {
 
 // The pre-registered file itself. Runs nothing, so it cannot touch the measured seed.
 TEST(CommittedPlan, MatchesTheTemplateAndTheStatedRule) {
-  std::ifstream file("references/comparison_plan.csv", std::ios::binary);
+  const std::ifstream file("references/comparison_plan.csv", std::ios::binary);
   ASSERT_TRUE(file.is_open());
   std::ostringstream text;
   text << file.rdbuf();
@@ -246,7 +246,7 @@ TEST(CommittedPlan, MatchesTheTemplateAndTheStatedRule) {
   ASSERT_TRUE(plan.has_value());
   EXPECT_EQ(EncodePlan(*plan), text.str());
 
-  std::ifstream reference_file("references/oracle_values.csv", std::ios::binary);
+  const std::ifstream reference_file("references/oracle_values.csv", std::ios::binary);
   std::ostringstream reference_text;
   reference_text << reference_file.rdbuf();
   const auto references = DecodeReferences(reference_text.str());
@@ -288,16 +288,43 @@ TEST(CommittedPlan, MatchesTheTemplateAndTheStatedRule) {
 }
 
 TEST(BuildPlan, AppliesTheStatedRule) {
-  std::vector<PlanTemplateRow> rows = {
-      {"a.value", kInstrument, "value", "REF", 6400, RowStatus::kRun},
-      {"a.vega", kInstrument, "vega", "FD:0.0001", 6400, RowStatus::kRun},
-      {"z", "svi-surface:arithmetic", "d_a_d05", "phase3", 0, RowStatus::kAwaitingPhase3},
+  const std::vector<PlanTemplateRow> rows = {
+      {.id = "a.value",
+       .instrument = kInstrument,
+       .greek = "value",
+       .reference = "REF",
+       .paths = 6400,
+       .status = RowStatus::kRun},
+      {.id = "a.vega",
+       .instrument = kInstrument,
+       .greek = "vega",
+       .reference = "FD:0.0001",
+       .paths = 6400,
+       .status = RowStatus::kRun},
+      {.id = "z",
+       .instrument = "svi-surface:arithmetic",
+       .greek = "d_a_d05",
+       .reference = "phase3",
+       .paths = 0,
+       .status = RowStatus::kAwaitingPhase3},
   };
   PilotFile pilot;
   pilot.config.seed = 7;
   pilot.config.batches = 64;
-  pilot.rows = {{"a.value", 1600, 1.0, 1.0, 0.04, 0.0, 0.0},
-                {"a.vega", 1600, 1.0, 1.0, 0.01, 3e-5, 1e-6}};
+  pilot.rows = {{.id = "a.value",
+                 .paths = 1600,
+                 .estimate = 1.0,
+                 .reference = 1.0,
+                 .se = 0.04,
+                 .two_h_mean = 0.0,
+                 .two_h_se = 0.0},
+                {.id = "a.vega",
+                 .paths = 1600,
+                 .estimate = 1.0,
+                 .reference = 1.0,
+                 .se = 0.01,
+                 .two_h_mean = 3e-5,
+                 .two_h_se = 1e-6}};
   const Plan plan = BuildPlan(rows, References(1.0), pilot, 9);
   ASSERT_EQ(plan.rows.size(), 3U);
   EXPECT_EQ(plan.header.declared_k, 3U);
@@ -320,7 +347,13 @@ TEST(BuildPlan, AppliesTheStatedRule) {
 TEST(Pilot, FileRoundTrips) {
   PilotConfig config;
   config.seed = 7;
-  const std::vector<PilotRow> rows = {{"a", 1600, 1.5, 1.25, 0.04, 3e-5, 1e-6}};
+  const std::vector<PilotRow> rows = {{.id = "a",
+                                       .paths = 1600,
+                                       .estimate = 1.5,
+                                       .reference = 1.25,
+                                       .se = 0.04,
+                                       .two_h_mean = 3e-5,
+                                       .two_h_se = 1e-6}};
   PilotFile file;
   ASSERT_TRUE(DecodePilot(EncodePilot(rows, config), file));
   EXPECT_EQ(file.config.seed, 7U);

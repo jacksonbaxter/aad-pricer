@@ -14,82 +14,121 @@
 
 namespace aadp {
 
-enum class BarrierType { kDownIn, kUpIn, kDownOut, kUpOut };
+enum class BarrierType : std::uint8_t { kDownIn, kUpIn, kDownOut, kUpOut };
 
+namespace barrier_detail {
+
+using std::exp;
+using std::log;
+using std::pow;
+using std::sqrt;
+
+// Haug's A to F terms. The expressions are unchanged from the formula sheet, phi and eta are
+// its signs.
 template <class Real>
-Real BarrierOptionValue(BarrierType barrier_type, OptionType option_type, double strike,
-                        double barrier, double rebate, const MarketParams<Real>& m) {
-  using std::exp;
-  using std::log;
-  using std::pow;
-  using std::sqrt;
-  const Real sd = m.sigma * sqrt(m.maturity);
-  const Real df_q = exp(-m.q * m.maturity);
-  const Real df_r = exp(-m.r * m.maturity);
-  const Real variance_rate = m.sigma * m.sigma;
-  const Real mu = (m.r - m.q) / variance_rate - 0.5;
-  const Real drift_sd = (1.0 + mu) * sd;
-  const Real barrier_ratio = barrier / m.spot;
-  const Real reflect_strike = pow(barrier_ratio, 2.0 * mu);
-  const Real reflect_spot = reflect_strike * barrier_ratio * barrier_ratio;
+struct Terms {
+  Terms(double strike_in, double barrier_in, double rebate_in, const MarketParams<Real>& market)
+      : strike(strike_in),
+        barrier(barrier_in),
+        rebate(rebate_in),
+        m(market),
+        sd(m.sigma * sqrt(m.maturity)),
+        df_q(exp(-m.q * m.maturity)),
+        df_r(exp(-m.r * m.maturity)),
+        variance_rate(m.sigma * m.sigma),
+        mu((m.r - m.q) / variance_rate - 0.5),
+        drift_sd((1.0 + mu) * sd),
+        barrier_ratio(barrier / m.spot),
+        reflect_strike(pow(barrier_ratio, 2.0 * mu)),
+        reflect_spot(reflect_strike * barrier_ratio * barrier_ratio),
+        x1(log(m.spot / strike) / sd + drift_sd),
+        x2(log(m.spot / barrier) / sd + drift_sd),
+        y1(log(barrier * barrier_ratio / strike) / sd + drift_sd),
+        y2(log(barrier / m.spot) / sd + drift_sd) {}
 
-  const Real x1 = log(m.spot / strike) / sd + drift_sd;
-  const Real x2 = log(m.spot / barrier) / sd + drift_sd;
-  const Real y1 = log(barrier * barrier_ratio / strike) / sd + drift_sd;
-  const Real y2 = log(barrier / m.spot) / sd + drift_sd;
-
-  const auto vanilla_term = [&](const Real& x, double phi) {
+  Real Vanilla(const Real& x, double phi) const {
     return phi * (m.spot * df_q * normal_cdf(phi * x) - strike * df_r * normal_cdf(phi * (x - sd)));
-  };
-  const auto a_term = [&](double phi) { return vanilla_term(x1, phi); };
-  const auto b_term = [&](double phi) { return vanilla_term(x2, phi); };
-  const auto reflected_term = [&](const Real& y, double eta, double phi) {
+  }
+  Real Reflected(const Real& y, double eta, double phi) const {
     return phi * (m.spot * df_q * reflect_spot * normal_cdf(eta * y) -
                   strike * df_r * reflect_strike * normal_cdf(eta * (y - sd)));
-  };
-  const auto c_term = [&](double eta, double phi) { return reflected_term(y1, eta, phi); };
-  const auto d_term = [&](double eta, double phi) { return reflected_term(y2, eta, phi); };
-  const auto e_term = [&](double eta) -> Real {
+  }
+  Real A(double phi) const { return Vanilla(x1, phi); }
+  Real B(double phi) const { return Vanilla(x2, phi); }
+  Real C(double eta, double phi) const { return Reflected(y1, eta, phi); }
+  Real D(double eta, double phi) const { return Reflected(y2, eta, phi); }
+  Real E(double eta) const {
     if (rebate == 0.0) return Real(0.0);
     return rebate * df_r *
            (normal_cdf(eta * (x2 - sd)) - reflect_strike * normal_cdf(eta * (y2 - sd)));
-  };
-  const auto f_term = [&](double eta) -> Real {
+  }
+  Real F(double eta) const {
     if (rebate == 0.0) return Real(0.0);
     const Real lambda = sqrt(mu * mu + 2.0 * m.r / variance_rate);
     const Real z = log(barrier / m.spot) / sd + lambda * sd;
     return rebate * (pow(barrier_ratio, mu + lambda) * normal_cdf(eta * z) +
                      pow(barrier_ratio, mu - lambda) * normal_cdf(eta * (z - 2.0 * lambda * sd)));
-  };
-
-  const bool strike_above = strike >= barrier;
-  if (option_type == OptionType::kCall) {
-    switch (barrier_type) {
-      case BarrierType::kDownIn:
-        return (strike_above ? c_term(1, 1) : a_term(1) - b_term(1) + d_term(1, 1)) + e_term(1);
-      case BarrierType::kUpIn:
-        return (strike_above ? a_term(1) : b_term(1) - c_term(-1, 1) + d_term(-1, 1)) + e_term(-1);
-      case BarrierType::kDownOut:
-        return (strike_above ? a_term(1) - c_term(1, 1) : b_term(1) - d_term(1, 1)) + f_term(1);
-      case BarrierType::kUpOut:
-        return (strike_above ? Real(0.0) : a_term(1) - b_term(1) + c_term(-1, 1) - d_term(-1, 1)) +
-               f_term(-1);
-    }
   }
+
+  double strike;
+  double barrier;
+  double rebate;
+  MarketParams<Real> m;
+  Real sd;
+  Real df_q;
+  Real df_r;
+  Real variance_rate;
+  Real mu;
+  Real drift_sd;
+  Real barrier_ratio;
+  Real reflect_strike;
+  Real reflect_spot;
+  Real x1;
+  Real x2;
+  Real y1;
+  Real y2;
+};
+
+template <class Real>
+Real CallValue(const Terms<Real>& t, BarrierType barrier_type) {
+  const bool strike_above = t.strike >= t.barrier;
   switch (barrier_type) {
     case BarrierType::kDownIn:
-      return (strike_above ? b_term(-1) - c_term(1, -1) + d_term(1, -1) : a_term(-1)) + e_term(1);
+      return (strike_above ? t.C(1, 1) : t.A(1) - t.B(1) + t.D(1, 1)) + t.E(1);
     case BarrierType::kUpIn:
-      return (strike_above ? a_term(-1) - b_term(-1) + d_term(-1, -1) : c_term(-1, -1)) +
-             e_term(-1);
+      return (strike_above ? t.A(1) : t.B(1) - t.C(-1, 1) + t.D(-1, 1)) + t.E(-1);
     case BarrierType::kDownOut:
-      return (strike_above ? a_term(-1) - b_term(-1) + c_term(1, -1) - d_term(1, -1) : Real(0.0)) +
-             f_term(1);
+      return (strike_above ? t.A(1) - t.C(1, 1) : t.B(1) - t.D(1, 1)) + t.F(1);
     case BarrierType::kUpOut:
-      return (strike_above ? b_term(-1) - d_term(-1, -1) : a_term(-1) - c_term(-1, -1)) +
-             f_term(-1);
+      return (strike_above ? Real(0.0) : t.A(1) - t.B(1) + t.C(-1, 1) - t.D(-1, 1)) + t.F(-1);
   }
   return Real(0.0);
+}
+
+template <class Real>
+Real PutValue(const Terms<Real>& t, BarrierType barrier_type) {
+  const bool strike_above = t.strike >= t.barrier;
+  switch (barrier_type) {
+    case BarrierType::kDownIn:
+      return (strike_above ? t.B(-1) - t.C(1, -1) + t.D(1, -1) : t.A(-1)) + t.E(1);
+    case BarrierType::kUpIn:
+      return (strike_above ? t.A(-1) - t.B(-1) + t.D(-1, -1) : t.C(-1, -1)) + t.E(-1);
+    case BarrierType::kDownOut:
+      return (strike_above ? t.A(-1) - t.B(-1) + t.C(1, -1) - t.D(1, -1) : Real(0.0)) + t.F(1);
+    case BarrierType::kUpOut:
+      return (strike_above ? t.B(-1) - t.D(-1, -1) : t.A(-1) - t.C(-1, -1)) + t.F(-1);
+  }
+  return Real(0.0);
+}
+
+}  // namespace barrier_detail
+
+template <class Real>
+Real BarrierOptionValue(BarrierType barrier_type, OptionType option_type, double strike,
+                        double barrier, double rebate, const MarketParams<Real>& m) {
+  const barrier_detail::Terms<Real> terms(strike, barrier, rebate, m);
+  return option_type == OptionType::kCall ? barrier_detail::CallValue(terms, barrier_type)
+                                          : barrier_detail::PutValue(terms, barrier_type);
 }
 
 }  // namespace aadp

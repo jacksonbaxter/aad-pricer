@@ -1,6 +1,7 @@
 // What the machine is, for the results header. Nothing here may return the node name of the
 // machine except short_hostname(), which exists so that the privacy scan can look for it.
-#pragma once
+#ifndef AADP_PLATFORM_CPU_INFO_HPP_
+#define AADP_PLATFORM_CPU_INFO_HPP_
 
 #include <cstdint>
 #include <optional>
@@ -52,3 +53,5 @@ std::string describe_linux_os(std::string_view pretty_name, std::string_view ver
                               std::string_view hostname);
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_CPU_INFO_HPP_

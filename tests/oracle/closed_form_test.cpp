@@ -9,6 +9,7 @@
 // - O7: BGK 1997 Table 2.1, 4.398, closed form 4.3975025600.
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 
 #include "oracle/barrier.hpp"
@@ -24,7 +25,7 @@ using test::Dual;
 constexpr double kFourDecimals = 5.1e-5;  // Published to 4 decimals, half a unit plus rounding.
 
 MarketParams<double> Market(double spot, double sigma, double r, double q, double maturity) {
-  return {spot, sigma, r, q, maturity};
+  return {.spot = spot, .sigma = sigma, .r = r, .q = q, .maturity = maturity};
 }
 
 TEST(BlackScholes, O1DeltaCall) {
@@ -49,7 +50,7 @@ TEST(BlackScholes, O3ThetaPutPerYear) {
 }
 
 TEST(BlackScholes, GammaAndVega) {
-  for (OptionType type : {OptionType::kCall, OptionType::kPut}) {
+  for (const OptionType type : {OptionType::kCall, OptionType::kPut}) {
     const auto g = BlackScholes(type, 60.0, Market(55, 0.30, 0.10, 0.0, 0.75));
     EXPECT_NEAR(g.gamma, 0.0278, kFourDecimals);
     EXPECT_NEAR(g.vega, 18.9358, kFourDecimals);
@@ -72,10 +73,12 @@ TEST(BlackScholes, PutCallParity) {
 // Hand-written Greeks against the chain rule through the value, so a sign or convention slip in
 // either has to appear in both to survive. Theta is -dV/dT by construction here.
 TEST(BlackScholes, HandGreeksMatchDualOnValue) {
-  for (OptionType type : {OptionType::kCall, OptionType::kPut}) {
-    const MarketParams<Dual> m{Dual::Variable(105, 0), Dual::Variable(0.36, 1),
-                               Dual::Variable(0.07, 2), Dual::Variable(0.02, 3),
-                               Dual::Variable(0.5, 4)};
+  for (const OptionType type : {OptionType::kCall, OptionType::kPut}) {
+    const MarketParams<Dual> m{.spot = Dual::Variable(105, 0),
+                               .sigma = Dual::Variable(0.36, 1),
+                               .r = Dual::Variable(0.07, 2),
+                               .q = Dual::Variable(0.02, 3),
+                               .maturity = Dual::Variable(0.5, 4)};
     const Dual value = BlackScholes(type, 100.0, m).value;
     const auto g = BlackScholes(type, 100.0, Market(105, 0.36, 0.07, 0.02, 0.5));
     EXPECT_NEAR(value.value, g.value, 1e-13);
@@ -95,18 +98,24 @@ TEST(GeometricAsian, O4TenFixings) {
 
 // The sums in the closed form replaced by the sums they stand for, with and without t = 0.
 TEST(GeometricAsian, MatchesExplicitCovarianceSum) {
-  const double spot = 100, strike = 95, sigma = 0.25, r = 0.04, q = 0.01, maturity = 0.75;
+  const double spot = 100;
+  const double strike = 95;
+  const double sigma = 0.25;
+  const double r = 0.04;
+  const double q = 0.01;
+  const double maturity = 0.75;
   for (const bool include_spot : {false, true}) {
     for (const std::uint32_t n : {1U, 2U, 7U, 50U}) {
       std::vector<double> times;
       if (include_spot) times.push_back(0.0);
       for (std::uint32_t i = 1; i <= n; ++i) times.push_back(maturity * i / n);
-      double sum_t = 0.0, sum_min = 0.0;
-      for (double a : times) {
+      double sum_t = 0.0;
+      double sum_min = 0.0;
+      for (const double a : times) {
         sum_t += a;
-        for (double b : times) sum_min += std::min(a, b);
+        for (const double b : times) sum_min += std::min(a, b);
       }
-      const double count = static_cast<double>(times.size());
+      const auto count = static_cast<double>(times.size());
       const double mean = std::log(spot) + (r - q - 0.5 * sigma * sigma) * sum_t / count;
       const double variance = sigma * sigma * sum_min / (count * count);
       const double sd = std::sqrt(variance);
@@ -124,7 +133,7 @@ TEST(GeometricAsian, MatchesExplicitCovarianceSum) {
 
 TEST(GeometricAsian, OneFixingWithoutSpotIsVanilla) {
   const auto m = Market(100, 0.20, 0.06, 0.03, 1.0);
-  for (OptionType type : {OptionType::kCall, OptionType::kPut}) {
+  for (const OptionType type : {OptionType::kCall, OptionType::kPut}) {
     EXPECT_NEAR(GeometricAsianValue(type, 95.0, 1, false, m), BlackScholes(type, 95.0, m).value,
                 1e-11);
   }
@@ -140,56 +149,296 @@ struct HaugRow {
 };
 
 // Common to the table: S = 100, q = 0.04, r = 0.08, T = 0.5, rebate = 3.
-constexpr HaugRow kHaugRows[] = {
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 90.0, 0.25, 9.0246},
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 100.0, 0.25, 6.7924},
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 110.0, 0.25, 4.8759},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 90.0, 0.25, 2.6789},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 100.0, 0.25, 2.3580},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 110.0, 0.25, 2.3453},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 90.0, 0.25, 7.7627},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 100.0, 0.25, 4.0109},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 110.0, 0.25, 2.0576},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 90.0, 0.25, 14.1112},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 100.0, 0.25, 8.4482},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 110.0, 0.25, 4.5910},
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 90.0, 0.30, 8.8334},
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 100.0, 0.30, 7.0285},
-    {BarrierType::kDownOut, OptionType::kCall, 95.0, 110.0, 0.30, 5.4137},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 90.0, 0.30, 2.6341},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 100.0, 0.30, 2.4389},
-    {BarrierType::kUpOut, OptionType::kCall, 105.0, 110.0, 0.30, 2.4315},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 90.0, 0.30, 9.0093},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 100.0, 0.30, 5.1370},
-    {BarrierType::kDownIn, OptionType::kCall, 95.0, 110.0, 0.30, 2.8517},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 90.0, 0.30, 15.2098},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 100.0, 0.30, 9.7278},
-    {BarrierType::kUpIn, OptionType::kCall, 105.0, 110.0, 0.30, 5.8350},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 90.0, 0.25, 2.2798},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 100.0, 0.25, 2.2947},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 110.0, 0.25, 2.6252},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 90.0, 0.25, 3.7760},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 100.0, 0.25, 5.4932},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 110.0, 0.25, 7.5187},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 90.0, 0.25, 2.9586},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 100.0, 0.25, 6.5677},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 110.0, 0.25, 11.9752},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 90.0, 0.25, 1.4653},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 100.0, 0.25, 3.3721},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 110.0, 0.25, 7.0846},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 90.0, 0.30, 2.4170},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 100.0, 0.30, 2.4258},
-    {BarrierType::kDownOut, OptionType::kPut, 95.0, 110.0, 0.30, 2.6246},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 90.0, 0.30, 4.2293},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 100.0, 0.30, 5.8032},
-    {BarrierType::kUpOut, OptionType::kPut, 105.0, 110.0, 0.30, 7.5649},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 90.0, 0.30, 3.8769},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 100.0, 0.30, 7.7989},
-    {BarrierType::kDownIn, OptionType::kPut, 95.0, 110.0, 0.30, 13.3078},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 90.0, 0.30, 2.0658},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 100.0, 0.30, 4.4226},
-    {BarrierType::kUpIn, OptionType::kPut, 105.0, 110.0, 0.30, 8.3686},
-};
+constexpr auto kHaugRows = std::to_array<HaugRow>({
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 9.0246},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 6.7924},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 4.8759},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 2.6789},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 2.3580},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 2.3453},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 7.7627},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 4.0109},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 2.0576},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 14.1112},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 8.4482},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 4.5910},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 8.8334},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 7.0285},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 5.4137},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 2.6341},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 2.4389},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 2.4315},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 9.0093},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 5.1370},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kCall,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 2.8517},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 15.2098},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 9.7278},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kCall,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 5.8350},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 2.2798},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 2.2947},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 2.6252},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 3.7760},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 5.4932},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 7.5187},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 2.9586},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 6.5677},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 11.9752},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.25,
+     .expected = 1.4653},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.25,
+     .expected = 3.3721},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.25,
+     .expected = 7.0846},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 2.4170},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 2.4258},
+    {.barrier_type = BarrierType::kDownOut,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 2.6246},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 4.2293},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 5.8032},
+    {.barrier_type = BarrierType::kUpOut,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 7.5649},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 3.8769},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 7.7989},
+    {.barrier_type = BarrierType::kDownIn,
+     .option_type = OptionType::kPut,
+     .barrier = 95.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 13.3078},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 90.0,
+     .sigma = 0.30,
+     .expected = 2.0658},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 100.0,
+     .sigma = 0.30,
+     .expected = 4.4226},
+    {.barrier_type = BarrierType::kUpIn,
+     .option_type = OptionType::kPut,
+     .barrier = 105.0,
+     .strike = 110.0,
+     .sigma = 0.30,
+     .expected = 8.3686},
+});
 
 TEST(BarrierClosedForm, HaugTable) {
   ASSERT_EQ(std::size(kHaugRows), 48U);
@@ -258,9 +507,11 @@ TEST(BarrierClosedForm, FarBarrierConvergesToVanilla) {
 // deterministic central differences, one parameter at a time.
 template <class Value>
 void ExpectGreeksMatchCentralDifference(const MarketParams<double>& m, Value value, double h) {
-  const MarketParams<Dual> active{Dual::Variable(m.spot, 0), Dual::Variable(m.sigma, 1),
-                                  Dual::Variable(m.r, 2), Dual::Variable(m.q, 3),
-                                  Dual::Variable(m.maturity, 4)};
+  const MarketParams<Dual> active{.spot = Dual::Variable(m.spot, 0),
+                                  .sigma = Dual::Variable(m.sigma, 1),
+                                  .r = Dual::Variable(m.r, 2),
+                                  .q = Dual::Variable(m.q, 3),
+                                  .maturity = Dual::Variable(m.maturity, 4)};
   const Dual result = value(active);
   EXPECT_NEAR(result.value, value(m), 1e-12);
   const auto bumped = [&](int slot, double bump) {

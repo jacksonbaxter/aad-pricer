@@ -34,8 +34,8 @@ TEST(Json, RefusesAKeySpelledWithAnEscape) {
 
 TEST(Json, RefusesMalformedDocuments) {
   for (const std::string_view bad :
-       {"", "{", "}", "[", "[1,", "[1 2]", "{\"a\"}", "{\"a\":}", "{a:1}", "\"abc", "\"\\x\"",
-        "\"\\u12\"", "01", "1.", "1e", "-", "tru", "{} x", "\"\t\""}) {
+       {"", "{", "}", "[", "[1,", "[1 2]", "{\"a\"}", "{\"a\":}", "{a:1}", "\"abc", R"("\x")",
+        R"("\u12")", "01", "1.", "1e", "-", "tru", "{} x", "\"\t\""}) {
     EXPECT_FALSE(parse_json(bad).has_value()) << bad;
   }
 }

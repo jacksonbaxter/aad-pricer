@@ -40,7 +40,7 @@ std::expected<std::vector<CalibrationSlice>, CalibrationError> select_calibratio
   std::vector<CalibrationSlice> slices;
   slices.reserve(forwards.size());
   for (const ExpiryForward& entry : forwards) {
-    CalibrationSlice slice{entry.expiry, entry.forward, {}};
+    CalibrationSlice slice{.expiry = entry.expiry, .forward = entry.forward, .rows = {}};
     std::ranges::copy_if(rows, std::back_inserter(slice.rows), [&](const taifex::OptionRow& row) {
       return passes_filters(row, entry.expiry, entry.forward);
     });

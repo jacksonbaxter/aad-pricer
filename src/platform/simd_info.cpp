@@ -4,14 +4,17 @@
 #include <hwy/targets.h>
 
 HWY_BEFORE_NAMESPACE();
-namespace aadp::platform {
-namespace HWY_NAMESPACE {
+
+namespace aadp::platform::HWY_NAMESPACE {
 namespace hn = hwy::HWY_NAMESPACE;
+namespace {
 
 std::size_t DoubleLanes() { return hn::Lanes(hn::ScalableTag<double>()); }
 
-}  // namespace HWY_NAMESPACE
-}  // namespace aadp::platform
+}  // namespace
+
+}  // namespace aadp::platform::HWY_NAMESPACE
+
 HWY_AFTER_NAMESPACE();
 
 namespace aadp::platform {

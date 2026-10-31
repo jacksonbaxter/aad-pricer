@@ -4,6 +4,7 @@
 // - accepted rows have finite numbers, non-negative prices, volume and open interest, a positive
 //   strike, and fields and a session that match the raw columns of their own line
 // - the calibration filter returns only rows that meet each of its conditions
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -47,8 +48,9 @@ void check_row(const OptionRow& row, const f::LineIndex& lines) {
 }
 
 void check_calibration(const std::vector<OptionRow>& rows) {
-  const std::vector<aadp::ExpiryForward> forwards = {
-      {"202401", 1000.0}, {"202401W2", 1005.5}, {"202412", 2000.0}};
+  const std::vector<aadp::ExpiryForward> forwards = {{.expiry = "202401", .forward = 1000.0},
+                                                     {.expiry = "202401W2", .forward = 1005.5},
+                                                     {.expiry = "202412", .forward = 2000.0}};
   const auto slices = aadp::select_calibration_set(rows, forwards);
   AADP_FUZZ_CHECK(slices.has_value());
   AADP_FUZZ_CHECK(slices->size() == forwards.size());
@@ -63,7 +65,8 @@ void check_calibration(const std::vector<OptionRow>& rows) {
       AADP_FUZZ_CHECK(row.right == OptionRight::kPut ? row.strike < slice.forward
                                                      : row.strike > slice.forward);
       AADP_FUZZ_CHECK(row.volume.has_value() && *row.volume > 0);
-      AADP_FUZZ_CHECK(row.settlement_price.has_value() && row.last_trade_price.has_value());
+      AADP_FUZZ_CHECK(row.settlement_price.has_value());
+      AADP_FUZZ_CHECK(row.last_trade_price.has_value());
       AADP_FUZZ_CHECK(*row.settlement_price == *row.last_trade_price);
       AADP_FUZZ_CHECK(*row.settlement_price >= aadp::kMinSettlementPoints);
     }
@@ -87,7 +90,7 @@ void check_read(std::string_view input) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(reinterpret_cast<const char*>(data), size);
+  const std::string_view input(std::bit_cast<const char*>(data), size);
   check_read(input);
   // Without the header most inputs stop at line 1.
   std::string with_header = t::kOptionsHeader;

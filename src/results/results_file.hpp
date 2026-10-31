@@ -11,7 +11,8 @@
 //
 // The binary writes this format and results_stamp adds the keys it owns. Keeping one format
 // means one reader and one fuzz target.
-#pragma once
+#ifndef AADP_RESULTS_RESULTS_FILE_HPP_
+#define AADP_RESULTS_RESULTS_FILE_HPP_
 
 #include <array>
 #include <expected>
@@ -43,8 +44,13 @@ struct ResultsFile {
   std::vector<HeaderField> header;
   std::vector<ResultsSection> sections;
 
-  std::optional<std::string_view> value(std::string_view key) const;
-  const ResultsSection* section(std::string_view name) const;
+  [[nodiscard]] std::optional<std::string_view> value(std::string_view key) const;
+  // For a key the caller has already proved present, as validate_stamped does. An absent key
+  // reads as empty, so a slip fails the caller's next comparison rather than reading nothing.
+  [[nodiscard]] std::string_view required(std::string_view key) const {
+    return value(key).value_or(std::string_view{});
+  }
+  [[nodiscard]] const ResultsSection* section(std::string_view name) const;
   bool operator==(const ResultsFile&) const = default;
 };
 
@@ -144,3 +150,5 @@ struct HistogramValue {
 std::vector<HistogramValue> parse_histogram_body(std::string_view body);
 
 }  // namespace aadp::results
+
+#endif  // AADP_RESULTS_RESULTS_FILE_HPP_

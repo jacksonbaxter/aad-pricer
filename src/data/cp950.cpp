@@ -5,18 +5,18 @@ namespace aadp::cp950 {
 std::expected<Unit, DecodeError> decode_unit(std::string_view bytes, std::size_t offset) {
   const auto lead = static_cast<std::uint8_t>(bytes[offset]);
   if (is_ascii(lead)) {
-    return Unit{offset, 1};
+    return Unit{.offset = offset, .length = 1};
   }
   if (!is_lead_byte(lead)) {
-    return std::unexpected(DecodeError{offset, ErrorKind::kInvalidLeadByte});
+    return std::unexpected(DecodeError{.position = offset, .kind = ErrorKind::kInvalidLeadByte});
   }
   if (offset + 1 == bytes.size()) {
-    return std::unexpected(DecodeError{offset, ErrorKind::kTruncatedPair});
+    return std::unexpected(DecodeError{.position = offset, .kind = ErrorKind::kTruncatedPair});
   }
   if (!is_trail_byte(static_cast<std::uint8_t>(bytes[offset + 1]))) {
-    return std::unexpected(DecodeError{offset, ErrorKind::kInvalidTrailByte});
+    return std::unexpected(DecodeError{.position = offset, .kind = ErrorKind::kInvalidTrailByte});
   }
-  return Unit{offset, 2};
+  return Unit{.offset = offset, .length = 2};
 }
 
 std::expected<std::vector<Unit>, DecodeError> decode(std::string_view bytes) {

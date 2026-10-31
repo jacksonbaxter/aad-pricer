@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -28,8 +29,11 @@ using aadp::taifex::ReadError;
 using aadp::taifex::Session;
 
 // Published in NOTES.md, "Recommended calibration set". The regression behind them is Phase 3.
-const std::vector<aadp::ExpiryForward> kPublishedForwards = {
-    {"202411", 22761.47}, {"202411W4", 22786.07}, {"202412", 22792.92}};
+std::vector<aadp::ExpiryForward> published_forwards() {
+  return {{.expiry = "202411", .forward = 22761.47},
+          {.expiry = "202411W4", .forward = 22786.07},
+          {.expiry = "202412", .forward = 22792.92}};
+}
 
 constexpr int kMaxErrorsShown = 20;
 
@@ -105,7 +109,7 @@ void print_options(const aadp::taifex::OptionsFile& file) {
 }
 
 void print_calibration_set(const aadp::taifex::OptionsFile& file) {
-  const auto slices = aadp::select_calibration_set(file.rows, kPublishedForwards);
+  const auto slices = aadp::select_calibration_set(file.rows, published_forwards());
   if (!slices) {
     std::cout << "\ncalibration set: bad forwards\n";
     return;
@@ -145,7 +149,7 @@ int usage() {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   std::string options_path = "data/DailyMarketReportOpt.csv";
   std::string futures_path = "data/DailyMarketReportFut.csv";
   const std::span<char*> args(argv, static_cast<std::size_t>(argc));
@@ -192,4 +196,7 @@ int main(int argc, char** argv) {
   print_calibration_set(*options);
   print_futures(*futures);
   return 0;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "chain_profile: %s\n", error.what());
+  return 2;
 }

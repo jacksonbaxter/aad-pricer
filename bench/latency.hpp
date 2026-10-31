@@ -3,7 +3,8 @@
 //
 // A single tick of error is at most 1/kMinResolutionMultiple of a batch at the gate, so every
 // published value is good to 10%, and to 1% at the size batches are normally grown to.
-#pragma once
+#ifndef AADP_BENCH_LATENCY_HPP_
+#define AADP_BENCH_LATENCY_HPP_
 
 #include <hdr/hdr_histogram.h>
 
@@ -55,9 +56,9 @@ class LatencyHistogram {
   static std::expected<LatencyHistogram, std::string> from_batches(
       std::span<const std::int64_t> batch_ns, double gate_ns);
 
-  std::vector<PublishedValue> values() const;
-  std::int64_t count() const;
-  double gate_ns() const { return gate_ns_; }
+  [[nodiscard]] std::vector<PublishedValue> values() const;
+  [[nodiscard]] std::int64_t count() const;
+  [[nodiscard]] double gate_ns() const { return gate_ns_; }
 
  private:
   struct Closer {
@@ -71,3 +72,5 @@ class LatencyHistogram {
 };
 
 }  // namespace aadp::bench
+
+#endif  // AADP_BENCH_LATENCY_HPP_

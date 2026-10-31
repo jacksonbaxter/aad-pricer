@@ -31,26 +31,24 @@ constexpr std::array<std::string_view, 18> kHeader = {
 constexpr std::string_view kCallLabel = "\xB6\x52\xC5\x76";  // 買權
 constexpr std::string_view kPutLabel = "\xBD\xE6\xC5\x76";   // 賣權
 
-enum Column : int {
-  kDate,
-  kContract,
-  kExpiry,
-  kStrike,
-  kRight,
-  kOpen,
-  kHigh,
-  kLow,
-  kLastTrade,
-  kVolume,
-  kSettlement,
-  kOpenInterest,
-  kLastBestBid,
-  kLastBestAsk,
-  kHistoricalHigh,
-  kHistoricalLow,
-  kNewsHalt,
-  kSession,
-};
+constexpr int kDate = 0;
+constexpr int kContract = 1;
+constexpr int kExpiry = 2;
+constexpr int kStrike = 3;
+constexpr int kRight = 4;
+constexpr int kOpen = 5;
+constexpr int kHigh = 6;
+constexpr int kLow = 7;
+constexpr int kLastTrade = 8;
+constexpr int kVolume = 9;
+constexpr int kSettlement = 10;
+constexpr int kOpenInterest = 11;
+constexpr int kLastBestBid = 12;
+constexpr int kLastBestAsk = 13;
+constexpr int kHistoricalHigh = 14;
+constexpr int kHistoricalLow = 15;
+constexpr int kNewsHalt = 16;
+constexpr int kSession = 17;
 
 OptionRight parse_right(RowFields& fields) {
   if (fields.ok() && fields.field(kRight) == kPutLabel) {

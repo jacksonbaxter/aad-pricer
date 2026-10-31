@@ -1,5 +1,6 @@
 // Thread placement. Linux can hard-pin; macOS cannot, and says so.
-#pragma once
+#ifndef AADP_PLATFORM_AFFINITY_HPP_
+#define AADP_PLATFORM_AFFINITY_HPP_
 
 #include <expected>
 #include <optional>
@@ -32,3 +33,5 @@ int process_nice();
 std::string format_cpu_list(std::span<const int> cpus);
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_AFFINITY_HPP_

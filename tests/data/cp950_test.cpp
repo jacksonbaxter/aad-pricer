@@ -12,14 +12,14 @@ TEST(Cp950, DecodesAsciiAndPairs) {
   const std::string bytes = "\xA4\x40\xAF\xEB,x";
   const auto units = decode(bytes);
   ASSERT_TRUE(units.has_value());
-  ASSERT_EQ(units->size(), 4u);
-  EXPECT_EQ((*units)[0].offset, 0u);
+  ASSERT_EQ(units->size(), 4U);
+  EXPECT_EQ((*units)[0].offset, 0U);
   EXPECT_EQ((*units)[0].length, 2);
-  EXPECT_EQ((*units)[1].offset, 2u);
+  EXPECT_EQ((*units)[1].offset, 2U);
   EXPECT_EQ((*units)[1].length, 2);
-  EXPECT_EQ((*units)[2].offset, 4u);
+  EXPECT_EQ((*units)[2].offset, 4U);
   EXPECT_EQ((*units)[2].length, 1);
-  EXPECT_EQ((*units)[3].offset, 5u);
+  EXPECT_EQ((*units)[3].offset, 5U);
   EXPECT_EQ((*units)[3].length, 1);
 }
 
@@ -36,10 +36,10 @@ TEST(Cp950, TrailBytesEqualToAsciiPunctuationStayInsideThePair) {
     const std::string bytes = std::string("\xA4") + trail + trail;
     const auto units = decode(bytes);
     ASSERT_TRUE(units.has_value()) << "trail " << trail;
-    ASSERT_EQ(units->size(), 2u) << "trail " << trail;
+    ASSERT_EQ(units->size(), 2U) << "trail " << trail;
     EXPECT_EQ((*units)[0].length, 2);
     // The same byte standing alone is ASCII.
-    EXPECT_EQ((*units)[1].offset, 2u);
+    EXPECT_EQ((*units)[1].offset, 2U);
     EXPECT_EQ((*units)[1].length, 1);
   }
 }
@@ -59,11 +59,11 @@ TEST(Cp950, EveryTrailValueIsClassifiedByTheDecoder) {
     const auto units = decode(bytes);
     if ((b >= 0x40 && b <= 0x7E) || (b >= 0xA1 && b <= 0xFE)) {
       ASSERT_TRUE(units.has_value()) << b;
-      EXPECT_EQ(units->size(), 1u) << b;
+      EXPECT_EQ(units->size(), 1U) << b;
     } else {
       ASSERT_FALSE(units.has_value()) << b;
       EXPECT_EQ(units.error().kind, ErrorKind::kInvalidTrailByte) << b;
-      EXPECT_EQ(units.error().position, 0u) << b;
+      EXPECT_EQ(units.error().position, 0U) << b;
     }
   }
 }
@@ -72,14 +72,14 @@ TEST(Cp950, CommaCannotBeATrailByte) {
   const auto units = decode("ab\xA4,");
   ASSERT_FALSE(units.has_value());
   EXPECT_EQ(units.error().kind, ErrorKind::kInvalidTrailByte);
-  EXPECT_EQ(units.error().position, 2u);
+  EXPECT_EQ(units.error().position, 2U);
 }
 
 TEST(Cp950, RejectsTruncationWithItsPosition) {
   const auto units = decode("abc\xA4\x40\xBD");
   ASSERT_FALSE(units.has_value());
   EXPECT_EQ(units.error().kind, ErrorKind::kTruncatedPair);
-  EXPECT_EQ(units.error().position, 5u);
+  EXPECT_EQ(units.error().position, 5U);
 }
 
 TEST(Cp950, RejectsBytesThatCannotLead) {
@@ -88,7 +88,7 @@ TEST(Cp950, RejectsBytesThatCannotLead) {
     const auto units = decode(bytes);
     ASSERT_FALSE(units.has_value());
     EXPECT_EQ(units.error().kind, ErrorKind::kInvalidLeadByte);
-    EXPECT_EQ(units.error().position, 2u);
+    EXPECT_EQ(units.error().position, 2U);
   }
 }
 
@@ -102,7 +102,7 @@ TEST(Cp950, EmbeddedNulIsAnAsciiUnitHere) {
   const std::string bytes("a\0b", 3);
   const auto units = decode(bytes);
   ASSERT_TRUE(units.has_value());
-  EXPECT_EQ(units->size(), 3u);
+  EXPECT_EQ(units->size(), 3U);
 }
 
 }  // namespace

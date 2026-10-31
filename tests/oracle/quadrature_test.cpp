@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -19,7 +20,16 @@ namespace {
 
 constexpr double kPin = 1e-9;  // BENCHMARKS.md b for O5, O6 and O9.
 
-BarrierInputs Bgk(double barrier) { return {100, 100, barrier, 0.10, 0.0, 0.30, 0.2, 50}; }
+BarrierInputs Bgk(double barrier) {
+  return {.spot = 100,
+          .strike = 100,
+          .barrier = barrier,
+          .r = 0.10,
+          .q = 0.0,
+          .sigma = 0.30,
+          .maturity = 0.2,
+          .monitors = 50};
+}
 
 struct BgkRow {
   double barrier;
@@ -32,13 +42,43 @@ struct BgkRow {
 };
 
 // Value and delta to 10 decimals: BENCHMARKS.md and rerun/barrier.out. Naive: rerun/naive.out.
-constexpr BgkRow kBgkRows[] = {
-    {85, 6.322, 0.591, 6.3222401405, 0.5909057930, 6.3075749325, 0.58049},
-    {90, 6.098, 0.633, 6.0981961431, 0.6328096928, 5.9772419956, 0.54133},
-    {95, 4.907, 0.798, 4.9067890354, 0.7978141916, 4.3975025600, 0.39101},
-    {97, 3.834, 0.917, 3.8339777052, 0.9169759262, 3.0595633046, 0.28486},
-    {99, 2.337, 0.958, 2.3363868958, 0.9578825906, 1.1707930349, 0.15960},
-};
+constexpr auto kBgkRows = std::to_array<BgkRow>({
+    {.barrier = 85,
+     .published_value = 6.322,
+     .published_delta = 0.591,
+     .value = 6.3222401405,
+     .delta = 0.5909057930,
+     .continuous = 6.3075749325,
+     .naive = 0.58049},
+    {.barrier = 90,
+     .published_value = 6.098,
+     .published_delta = 0.633,
+     .value = 6.0981961431,
+     .delta = 0.6328096928,
+     .continuous = 5.9772419956,
+     .naive = 0.54133},
+    {.barrier = 95,
+     .published_value = 4.907,
+     .published_delta = 0.798,
+     .value = 4.9067890354,
+     .delta = 0.7978141916,
+     .continuous = 4.3975025600,
+     .naive = 0.39101},
+    {.barrier = 97,
+     .published_value = 3.834,
+     .published_delta = 0.917,
+     .value = 3.8339777052,
+     .delta = 0.9169759262,
+     .continuous = 3.0595633046,
+     .naive = 0.28486},
+    {.barrier = 99,
+     .published_value = 2.337,
+     .published_delta = 0.958,
+     .value = 2.3363868958,
+     .delta = 0.9578825906,
+     .continuous = 1.1707930349,
+     .naive = 0.15960},
+});
 
 TEST(DiscreteBarrier, PinsAllFiveRows) {
   for (const BgkRow& row : kBgkRows) {
@@ -51,7 +91,8 @@ TEST(DiscreteBarrier, PinsAllFiveRows) {
 
 TEST(DiscreteBarrier, SimpsonAgreesWithGaussLegendre) {
   for (const BgkRow& row : kBgkRows) {
-    const BarrierResult a = DiscreteDownOutGaussLegendre(Bgk(row.barrier), {3.0, 10, 14.0, 15.0});
+    const BarrierResult a = DiscreteDownOutGaussLegendre(
+        Bgk(row.barrier), {.panels_per_sd = 3.0, .degree = 10, .top_sd = 14.0, .kernel_sd = 15.0});
     const BarrierResult b = DiscreteDownOutSimpson(Bgk(row.barrier), {});
     EXPECT_NEAR(a.value, b.value, kPin) << row.barrier;
     EXPECT_NEAR(a.delta, b.delta, kPin) << row.barrier;
@@ -85,7 +126,14 @@ TEST(DiscreteBarrier, IsAboveTheContinuousContract) {
 }
 
 TEST(DiscreteBarrier, O8FourMonitors) {
-  const BarrierInputs in{100, 100, 95, 0.10, 0.0, 0.60, 0.2, 4};
+  const BarrierInputs in{.spot = 100,
+                         .strike = 100,
+                         .barrier = 95,
+                         .r = 0.10,
+                         .q = 0.0,
+                         .sigma = 0.60,
+                         .maturity = 0.2,
+                         .monitors = 4};
   const BarrierResult gl = DiscreteDownOutGaussLegendre(in, {});
   EXPECT_NEAR(gl.value, 9.4905, 1e-4);      // BENCHMARKS.md reference and b.
   EXPECT_NEAR(gl.value, 9.49052, 2e-5);     // BGK 1999 published value.
@@ -93,8 +141,16 @@ TEST(DiscreteBarrier, O8FourMonitors) {
 }
 
 TEST(DiscreteBarrier, StrikeBelowBarrierAgreesAcrossMethods) {
-  const BarrierInputs in{100, 90, 95, 0.05, 0.02, 0.30, 0.5, 12};
-  const BarrierResult a = DiscreteDownOutGaussLegendre(in, {3.0, 10, 14.0, 15.0});
+  const BarrierInputs in{.spot = 100,
+                         .strike = 90,
+                         .barrier = 95,
+                         .r = 0.05,
+                         .q = 0.02,
+                         .sigma = 0.30,
+                         .maturity = 0.5,
+                         .monitors = 12};
+  const BarrierResult a = DiscreteDownOutGaussLegendre(
+      in, {.panels_per_sd = 3.0, .degree = 10, .top_sd = 14.0, .kernel_sd = 15.0});
   const BarrierResult b = DiscreteDownOutSimpson(in, {});
   EXPECT_NEAR(a.value, b.value, kPin);
   EXPECT_NEAR(a.delta, b.delta, kPin);
@@ -106,7 +162,13 @@ TEST(DiscreteBarrier, StrikeBelowBarrierAgreesAcrossMethods) {
 constexpr double kImpliedSigma = 0.1780163;
 
 AsianInputs Fm(double strike, std::uint32_t steps, double sigma = 0.17801) {
-  return {100, strike, 0.0367, 0.0, sigma, 1.0, steps};
+  return {.spot = 100,
+          .strike = strike,
+          .r = 0.0367,
+          .q = 0.0,
+          .sigma = sigma,
+          .maturity = 1.0,
+          .steps = steps};
 }
 
 TEST(ArithmeticAsian, O9) {
@@ -127,9 +189,13 @@ TEST(ArithmeticAsian, ImpliedSigmaReachesTheArithmeticColumns) {
     double published_10000;  // Quadrature with 10000 nodes.
     double published_5000;   // Quadrature with 5000 nodes.
   };
-  const Row rows[] = {{90, 12, 11.90497, 11.90498}, {100, 12, 4.88210, 4.88212},
-                      {110, 12, 1.36314, 1.36314},  {90, 50, 11.93301, 11.93299},
-                      {100, 50, 4.93736, 4.93738},  {110, 50, 1.40264, 1.40262}};
+  const auto rows = std::to_array<Row>(
+      {{.strike = 90, .steps = 12, .published_10000 = 11.90497, .published_5000 = 11.90498},
+       {.strike = 100, .steps = 12, .published_10000 = 4.88210, .published_5000 = 4.88212},
+       {.strike = 110, .steps = 12, .published_10000 = 1.36314, .published_5000 = 1.36314},
+       {.strike = 90, .steps = 50, .published_10000 = 11.93301, .published_5000 = 11.93299},
+       {.strike = 100, .steps = 50, .published_10000 = 4.93736, .published_5000 = 4.93738},
+       {.strike = 110, .steps = 50, .published_10000 = 1.40264, .published_5000 = 1.40262}});
   for (const Row& row : rows) {
     const double value = ArithmeticAsianCall(Fm(row.strike, row.steps, kImpliedSigma), {}).value;
     EXPECT_NEAR(value, row.published_10000, 2.0e-5) << row.strike << " " << row.steps;
@@ -143,12 +209,16 @@ TEST(ArithmeticAsian, ImpliedSigmaReachesTheGeometricColumn) {
     std::uint32_t steps;
     double published;
   };
-  const Row rows[] = {{90, 12, 11.66744},  {100, 12, 4.703634}, {110, 12, 1.251243},
-                      {90, 50, 11.7076},   {100, 50, 4.769273}, {110, 50, 1.299134},
-                      {100, 250, 4.787024}};
+  const auto rows = std::to_array<Row>({{.strike = 90, .steps = 12, .published = 11.66744},
+                                        {.strike = 100, .steps = 12, .published = 4.703634},
+                                        {.strike = 110, .steps = 12, .published = 1.251243},
+                                        {.strike = 90, .steps = 50, .published = 11.7076},
+                                        {.strike = 100, .steps = 50, .published = 4.769273},
+                                        {.strike = 110, .steps = 50, .published = 1.299134},
+                                        {.strike = 100, .steps = 250, .published = 4.787024}});
   for (const Row& row : rows) {
     const auto market = [&](double sigma) {
-      return MarketParams<double>{100, sigma, 0.0367, 0, 1};
+      return MarketParams<double>{.spot = 100, .sigma = sigma, .r = 0.0367, .q = 0, .maturity = 1};
     };
     const auto value = [&](double sigma) {
       return GeometricAsianValue(OptionType::kCall, row.strike, row.steps, true, market(sigma));
@@ -159,8 +229,9 @@ TEST(ArithmeticAsian, ImpliedSigmaReachesTheGeometricColumn) {
 }
 
 TEST(ArithmeticAsian, RecursionMatchesBruteForceAtThreeSteps) {
-  for (double strike : {90.0, 100.0, 110.0}) {
-    const AsianResult recursion = ArithmeticAsianCall(Fm(strike, 3), {6.0, 14.0, 16.0});
+  for (const double strike : {90.0, 100.0, 110.0}) {
+    const AsianResult recursion = ArithmeticAsianCall(
+        Fm(strike, 3), {.nodes_per_sd = 6.0, .grid_sd = 14.0, .kernel_sd = 16.0});
     EXPECT_NEAR(recursion.value, ArithmeticAsianBruteForce3(Fm(strike, 3)), 1e-12) << strike;
     EXPECT_NEAR(recursion.mass_error, 0.0, 1e-13);
     EXPECT_NEAR(recursion.martingale_error, 0.0, 1e-13);
@@ -180,10 +251,19 @@ TEST(ArithmeticAsian, DividendEntersTheDrift) {
 // leave an error near c4 / (64 * 128 * 256 * 512), about c4 * 2e-10, so 1e-7 allows c4 up to
 // 500. Linetsky's value is a continuous average, so the discrete tool reaches it only here.
 TEST(ArithmeticAsian, RichardsonApproachesLinetskyCase5) {
-  const AsianInputs in{2.0, 2.0, 0.05, 0.0, 0.50, 1.0, 0};
+  const AsianInputs in{
+      .spot = 2.0, .strike = 2.0, .r = 0.05, .q = 0.0, .sigma = 0.50, .maturity = 1.0, .steps = 0};
   const std::vector<double> diagonal = ArithmeticAsianRichardson(in, 64, 4, {});
   ASSERT_EQ(diagonal.size(), 4U);
-  const double raw = ArithmeticAsianCall({2.0, 2.0, 0.05, 0.0, 0.50, 1.0, 512}, {}).value;
+  const double raw = ArithmeticAsianCall({.spot = 2.0,
+                                          .strike = 2.0,
+                                          .r = 0.05,
+                                          .q = 0.0,
+                                          .sigma = 0.50,
+                                          .maturity = 1.0,
+                                          .steps = 512},
+                                         {})
+                         .value;
   for (std::size_t i = 0; i < diagonal.size(); ++i) {
     std::printf("Richardson level %zu: %.12f, error %.3e\n", i, diagonal[i],
                 diagonal[i] - kLinetskyCase5);
@@ -212,12 +292,19 @@ TEST(GeneratedReferences, CarrySectionNineValues) {
     double value;
     double tolerance;
   };
-  const Expected expected[] = {
-      {"O1", 0.5946, 5.1e-5},       {"O2", 38.7325, 5.1e-5},      {"O3", -31.1924, 5.1e-5},
-      {"O4", 5.3425606635, 1e-10},  {"O5", 4.9067890354, kPin},   {"O6", 0.7978141916, kPin},
-      {"O7", 4.3975025600, kPin},   {"O8", 9.4905, 1e-4},         {"O9", 4.937202814482, kPin},
-      {"O10", 0.2464156905, 1e-10}, {"O11", 1.3939809367, 1e-10},
-  };
+  const auto expected = std::to_array<Expected>({
+      {.id = "O1", .value = 0.5946, .tolerance = 5.1e-5},
+      {.id = "O2", .value = 38.7325, .tolerance = 5.1e-5},
+      {.id = "O3", .value = -31.1924, .tolerance = 5.1e-5},
+      {.id = "O4", .value = 5.3425606635, .tolerance = 1e-10},
+      {.id = "O5", .value = 4.9067890354, .tolerance = kPin},
+      {.id = "O6", .value = 0.7978141916, .tolerance = kPin},
+      {.id = "O7", .value = 4.3975025600, .tolerance = kPin},
+      {.id = "O8", .value = 9.4905, .tolerance = 1e-4},
+      {.id = "O9", .value = 4.937202814482, .tolerance = kPin},
+      {.id = "O10", .value = 0.2464156905, .tolerance = 1e-10},
+      {.id = "O11", .value = 1.3939809367, .tolerance = 1e-10},
+  });
   for (const Expected& e : expected) {
     const ReferenceRow* row = Find(rows, e.id);
     ASSERT_NE(row, nullptr) << e.id;
@@ -234,7 +321,6 @@ TEST(GeneratedReferences, CarrySectionNineValues) {
 TEST(GeneratedReferences, IdsAreUniqueAndCsvIsWellFormed) {
   std::vector<std::string> failures;
   const std::vector<ReferenceRow> rows = GenerateReferences(failures);
-  std::vector<std::string> ids;
   for (const ReferenceRow& row : rows) {
     EXPECT_EQ(Find(rows, row.id), &row) << "duplicate " << row.id;
     for (const std::string* field : {&row.id, &row.parameters, &row.method, &row.source}) {

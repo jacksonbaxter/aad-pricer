@@ -1,6 +1,7 @@
 // Floating-point control state. Flush-to-zero silently changes results, and a linked object
 // built with -ffast-math can set it behind our back, so it is read and checked on every run.
-#pragma once
+#ifndef AADP_PLATFORM_FP_STATE_HPP_
+#define AADP_PLATFORM_FP_STATE_HPP_
 
 #include <cstdint>
 #include <expected>
@@ -29,3 +30,5 @@ std::expected<FpState, std::string> check_fp_state();
 void write_fp_register(std::uint64_t raw);
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_FP_STATE_HPP_

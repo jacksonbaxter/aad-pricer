@@ -38,7 +38,7 @@ struct RunSummary {
   double critical = 0.0;
   bool critical_matches_plan = false;
 
-  bool Clean() const {
+  [[nodiscard]] bool Clean() const {
     return failed == 0 && skipped == 0 && rows == declared_k && critical_matches_plan &&
            run == passed;
   }

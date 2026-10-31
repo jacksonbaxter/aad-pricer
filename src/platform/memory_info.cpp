@@ -10,7 +10,7 @@ std::uint64_t peak_rss_bytes() {
     return 0;
   }
   const auto value = static_cast<std::uint64_t>(usage.ru_maxrss);
-#if defined(__APPLE__)
+#ifdef __APPLE__
   return value;
 #else
   return value * 1024;

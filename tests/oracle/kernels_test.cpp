@@ -18,19 +18,65 @@ using test::ActiveMarket;
 using test::Dual;
 using test::ReadGreek;
 
-constexpr MarketParams<double> kMarket{100.0, 0.30, 0.10, 0.02, 0.5};
+constexpr MarketParams<double> kMarket{
+    .spot = 100.0, .sigma = 0.30, .r = 0.10, .q = 0.02, .maturity = 0.5};
 
 std::vector<Contract> AllContracts() {
   return {
-      {Product::kEuropean, OptionType::kCall, 100.0, 0.0, 1, false},
-      {Product::kEuropean, OptionType::kPut, 100.0, 0.0, 1, false},
-      {Product::kAsianArithmetic, OptionType::kCall, 100.0, 0.0, 12, true},
-      {Product::kAsianArithmetic, OptionType::kPut, 100.0, 0.0, 12, false},
-      {Product::kAsianGeometric, OptionType::kCall, 100.0, 0.0, 12, false},
-      {Product::kAsianGeometric, OptionType::kPut, 100.0, 0.0, 12, true},
-      {Product::kDownOutHard, OptionType::kCall, 100.0, 95.0, 12, false},
-      {Product::kDownOutOneStep, OptionType::kCall, 100.0, 95.0, 12, false},
-      {Product::kDownOutBridge, OptionType::kCall, 100.0, 95.0, 12, false},
+      {.product = Product::kEuropean,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 1,
+       .include_spot = false},
+      {.product = Product::kEuropean,
+       .type = OptionType::kPut,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 1,
+       .include_spot = false},
+      {.product = Product::kAsianArithmetic,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = true},
+      {.product = Product::kAsianArithmetic,
+       .type = OptionType::kPut,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kAsianGeometric,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kAsianGeometric,
+       .type = OptionType::kPut,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = true},
+      {.product = Product::kDownOutHard,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kDownOutOneStep,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kDownOutBridge,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
   };
 }
 
@@ -66,7 +112,7 @@ TEST(Kernels, PathwiseGreeksMatchPathDifferences) {
         // Skip a path that sits within the bump of the payoff kink.
         if (base < 1e-3) continue;
       }
-      for (Greek greek :
+      for (const Greek greek :
            {Greek::kDelta, Greek::kVega, Greek::kRho, Greek::kDividendRho, Greek::kTheta}) {
         const double fd = PathCentralDifference(c, kMarket, greek, kH, u);
         EXPECT_NEAR(ReadGreek(dual, greek), fd, 3e-6 * (1.0 + std::fabs(fd)))
@@ -80,7 +126,12 @@ TEST(Kernels, PathwiseGreeksMatchPathDifferences) {
 }
 
 TEST(Kernels, OneStepSurvivalMatchesHardKernelFarFromTheBarrier) {
-  Contract hard{Product::kDownOutHard, OptionType::kCall, 100.0, 1e-3, 12, false};
+  const Contract hard{.product = Product::kDownOutHard,
+                      .type = OptionType::kCall,
+                      .strike = 100.0,
+                      .barrier = 1e-3,
+                      .steps = 12,
+                      .include_spot = false};
   Contract one_step = hard;
   one_step.product = Product::kDownOutOneStep;
   for (std::uint64_t path = 0; path < 500; ++path) {
@@ -91,12 +142,17 @@ TEST(Kernels, OneStepSurvivalMatchesHardKernelFarFromTheBarrier) {
 }
 
 TEST(Kernels, BridgeWeightIsBelowHardPayoffAndZeroAtTheBarrier) {
-  Contract hard{Product::kDownOutHard, OptionType::kCall, 100.0, 95.0, 12, false};
+  const Contract hard{.product = Product::kDownOutHard,
+                      .type = OptionType::kCall,
+                      .strike = 100.0,
+                      .barrier = 95.0,
+                      .steps = 12,
+                      .include_spot = false};
   Contract bridge = hard;
   bridge.product = Product::kDownOutBridge;
   for (std::uint64_t path = 0; path < 500; ++path) {
     const auto u = PathUniforms(path, 12);
-    const double weighted = DiscountedPayoff<double>(bridge, kMarket, u);
+    const auto weighted = DiscountedPayoff<double>(bridge, kMarket, u);
     EXPECT_GE(weighted, 0.0);
     EXPECT_LE(weighted, DiscountedPayoff<double>(hard, kMarket, u));
   }
@@ -109,12 +165,17 @@ TEST(Kernels, BridgeWeightIsBelowHardPayoffAndZeroAtTheBarrier) {
 // The corner the research flagged: u at its smallest with p close to 1. Everything stays finite,
 // because p (1 - u) < 1, and a survival probability of 0 returns 0 rather than -inf.
 TEST(Kernels, OneStepSurvivalIsFiniteAtExtremeUniforms) {
-  const Contract c{Product::kDownOutOneStep, OptionType::kCall, 100.0, 95.0, 4, false};
+  const Contract c{.product = Product::kDownOutOneStep,
+                   .type = OptionType::kCall,
+                   .strike = 100.0,
+                   .barrier = 95.0,
+                   .steps = 4,
+                   .include_spot = false};
   for (const double extreme : {UniformFromBits(0), UniformFromBits(~std::uint64_t{0})}) {
     const std::array<double, 4> u = {extreme, extreme, extreme, extreme};
     const Dual out = DiscountedPayoff<Dual>(c, ActiveMarket(kMarket), u);
     EXPECT_TRUE(std::isfinite(out.value));
-    for (double t : out.tangent) EXPECT_TRUE(std::isfinite(t));
+    for (const double t : out.tangent) EXPECT_TRUE(std::isfinite(t));
   }
   MarketParams<double> far_below = kMarket;
   far_below.spot = 1e-30;
@@ -124,10 +185,15 @@ TEST(Kernels, OneStepSurvivalIsFiniteAtExtremeUniforms) {
 
 TEST(FiniteDifference, RecoversSlopeOfAKnownPayoffWithTheta) {
   // Forward-like: an Asian with one fixing, deep in the money, is linear in spot.
-  const Contract c{Product::kAsianArithmetic, OptionType::kCall, 1.0, 0.0, 1, false};
+  const Contract c{.product = Product::kAsianArithmetic,
+                   .type = OptionType::kCall,
+                   .strike = 1.0,
+                   .barrier = 0.0,
+                   .steps = 1,
+                   .include_spot = false};
   const std::array<double, 1> u = {0.75};
   const double delta = PathCentralDifference(c, kMarket, Greek::kDelta, 1e-4, u);
-  const double value = DiscountedPayoff<double>(c, kMarket, u);
+  const auto value = DiscountedPayoff<double>(c, kMarket, u);
   EXPECT_NEAR(delta, (value + std::exp(-kMarket.r * kMarket.maturity)) / kMarket.spot, 1e-9);
   const double theta = PathCentralDifference(c, kMarket, Greek::kTheta, 1e-5, u);
   const double dvdt = (DiscountedPayoff<double>(c, BumpFor(Greek::kTheta, kMarket, 1e-5), u) -

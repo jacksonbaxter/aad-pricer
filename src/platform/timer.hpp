@@ -1,7 +1,8 @@
 // Timers. read_ticks() is the batch timer: mach_absolute_time on macOS, rdtscp on x86-64 Linux,
 // cntvct_el0 on arm64 Linux. clock_ns() reads CLOCK_MONOTONIC_RAW and is the reference the ticks
 // are calibrated against, on every run. No frequency is assumed anywhere.
-#pragma once
+#ifndef AADP_PLATFORM_TIMER_HPP_
+#define AADP_PLATFORM_TIMER_HPP_
 
 #include <time.h>
 
@@ -10,14 +11,14 @@
 #include <span>
 #include <string>
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <mach/mach_time.h>
 #endif
 
 namespace aadp::platform {
 
 inline std::uint64_t read_ticks() noexcept {
-#if defined(__APPLE__)
+#ifdef __APPLE__
   return mach_absolute_time();
 #elif defined(__linux__) && defined(__x86_64__)
   // rdtscp waits for earlier instructions to finish; plain rdtsc does not.
@@ -79,3 +80,5 @@ TimerReport calibrate_timer();
 std::string timer_problem(const TimerReport& report);
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_TIMER_HPP_

@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -59,11 +60,11 @@ struct Region {
 };
 
 // The three branches of PPND16, lower side. r = sqrt(-log p) <= 5 is p >= exp(-25) = 1.4e-11.
-constexpr Region kRegions[] = {
-    {"central 0.075 to 0.4999", 0.075, 0.4999, false},
-    {"middle 1.4e-11 to 0.075", 1.5e-11, 0.075, true},
-    {"far tail 1e-300 to 1.4e-11", 1e-300, 1.3e-11, true},
-};
+constexpr auto kRegions = std::to_array<Region>({
+    {.name = "central 0.075 to 0.4999", .lo = 0.075, .hi = 0.4999, .log_spaced = false},
+    {.name = "middle 1.4e-11 to 0.075", .lo = 1.5e-11, .hi = 0.075, .log_spaced = true},
+    {.name = "far tail 1e-300 to 1.4e-11", .lo = 1e-300, .hi = 1.3e-11, .log_spaced = true},
+});
 
 TEST(InverseNormal, MatchesErfcReferenceInEveryRegion) {
   constexpr int kPoints = 4001;
@@ -92,7 +93,7 @@ TEST(InverseNormal, MatchesErfcReferenceInEveryRegion) {
 // Branch joins, where a wrong coefficient or a wrong test would show first.
 TEST(InverseNormal, MatchesReferenceAtBranchBoundaries) {
   const double exp25 = std::exp(-25.0);
-  for (double p : {0.075, 0.925, exp25}) {
+  for (const double p : {0.075, 0.925, exp25}) {
     for (int ulps = -4; ulps <= 4; ++ulps) {
       double q = p;
       for (int i = 0; i < std::abs(ulps); ++i) {
@@ -105,14 +106,14 @@ TEST(InverseNormal, MatchesReferenceAtBranchBoundaries) {
 
 // Dyadic p only: 1 - p is then exact, so the two calls see the same tail probability.
 TEST(InverseNormal, IsAntisymmetric) {
-  for (double p : {0x1p-40, 0x1p-20, 0.0625, 0.25, 0.4375}) {
+  for (const double p : {0x1p-40, 0x1p-20, 0.0625, 0.25, 0.4375}) {
     EXPECT_EQ(inverse_normal(p), -inverse_normal(1.0 - p)) << p;
   }
 }
 
 // Upper values stop at 1: beyond that Phi(x) carries too few digits of 1 - Phi(x) to invert.
 TEST(InverseNormal, RoundTripsThroughTheCdf) {
-  for (double x : {-37.0, -12.0, -6.0, -1.0, -1e-3, 0.0, 1e-3, 1.0}) {
+  for (const double x : {-37.0, -12.0, -6.0, -1.0, -1e-3, 0.0, 1e-3, 1.0}) {
     const double p = normal_cdf(x);
     EXPECT_NEAR(inverse_normal(p), x, 1e-13 * std::max(1.0, std::fabs(x))) << x;
   }

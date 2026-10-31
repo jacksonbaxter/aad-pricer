@@ -39,16 +39,16 @@ class LineIndex {
     }
   }
 
-  std::size_t count() const { return begins_.size(); }
+  [[nodiscard]] std::size_t count() const { return begins_.size(); }
 
   // Half-open byte range of a 1-based line, with its terminator.
-  std::size_t begin(std::size_t line) const { return begins_[line - 1]; }
-  std::size_t end(std::size_t line) const {
+  [[nodiscard]] std::size_t begin(std::size_t line) const { return begins_[line - 1]; }
+  [[nodiscard]] std::size_t end(std::size_t line) const {
     return line == count() ? input_.size() : begins_[line];
   }
 
   // The line without its terminator.
-  std::string_view text(std::size_t line) const {
+  [[nodiscard]] std::string_view text(std::size_t line) const {
     std::string_view text = input_.substr(begin(line), end(line) - begin(line));
     if (!text.empty() && text.back() == '\n') {
       text.remove_suffix(1);

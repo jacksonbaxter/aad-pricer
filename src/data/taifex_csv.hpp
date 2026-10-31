@@ -61,13 +61,13 @@ class RecordReader {
   // Moves to the next line. Returns false at the end of the input.
   bool next();
 
-  std::string_view input() const { return input_; }
-  std::size_t line() const { return line_; }
-  std::size_t line_begin() const { return line_begin_; }
-  std::span<const std::string_view> fields() const { return fields_; }
+  [[nodiscard]] std::string_view input() const { return input_; }
+  [[nodiscard]] std::size_t line() const { return line_; }
+  [[nodiscard]] std::size_t line_begin() const { return line_begin_; }
+  [[nodiscard]] std::span<const std::string_view> fields() const { return fields_; }
   // The encoding or control-character error on this line, if any. The line's fields are then
   // incomplete, and the reader has already resumed at the next line.
-  const std::optional<ReadError>& error() const { return error_; }
+  [[nodiscard]] const std::optional<ReadError>& error() const { return error_; }
 
  private:
   void add_field(std::size_t end);
@@ -91,16 +91,16 @@ class RowFields {
  public:
   RowFields(const RecordReader& records, std::size_t column_count);
 
-  bool ok() const { return !error_.has_value(); }
-  const ReadError& error() const { return *error_; }
+  [[nodiscard]] bool ok() const { return !error_.has_value(); }
+  [[nodiscard]] const std::optional<ReadError>& error() const { return error_; }
 
   std::int32_t date(int column);
   std::string contract(int column);
   // YYYYMM with an optional weekly suffix, or with allow_spread two of those joined by '/'.
   std::string expiry(int column, bool allow_spread);
   Session session(int column);
-  bool is_empty(int column) const { return field(column).empty(); }
-  std::string_view field(int column) const;
+  [[nodiscard]] bool is_empty(int column) const { return field(column).empty(); }
+  [[nodiscard]] std::string_view field(int column) const;
 
   // Required and strictly positive.
   double strike(int column);
@@ -114,7 +114,7 @@ class RowFields {
  private:
   void fail_number(NumberError error, int column);
 
-  const RecordReader& records_;
+  const RecordReader* records_;
   std::optional<ReadError> error_;
 };
 
@@ -127,11 +127,11 @@ void read_rows(RecordReader& records, std::size_t column_count, ParseRow parse_r
   while (records.next()) {
     RowFields fields(records, column_count);
     Row row = fields.ok() ? parse_row(fields) : Row{};
-    if (fields.ok()) {
+    if (const std::optional<ReadError>& failure = fields.error()) {
+      errors.push_back(*failure);
+    } else {
       row.line = records.line();
       rows.push_back(std::move(row));
-    } else {
-      errors.push_back(fields.error());
     }
   }
 }

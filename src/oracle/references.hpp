@@ -28,7 +28,7 @@ struct ReferenceTable {
   std::vector<Reference> rows;
 
   bool operator==(const ReferenceTable&) const = default;
-  const Reference* Find(std::string_view id) const;
+  [[nodiscard]] const Reference* Find(std::string_view id) const;
 };
 
 std::expected<ReferenceTable, decode::DecodeError> DecodeReferences(std::string_view input);

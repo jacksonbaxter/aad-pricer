@@ -1,5 +1,6 @@
 // The two machines whose numbers may be reported. Anything else is `other`, never reportable.
-#pragma once
+#ifndef AADP_PLATFORM_HOST_LABEL_HPP_
+#define AADP_PLATFORM_HOST_LABEL_HPP_
 
 #include <string>
 #include <string_view>
@@ -16,3 +17,5 @@ std::string_view classify_host(std::string_view os_name, std::string_view cpu_mo
 std::string detect_host_label();
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_HOST_LABEL_HPP_

@@ -18,9 +18,11 @@ inline constexpr std::size_t kSlotQ = 3;
 inline constexpr std::size_t kSlotMaturity = 4;
 
 inline MarketParams<Dual> ActiveMarket(const MarketParams<double>& m) {
-  return {Dual::Variable(m.spot, kSlotSpot), Dual::Variable(m.sigma, kSlotSigma),
-          Dual::Variable(m.r, kSlotR), Dual::Variable(m.q, kSlotQ),
-          Dual::Variable(m.maturity, kSlotMaturity)};
+  return {.spot = Dual::Variable(m.spot, kSlotSpot),
+          .sigma = Dual::Variable(m.sigma, kSlotSigma),
+          .r = Dual::Variable(m.r, kSlotR),
+          .q = Dual::Variable(m.q, kSlotQ),
+          .maturity = Dual::Variable(m.maturity, kSlotMaturity)};
 }
 
 // Value, or a first-order Greek with theta = -dV/dT.

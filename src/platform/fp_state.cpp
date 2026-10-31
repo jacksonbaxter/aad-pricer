@@ -1,5 +1,6 @@
 #include "platform/fp_state.hpp"
 
+#include <array>
 #include <cstdio>
 
 namespace aadp::platform {
@@ -25,7 +26,7 @@ FpState read_fp_state() {
   std::uint64_t raw = 0;
   __asm__ volatile("mrs %0, fpcr" : "=r"(raw));
   return decode_fpcr(raw);
-#elif defined(__x86_64__)
+#elifdef __x86_64__
   std::uint32_t raw = 0;
   __asm__ volatile("stmxcsr %0" : "=m"(raw));
   return decode_mxcsr(raw);
@@ -37,12 +38,13 @@ FpState read_fp_state() {
 std::expected<FpState, std::string> check_fp_state() {
   const FpState state = read_fp_state();
   if (state.ftz || state.daz) {
-    char text[128];
-    std::snprintf(text, sizeof(text), "%.*s=0x%llx has %s set",
+    std::array<char, 128> text{};
+    const char* flags = state.ftz ? "FTZ" : "DAZ";
+    if (state.ftz && state.daz) flags = "FTZ and DAZ";
+    std::snprintf(text.data(), text.size(), "%.*s=0x%llx has %s set",
                   static_cast<int>(state.register_name.size()), state.register_name.data(),
-                  static_cast<unsigned long long>(state.raw),
-                  state.ftz && state.daz ? "FTZ and DAZ" : (state.ftz ? "FTZ" : "DAZ"));
-    return std::unexpected(std::string(text));
+                  static_cast<unsigned long long>(state.raw), flags);
+    return std::unexpected(std::string(text.data()));
   }
   return state;
 }
@@ -50,7 +52,7 @@ std::expected<FpState, std::string> check_fp_state() {
 void write_fp_register(std::uint64_t raw) {
 #if defined(__aarch64__) || defined(__arm64__)
   __asm__ volatile("msr fpcr, %0" : : "r"(raw));
-#elif defined(__x86_64__)
+#elifdef __x86_64__
   auto value = static_cast<std::uint32_t>(raw);
   __asm__ volatile("ldmxcsr %0" : : "m"(value));
 #endif

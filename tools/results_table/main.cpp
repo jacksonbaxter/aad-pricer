@@ -2,6 +2,8 @@
 // README gets numbers. Each directory under results/ is named for its host, and a file filed
 // under another host's directory is refused.
 #include <algorithm>
+#include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -38,7 +40,7 @@ void collect(const fs::path& path, std::vector<fs::path>& out) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char* const* argv) try {
   bool one_table = false;
   std::vector<fs::path> paths;
   for (int i = 1; i < argc; ++i) {
@@ -65,7 +67,7 @@ int main(int argc, char** argv) {
 
   std::vector<aadp::results::ResultsFile> files;
   for (const fs::path& path : paths) {
-    std::ifstream in(path, std::ios::binary);
+    const std::ifstream in(path, std::ios::binary);
     std::ostringstream text;
     text << in.rdbuf();
     auto file = aadp::results::parse_results_file(text.str());
@@ -90,4 +92,7 @@ int main(int argc, char** argv) {
   }
   std::cout << *table;
   return 0;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "results_table: %s\n", error.what());
+  return kExitRefused;
 }

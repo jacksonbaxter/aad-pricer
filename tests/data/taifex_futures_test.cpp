@@ -16,11 +16,11 @@ using testing::kFuturesHeader;
 
 std::string file_with(const std::string& row) { return kFuturesHeader + "\r\n" + row + "\r\n"; }
 
-ReadError error_of(testing::FuturesFields fields) {
+ReadError error_of(const testing::FuturesFields& fields) {
   const auto file = read_futures(file_with(join(fields)));
   EXPECT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty());
-  EXPECT_EQ(file->row_errors.size(), 1u);
+  EXPECT_EQ(file->row_errors.size(), 1U);
   return file->row_errors.empty() ? ReadError{} : file->row_errors[0];
 }
 
@@ -52,10 +52,10 @@ testing::FuturesFields spread_fields() {
 TEST(FuturesReader, ReadsARowField) {
   const auto file = read_futures(file_with(join(futures_fields())));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(file->row_errors.empty());
   const FuturesRow& row = file->rows[0];
-  EXPECT_EQ(row.line, 2u);
+  EXPECT_EQ(row.line, 2U);
   EXPECT_EQ(row.trade_date, 20240103);
   EXPECT_EQ(row.contract, "ABF");
   EXPECT_EQ(row.expiry, "202401");
@@ -82,14 +82,14 @@ TEST(FuturesReader, TwoCharacterContractIsValid) {
   fields[testing::kFutContract] = "T2";
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].contract, "T2");
 }
 
 TEST(FuturesReader, CalendarSpreadMayHaveNegativePrices) {
   const auto file = read_futures(file_with(join(spread_fields())));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   const FuturesRow& row = file->rows[0];
   EXPECT_TRUE(row.calendar_spread);
   EXPECT_EQ(row.expiry, "202401/202402");
@@ -104,7 +104,7 @@ TEST(FuturesReader, WeeklyLegOfASpreadIsValid) {
   fields[testing::kFutExpiry] = "202401W4/202402";
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 1U);
 }
 
 TEST(FuturesReader, OutrightMayNotHaveNegativePrices) {
@@ -128,7 +128,7 @@ TEST(FuturesReader, ChangeIsSigned) {
   fields[testing::kFutChangePercent] = "-1.25%";
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].change, -0.65);
   EXPECT_EQ(file->rows[0].change_percent, -1.25);
 }
@@ -138,7 +138,7 @@ TEST(FuturesReader, NegativeZeroPercentIsAccepted) {
   fields[testing::kFutChangePercent] = "-0.00%";
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_EQ(file->rows[0].change_percent, 0.0);
 }
 
@@ -155,7 +155,7 @@ TEST(FuturesReader, NullIsMissingOnlyInTheSettlementColumn) {
   fields[testing::kFutSession] = testing::kAfterHours;
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
-  ASSERT_EQ(file->rows.size(), 1u);
+  ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_FALSE(file->rows[0].settlement_price);
   EXPECT_EQ(file->rows[0].session, Session::kAfterHours);
 
@@ -185,7 +185,7 @@ TEST(FuturesReader, WrongHeaderFailsTheWholeRead) {
   const auto file = read_futures(header + "\r\n");
   ASSERT_FALSE(file.has_value());
   EXPECT_EQ(file.error().code, ErrorCode::kHeaderMismatch);
-  EXPECT_EQ(file.error().line, 1u);
+  EXPECT_EQ(file.error().line, 1U);
 }
 
 TEST(FuturesReader, OptionsHeaderIsRejected) {
@@ -206,13 +206,13 @@ TEST(FuturesReader, BadRowsDoNotStopTheRead) {
       kFuturesHeader + "\r\n" + join(bad) + "\r\n" + std::string("1,2\r\n") + good + "\r\n" + good;
   const auto file = read_futures(input);
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 2u);
-  EXPECT_EQ(file->rows[0].line, 4u);
-  EXPECT_EQ(file->rows[1].line, 5u);
-  ASSERT_EQ(file->row_errors.size(), 2u);
-  EXPECT_EQ(file->row_errors[0].line, 2u);
+  EXPECT_EQ(file->rows.size(), 2U);
+  EXPECT_EQ(file->rows[0].line, 4U);
+  EXPECT_EQ(file->rows[1].line, 5U);
+  ASSERT_EQ(file->row_errors.size(), 2U);
+  EXPECT_EQ(file->row_errors[0].line, 2U);
   EXPECT_EQ(file->row_errors[0].column, static_cast<int>(testing::kFutVolume));
-  EXPECT_EQ(file->row_errors[1].line, 3u);
+  EXPECT_EQ(file->row_errors[1].line, 3U);
   EXPECT_EQ(file->row_errors[1].code, ErrorCode::kWrongColumnCount);
 }
 
@@ -222,7 +222,7 @@ TEST(FuturesReader, EmbeddedNulIsARowError) {
   const auto file = read_futures(file_with(join(fields)));
   ASSERT_TRUE(file.has_value());
   EXPECT_TRUE(file->rows.empty());
-  ASSERT_EQ(file->row_errors.size(), 1u);
+  ASSERT_EQ(file->row_errors.size(), 1U);
   EXPECT_EQ(file->row_errors[0].code, ErrorCode::kControlCharacter);
 }
 
@@ -230,7 +230,7 @@ TEST(FuturesReader, MissingFinalNewlineWithAnEmptyLastFieldStillGivesTheRow) {
   // The last column is empty on outright rows, so the input ends on a comma.
   const auto file = read_futures(kFuturesHeader + "\r\n" + join(futures_fields()));
   ASSERT_TRUE(file.has_value());
-  EXPECT_EQ(file->rows.size(), 1u);
+  EXPECT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(file->row_errors.empty());
 }
 

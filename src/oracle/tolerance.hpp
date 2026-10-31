@@ -41,7 +41,7 @@ inline BatchStatistics BatchMeansStatistics(std::span<const double> batch_means)
   if (count < 2) return stats;
   double sum = 0.0;
   for (const double x : batch_means) sum += x;
-  const double b = static_cast<double>(count);
+  const auto b = static_cast<double>(count);
   const double mean = sum / b;
   double squares = 0.0;
   for (const double x : batch_means) squares += (x - mean) * (x - mean);
@@ -65,9 +65,9 @@ struct ToleranceResult {
   bool within_bound = false;
   bool within_ceiling = false;
 
-  constexpr bool passed() const { return within_bound && within_ceiling; }
+  [[nodiscard]] constexpr bool passed() const { return within_bound && within_ceiling; }
   // Which condition failed, for the one-line report.
-  constexpr const char* failed_condition() const {
+  [[nodiscard]] constexpr const char* failed_condition() const {
     if (passed()) return "none";
     if (!within_bound && !within_ceiling) return "both";
     return within_bound ? "se-ceiling" : "distance";

@@ -274,7 +274,8 @@ TEST(DualParity, LiveTangentAtSingularities) {
 TEST(DualParity, ComparisonsMatchDouble) {
   for (const double a : kSpecial) {
     for (const double b : kSpecial) {
-      const Dual x(a), y(b);
+      const Dual x(a);
+      const Dual y(b);
       EXPECT_EQ(x == y, a == b);
       EXPECT_EQ(x != y, a != b);
       EXPECT_EQ(x < y, a < b);

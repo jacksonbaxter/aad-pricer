@@ -38,7 +38,7 @@ TEST(Attribution, NamesBothDatasetsTheLicenceAndThePinnedCopy) {
             text.npos);
   EXPECT_NE(text.find("not endorsed by"), text.npos);
   // Two seven-line exhibits and the six-line note, with a blank line between each.
-  EXPECT_EQ(count_lines(text), 7u + 1u + 6u + 1u + 7u);
+  EXPECT_EQ(count_lines(text), 7U + 1U + 6U + 1U + 7U);
 }
 
 TEST(Attribution, NoticeStartsWithTheExactBytes) {

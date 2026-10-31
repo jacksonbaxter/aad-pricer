@@ -13,7 +13,8 @@
 // `repetitions` calls and refuses if those are not all full length. Hardware counters are read
 // per call and treated the same way, which also keeps out Google Benchmark's start-up: on macOS
 // it spins for a second estimating a clock rate inside RunSpecifiedBenchmarks.
-#pragma once
+#ifndef AADP_BENCH_HARNESS_HPP_
+#define AADP_BENCH_HARNESS_HPP_
 
 #include <cstdint>
 #include <expected>
@@ -63,3 +64,5 @@ std::string render_histogram(std::uint64_t batch_units, const LatencyHistogram& 
 int harness_main(int argc, char** argv, std::vector<Workload> workloads);
 
 }  // namespace aadp::bench
+
+#endif  // AADP_BENCH_HARNESS_HPP_

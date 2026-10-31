@@ -1,6 +1,7 @@
 // The last check before a results file is written. It reports what kind of thing it found and
 // on which line, never the text, so that the refusal message is safe to log.
-#pragma once
+#ifndef AADP_RESULTS_PRIVACY_HPP_
+#define AADP_RESULTS_PRIVACY_HPP_
 
 #include <cstddef>
 #include <string>
@@ -23,3 +24,5 @@ struct PrivacyHit {
 std::vector<PrivacyHit> scan_private_text(std::string_view text, const PrivacyConfig& config);
 
 }  // namespace aadp::results
+
+#endif  // AADP_RESULTS_PRIVACY_HPP_

@@ -17,7 +17,7 @@
 
 namespace aadp {
 
-enum class Product {
+enum class Product : std::uint8_t {
   kEuropean,
   kAsianArithmetic,
   kAsianGeometric,
@@ -64,8 +64,9 @@ Real European(const Contract& c, const MarketParams<Real>& m, std::span<const do
   using std::log;
   const Step<Real> step = MakeStep(m, c.steps);
   Real x = log(m.spot);
-  for (std::uint32_t i = 0; i < c.steps; ++i)
+  for (std::uint32_t i = 0; i < c.steps; ++i) {
     x = x + step.drift + step.sd * inverse_normal(uniforms[i]);
+  }
   return step.discount * Payoff(c.type, Real(exp(x)), c.strike);
 }
 

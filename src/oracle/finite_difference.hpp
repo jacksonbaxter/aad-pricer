@@ -11,7 +11,7 @@
 
 namespace aadp {
 
-enum class Greek { kValue, kDelta, kVega, kRho, kDividendRho, kTheta };
+enum class Greek : std::uint8_t { kValue, kDelta, kVega, kRho, kDividendRho, kTheta };
 
 inline constexpr int kFirstOrderGreeks = 5;
 
@@ -41,8 +41,8 @@ inline MarketParams<double> BumpFor(Greek greek, MarketParams<double> m, double 
 // (V(+h) - V(-h)) / 2h on one path, with theta's sign applied.
 inline double PathCentralDifference(const Contract& contract, const MarketParams<double>& m,
                                     Greek greek, double h, std::span<const double> uniforms) {
-  const double up = DiscountedPayoff<double>(contract, BumpFor(greek, m, h), uniforms);
-  const double down = DiscountedPayoff<double>(contract, BumpFor(greek, m, -h), uniforms);
+  const auto up = DiscountedPayoff<double>(contract, BumpFor(greek, m, h), uniforms);
+  const auto down = DiscountedPayoff<double>(contract, BumpFor(greek, m, -h), uniforms);
   const double slope = (up - down) / (2.0 * h);
   return greek == Greek::kTheta ? -slope : slope;
 }

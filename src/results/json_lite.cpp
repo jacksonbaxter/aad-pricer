@@ -42,8 +42,9 @@ class Parser {
     }
   }
 
-  bool peek(char c) const { return at_ < text_.size() && text_[at_] == c; }
+  [[nodiscard]] bool peek(char c) const { return at_ < text_.size() && text_[at_] == c; }
 
+  // NOLINTNEXTLINE(misc-no-recursion): parse_value stops at kMaxDepth.
   bool parse_value(JsonValue& out, int depth) {
     if (depth > kMaxDepth) {
       return fail("nesting too deep");
@@ -66,6 +67,7 @@ class Parser {
     }
   }
 
+  // NOLINTNEXTLINE(misc-no-recursion): parse_value stops at kMaxDepth.
   bool parse_object(JsonValue& out, int depth) {
     out.kind = JsonValue::Kind::kObject;
     ++at_;
@@ -83,7 +85,7 @@ class Parser {
       if (!parse_string(member.key)) {
         return false;
       }
-      if (member.key.find('\\') != std::string::npos) {
+      if (member.key.contains('\\')) {
         return fail("escaped key");
       }
       skip_space();
@@ -108,6 +110,7 @@ class Parser {
     }
   }
 
+  // NOLINTNEXTLINE(misc-no-recursion): parse_value stops at kMaxDepth.
   bool parse_array(JsonValue& out, int depth) {
     out.kind = JsonValue::Kind::kArray;
     ++at_;
@@ -162,7 +165,7 @@ class Parser {
           return fail("bad unicode escape");
         }
         at_ += 6;
-      } else if (std::string_view("\"\\/bfnrt").find(escape) != std::string_view::npos) {
+      } else if (std::string_view("\"\\/bfnrt").contains(escape)) {
         at_ += 2;
       } else {
         return fail("bad escape");
@@ -222,6 +225,7 @@ class Parser {
   std::string error_;
 };
 
+// NOLINTNEXTLINE(misc-no-recursion): the parser caps the depth at kMaxDepth.
 void write_value(const JsonValue& value, int indent, std::string& out) {
   const auto pad = [&out](int width) { out.append(static_cast<std::size_t>(width) * 2U, ' '); };
   switch (value.kind) {
@@ -273,6 +277,7 @@ std::expected<JsonValue, std::string> parse_json(std::string_view text) {
   return Parser(text).parse_document();
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): the parser caps the depth at kMaxDepth.
 void drop_json_keys(JsonValue& value, std::span<const std::string_view> keys) {
   std::erase_if(value.members, [keys](const JsonMember& member) {
     return std::ranges::find(keys, std::string_view(member.key)) != keys.end();

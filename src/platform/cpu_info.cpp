@@ -4,17 +4,18 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <thread>
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #endif
-#if defined(__linux__)
+#ifdef __linux__
 #include <sched.h>
 #endif
 
@@ -55,7 +56,7 @@ std::string lower(std::string_view text) {
   return out;
 }
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 std::string sysctl_string(const char* name) {
   std::size_t size = 0;
   if (sysctlbyname(name, nullptr, &size, nullptr, 0) != 0 || size == 0) {
@@ -65,12 +66,12 @@ std::string sysctl_string(const char* name) {
   if (sysctlbyname(name, value.data(), &size, nullptr, 0) != 0) {
     return {};
   }
-  value.resize(value.find('\0') == std::string::npos ? size : value.find('\0'));
+  value.resize(std::min(size, value.find('\0')));
   return value;
 }
 #endif
 
-#if defined(__linux__)
+#ifdef __linux__
 std::string read_first_line(const std::string& path) {
   std::ifstream in(path);
   std::string line;
@@ -91,11 +92,11 @@ std::string read_file(const std::string& path) {
 }  // namespace
 
 std::string short_hostname() {
-  char name[256] = {};
-  if (gethostname(name, sizeof(name) - 1) != 0) {
+  std::array<char, 256> name{};
+  if (gethostname(name.data(), name.size() - 1) != 0) {
     return {};
   }
-  const std::string_view view(name);
+  const std::string_view view(name.data());
   return std::string(view.substr(0, view.find('.')));
 }
 
@@ -136,7 +137,7 @@ std::optional<std::string> describe_midr(std::string_view midr_text) {
 std::string parse_os_release_field(std::string_view os_release, std::string_view key) {
   while (!os_release.empty()) {
     const auto end = os_release.find('\n');
-    std::string_view line = os_release.substr(0, end);
+    const std::string_view line = os_release.substr(0, end);
     const auto equals = line.find('=');
     if (equals != std::string_view::npos && line.substr(0, equals) == key) {
       std::string_view value = trim(line.substr(equals + 1));
@@ -159,7 +160,7 @@ std::string describe_linux_os(std::string_view pretty_name, std::string_view ver
   if (pretty_name.empty()) {
     return "Linux";
   }
-  if (!hostname.empty() && lower(pretty_name).find(lower(hostname)) != std::string::npos) {
+  if (!hostname.empty() && lower(pretty_name).contains(lower(hostname))) {
     return "Linux, os-release VERSION_ID " +
            (version_id.empty() ? std::string("unknown") : std::string(version_id)) +
            ", name withheld";
@@ -175,12 +176,12 @@ CpuInfo read_cpu_info() {
     info.kernel = std::string(names.sysname) + " " + names.release;
     info.arch = names.machine;
   }
-#if defined(__APPLE__)
+#ifdef __APPLE__
   info.os_name = "macOS";
   info.os = "macOS " + sysctl_string("kern.osproductversion") + " (build " +
             sysctl_string("kern.osversion") + ")";
   info.cpu_model = sysctl_string("machdep.cpu.brand_string");
-#elif defined(__linux__)
+#elifdef __linux__
   info.os_name = "Linux";
   const std::string os_release = read_file("/etc/os-release");
   info.os = describe_linux_os(parse_os_release_field(os_release, "PRETTY_NAME"),
@@ -206,7 +207,7 @@ CpuInfo read_cpu_info() {
 
 FrequencyInfo read_frequency_info(int cpu) {
   FrequencyInfo info;
-#if defined(__linux__)
+#ifdef __linux__
   const std::string base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu);
   const auto set = [](std::string& field, const std::string& value) {
     if (!value.empty()) {

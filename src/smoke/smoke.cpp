@@ -11,17 +11,20 @@ static_assert(aadp::build_info::simd_target != "avx2" || HWY_STATIC_TARGET == HW
 static_assert(aadp::build_info::simd_target != "avx512" || HWY_STATIC_TARGET == HWY_AVX3);
 
 HWY_BEFORE_NAMESPACE();
-namespace aadp::smoke {
-namespace HWY_NAMESPACE {
+
+namespace aadp::smoke::HWY_NAMESPACE {
 namespace hn = hwy::HWY_NAMESPACE;
+namespace {
 
 double SumOfOnes() {
   const hn::ScalableTag<double> d;
   return hn::ReduceSum(d, hn::Set(d, 1.0));
 }
 
-}  // namespace HWY_NAMESPACE
-}  // namespace aadp::smoke
+}  // namespace
+
+}  // namespace aadp::smoke::HWY_NAMESPACE
+
 HWY_AFTER_NAMESPACE();
 
 namespace aadp::smoke {

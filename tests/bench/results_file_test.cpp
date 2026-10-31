@@ -58,24 +58,24 @@ TEST(ResultsFile, ReaderBoundsTheHeaderAndTheSections) {
 
 TEST(ResultsFile, WriterRefusesWhatTheReaderCouldNotRead) {
   ResultsFile file;
-  file.header.push_back({"key", "line\nbreak"});
+  file.header.push_back({.key = "key", .value = "line\nbreak"});
   EXPECT_FALSE(write_results_file(file).has_value());
 
   file = {};
-  file.header.push_back({"Key", "value"});
+  file.header.push_back({.key = "Key", .value = "value"});
   EXPECT_FALSE(write_results_file(file).has_value());
 
   file = {};
-  file.header.push_back({"key", "a"});
-  file.header.push_back({"key", "b"});
+  file.header.push_back({.key = "key", .value = "a"});
+  file.header.push_back({.key = "key", .value = "b"});
   EXPECT_FALSE(write_results_file(file).has_value());
 
   file = {};
-  file.sections.push_back({"a", "no newline"});
+  file.sections.push_back({.name = "a", .body = "no newline"});
   EXPECT_FALSE(write_results_file(file).has_value());
 
   file = {};
-  file.sections.push_back({"a", "@section b\n"});
+  file.sections.push_back({.name = "a", .body = "@section b\n"});
   EXPECT_FALSE(write_results_file(file).has_value());
 }
 

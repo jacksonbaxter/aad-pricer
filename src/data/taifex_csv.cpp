@@ -87,7 +87,7 @@ void RecordReader::add_field(std::size_t end) {
 }
 
 void RecordReader::fail_line(ErrorCode code, std::size_t position) {
-  error_ = ReadError{code, line_, position, kNoColumn};
+  error_ = ReadError{.code = code, .line = line_, .position = position, .column = kNoColumn};
   // A raw scan is safe here, unlike inside a line: LF is below every trail byte, so it can only
   // be a line end, and a bad pair must not swallow the line after it.
   const auto lf = input_.find('\n', position);
@@ -141,46 +141,56 @@ std::expected<void, ReadError> check_header(RecordReader& records,
                                             std::span<const std::string_view> labels) {
   const std::string_view input = records.input();
   if (!records.next()) {
-    return std::unexpected(ReadError{ErrorCode::kEmptyInput, 0, 0, kNoColumn});
+    return std::unexpected(
+        ReadError{.code = ErrorCode::kEmptyInput, .line = 0, .position = 0, .column = kNoColumn});
   }
   if (records.error()) {
     return std::unexpected(*records.error());
   }
   const auto fields = records.fields();
   if (fields.size() != labels.size()) {
-    return std::unexpected(ReadError{ErrorCode::kHeaderMismatch, records.line(),
-                                     inside(input, records.line_begin()), kNoColumn});
+    return std::unexpected(ReadError{.code = ErrorCode::kHeaderMismatch,
+                                     .line = records.line(),
+                                     .position = inside(input, records.line_begin()),
+                                     .column = kNoColumn});
   }
   for (std::size_t i = 0; i < labels.size(); ++i) {
     if (fields[i] != labels[i]) {
       const auto position = static_cast<std::size_t>(fields[i].data() - input.data());
-      return std::unexpected(ReadError{ErrorCode::kHeaderMismatch, records.line(),
-                                       inside(input, position), static_cast<int>(i)});
+      return std::unexpected(ReadError{.code = ErrorCode::kHeaderMismatch,
+                                       .line = records.line(),
+                                       .position = inside(input, position),
+                                       .column = static_cast<int>(i)});
     }
   }
   return {};
 }
 
-RowFields::RowFields(const RecordReader& records, std::size_t column_count) : records_(records) {
+RowFields::RowFields(const RecordReader& records, std::size_t column_count) : records_(&records) {
   if (records.error()) {
     error_ = records.error();
   } else if (records.fields().size() != column_count) {
-    error_ = ReadError{ErrorCode::kWrongColumnCount, records.line(),
-                       inside(records.input(), records.line_begin()), kNoColumn};
+    error_ = ReadError{.code = ErrorCode::kWrongColumnCount,
+                       .line = records.line(),
+                       .position = inside(records.input(), records.line_begin()),
+                       .column = kNoColumn};
   }
 }
 
 std::string_view RowFields::field(int column) const {
-  return records_.fields()[static_cast<std::size_t>(column)];
+  return records_->fields()[static_cast<std::size_t>(column)];
 }
 
 void RowFields::fail(ErrorCode code, int column) {
   if (error_) {
     return;
   }
-  const std::string_view input = records_.input();
+  const std::string_view input = records_->input();
   const auto position = static_cast<std::size_t>(field(column).data() - input.data());
-  error_ = ReadError{code, records_.line(), inside(input, position), column};
+  error_ = ReadError{.code = code,
+                     .line = records_->line(),
+                     .position = inside(input, position),
+                     .column = column};
 }
 
 void RowFields::fail_number(NumberError error, int column) {

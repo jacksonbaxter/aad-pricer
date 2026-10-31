@@ -21,7 +21,7 @@ Real GeometricAsianValue(OptionType type, double strike, std::uint32_t fixings, 
   using std::exp;
   using std::log;
   using std::sqrt;
-  const double n = static_cast<double>(fixings);
+  const auto n = static_cast<double>(fixings);
   const double count = n + (include_spot ? 1.0 : 0.0);
   // Fractions of T. sum_i i/n, and sum_ij min(i, j)/n over i, j = 1..n, where a fixing at 0
   // adds nothing to either sum.

@@ -68,23 +68,30 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
     if (auto valid = validate_stamped(file); !valid) {
       return std::unexpected(valid.error());
     }
-    const std::string label(*file.value("host_label"));
+    const std::string label(file.required("host_label"));
     if (host.empty()) {
       host = label;
     } else if (host != label) {
       return std::unexpected("refusing to put hosts " + host + " and " + label + " in one table");
     }
-    if (*file.value("reportable") != "yes") {
-      return std::unexpected("not reportable: " + std::string(*file.value("reportable_reason")));
+    if (file.required("reportable") != "yes") {
+      return std::unexpected("not reportable: " + std::string(file.required("reportable_reason")));
     }
-    any_without_claim = any_without_claim || *file.value("claim") == "none";
+    any_without_claim = any_without_claim || file.required("claim") == "none";
 
-    auto json = parse_json(file.section(kBenchmarkSection)->body);
+    const ResultsSection* benchmark = file.section(kBenchmarkSection);
+    if (benchmark == nullptr) {
+      return std::unexpected("no benchmark section");
+    }
+    auto json = parse_json(benchmark->body);
     if (!json) {
       return std::unexpected("benchmark JSON: " + json.error());
     }
-    const auto start = parse_measure_line(*file.value("measure_start"));
-    const auto end = parse_measure_line(*file.value("measure_end"));
+    const auto start = parse_measure_line(file.required("measure_start"));
+    const auto end = parse_measure_line(file.required("measure_end"));
+    if (!start || !end) {
+      return std::unexpected("a reportable file has a malformed measure line");
+    }
     bool any_histogram = false;
     for (const ResultsSection& section : file.sections) {
       if (!section.name.starts_with(kHistogramPrefix)) {
@@ -97,12 +104,13 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
       if (!mean) {
         return std::unexpected("no benchmark entry for " + name);
       }
-      rows += "| " + cell(name) + " | " + cell(*file.value("repetitions")) + " | " +
+      rows += "| ";
+      rows += cell(name) + " | " + cell(file.required("repetitions")) + " | " +
               cell(histogram_value(values, "batches")) + " | " + cell(*mean) + " | " +
               cell(histogram_value(values, "p50")) + " | " + cell(histogram_value(values, "p99")) +
               " | " + cell(histogram_value(values, "max")) + " | " + cell(start->load1) + " | " +
-              cell(end->load1) + " | " + cell(file.value("commit")->substr(0, kShortCommit)) +
-              " | " + cell(*file.value("claim")) + " |\n";
+              cell(end->load1) + " | " + cell(file.required("commit").substr(0, kShortCommit)) +
+              " | " + cell(file.required("claim")) + " |\n";
     }
     if (!any_histogram) {
       return std::unexpected("a results file has no histogram");

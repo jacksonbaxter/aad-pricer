@@ -3,7 +3,8 @@
 //
 // Dropped: `host=`, and Google Benchmark's host_name and executable.
 // Kept: load, time, exit, governor and frequency, from validated fields.
-#pragma once
+#ifndef AADP_RESULTS_STAMP_HPP_
+#define AADP_RESULTS_STAMP_HPP_
 
 #include <expected>
 #include <string>
@@ -13,7 +14,7 @@
 
 namespace aadp::results {
 
-enum class StampError {
+enum class StampError : std::uint8_t {
   kMalformedRun,      // The binary's output cannot be read
   kIncompleteHeader,  // A required key is missing or empty
   kNoStartLine,
@@ -52,3 +53,5 @@ struct StampRequest {
 std::expected<std::string, StampRefusal> stamp_results(const StampRequest& request);
 
 }  // namespace aadp::results
+
+#endif  // AADP_RESULTS_STAMP_HPP_

@@ -5,6 +5,8 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
+#include <exception>
 
 #include "harness.hpp"
 #include "platform/cacheline.hpp"
@@ -22,7 +24,7 @@ std::array<double, kValues> make_values() {
 }
 
 void selftest_workload(std::uint64_t units) {
-  alignas(aadp::platform::kCacheLineBytes) static std::array<double, kValues> values =
+  alignas(aadp::platform::kCacheLineBytes) static const std::array<double, kValues> values =
       make_values();
   double sum = 0.0;
   for (std::uint64_t unit = 0; unit < units; ++unit) {
@@ -35,6 +37,10 @@ void selftest_workload(std::uint64_t units) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
-  return aadp::bench::harness_main(argc, argv, {{"harness_selftest", selftest_workload}});
+int main(int argc, char** argv) try {
+  return aadp::bench::harness_main(argc, argv,
+                                   {{.name = "harness_selftest", .run = selftest_workload}});
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "harness_selftest: %s\n", error.what());
+  return 1;
 }

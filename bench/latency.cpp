@@ -39,7 +39,7 @@ std::expected<BatchSizing, std::string> size_batch(
   for (std::uint64_t units = 1; units <= kMaxUnits; units *= 2) {
     const double median = measure_batch(timed_run, units);
     if (median >= target_ns) {
-      return BatchSizing{units, median};
+      return BatchSizing{.units = units, .median_span_ns = median};
     }
   }
   return std::unexpected("no batch size reached the target span");
@@ -62,12 +62,12 @@ std::expected<LatencyHistogram, std::string> LatencyHistogram::from_batches(
   }
   const std::int64_t shortest = *std::ranges::min_element(batch_ns);
   if (static_cast<double>(shortest) < gate_ns) {
-    char text[160];
-    std::snprintf(text, sizeof(text),
+    std::array<char, 160> text{};
+    std::snprintf(text.data(), text.size(),
                   "refusing to produce a histogram: a batch took %lld ns, below the %.1f ns the "
                   "timer can resolve on this run; batch more work",
                   static_cast<long long>(shortest), gate_ns);
-    return std::unexpected(std::string(text));
+    return std::unexpected(std::string(text.data()));
   }
   hdr_histogram* raw = nullptr;
   if (hdr_init(1, kHighestNs, kSignificantFigures, &raw) != 0) {
@@ -85,13 +85,14 @@ std::expected<LatencyHistogram, std::string> LatencyHistogram::from_batches(
 std::vector<PublishedValue> LatencyHistogram::values() const {
   const hdr_histogram* raw = histogram_.get();
   std::vector<PublishedValue> out;
-  out.push_back({"min", publishable(hdr_min(raw), gate_ns_)});
+  out.push_back({.label = "min", .ns = publishable(hdr_min(raw), gate_ns_)});
   for (const double percentile : kPercentiles) {
-    char label[16];
-    std::snprintf(label, sizeof(label), "p%g", percentile);
-    out.push_back({label, publishable(hdr_value_at_percentile(raw, percentile), gate_ns_)});
+    std::array<char, 16> label{};
+    std::snprintf(label.data(), label.size(), "p%g", percentile);
+    out.push_back({.label = std::string(label.data()),
+                   .ns = publishable(hdr_value_at_percentile(raw, percentile), gate_ns_)});
   }
-  out.push_back({"max", publishable(hdr_max(raw), gate_ns_)});
+  out.push_back({.label = "max", .ns = publishable(hdr_max(raw), gate_ns_)});
   return out;
 }
 

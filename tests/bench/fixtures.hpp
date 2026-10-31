@@ -1,6 +1,7 @@
 // Synthetic inputs. The machine name, addresses and paths are made up, and paths are assembled
 // at run time so that these files pass the repo's own hygiene grep.
-#pragma once
+#ifndef AADP_TESTS_BENCH_FIXTURES_HPP_
+#define AADP_TESTS_BENCH_FIXTURES_HPP_
 
 #include <array>
 #include <filesystem>
@@ -39,7 +40,7 @@ inline std::string captured_stderr() {
 inline results::ResultsFile raw_file() {
   results::ResultsFile file;
   const auto add = [&file](std::string_view key, std::string_view value) {
-    file.header.push_back({std::string(key), std::string(value)});
+    file.header.push_back({.key = std::string(key), .value = std::string(value)});
   };
   for (const std::string_view key : results::kRunHeaderKeys) {
     add(key, "synthetic");
@@ -65,18 +66,18 @@ inline results::ResultsFile raw_file() {
   set("process_nice", "0");
   set("repetitions", "3");
   set("run_started_at", "2026-01-02T03:04:06Z");
-  file.sections.push_back({"benchmark_json",
-                           "{\n  \"context\": {\n    \"date\": \"2026-01-02T03:04:06+00:00\",\n"
-                           "    \"host_name\": \"" +
-                               std::string(kHost) + "\",\n    \"executable\": \"" +
-                               home_path("build/bin/bench") +
-                               "\",\n    \"load_avg\": [0.31, 0.2, 0.1]\n  },\n"
-                               "  \"benchmarks\": [\n    {\"name\": \"harness_selftest/mean\", "
-                               "\"run_name\": \"harness_selftest/manual_time\", "
-                               "\"aggregate_name\": \"mean\", \"real_time\": 4100.5}\n  ]\n}\n"});
   file.sections.push_back(
-      {"histogram_harness_selftest",
-       "unit ns\nbatches 60000\ngate_ns 200.0\np50 4100\np99 4300\nmax 90000\n"});
+      {.name = "benchmark_json",
+       .body = "{\n  \"context\": {\n    \"date\": \"2026-01-02T03:04:06+00:00\",\n"
+               "    \"host_name\": \"" +
+               std::string(kHost) + "\",\n    \"executable\": \"" + home_path("build/bin/bench") +
+               "\",\n    \"load_avg\": [0.31, 0.2, 0.1]\n  },\n"
+               "  \"benchmarks\": [\n    {\"name\": \"harness_selftest/mean\", "
+               "\"run_name\": \"harness_selftest/manual_time\", "
+               "\"aggregate_name\": \"mean\", \"real_time\": 4100.5}\n  ]\n}\n"});
+  file.sections.push_back(
+      {.name = "histogram_harness_selftest",
+       .body = "unit ns\nbatches 60000\ngate_ns 200.0\np50 4100\np99 4300\nmax 90000\n"});
   return file;
 }
 
@@ -91,7 +92,7 @@ inline void set_field(results::ResultsFile& file, std::string_view key, std::str
       return;
     }
   }
-  file.header.push_back({std::string(key), std::string(value)});
+  file.header.push_back({.key = std::string(key), .value = std::string(value)});
 }
 
 inline void remove_field(results::ResultsFile& file, std::string_view key) {
@@ -118,3 +119,5 @@ struct StampCase {
 };
 
 }  // namespace aadp::testing
+
+#endif  // AADP_TESTS_BENCH_FIXTURES_HPP_

@@ -1,6 +1,7 @@
 // Properties, beyond not crashing: writing is stable after one round, and a key that was dropped
 // cannot be found again in what is written.
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -19,24 +20,20 @@ namespace {
 
 constexpr std::array<std::string_view, 2> kDropped = {"host_name", "executable"};
 
+// NOLINTNEXTLINE(misc-no-recursion): depth is capped by the parser, which built this value.
 bool has_dropped_key(const aadp::results::JsonValue& value) {
-  for (const auto& member : value.members) {
-    if (member.key == kDropped[0] || member.key == kDropped[1] || has_dropped_key(member.value)) {
-      return true;
-    }
-  }
-  for (const auto& item : value.items) {
-    if (has_dropped_key(item)) {
-      return true;
-    }
-  }
-  return false;
+  const auto dropped_member = [](const auto& member) {
+    return member.key == kDropped[0] || member.key == kDropped[1] || has_dropped_key(member.value);
+  };
+  const auto dropped_item = [](const auto& item) { return has_dropped_key(item); };
+  return std::ranges::any_of(value.members, dropped_member) ||
+         std::ranges::any_of(value.items, dropped_item);
 }
 
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view text(reinterpret_cast<const char*>(data), size);
+  const std::string_view text(std::bit_cast<const char*>(data), size);
   auto value = aadp::results::parse_json(text);
   if (!value) {
     return 0;

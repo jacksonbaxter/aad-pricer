@@ -5,6 +5,8 @@
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
+#include <optional>
+#include <string>
 #include <utility>
 
 namespace aadp::results {
@@ -103,6 +105,120 @@ std::string_view strip_cr(std::string_view line) {
   return line;
 }
 
+using Problem = std::optional<std::string>;
+
+// Fields that measure.sh leaves empty when it cannot read them, as when /proc lacks the file.
+struct OptionalField {
+  std::string_view key;
+  std::size_t slot;
+  bool (*valid)(std::string_view);
+  std::optional<std::string> MeasureLine::* field;
+};
+
+constexpr std::size_t kSlots = 8;
+
+constexpr auto kOptionalFields = std::to_array<OptionalField>({
+    {.key = "cpus", .slot = 4, .valid = valid_cpus, .field = &MeasureLine::cpus},
+    {.key = "governor", .slot = 5, .valid = valid_governor, .field = &MeasureLine::governor},
+    {.key = "freq_khz", .slot = 6, .valid = valid_freq, .field = &MeasureLine::freq_khz},
+    {.key = "perf_event_paranoid",
+     .slot = 7,
+     .valid = valid_paranoid,
+     .field = &MeasureLine::perf_event_paranoid},
+});
+
+Problem apply_load1(std::string_view value, MeasureLine& out) {
+  if (!valid_load(value)) {
+    return "load1 is not a number";
+  }
+  const std::string copy(value);
+  out.load1 = copy;
+  out.load1_value = std::strtod(copy.c_str(), nullptr);
+  if (!std::isfinite(out.load1_value)) {
+    return "load1 is out of range";
+  }
+  return std::nullopt;
+}
+
+Problem apply_at(std::string_view value, MeasureLine& out) {
+  if (!valid_timestamp(value)) {
+    return "at is not a UTC timestamp";
+  }
+  out.at = std::string(value);
+  return std::nullopt;
+}
+
+Problem apply_exit(std::string_view value, MeasureLine& out) {
+  if (out.kind != MeasureKind::kEnd) {
+    return "exit on a start line";
+  }
+  int status = 0;
+  const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), status);
+  if (!all_digits(value) || error != std::errc{} || end != value.data() + value.size() ||
+      status > 255) {
+    return "exit is not a status from 0 to 255";
+  }
+  out.exit_status = status;
+  return std::nullopt;
+}
+
+Problem apply_host(std::string_view value, MeasureLine& out) {
+  if (out.kind != MeasureKind::kStart) {
+    return "host on an end line";
+  }
+  if (!valid_hostname(value)) {
+    return "host is empty or malformed";
+  }
+  out.host = std::string(value);
+  return std::nullopt;
+}
+
+// Unknown keys are skipped and never stored, so they cannot leak.
+Problem apply_field(std::string_view key, std::string_view value, std::array<bool, kSlots>& seen,
+                    MeasureLine& out) {
+  const auto repeated = [&seen, key](std::size_t slot) -> Problem {
+    if (std::exchange(seen[slot], true)) {
+      return std::string(key) + " repeated";
+    }
+    return std::nullopt;
+  };
+  using Apply = Problem (*)(std::string_view, MeasureLine&);
+  struct RequiredField {
+    std::string_view key;
+    std::size_t slot;
+    Apply apply;
+  };
+  static constexpr auto kFields = std::to_array<RequiredField>({
+      {.key = "load1", .slot = 0, .apply = apply_load1},
+      {.key = "at", .slot = 1, .apply = apply_at},
+      {.key = "exit", .slot = 2, .apply = apply_exit},
+      {.key = "host", .slot = 3, .apply = apply_host},
+  });
+  for (const RequiredField& field : kFields) {
+    if (key == field.key) {
+      Problem problem = repeated(field.slot);
+      return problem ? problem : field.apply(value, out);
+    }
+  }
+  for (const OptionalField& field : kOptionalFields) {
+    if (key != field.key) {
+      continue;
+    }
+    if (Problem problem = repeated(field.slot)) {
+      return problem;
+    }
+    if (value.empty()) {
+      return std::nullopt;
+    }
+    if (!field.valid(value)) {
+      return std::string(key) + " is malformed";
+    }
+    out.*field.field = std::string(value);
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 }  // namespace
 
 std::expected<MeasureLine, std::string> parse_measure_line(std::string_view raw_line) {
@@ -115,8 +231,7 @@ std::expected<MeasureLine, std::string> parse_measure_line(std::string_view raw_
   out.kind = *kind;
 
   std::string_view rest = line.substr((*kind == MeasureKind::kStart ? kStart : kEnd).size());
-  std::array<bool, 8> seen{};
-  const auto once = [&seen](std::size_t slot) { return !std::exchange(seen[slot], true); };
+  std::array<bool, kSlots> seen{};
 
   while (!rest.empty()) {
     const auto space = rest.find(' ');
@@ -130,81 +245,9 @@ std::expected<MeasureLine, std::string> parse_measure_line(std::string_view raw_
       return std::unexpected("expected key=value");
     }
     const std::string_view key = token.substr(0, equals);
-    const std::string_view value = token.substr(equals + 1);
-
-    if (key == "load1") {
-      if (!once(0)) {
-        return std::unexpected("load1 repeated");
-      }
-      if (!valid_load(value)) {
-        return std::unexpected("load1 is not a number");
-      }
-      const std::string copy(value);
-      out.load1 = copy;
-      out.load1_value = std::strtod(copy.c_str(), nullptr);
-      if (!std::isfinite(out.load1_value)) {
-        return std::unexpected("load1 is out of range");
-      }
-    } else if (key == "at") {
-      if (!once(1)) {
-        return std::unexpected("at repeated");
-      }
-      if (!valid_timestamp(value)) {
-        return std::unexpected("at is not a UTC timestamp");
-      }
-      out.at = std::string(value);
-    } else if (key == "exit") {
-      if (!once(2)) {
-        return std::unexpected("exit repeated");
-      }
-      if (*kind != MeasureKind::kEnd) {
-        return std::unexpected("exit on a start line");
-      }
-      int status = 0;
-      const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), status);
-      if (!all_digits(value) || error != std::errc{} || end != value.data() + value.size() ||
-          status > 255) {
-        return std::unexpected("exit is not a status from 0 to 255");
-      }
-      out.exit_status = status;
-    } else if (key == "host") {
-      if (!once(3)) {
-        return std::unexpected("host repeated");
-      }
-      if (*kind != MeasureKind::kStart) {
-        return std::unexpected("host on an end line");
-      }
-      if (!valid_hostname(value)) {
-        return std::unexpected("host is empty or malformed");
-      }
-      out.host = std::string(value);
-    } else if (key == "cpus" || key == "governor" || key == "freq_khz" ||
-               key == "perf_event_paranoid") {
-      const std::size_t slot = key == "cpus"       ? 4U
-                               : key == "governor" ? 5U
-                               : key == "freq_khz" ? 6U
-                                                   : 7U;
-      if (!once(slot)) {
-        return std::unexpected(std::string(key) + " repeated");
-      }
-      // Empty means measure.sh could not read it, as when /proc lacks the file.
-      if (value.empty()) {
-        continue;
-      }
-      const bool ok = slot == 4U   ? valid_cpus(value)
-                      : slot == 5U ? valid_governor(value)
-                      : slot == 6U ? valid_freq(value)
-                                   : valid_paranoid(value);
-      if (!ok) {
-        return std::unexpected(std::string(key) + " is malformed");
-      }
-      auto& field = slot == 4U   ? out.cpus
-                    : slot == 5U ? out.governor
-                    : slot == 6U ? out.freq_khz
-                                 : out.perf_event_paranoid;
-      field = std::string(value);
+    if (const Problem problem = apply_field(key, token.substr(equals + 1), seen, out)) {
+      return std::unexpected(*problem);
     }
-    // Unknown keys are skipped and never stored, so they cannot leak.
   }
 
   if (!seen[0]) {

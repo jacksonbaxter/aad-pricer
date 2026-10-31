@@ -26,11 +26,11 @@ bool is_word(char c) { return is_digit(c) || (c >= 'a' && c <= 'z') || c == '_';
 bool has_home_path(std::string_view line) {
   for (const std::string_view root : kHomeRoots) {
     const std::string needle = "/" + std::string(root) + "/";
-    if (line.find(needle) != std::string_view::npos) {
+    if (line.contains(needle)) {
       return true;
     }
     const std::string windows = ":\\" + std::string(root) + "\\";
-    if (line.find(windows) != std::string_view::npos) {
+    if (line.contains(windows)) {
       return true;
     }
   }
@@ -94,8 +94,7 @@ bool has_ipv6(std::string_view line) {
     const bool bounded =
         (i == 0 || !is_word(line[i - 1])) && (end == line.size() || !is_word(line[end]));
     const auto colons = std::ranges::count(token, ':');
-    const bool compressed =
-        token.find("::") != std::string_view::npos && token.size() > 2 && colons >= 2;
+    const bool compressed = token.contains("::") && token.size() > 2 && colons >= 2;
     if (bounded && (compressed || colons == 7)) {
       return true;
     }
@@ -133,27 +132,24 @@ std::vector<PrivacyHit> scan_private_text(std::string_view text, const PrivacyCo
     text = end == std::string_view::npos ? std::string_view{} : text.substr(end + 1);
     ++number;
     if (has_home_path(line)) {
-      hits.push_back({"home path", number});
+      hits.push_back({.kind = "home path", .line = number});
     }
     if (has_ipv4(line) || has_ipv6(line)) {
-      hits.push_back({"ip address", number});
+      hits.push_back({.kind = "ip address", .line = number});
     }
-    const auto contains = [&line](const std::string& needle) {
-      return line.find(needle) != std::string::npos;
-    };
+    const auto contains = [&line](const std::string& needle) { return line.contains(needle); };
     // The field itself counts, whatever its value: a measure line copied from another machine
     // names a host this scan was never told about.
-    if (line.find("host=") != std::string::npos || std::ranges::any_of(hostnames, contains)) {
-      hits.push_back({"hostname", number});
+    if (line.contains("host=") || std::ranges::any_of(hostnames, contains)) {
+      hits.push_back({.kind = "hostname", .line = number});
     }
     // The stamp drops these keys from the benchmark JSON. Finding one now means it sits somewhere
     // the JSON filter never looked, and a relative path in it would pass every other check.
-    if (line.find("host_name") != std::string::npos ||
-        line.find("executable\"") != std::string::npos) {
-      hits.push_back({"google benchmark private key", number});
+    if (line.contains("host_name") || line.contains("executable\"")) {
+      hits.push_back({.kind = "google benchmark private key", .line = number});
     }
     if (std::ranges::any_of(forbidden, contains)) {
-      hits.push_back({"forbidden string", number});
+      hits.push_back({.kind = "forbidden string", .line = number});
     }
   }
   return hits;

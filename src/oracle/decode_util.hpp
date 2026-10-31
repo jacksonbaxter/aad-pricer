@@ -3,6 +3,8 @@
 #ifndef AADP_ORACLE_DECODE_UTIL_HPP_
 #define AADP_ORACLE_DECODE_UTIL_HPP_
 
+#include <algorithm>
+#include <array>
 #include <charconv>
 #include <cmath>
 #include <cstddef>
@@ -33,44 +35,37 @@ inline std::optional<double> ParseDouble(std::string_view text) {
         (c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-';
     if (!allowed) return std::nullopt;
   }
-  char buffer[kMaxNumberBytes];
-  text.copy(buffer, text.size());
-  buffer[text.size()] = '\0';
+  std::array<char, kMaxNumberBytes> buffer{};
+  text.copy(buffer.data(), text.size());
   char* end = nullptr;
-  const double value = std::strtod(buffer, &end);
-  if (end != buffer + text.size() || !std::isfinite(value)) return std::nullopt;
+  const double value = std::strtod(buffer.data(), &end);
+  if (end != buffer.data() + text.size() || !std::isfinite(value)) return std::nullopt;
   return value;
 }
 
 inline std::optional<std::uint64_t> ParseUnsigned(std::string_view text) {
   std::uint64_t value = 0;
-  const char* const last = text.data() + text.size();
-  const auto [end, error] = std::from_chars(text.data(), last, value);
+  const char* const first = text.data();
+  const char* const last = first + text.size();
+  const auto [end, error] = std::from_chars(first, last, value);
   if (text.empty() || error != std::errc{} || end != last) return std::nullopt;
   return value;
 }
 
 inline bool IsToken(std::string_view text) {
   if (text.empty()) return false;
-  for (const char c : text) {
-    const bool allowed = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
-                         (c >= 'a' && c <= 'z') || c == '.' || c == '_' || c == '-';
-    if (!allowed) return false;
-  }
-  return true;
+  return std::ranges::all_of(text, [](char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '.' ||
+           c == '_' || c == '-';
+  });
 }
 
 inline bool IsPrintable(std::string_view text) {
-  for (const char c : text) {
-    if (c < ' ' || c > '~') return false;
-  }
-  return true;
+  return std::ranges::all_of(text, [](char c) { return c >= ' ' && c <= '~'; });
 }
 
 // Without the separator, so a field can never change the column count.
-inline bool IsField(std::string_view text) {
-  return IsPrintable(text) && text.find(',') == std::string_view::npos;
-}
+inline bool IsField(std::string_view text) { return IsPrintable(text) && !text.contains(','); }
 
 inline std::vector<std::string_view> Split(std::string_view text, char separator) {
   std::vector<std::string_view> parts;

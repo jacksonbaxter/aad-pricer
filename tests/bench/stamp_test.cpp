@@ -214,7 +214,7 @@ TEST(Stamp, RefusesEachMissingHeaderKey) {
 TEST(Stamp, RefusesRawOutputThatAlreadyClaimsToBeStamped) {
   StampCase test_case;
   ResultsFile raw = testing::raw_file();
-  raw.header.push_back({"reportable", "yes"});
+  raw.header.push_back({.key = "reportable", .value = "yes"});
   test_case.raw = testing::text_of(raw);
   expect_refused(test_case, StampError::kMalformedRun);
 }

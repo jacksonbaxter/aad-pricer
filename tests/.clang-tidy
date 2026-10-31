@@ -1,0 +1,12 @@
+---
+# Tests differ from production code in these ways only.
+InheritParentConfig: true
+Checks:
+  # Tests start the tools under test through a shell, on paths the test itself built.
+  - '-bugprone-command-processor'
+  # Reproducible test sequences need a fixed seed.
+  - '-bugprone-random-generator-seed'
+  # A throw from a test binary's static data stops it at start, visibly, which is the right result.
+  - '-bugprone-throwing-static-initialization'
+  # gtest runs tests on the main thread, so the process calls these with no other thread live.
+  - '-concurrency-mt-unsafe'

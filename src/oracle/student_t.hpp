@@ -42,8 +42,10 @@ inline double RegularizedIncompleteBeta(double x, double a, double b) {
     return std::numeric_limits<double>::quiet_NaN();
   }
   if (x == 0.0 || x == 1.0) return x;
+  // NOLINTBEGIN(concurrency-mt-unsafe): lgamma's only shared state is signgam, never read here.
   const double log_front =
       std::lgamma(a + b) - std::lgamma(a) - std::lgamma(b) + a * std::log(x) + b * std::log1p(-x);
+  // NOLINTEND(concurrency-mt-unsafe)
   const double front = std::exp(log_front);
   if (x < (a + 1.0) / (a + b + 2.0)) {
     return front * student_t_detail::BetaContinuedFraction(x, a, b) / a;

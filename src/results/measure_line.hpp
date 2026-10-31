@@ -6,7 +6,8 @@
 //
 // sanitized_measure_line() rebuilds a line from the validated fields it knows, so `host=` and
 // any field a later measure.sh adds cannot reach a committed file.
-#pragma once
+#ifndef AADP_RESULTS_MEASURE_LINE_HPP_
+#define AADP_RESULTS_MEASURE_LINE_HPP_
 
 #include <cstddef>
 #include <expected>
@@ -17,7 +18,7 @@
 
 namespace aadp::results {
 
-enum class MeasureKind { kStart, kEnd };
+enum class MeasureKind : std::uint8_t { kStart, kEnd };
 
 struct MeasureLine {
   MeasureKind kind = MeasureKind::kStart;
@@ -50,3 +51,5 @@ MeasureScan scan_measure_stderr(std::string_view captured);
 std::expected<std::vector<int>, std::string> expand_cpu_list(std::string_view list);
 
 }  // namespace aadp::results
+
+#endif  // AADP_RESULTS_MEASURE_LINE_HPP_

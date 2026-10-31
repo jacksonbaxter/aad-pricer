@@ -9,7 +9,7 @@ namespace {
 
 constexpr std::string_view kSectionMarker = "@section ";
 // Far above any real file, and small enough that a bad input cannot exhaust memory.
-constexpr std::size_t kMaxFileBytes = 64U * 1024U * 1024U;
+constexpr std::size_t kMaxFileBytes = std::size_t{64} * 1024U * 1024U;
 // The repeat checks below are quadratic, so these bound the work as well as the file.
 constexpr std::size_t kMaxHeaderLines = 1024;
 constexpr std::size_t kMaxSections = 1024;
@@ -62,11 +62,115 @@ const ResultsSection* ResultsFile::section(std::string_view name) const {
   return nullptr;
 }
 
+namespace {
+
+std::optional<std::string> parse_header_line(std::string_view line, ResultsFile& file) {
+  const auto colon = line.find(": ");
+  if (colon == std::string_view::npos) {
+    return "header line without `key: value`";
+  }
+  const std::string_view key = line.substr(0, colon);
+  const std::string_view value = line.substr(colon + 2);
+  if (!valid_key(key)) {
+    return "bad header key";
+  }
+  if (!valid_value(value)) {
+    return "control character in a header value";
+  }
+  if (file.value(key)) {
+    return "repeated header key " + std::string(key);
+  }
+  if (file.header.size() == kMaxHeaderLines) {
+    return "too many header lines";
+  }
+  file.header.push_back({.key = std::string(key), .value = std::string(value)});
+  return std::nullopt;
+}
+
+std::optional<std::string> parse_body_line(std::string_view line, ResultsFile& file) {
+  if (line.starts_with(kSectionMarker)) {
+    const std::string_view name = line.substr(kSectionMarker.size());
+    if (!valid_section_name(name)) {
+      return "bad section name";
+    }
+    if (file.section(name) != nullptr) {
+      return "repeated section " + std::string(name);
+    }
+    if (file.sections.size() == kMaxSections) {
+      return "too many sections";
+    }
+    file.sections.push_back({.name = std::string(name), .body = {}});
+    return std::nullopt;
+  }
+  if (file.sections.empty()) {
+    return "data before the first section";
+  }
+  std::string& body = file.sections.back().body;
+  body.append(line);
+  body.push_back('\n');
+  return std::nullopt;
+}
+
+std::optional<std::string> check_writable_header(const ResultsFile& file) {
+  for (std::size_t i = 0; i < file.header.size(); ++i) {
+    const HeaderField& field = file.header[i];
+    if (!valid_key(field.key)) {
+      return "bad header key";
+    }
+    if (!valid_value(field.value)) {
+      return "control character in header value of " + field.key;
+    }
+    for (std::size_t j = 0; j < i; ++j) {
+      if (file.header[j].key == field.key) {
+        return "repeated header key " + field.key;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> check_writable_body(const ResultsSection& section) {
+  if (section.body.contains('\0')) {
+    return "NUL in section " + section.name;
+  }
+  if (!section.body.empty() && section.body.back() != '\n') {
+    return "section " + section.name + " does not end in a newline";
+  }
+  std::string_view rest = section.body;
+  std::string_view line;
+  while (next_line(rest, line)) {
+    if (line.starts_with(kSectionMarker)) {
+      return "section " + section.name + " has a line like a section marker";
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> check_writable_sections(const ResultsFile& file) {
+  for (std::size_t i = 0; i < file.sections.size(); ++i) {
+    const ResultsSection& section = file.sections[i];
+    if (!valid_section_name(section.name)) {
+      return "bad section name";
+    }
+    for (std::size_t j = 0; j < i; ++j) {
+      if (file.sections[j].name == section.name) {
+        return "repeated section " + section.name;
+      }
+    }
+    if (auto problem = check_writable_body(section)) {
+      return problem;
+    }
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
 std::expected<ResultsFile, std::string> parse_results_file(std::string_view text) {
   if (text.size() > kMaxFileBytes) {
     return std::unexpected("file is too large");
   }
-  if (text.find('\0') != std::string_view::npos) {
+  if (text.contains('\0')) {
     return std::unexpected("file has a NUL byte");
   }
   std::string_view line;
@@ -81,51 +185,18 @@ std::expected<ResultsFile, std::string> parse_results_file(std::string_view text
       header_closed = true;
       break;
     }
-    const auto colon = line.find(": ");
-    if (colon == std::string_view::npos) {
-      return std::unexpected("header line without `key: value`");
+    if (auto problem = parse_header_line(line, file)) {
+      return std::unexpected(std::move(*problem));
     }
-    const std::string_view key = line.substr(0, colon);
-    const std::string_view value = line.substr(colon + 2);
-    if (!valid_key(key)) {
-      return std::unexpected("bad header key");
-    }
-    if (!valid_value(value)) {
-      return std::unexpected("control character in a header value");
-    }
-    if (file.value(key)) {
-      return std::unexpected("repeated header key " + std::string(key));
-    }
-    if (file.header.size() == kMaxHeaderLines) {
-      return std::unexpected("too many header lines");
-    }
-    file.header.push_back({std::string(key), std::string(value)});
   }
   if (!header_closed) {
     return std::unexpected("header is not closed by a blank line");
   }
 
   while (next_line(text, line)) {
-    if (line.starts_with(kSectionMarker)) {
-      const std::string_view name = line.substr(kSectionMarker.size());
-      if (!valid_section_name(name)) {
-        return std::unexpected("bad section name");
-      }
-      if (file.section(name) != nullptr) {
-        return std::unexpected("repeated section " + std::string(name));
-      }
-      if (file.sections.size() == kMaxSections) {
-        return std::unexpected("too many sections");
-      }
-      file.sections.push_back({std::string(name), {}});
-      continue;
+    if (auto problem = parse_body_line(line, file)) {
+      return std::unexpected(std::move(*problem));
     }
-    if (file.sections.empty()) {
-      return std::unexpected("data before the first section");
-    }
-    std::string& body = file.sections.back().body;
-    body.append(line);
-    body.push_back('\n');
   }
   return file;
 }
@@ -134,47 +205,19 @@ std::expected<std::string, std::string> write_results_file(const ResultsFile& fi
   if (file.header.size() > kMaxHeaderLines || file.sections.size() > kMaxSections) {
     return std::unexpected("too many header lines or sections");
   }
+  if (auto problem = check_writable_header(file)) {
+    return std::unexpected(std::move(*problem));
+  }
+  if (auto problem = check_writable_sections(file)) {
+    return std::unexpected(std::move(*problem));
+  }
   std::string out(kResultsMagic);
   out += '\n';
-  for (std::size_t i = 0; i < file.header.size(); ++i) {
-    const HeaderField& field = file.header[i];
-    if (!valid_key(field.key)) {
-      return std::unexpected("bad header key");
-    }
-    if (!valid_value(field.value)) {
-      return std::unexpected("control character in header value of " + field.key);
-    }
-    for (std::size_t j = 0; j < i; ++j) {
-      if (file.header[j].key == field.key) {
-        return std::unexpected("repeated header key " + field.key);
-      }
-    }
+  for (const HeaderField& field : file.header) {
     out += field.key + ": " + field.value + "\n";
   }
   out += '\n';
-  for (std::size_t i = 0; i < file.sections.size(); ++i) {
-    const ResultsSection& section = file.sections[i];
-    if (!valid_section_name(section.name)) {
-      return std::unexpected("bad section name");
-    }
-    for (std::size_t j = 0; j < i; ++j) {
-      if (file.sections[j].name == section.name) {
-        return std::unexpected("repeated section " + section.name);
-      }
-    }
-    if (section.body.find('\0') != std::string::npos) {
-      return std::unexpected("NUL in section " + section.name);
-    }
-    if (!section.body.empty() && section.body.back() != '\n') {
-      return std::unexpected("section " + section.name + " does not end in a newline");
-    }
-    std::string_view rest = section.body;
-    std::string_view line;
-    while (next_line(rest, line)) {
-      if (line.starts_with(kSectionMarker)) {
-        return std::unexpected("section " + section.name + " has a line like a section marker");
-      }
-    }
+  for (const ResultsSection& section : file.sections) {
     out += std::string(kSectionMarker) + section.name + "\n" + section.body;
   }
   return out;
@@ -213,15 +256,15 @@ std::expected<void, std::string> validate_stamped(const ResultsFile& file) {
   if (!missing.empty()) {
     return std::unexpected("header is missing " + std::string(missing.front()));
   }
-  const std::string_view claim = *file.value("claim");
+  const std::string_view claim = file.required("claim");
   if (claim != "none" && claim != "result") {
     return std::unexpected("claim must be none or result");
   }
-  const std::string_view label = *file.value("host_label");
+  const std::string_view label = file.required("host_label");
   if (label != "mac-m4max" && label != "linux-zen1" && label != "other") {
     return std::unexpected("unknown host label");
   }
-  const std::string_view reportable = *file.value("reportable");
+  const std::string_view reportable = file.required("reportable");
   if (reportable != "yes" && reportable != "no") {
     return std::unexpected("reportable must be yes or no");
   }
@@ -235,8 +278,8 @@ std::expected<void, std::string> validate_stamped(const ResultsFile& file) {
   if (label == "other") {
     return std::unexpected("host other is never reportable");
   }
-  const auto start = parse_measure_line(*file.value("measure_start"));
-  const auto end = parse_measure_line(*file.value("measure_end"));
+  const auto start = parse_measure_line(file.required("measure_start"));
+  const auto end = parse_measure_line(file.required("measure_end"));
   if (!start || start->kind != MeasureKind::kStart) {
     return std::unexpected("reportable without a measure.sh start line");
   }
@@ -246,11 +289,11 @@ std::expected<void, std::string> validate_stamped(const ResultsFile& file) {
   if (end->exit_status != 0) {
     return std::unexpected("reportable with a non-zero exit");
   }
-  const std::string_view tree = *file.value("tree_state");
+  const std::string_view tree = file.required("tree_state");
   if (tree != "clean" && tree != "exported") {
     return std::unexpected("reportable from a tree that is not clean");
   }
-  if (!is_commit_hash(*file.value("commit"))) {
+  if (!is_commit_hash(file.required("commit"))) {
     return std::unexpected("reportable without a commit");
   }
   return {};
@@ -262,7 +305,8 @@ std::vector<HistogramValue> parse_histogram_body(std::string_view body) {
   while (next_line(body, line)) {
     const auto space = line.find(' ');
     if (space != std::string_view::npos) {
-      values.push_back({std::string(line.substr(0, space)), std::string(line.substr(space + 1))});
+      values.push_back({.key = std::string(line.substr(0, space)),
+                        .value = std::string(line.substr(space + 1))});
     }
   }
   return values;

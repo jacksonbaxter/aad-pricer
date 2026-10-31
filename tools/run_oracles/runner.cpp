@@ -7,6 +7,7 @@
 #include <map>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string_view>
 #include <tuple>
 
@@ -46,10 +47,26 @@ struct GroupRequest {
 
 using Table = std::vector<std::array<double, kStats>>;
 
+// The plan decoder has proved both of these valid, so a failure here is a broken invariant.
+Instrument RequireInstrument(std::string_view text) {
+  auto instrument = DecodeInstrument(text);
+  if (!instrument) throw std::logic_error("undecodable instrument in a decoded plan");
+  return *std::move(instrument);
+}
+
+Greek RequireGreek(std::string_view text) {
+  const auto greek = DecodeGreek(text);
+  if (!greek) throw std::logic_error("undecodable greek in a decoded plan");
+  return *greek;
+}
+
 Table RunGroup(const GroupRequest& request, std::uint32_t threads) {
-  const Instrument instrument = *DecodeInstrument(request.instrument);
-  const RunConfig config{request.seed, request.paths, request.batches, instrument.contract.steps,
-                         threads};
+  const Instrument instrument = RequireInstrument(request.instrument);
+  const RunConfig config{.seed = request.seed,
+                         .paths = request.paths,
+                         .batches = request.batches,
+                         .steps = instrument.contract.steps,
+                         .threads = threads};
   const MarketParams<Dual> active = ActiveMarket(instrument.market);
   return RunBatches<kStats>(
       config, [&](std::span<const double> u, std::array<double, kStats>& stats) {
@@ -80,9 +97,9 @@ std::vector<double> Column(const Table& table, std::size_t index) {
 using GroupKey = std::tuple<std::string, std::uint64_t, std::uint32_t, std::uint64_t>;
 
 std::string Format(const char* format, auto... values) {
-  char text[256];
-  std::snprintf(text, sizeof(text), format, values...);
-  return text;
+  std::array<char, 256> text{};
+  std::snprintf(text.data(), text.size(), format, values...);
+  return text.data();
 }
 
 // Why a row cannot run, or nothing. Decoded rows are valid in themselves, so this covers what
@@ -100,16 +117,47 @@ std::optional<std::string> ProblemWithRow(const PlanRow& row, const ReferenceTab
 
 }  // namespace
 
-RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const RunOptions& options,
-                   std::ostream& out) {
-  RunSummary summary;
-  summary.rows = plan.rows.size();
-  summary.declared_k = plan.header.declared_k;
-  summary.critical = CriticalValue(plan.header.alpha_f, plan.rows.size(), plan.header.batches);
-  // Computed, never trusted from the file. Printed to three decimals there is no point being
-  // finer than the file's own digits, but a K that moved the constant must show.
-  summary.critical_matches_plan = std::fabs(summary.critical - plan.header.critical) < 1e-9;
+namespace {
 
+GroupKey KeyOf(const Plan& plan, const RunOptions& options, const PlanRow& row) {
+  const std::uint64_t paths =
+      options.smoke ? options.smoke_paths_per_batch * row.batches : row.paths;
+  const std::uint64_t seed = options.smoke ? plan.header.pilot_seed + 1 : row.seed;
+  return {row.instrument, paths, row.batches, seed};
+}
+
+// Adds the row to its group. One simulation holds one step per Greek, so a second step would
+// silently replace it.
+std::optional<std::string> AddToGroup(const PlanRow& row, const GroupKey& key,
+                                      GroupRequest& group) {
+  group.instrument = row.instrument;
+  group.paths = std::get<1>(key);
+  group.batches = row.batches;
+  group.seed = std::get<3>(key);
+  if (const auto h = FiniteDifferenceStep(row.reference)) {
+    double& slot = group.fd_h[GreekIndex(RequireGreek(row.greek)) - 1];
+    if (slot != 0.0 && slot != *h) {
+      return "another row uses a different step for this Greek on these paths";
+    }
+    slot = *h;
+  }
+  return std::nullopt;
+}
+
+ToleranceResult JudgeRow(const PlanRow& row, const ReferenceTable& references, const Table& table,
+                         double critical) {
+  const Greek greek = RequireGreek(row.greek);
+  const std::vector<double> estimate = Column(table, GreekIndex(greek));
+  const ToleranceLimits limits{.b = row.b, .se_ceiling = row.se_ceiling, .critical = critical};
+  if (FiniteDifferenceStep(row.reference)) {
+    const std::size_t fd = kFdOffset + GreekIndex(greek) - 1;
+    return CheckPaired(estimate, Column(table, fd), limits);
+  }
+  return CheckAgainstReference(estimate, references.Find(row.reference)->value, limits);
+}
+
+void ReportHeader(const Plan& plan, const RunOptions& options, const RunSummary& summary,
+                  std::ostream& out) {
   if (options.smoke) {
     out << "SMOKE RUN: reduced size, not a statistical result. No row is judged.\n";
   }
@@ -121,37 +169,37 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
   if (!summary.critical_matches_plan) {
     out << "ERROR: critical value differs from the plan's\n";
   }
+}
+
+const char* Verdict(bool smoke, bool pass) {
+  if (smoke) return pass ? "finite" : "NONFINITE";
+  return pass ? "pass" : "FAIL";
+}
+
+}  // namespace
+
+RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const RunOptions& options,
+                   std::ostream& out) {
+  RunSummary summary;
+  summary.rows = plan.rows.size();
+  summary.declared_k = plan.header.declared_k;
+  summary.critical = CriticalValue(plan.header.alpha_f, plan.rows.size(), plan.header.batches);
+  // Computed, never trusted from the file. Printed to three decimals there is no point being
+  // finer than the file's own digits, but a K that moved the constant must show.
+  summary.critical_matches_plan = std::fabs(summary.critical - plan.header.critical) < 1e-9;
+  ReportHeader(plan, options, summary, out);
 
   // One simulation per contract, seed and size. Greeks on one path share it, and Bonferroni
   // needs no independence between them.
   std::map<GroupKey, GroupRequest> groups;
   std::vector<std::optional<std::string>> problems(plan.rows.size());
-  const auto key_of = [&](const PlanRow& row) -> GroupKey {
-    const std::uint64_t paths =
-        options.smoke ? options.smoke_paths_per_batch * row.batches : row.paths;
-    const std::uint64_t seed = options.smoke ? plan.header.pilot_seed + 1 : row.seed;
-    return {row.instrument, paths, row.batches, seed};
-  };
   for (std::size_t i = 0; i < plan.rows.size(); ++i) {
     const PlanRow& row = plan.rows[i];
     if (row.status != RowStatus::kRun) continue;
     problems[i] = ProblemWithRow(row, references);
     if (problems[i]) continue;
-    const GroupKey key = key_of(row);
-    GroupRequest& group = groups[key];
-    group.instrument = row.instrument;
-    group.paths = std::get<1>(key);
-    group.batches = row.batches;
-    group.seed = std::get<3>(key);
-    if (const auto h = FiniteDifferenceStep(row.reference)) {
-      // One simulation holds one step per Greek, so a second step would silently replace it.
-      double& slot = group.fd_h[GreekIndex(*DecodeGreek(row.greek)) - 1];
-      if (slot != 0.0 && slot != *h) {
-        problems[i] = "another row uses a different step for this Greek on these paths";
-        continue;
-      }
-      slot = *h;
-    }
+    const GroupKey key = KeyOf(plan, options, row);
+    problems[i] = AddToGroup(row, key, groups[key]);
   }
   std::map<GroupKey, Table> results;
   for (const auto& [key, request] : groups) results[key] = RunGroup(request, options.threads);
@@ -173,25 +221,14 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
       out << Format("%-18s SKIPPED: %s\n", row.id.c_str(), problems[i]->c_str());
       continue;
     }
-    const Greek greek = *DecodeGreek(row.greek);
-    const Table& table = results.at(key_of(row));
-    const std::vector<double> estimate = Column(table, GreekIndex(greek));
-    const ToleranceLimits limits{
-        .b = row.b, .se_ceiling = row.se_ceiling, .critical = summary.critical};
-    ToleranceResult result;
-    if (FiniteDifferenceStep(row.reference)) {
-      const std::size_t fd = kFdOffset + GreekIndex(greek) - 1;
-      result = CheckPaired(estimate, Column(table, fd), limits);
-    } else {
-      result = CheckAgainstReference(estimate, references.Find(row.reference)->value, limits);
-    }
+    const ToleranceResult result =
+        JudgeRow(row, references, results.at(KeyOf(plan, options, row)), summary.critical);
     const bool pass = options.smoke ? finite_or_report(result) : result.passed();
     (pass ? summary.passed : summary.failed) += 1;
-    const char* verdict =
-        options.smoke ? (pass ? "finite" : "NONFINITE") : (pass ? "pass" : "FAIL");
     out << Format("%-18s estimate=%.10f reference=%.10f se=%.4e bound=%.4e %s condition=%s\n",
                   row.id.c_str(), result.estimate, result.reference, result.standard_error,
-                  result.bound, verdict, options.smoke ? "not-judged" : result.failed_condition());
+                  result.bound, Verdict(options.smoke, pass),
+                  options.smoke ? "not-judged" : result.failed_condition());
   }
   out << Format("run=%zu passed=%zu failed=%zu skipped=%zu awaiting=%zu K=%zu\n", summary.run,
                 summary.passed, summary.failed, summary.skipped, summary.awaiting, summary.rows);
@@ -215,8 +252,12 @@ struct GreekReference {
 void AddRows(std::vector<PlanTemplateRow>& rows, const std::string& prefix, const char* instrument,
              std::uint64_t paths, const std::vector<GreekReference>& columns) {
   for (const GreekReference& column : columns) {
-    rows.push_back({prefix + "." + column.greek, instrument, column.greek, column.reference, paths,
-                    RowStatus::kRun});
+    rows.push_back({.id = prefix + "." + column.greek,
+                    .instrument = instrument,
+                    .greek = column.greek,
+                    .reference = column.reference,
+                    .paths = paths,
+                    .status = RowStatus::kRun});
   }
 }
 
@@ -225,15 +266,18 @@ std::vector<GreekReference> AllClosedForm(const std::string& prefix,
                                           const std::string& published_id) {
   std::vector<GreekReference> columns;
   for (const char* greek : {"value", "delta", "vega", "rho", "divrho", "theta"}) {
-    columns.push_back({greek, greek == published_greek ? published_id : prefix + "." + greek});
+    columns.push_back(
+        {.greek = greek,
+         .reference = greek == published_greek ? published_id : prefix + "." + greek});
   }
   return columns;
 }
 
 std::vector<GreekReference> DiscreteBarrierColumns(const std::string& value_id,
                                                    const std::string& delta_id) {
-  return {{"value", value_id}, {"delta", delta_id}, {"vega", kFdRate},
-          {"rho", kFdRate},    {"divrho", kFdRate}, {"theta", kFdRate}};
+  return {{.greek = "value", .reference = value_id}, {.greek = "delta", .reference = delta_id},
+          {.greek = "vega", .reference = kFdRate},   {.greek = "rho", .reference = kFdRate},
+          {.greek = "divrho", .reference = kFdRate}, {.greek = "theta", .reference = kFdRate}};
 }
 
 }  // namespace
@@ -250,18 +294,24 @@ std::vector<PlanTemplateRow> PlanTemplate() {
   // crossings in the whole run and an unstable SE. 1e-3 is the smallest step with SE stable across
   // four seeds (max/min 1.30, limit 1.62).
   AddRows(rows, "AA50K100", cat::kArithmeticO9, kBarrierPaths,
-          {{"value", "O9"},
-           {"delta", kFdSpot},
-           {"vega", kFdRate},
-           {"rho", kFdRate},
-           {"divrho", kFdRate},
-           {"theta", kFdAsianTheta}});
-  AddRows(rows, "AA50K090", cat::kArithmeticN50K90, kBarrierPaths, {{"value", "AA50K090"}});
-  AddRows(rows, "AA50K110", cat::kArithmeticN50K110, kBarrierPaths, {{"value", "AA50K110"}});
-  AddRows(rows, "AA12K090", cat::kArithmeticN12K90, kDefaultPaths, {{"value", "AA12K090"}});
-  AddRows(rows, "AA12K100", cat::kArithmeticN12K100, kDefaultPaths, {{"value", "AA12K100"}});
-  AddRows(rows, "AA12K110", cat::kArithmeticN12K110, kDefaultPaths, {{"value", "AA12K110"}});
-  AddRows(rows, "AA2", cat::kArithmeticO11, kDefaultPaths, {{"value", "O11"}});
+          {{.greek = "value", .reference = "O9"},
+           {.greek = "delta", .reference = kFdSpot},
+           {.greek = "vega", .reference = kFdRate},
+           {.greek = "rho", .reference = kFdRate},
+           {.greek = "divrho", .reference = kFdRate},
+           {.greek = "theta", .reference = kFdAsianTheta}});
+  AddRows(rows, "AA50K090", cat::kArithmeticN50K90, kBarrierPaths,
+          {{.greek = "value", .reference = "AA50K090"}});
+  AddRows(rows, "AA50K110", cat::kArithmeticN50K110, kBarrierPaths,
+          {{.greek = "value", .reference = "AA50K110"}});
+  AddRows(rows, "AA12K090", cat::kArithmeticN12K90, kDefaultPaths,
+          {{.greek = "value", .reference = "AA12K090"}});
+  AddRows(rows, "AA12K100", cat::kArithmeticN12K100, kDefaultPaths,
+          {{.greek = "value", .reference = "AA12K100"}});
+  AddRows(rows, "AA12K110", cat::kArithmeticN12K110, kDefaultPaths,
+          {{.greek = "value", .reference = "AA12K110"}});
+  AddRows(rows, "AA2", cat::kArithmeticO11, kDefaultPaths,
+          {{.greek = "value", .reference = "O11"}});
 
   AddRows(rows, "DB085", cat::kOneStepH85, kBarrierPaths,
           DiscreteBarrierColumns("DB085.value", "DB085.delta"));
@@ -284,17 +334,24 @@ std::vector<PlanTemplateRow> PlanTemplate() {
         std::pair{"CB", "svi-surface:continuous-barrier"}}) {
     for (const char* slice : {"d05", "d12", "d33"}) {
       for (const char* parameter : {"a", "b", "rho", "m", "sigma"}) {
-        rows.push_back({std::string("P3.") + code + "." + slice + "." + parameter, surface,
-                        std::string("d_") + parameter + "_" + slice, "phase3", 0,
-                        RowStatus::kAwaitingPhase3});
+        rows.push_back({.id = std::string("P3.") + code + "." + slice + "." + parameter,
+                        .instrument = surface,
+                        .greek = std::string("d_") + parameter + "_" + slice,
+                        .reference = "phase3",
+                        .paths = 0,
+                        .status = RowStatus::kAwaitingPhase3});
       }
     }
   }
   for (const auto& [code, contract] : {std::pair{"KID", "knock-in-parity:discrete"},
                                        std::pair{"KIC", "knock-in-parity:continuous"}}) {
     for (const char* greek : {"value", "delta", "vega", "rho", "divrho", "theta"}) {
-      rows.push_back({std::string("P3.") + code + "." + greek, contract, greek, "phase3", 0,
-                      RowStatus::kAwaitingPhase3});
+      rows.push_back({.id = std::string("P3.") + code + "." + greek,
+                      .instrument = contract,
+                      .greek = greek,
+                      .reference = "phase3",
+                      .paths = 0,
+                      .status = RowStatus::kAwaitingPhase3});
     }
   }
   return rows;
@@ -319,7 +376,7 @@ std::vector<PilotRow> RunPilot(const std::vector<PlanTemplateRow>& rows,
     group.seed = config.seed;
     group.two_h = true;
     if (const auto h = FiniteDifferenceStep(row.reference)) {
-      group.fd_h[GreekIndex(*DecodeGreek(row.greek)) - 1] = *h;
+      group.fd_h[GreekIndex(RequireGreek(row.greek)) - 1] = *h;
     }
   }
   std::map<GroupKey, Table> tables;
@@ -333,7 +390,7 @@ std::vector<PilotRow> RunPilot(const std::vector<PlanTemplateRow>& rows,
     if (row.status != RowStatus::kRun) continue;
     const GroupKey key = key_of(row);
     const Table& table = tables.at(key);
-    const Greek greek = *DecodeGreek(row.greek);
+    const Greek greek = RequireGreek(row.greek);
     const std::vector<double> estimate = Column(table, GreekIndex(greek));
     PilotRow out;
     out.id = row.id;
@@ -467,6 +524,7 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
   h.fd_b_factor = kFdBFactor;
   h.pilot_seed = pilot.config.seed;
   h.measured_seed = measured_seed;
+  // NOLINTBEGIN(bugprone-suspicious-missing-comma): each entry is one long line split for width.
   plan.comments = {
       "# Pre-registered comparison plan, BENCHMARKS.md section 10. Generated by aadp_run_oracles"
       " emit-plan from references/pilot_results.csv, and committed before the first measured run.",
@@ -486,6 +544,7 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
       "# Awaiting rows fix nothing yet. They get a ceiling from their own pilot before their first"
       " measured run, and they already count in K.",
   };
+  // NOLINTEND(bugprone-suspicious-missing-comma)
 
   for (const PlanTemplateRow& row : rows) {
     PlanRow out;

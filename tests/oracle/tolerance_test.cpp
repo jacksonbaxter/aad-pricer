@@ -28,7 +28,7 @@ TEST(StudentT, BonferroniConstantsForKOf100) {
 // Exact quantiles exist for nu = 1 (Cauchy) and nu = 2, and they exercise both branches of the
 // incomplete beta, so this is a check the printed tables cannot give.
 TEST(StudentT, ClosedFormQuantiles) {
-  for (double p : {0.6, 0.9, 0.99, 0.9999, 1.0 - 1e-6}) {
+  for (const double p : {0.6, 0.9, 0.99, 0.9999, 1.0 - 1e-6}) {
     EXPECT_NEAR(StudentTQuantile(p, 1.0), std::tan(std::numbers::pi * (p - 0.5)),
                 2e-9 * StudentTQuantile(p, 1.0));
     const double alpha = 4.0 * p * (1.0 - p);

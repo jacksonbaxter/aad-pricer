@@ -15,7 +15,7 @@
 
 namespace aadp {
 
-enum class OptionType { kCall, kPut };
+enum class OptionType : std::uint8_t { kCall, kPut };
 
 template <class Real>
 struct MarketParams {
@@ -52,7 +52,7 @@ BsGreeks<Real> BlackScholes(OptionType type, double strike, const MarketParams<R
   const Real cdf1 = normal_cdf(phi * d1);
   const Real cdf2 = normal_cdf(phi * d2);
   const Real pdf1 = normal_pdf(d1);
-  BsGreeks<Real> g;
+  BsGreeks<Real> g{};
   g.value = phi * (m.spot * df_q * cdf1 - strike * df_r * cdf2);
   g.delta = phi * df_q * cdf1;
   g.gamma = df_q * pdf1 / (m.spot * sd);

@@ -8,10 +8,12 @@
 #include <charconv>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -31,8 +33,7 @@ Arguments ParseArguments(int argc, char** argv) {
     } else if (key.starts_with("--") && i + 1 < argc) {
       arguments.emplace(key.substr(2), argv[++i]);
     } else {
-      std::fprintf(stderr, "bad argument %s\n", argv[i]);
-      std::exit(2);
+      throw std::runtime_error("bad argument " + std::string(argv[i]));
     }
   }
   return arguments;
@@ -41,17 +42,15 @@ Arguments ParseArguments(int argc, char** argv) {
 std::string Required(const Arguments& arguments, std::string_view key) {
   const auto found = arguments.find(key);
   if (found == arguments.end()) {
-    std::fprintf(stderr, "missing --%s\n", std::string(key).c_str());
-    std::exit(2);
+    throw std::runtime_error("missing --" + std::string(key));
   }
   return found->second;
 }
 
 std::string ReadFile(const std::string& path) {
-  std::ifstream file(path, std::ios::binary);
+  const std::ifstream file(path, std::ios::binary);
   if (!file) {
-    std::fprintf(stderr, "cannot open %s\n", path.c_str());
-    std::exit(2);
+    throw std::runtime_error("cannot open " + path);
   }
   std::ostringstream text;
   text << file.rdbuf();
@@ -62,8 +61,7 @@ void WriteFile(const std::string& path, const std::string& text) {
   std::ofstream file(path, std::ios::binary);
   file << text;
   if (!file.good()) {
-    std::fprintf(stderr, "cannot write %s\n", path.c_str());
-    std::exit(2);
+    throw std::runtime_error("cannot write " + path);
   }
 }
 
@@ -74,8 +72,7 @@ std::uint64_t Number(const Arguments& arguments, std::string_view key, std::uint
   const std::string& text = found->second;
   const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
   if (error != std::errc{} || end != text.data() + text.size()) {
-    std::fprintf(stderr, "bad number for --%s\n", std::string(key).c_str());
-    std::exit(2);
+    throw std::runtime_error("bad number for --" + std::string(key));
   }
   return value;
 }
@@ -87,16 +84,15 @@ std::uint32_t DefaultThreads() {
 aadp::ReferenceTable LoadReferences(const Arguments& arguments) {
   auto references = aadp::DecodeReferences(ReadFile(Required(arguments, "references")));
   if (!references) {
-    std::fprintf(stderr, "references line %zu: %s\n", references.error().line,
-                 references.error().message.c_str());
-    std::exit(2);
+    throw std::runtime_error("references line " + std::to_string(references.error().line) + ": " +
+                             references.error().message);
   }
   return *std::move(references);
 }
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   using namespace aadp::oracle_runner;
   if (argc < 2) {
     std::fprintf(stderr, "usage: %s run|pilot|emit-plan ...\n", argv[0]);
@@ -150,5 +146,8 @@ int main(int argc, char** argv) {
     return 0;
   }
   std::fprintf(stderr, "unknown command %s\n", argv[1]);
+  return 2;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "aadp_run_oracles: %s\n", error.what());
   return 2;
 }

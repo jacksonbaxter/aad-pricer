@@ -29,7 +29,7 @@ RunResult run(const std::string& arguments) {
   const std::string command = shell_arg(AADP_CHAIN_PROFILE_PATH) + " " + arguments + " 2>&1";
   FILE* pipe = popen(command.c_str(), "r");
   EXPECT_NE(pipe, nullptr);
-  RunResult result{"", -1};
+  RunResult result{.output = "", .status = -1};
   if (pipe == nullptr) {
     return result;
   }
@@ -61,11 +61,14 @@ class ChainProfile : public ::testing::Test {
                                          testing::join(testing::futures_fields()) + "\r\n");
   }
 
-  std::string arguments() const {
+  [[nodiscard]] std::string arguments() const {
     return "--options " + shell_arg((dir_ / "options.csv").string()) + " --futures " +
            shell_arg((dir_ / "futures.csv").string());
   }
 
+  [[nodiscard]] const fs::path& dir() const { return dir_; }
+
+ private:
   fs::path dir_;
 };
 
@@ -77,7 +80,7 @@ TEST_F(ChainProfile, OutputCarriesTheFullAttribution) {
 
 TEST_F(ChainProfile, AttributionComesBeforeAnyCount) {
   const RunResult result = run(arguments());
-  EXPECT_EQ(result.output.find(attribution_text()), 0u) << result.output;
+  EXPECT_EQ(result.output.find(attribution_text()), 0U) << result.output;
 }
 
 TEST_F(ChainProfile, PrintsCountsThroughTheReaders) {
@@ -89,14 +92,14 @@ TEST_F(ChainProfile, PrintsCountsThroughTheReaders) {
 }
 
 TEST_F(ChainProfile, MissingFileFailsAndSaysHowToGetIt) {
-  const RunResult result = run("--options " + shell_arg((dir_ / "no-such-file.csv").string()));
+  const RunResult result = run("--options " + shell_arg((dir() / "no-such-file.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("scripts/fetch_data.sh"), std::string::npos) << result.output;
 }
 
 TEST_F(ChainProfile, WrongHeaderFails) {
-  write_file(dir_ / "bad.csv", "not,a,header\r\n");
-  const RunResult result = run("--options " + shell_arg((dir_ / "bad.csv").string()));
+  write_file(dir() / "bad.csv", "not,a,header\r\n");
+  const RunResult result = run("--options " + shell_arg((dir() / "bad.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("header mismatch"), std::string::npos) << result.output;
 }

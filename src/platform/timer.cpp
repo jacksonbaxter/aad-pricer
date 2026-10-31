@@ -6,7 +6,7 @@
 #include <numeric>
 #include <vector>
 
-#if defined(__x86_64__)
+#ifdef __x86_64__
 #include <cpuid.h>
 #endif
 
@@ -71,21 +71,21 @@ ReadStats sample_reads(Read read, double& cost_ns) {
 }
 
 std::string describe_tick_counter() {
-  char text[96] = "none";
-#if defined(__APPLE__)
+  std::array<char, 96> text{"none"};
+#ifdef __APPLE__
   mach_timebase_info_data_t base{};
   mach_timebase_info(&base);
-  std::snprintf(text, sizeof(text), "mach_timebase %u/%u, not used", base.numer, base.denom);
-#elif defined(__x86_64__)
+  std::snprintf(text.data(), text.size(), "mach_timebase %u/%u, not used", base.numer, base.denom);
+#elifdef __x86_64__
   unsigned eax = 0;
   unsigned ebx = 0;
   unsigned ecx = 0;
   unsigned edx = 0;
   const bool invariant =
       __get_cpuid(0x80000007U, &eax, &ebx, &ecx, &edx) != 0 && ((edx >> 8) & 1U) != 0;
-  std::snprintf(text, sizeof(text), "invariant TSC %s", invariant ? "yes" : "no");
+  std::snprintf(text.data(), text.size(), "invariant TSC %s", invariant ? "yes" : "no");
 #endif
-  return text;
+  return text.data();
 }
 
 }  // namespace
@@ -110,9 +110,9 @@ ReadStats analyse_reads(std::span<const std::uint64_t> reads) {
 
 TimerReport calibrate_timer() {
   TimerReport report;
-#if defined(__APPLE__)
+#ifdef __APPLE__
   report.tick_source = "mach_absolute_time";
-#elif defined(__x86_64__)
+#elifdef __x86_64__
   report.tick_source = "rdtscp";
 #else
   report.tick_source = "cntvct_el0";
@@ -148,10 +148,10 @@ std::string timer_problem(const TimerReport& report) {
     return "the tick counter went backward";
   }
   if (report.calibration_spread > kMaxSpread) {
-    char text[96];
-    std::snprintf(text, sizeof(text), "calibration spread %.4f is above the %.2f limit",
+    std::array<char, 96> text{};
+    std::snprintf(text.data(), text.size(), "calibration spread %.4f is above the %.2f limit",
                   report.calibration_spread, kMaxSpread);
-    return text;
+    return text.data();
   }
   return {};
 }

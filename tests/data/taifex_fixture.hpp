@@ -42,50 +42,46 @@ inline constexpr std::string_view kCall = "\xB6\x52\xC5\x76";        // 買權
 inline constexpr std::string_view kPut = "\xBD\xE6\xC5\x76";         // 賣權
 
 // Column indices, for tests that spoil one field.
-enum OptionColumn : std::size_t {
-  kOptDate,
-  kOptContract,
-  kOptExpiry,
-  kOptStrike,
-  kOptRight,
-  kOptOpen,
-  kOptHigh,
-  kOptLow,
-  kOptLast,
-  kOptVolume,
-  kOptSettlement,
-  kOptOpenInterest,
-  kOptBid,
-  kOptAsk,
-  kOptHistHigh,
-  kOptHistLow,
-  kOptHalt,
-  kOptSession,
-  kOptColumnCount,
-};
+inline constexpr std::size_t kOptDate = 0;
+inline constexpr std::size_t kOptContract = 1;
+inline constexpr std::size_t kOptExpiry = 2;
+inline constexpr std::size_t kOptStrike = 3;
+inline constexpr std::size_t kOptRight = 4;
+inline constexpr std::size_t kOptOpen = 5;
+inline constexpr std::size_t kOptHigh = 6;
+inline constexpr std::size_t kOptLow = 7;
+inline constexpr std::size_t kOptLast = 8;
+inline constexpr std::size_t kOptVolume = 9;
+inline constexpr std::size_t kOptSettlement = 10;
+inline constexpr std::size_t kOptOpenInterest = 11;
+inline constexpr std::size_t kOptBid = 12;
+inline constexpr std::size_t kOptAsk = 13;
+inline constexpr std::size_t kOptHistHigh = 14;
+inline constexpr std::size_t kOptHistLow = 15;
+inline constexpr std::size_t kOptHalt = 16;
+inline constexpr std::size_t kOptSession = 17;
+inline constexpr std::size_t kOptColumnCount = 18;
 
-enum FuturesColumn : std::size_t {
-  kFutDate,
-  kFutContract,
-  kFutExpiry,
-  kFutOpen,
-  kFutHigh,
-  kFutLow,
-  kFutLast,
-  kFutChange,
-  kFutChangePercent,
-  kFutVolume,
-  kFutSettlement,
-  kFutOpenInterest,
-  kFutBid,
-  kFutAsk,
-  kFutHistHigh,
-  kFutHistLow,
-  kFutHalt,
-  kFutSession,
-  kFutSpreadVolume,
-  kFutColumnCount,
-};
+inline constexpr std::size_t kFutDate = 0;
+inline constexpr std::size_t kFutContract = 1;
+inline constexpr std::size_t kFutExpiry = 2;
+inline constexpr std::size_t kFutOpen = 3;
+inline constexpr std::size_t kFutHigh = 4;
+inline constexpr std::size_t kFutLow = 5;
+inline constexpr std::size_t kFutLast = 6;
+inline constexpr std::size_t kFutChange = 7;
+inline constexpr std::size_t kFutChangePercent = 8;
+inline constexpr std::size_t kFutVolume = 9;
+inline constexpr std::size_t kFutSettlement = 10;
+inline constexpr std::size_t kFutOpenInterest = 11;
+inline constexpr std::size_t kFutBid = 12;
+inline constexpr std::size_t kFutAsk = 13;
+inline constexpr std::size_t kFutHistHigh = 14;
+inline constexpr std::size_t kFutHistLow = 15;
+inline constexpr std::size_t kFutHalt = 16;
+inline constexpr std::size_t kFutSession = 17;
+inline constexpr std::size_t kFutSpreadVolume = 18;
+inline constexpr std::size_t kFutColumnCount = 19;
 
 using OptionFields = std::array<std::string, kOptColumnCount>;
 using FuturesFields = std::array<std::string, kFutColumnCount>;

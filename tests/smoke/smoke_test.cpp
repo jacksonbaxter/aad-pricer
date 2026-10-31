@@ -14,10 +14,10 @@ namespace {
 TEST(Smoke, HighwayMatchesTheConfiguredTarget) {
   std::printf("Highway target: %s\n", aadp::smoke::highway_target_name());
   const std::string_view target = aadp::build_info::simd_target;
-  const double lanes = target == "scalar"   ? 1.0
-                       : target == "avx2"   ? 4.0
-                       : target == "avx512" ? 8.0
-                                            : 2.0;
+  double lanes = 2.0;
+  if (target == "scalar") lanes = 1.0;
+  if (target == "avx2") lanes = 4.0;
+  if (target == "avx512") lanes = 8.0;
   EXPECT_EQ(aadp::smoke::sum_of_ones(), lanes);
 }
 
@@ -32,7 +32,7 @@ TEST(Smoke, HdrHistogramRecords) {
 TEST(Smoke, BenchmarkLinks) {
   int calls = 0;
   benchmark::RegisterBenchmark("noop", [&calls](benchmark::State& state) {
-    for (auto _ : state) {
+    for (const auto _ : state) {
       benchmark::DoNotOptimize(calls);
     }
     ++calls;

@@ -65,7 +65,7 @@ std::expected<Scanned, NumberError> scan(std::string_view text) {
   for (std::size_t k = fraction_begin; k < fraction_begin + fraction_digits; ++k) {
     mantissa = mantissa * 10 + (text[k] - '0');
   }
-  return Scanned{negative, mantissa, fraction_digits};
+  return Scanned{.negative = negative, .mantissa = mantissa, .fraction_digits = fraction_digits};
 }
 
 }  // namespace

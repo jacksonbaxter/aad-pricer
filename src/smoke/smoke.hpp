@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AADP_SMOKE_SMOKE_HPP_
+#define AADP_SMOKE_SMOKE_HPP_
 
 namespace aadp::smoke {
 
@@ -9,3 +10,5 @@ const char* highway_target_name();
 double sum_of_ones();
 
 }  // namespace aadp::smoke
+
+#endif  // AADP_SMOKE_SMOKE_HPP_

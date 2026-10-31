@@ -1,0 +1,8 @@
+---
+# Fuzz targets differ from production code in these ways only.
+InheritParentConfig: true
+Checks:
+  # A throw from fixture data stops the target at start, visibly, which is the right result.
+  - '-bugprone-throwing-static-initialization'
+  # A failed property must trap on its own line, so the crash report names it.
+  - '-cppcoreguidelines-macro-usage'

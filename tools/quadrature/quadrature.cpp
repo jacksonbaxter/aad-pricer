@@ -1,6 +1,7 @@
 #include "quadrature.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -73,7 +74,7 @@ LastStepValues LastStep(double x, const LogStep& step, double log_floor, double 
   const double a = (x + step.drift - log_floor) / step.sd;
   const double forward = std::exp(x + step.drift + 0.5 * step.sd * step.sd);
   const double share = step.discount * forward * normal_cdf(a + step.sd);
-  return {share - step.discount * strike * normal_cdf(a), share};
+  return {.payoff = share - step.discount * strike * normal_cdf(a), .share = share};
 }
 
 // Banded kernel on non-uniform nodes, stored row by row.
@@ -87,7 +88,7 @@ class BandedKernel {
     const double norm = kInverseSqrtTwoPi / sd;
     for (std::size_t i = 0; i < size; ++i) {
       const double centre = nodes[i] + drift;
-      const auto lo = std::lower_bound(nodes.begin(), nodes.end(), centre - width * sd);
+      const auto lo = std::ranges::lower_bound(nodes, centre - width * sd);
       const auto hi = std::upper_bound(lo, nodes.end(), centre + width * sd);
       first_[i] = static_cast<std::size_t>(lo - nodes.begin());
       start_[i] = values_.size();
@@ -169,8 +170,10 @@ BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
     score += density * value[j] * offset / (step.sd * step.sd);
     naive += density * share[j];
   }
-  return {step.discount * price, step.discount * score / in.spot, step.discount * naive / in.spot,
-          size};
+  return {.value = step.discount * price,
+          .delta = step.discount * score / in.spot,
+          .naive_delta = step.discount * naive / in.spot,
+          .nodes = size};
 }
 
 namespace {
@@ -238,7 +241,10 @@ BarrierResult SimpsonOnGrid(const BarrierInputs& in, const SimpsonResolution& re
   const double delta = (-at_spot(value, in.spot + 2 * e) + 8 * at_spot(value, in.spot + e) -
                         8 * at_spot(value, in.spot - e) + at_spot(value, in.spot - 2 * e)) /
                        (12 * e);
-  return {at_spot(value, in.spot), delta, at_spot(share, in.spot) / in.spot, size};
+  return {.value = at_spot(value, in.spot),
+          .delta = delta,
+          .naive_delta = at_spot(share, in.spot) / in.spot,
+          .nodes = size};
 }
 
 }  // namespace
@@ -255,8 +261,10 @@ BarrierResult DiscreteDownOutSimpson(const BarrierInputs& in, const SimpsonResol
   const BarrierResult coarse = SimpsonOnGrid(in, resolution, intervals);
   const BarrierResult fine = SimpsonOnGrid(in, resolution, 2 * intervals);
   const auto extrapolate = [](double c, double f) { return (16.0 * f - c) / 15.0; };
-  return {extrapolate(coarse.value, fine.value), extrapolate(coarse.delta, fine.delta),
-          extrapolate(coarse.naive_delta, fine.naive_delta), fine.nodes};
+  return {.value = extrapolate(coarse.value, fine.value),
+          .delta = extrapolate(coarse.delta, fine.delta),
+          .naive_delta = extrapolate(coarse.naive_delta, fine.naive_delta),
+          .nodes = fine.nodes};
 }
 
 AsianResult ArithmeticAsianCall(const AsianInputs& in, const AsianResolution& resolution) {
@@ -267,7 +275,10 @@ AsianResult ArithmeticAsianCall(const AsianInputs& in, const AsianResolution& re
   const double spacing = sd / resolution.nodes_per_sd;
   const double offset_strike = in.strike * (steps + 1.0) / in.spot - 1.0;
   if (!(offset_strike > 0.0) || in.steps < 2) {
-    return {std::numeric_limits<double>::quiet_NaN(), 0.0, 0.0, 0};
+    return {.value = std::numeric_limits<double>::quiet_NaN(),
+            .mass_error = 0.0,
+            .martingale_error = 0.0,
+            .nodes = 0};
   }
   const double norm = kInverseSqrtTwoPi / sd;
 
@@ -306,8 +317,7 @@ AsianResult ArithmeticAsianCall(const AsianInputs& in, const AsianResolution& re
     std::vector<double> next(next_grid.size());
     for (std::size_t i = 0; i < next_grid.size(); ++i) {
       const double centre = next_grid[i] - drift;
-      const auto lo =
-          std::lower_bound(shifted.begin(), shifted.end(), centre - resolution.kernel_sd * sd);
+      const auto lo = std::ranges::lower_bound(shifted, centre - resolution.kernel_sd * sd);
       const auto hi = std::upper_bound(lo, shifted.end(), centre + resolution.kernel_sd * sd);
       double sum = 0.0;
       for (auto it = lo; it != hi; ++it) {
@@ -337,8 +347,10 @@ AsianResult ArithmeticAsianCall(const AsianInputs& in, const AsianResolution& re
   first_moment *= spacing;
   double exact_moment = 0.0;
   for (std::uint32_t k = 1; k <= in.steps; ++k) exact_moment += std::exp((in.r - in.q) * k * dt);
-  return {std::exp(-in.r * in.maturity) * in.spot / (steps + 1.0) * total, mass - 1.0,
-          first_moment / exact_moment - 1.0, grid.size()};
+  return {.value = std::exp(-in.r * in.maturity) * in.spot / (steps + 1.0) * total,
+          .mass_error = mass - 1.0,
+          .martingale_error = first_moment / exact_moment - 1.0,
+          .nodes = grid.size()};
 }
 
 double ArithmeticAsianBruteForce3(const AsianInputs& in, int nodes, double span) {
@@ -382,7 +394,7 @@ std::vector<double> ArithmeticAsianRichardson(const AsianInputs& in, std::uint32
   std::vector<double> diagonal;
   for (int level = 0; level < levels; ++level) {
     AsianInputs at_level = in;
-    at_level.steps = first_steps << level;
+    at_level.steps = first_steps * (1 << level);
     double value = ArithmeticAsianCall(at_level, resolution).value;
     std::vector<double> updated{value};
     for (std::size_t k = 1; k <= column.size(); ++k) {
@@ -399,7 +411,7 @@ std::vector<double> ArithmeticAsianRichardson(const AsianInputs& in, std::uint32
 double ContinuousDownOutCallBgk(double spot, double strike, double barrier, double r, double q,
                                 double sigma, double maturity) {
   const auto call = [&](double s) {
-    const MarketParams<double> m{s, sigma, r, q, maturity};
+    const MarketParams<double> m{.spot = s, .sigma = sigma, .r = r, .q = q, .maturity = maturity};
     return BlackScholes(OptionType::kCall, strike, m).value;
   };
   const double exponent = 2.0 * (r - q) / (sigma * sigma) - 1.0;
@@ -415,18 +427,31 @@ constexpr const char* kBgk1999 = "BGK 1999 Table 1 (Finance Stoch. 3)";
 constexpr const char* kFusaiMeucci = "Fusai and Meucci Table 6 (JBF 2008)";
 constexpr const char* kDerived = "derived; see tools/quadrature";
 
-constexpr BarrierInputs kBarrierH95{100, 100, 95, 0.10, 0.0, 0.30, 0.2, 50};
-constexpr AsianInputs kFusaiMeucciInputs{100, 100, 0.0367, 0.0, 0.17801, 1.0, 50};
+constexpr BarrierInputs kBarrierH95{.spot = 100,
+                                    .strike = 100,
+                                    .barrier = 95,
+                                    .r = 0.10,
+                                    .q = 0.0,
+                                    .sigma = 0.30,
+                                    .maturity = 0.2,
+                                    .monitors = 50};
+constexpr AsianInputs kFusaiMeucciInputs{.spot = 100,
+                                         .strike = 100,
+                                         .r = 0.0367,
+                                         .q = 0.0,
+                                         .sigma = 0.17801,
+                                         .maturity = 1.0,
+                                         .steps = 50};
 
 void Require(bool ok, const std::string& what, std::vector<std::string>& failures) {
   if (!ok) failures.push_back(what);
 }
 
 std::string Describe(const char* label, double a, double b) {
-  char text[160];
-  std::snprintf(text, sizeof(text), "%s: %.12f against %.12f, difference %.3e", label, a, b,
+  std::array<char, 160> text{};
+  std::snprintf(text.data(), text.size(), "%s: %.12f against %.12f, difference %.3e", label, a, b,
                 std::fabs(a - b));
-  return text;
+  return text.data();
 }
 
 struct GreekColumn {
@@ -434,10 +459,14 @@ struct GreekColumn {
   Greek greek;
 };
 
-constexpr GreekColumn kGreekColumns[] = {
-    {"value", Greek::kValue}, {"delta", Greek::kDelta},        {"vega", Greek::kVega},
-    {"rho", Greek::kRho},     {"divrho", Greek::kDividendRho}, {"theta", Greek::kTheta},
-};
+constexpr auto kGreekColumns = std::to_array<GreekColumn>({
+    {.suffix = "value", .greek = Greek::kValue},
+    {.suffix = "delta", .greek = Greek::kDelta},
+    {.suffix = "vega", .greek = Greek::kVega},
+    {.suffix = "rho", .greek = Greek::kRho},
+    {.suffix = "divrho", .greek = Greek::kDividendRho},
+    {.suffix = "theta", .greek = Greek::kTheta},
+});
 
 std::string StripKind(const char* instrument) {
   const std::string_view text(instrument);
@@ -455,8 +484,12 @@ void AddClosedForm(std::vector<ReferenceRow>& rows, const std::string& prefix,
   for (const GreekColumn& column : kGreekColumns) {
     std::string id = prefix + "." + column.suffix;
     if (column.suffix == override_suffix) id = override_id;
-    rows.push_back(
-        {id, StripKind(instrument), test::ReadGreek(out, column.greek), 0.0, method, source});
+    rows.push_back({.id = id,
+                    .parameters = StripKind(instrument),
+                    .value = test::ReadGreek(out, column.greek),
+                    .b = 0.0,
+                    .method = method,
+                    .source = source});
   }
 }
 
@@ -465,7 +498,8 @@ void AddDiscreteBarrier(std::vector<ReferenceRow>& rows, std::vector<std::string
                         const std::string& value_id, const std::string& delta_id, double value_b,
                         const char* source) {
   const GaussLegendreResolution coarse{};
-  const GaussLegendreResolution fine{3.0, 10, 14.0, 15.0};
+  const GaussLegendreResolution fine{
+      .panels_per_sd = 3.0, .degree = 10, .top_sd = 14.0, .kernel_sd = 15.0};
   const BarrierResult gl = DiscreteDownOutGaussLegendre(in, coarse);
   const BarrierResult gl_fine = DiscreteDownOutGaussLegendre(in, fine);
   const BarrierResult simpson = DiscreteDownOutSimpson(in, SimpsonResolution{});
@@ -481,24 +515,43 @@ void AddDiscreteBarrier(std::vector<ReferenceRow>& rows, std::vector<std::string
   check("naive, GL against Simpson", gl_fine.naive_delta, simpson.naive_delta, kAgreement);
   const std::string parameters = StripKind(instrument);
   const std::string method = "backward GL recursion; Simpson cross-check";
-  rows.push_back({value_id, parameters, gl_fine.value, value_b, method, source});
-  rows.push_back({delta_id, parameters, gl_fine.delta, std::max(kAgreement, 0.0), method, source});
-  rows.push_back({prefix + ".naive", parameters, gl_fine.naive_delta, kAgreement,
-                  "naive-delta limit of the same recursion", kDerived});
+  rows.push_back({.id = value_id,
+                  .parameters = parameters,
+                  .value = gl_fine.value,
+                  .b = value_b,
+                  .method = method,
+                  .source = source});
+  rows.push_back({.id = delta_id,
+                  .parameters = parameters,
+                  .value = gl_fine.delta,
+                  .b = std::max(kAgreement, 0.0),
+                  .method = method,
+                  .source = source});
+  rows.push_back({.id = prefix + ".naive",
+                  .parameters = parameters,
+                  .value = gl_fine.naive_delta,
+                  .b = kAgreement,
+                  .method = "naive-delta limit of the same recursion",
+                  .source = kDerived});
 }
 
 void AddAsian(std::vector<ReferenceRow>& rows, std::vector<std::string>& failures,
               const std::string& id, const char* instrument, AsianInputs in) {
   const AsianResult coarse = ArithmeticAsianCall(in, AsianResolution{});
-  const AsianResult fine = ArithmeticAsianCall(in, AsianResolution{6.0, 14.0, 16.0});
+  const AsianResult fine = ArithmeticAsianCall(
+      in, AsianResolution{.nodes_per_sd = 6.0, .grid_sd = 14.0, .kernel_sd = 16.0});
   constexpr double kAgreement = 1e-9;
   constexpr double kIdentity = 1e-11;
   Require(std::fabs(coarse.value - fine.value) <= kAgreement,
           id + " " + Describe("coarse against fine", coarse.value, fine.value), failures);
   Require(std::fabs(fine.mass_error) <= kIdentity, id + " density mass", failures);
   Require(std::fabs(fine.martingale_error) <= kIdentity, id + " martingale", failures);
-  rows.push_back(
-      {id, StripKind(instrument), fine.value, kAgreement, "convolution recursion", kFusaiMeucci});
+  rows.push_back({.id = id,
+                  .parameters = StripKind(instrument),
+                  .value = fine.value,
+                  .b = kAgreement,
+                  .method = "convolution recursion",
+                  .source = kFusaiMeucci});
 }
 
 }  // namespace
@@ -510,35 +563,75 @@ std::vector<ReferenceRow> GenerateReferences(std::vector<std::string>& failures)
     return [type, strike](const auto& p) { return BlackScholes(type, strike, p).value; };
   };
 
-  AddClosedForm(rows, "VA", cat::kVanillaO1, {105, 0.36, 0.10, 0.10, 0.5},
+  AddClosedForm(rows, "VA", cat::kVanillaO1,
+                {.spot = 105, .sigma = 0.36, .r = 0.10, .q = 0.10, .maturity = 0.5},
                 bs(OptionType::kCall, 100.0), "closed form", kHaugGreeks, "delta", "O1");
-  AddClosedForm(rows, "VB", cat::kVanillaO2, {72, 0.19, 0.09, 0.0, 1.0},
+  AddClosedForm(rows, "VB", cat::kVanillaO2,
+                {.spot = 72, .sigma = 0.19, .r = 0.09, .q = 0.0, .maturity = 1.0},
                 bs(OptionType::kCall, 75.0), "closed form", kHaugGreeks, "rho", "O2");
-  AddClosedForm(rows, "VC", cat::kVanillaO3, {430, 0.20, 0.07, 0.05, 1.0 / 12.0},
+  AddClosedForm(rows, "VC", cat::kVanillaO3,
+                {.spot = 430, .sigma = 0.20, .r = 0.07, .q = 0.05, .maturity = 1.0 / 12.0},
                 bs(OptionType::kPut, 405.0), "closed form", kHaugGreeks, "theta", "O3");
   AddClosedForm(
-      rows, "GA", cat::kGeometricO4, {100, 0.20, 0.06, 0.03, 1.0},
+      rows, "GA", cat::kGeometricO4,
+      {.spot = 100, .sigma = 0.20, .r = 0.06, .q = 0.03, .maturity = 1.0},
       [](const auto& p) { return GeometricAsianValue(OptionType::kCall, 100.0, 10, false, p); },
       "closed form", "QuantLib 5d6defcc test-suite/asianoptions.cpp:429", "value", "O4");
 
   AddDiscreteBarrier(rows, failures, "DB085", cat::kOneStepH85,
-                     {100, 100, 85, 0.10, 0.0, 0.30, 0.2, 50}, "DB085.value", "DB085.delta", 1e-9,
-                     kBgk1997);
+                     {.spot = 100,
+                      .strike = 100,
+                      .barrier = 85,
+                      .r = 0.10,
+                      .q = 0.0,
+                      .sigma = 0.30,
+                      .maturity = 0.2,
+                      .monitors = 50},
+                     "DB085.value", "DB085.delta", 1e-9, kBgk1997);
   AddDiscreteBarrier(rows, failures, "DB090", cat::kOneStepH90,
-                     {100, 100, 90, 0.10, 0.0, 0.30, 0.2, 50}, "DB090.value", "DB090.delta", 1e-9,
-                     kBgk1997);
+                     {.spot = 100,
+                      .strike = 100,
+                      .barrier = 90,
+                      .r = 0.10,
+                      .q = 0.0,
+                      .sigma = 0.30,
+                      .maturity = 0.2,
+                      .monitors = 50},
+                     "DB090.value", "DB090.delta", 1e-9, kBgk1997);
   AddDiscreteBarrier(rows, failures, "DB095", cat::kOneStepH95, kBarrierH95, "O5", "O6", 1e-9,
                      kBgk1997);
   AddDiscreteBarrier(rows, failures, "DB097", cat::kOneStepH97,
-                     {100, 100, 97, 0.10, 0.0, 0.30, 0.2, 50}, "DB097.value", "DB097.delta", 1e-9,
-                     kBgk1997);
+                     {.spot = 100,
+                      .strike = 100,
+                      .barrier = 97,
+                      .r = 0.10,
+                      .q = 0.0,
+                      .sigma = 0.30,
+                      .maturity = 0.2,
+                      .monitors = 50},
+                     "DB097.value", "DB097.delta", 1e-9, kBgk1997);
   AddDiscreteBarrier(rows, failures, "DB099", cat::kOneStepH99,
-                     {100, 100, 99, 0.10, 0.0, 0.30, 0.2, 50}, "DB099.value", "DB099.delta", 1e-9,
-                     kBgk1997);
+                     {.spot = 100,
+                      .strike = 100,
+                      .barrier = 99,
+                      .r = 0.10,
+                      .q = 0.0,
+                      .sigma = 0.30,
+                      .maturity = 0.2,
+                      .monitors = 50},
+                     "DB099.value", "DB099.delta", 1e-9, kBgk1997);
   // BENCHMARKS.md gives O8 b = 1e-4 around 9.4905. The tool's methods agree far inside that, and
   // the wider figure stays as the stated b.
   AddDiscreteBarrier(rows, failures, "DBS", cat::kOneStepO8,
-                     {100, 100, 95, 0.10, 0.0, 0.60, 0.2, 4}, "O8", "DBS.delta", 1e-4, kBgk1999);
+                     {.spot = 100,
+                      .strike = 100,
+                      .barrier = 95,
+                      .r = 0.10,
+                      .q = 0.0,
+                      .sigma = 0.60,
+                      .maturity = 0.2,
+                      .monitors = 4},
+                     "O8", "DBS.delta", 1e-4, kBgk1999);
 
   const auto continuous = [&](const std::string& prefix, const char* instrument,
                               const MarketParams<double>& m, double strike, double barrier,
@@ -561,9 +654,13 @@ std::vector<ReferenceRow> GenerateReferences(std::vector<std::string>& failures)
               failures);
     }
   };
-  continuous("CB095", cat::kBridgeO7, {100, 0.30, 0.10, 0.0, 0.2}, 100, 95, "value", "O7");
-  continuous("CB085", cat::kBridgeH85, {100, 0.30, 0.10, 0.0, 0.2}, 100, 85, "", "");
-  continuous("CBK90", cat::kBridgeK90, {100, 0.25, 0.08, 0.04, 0.5}, 90, 95, "", "");
+  continuous("CB095", cat::kBridgeO7,
+             {.spot = 100, .sigma = 0.30, .r = 0.10, .q = 0.0, .maturity = 0.2}, 100, 95, "value",
+             "O7");
+  continuous("CB085", cat::kBridgeH85,
+             {.spot = 100, .sigma = 0.30, .r = 0.10, .q = 0.0, .maturity = 0.2}, 100, 85, "", "");
+  continuous("CBK90", cat::kBridgeK90,
+             {.spot = 100, .sigma = 0.25, .r = 0.08, .q = 0.04, .maturity = 0.5}, 90, 95, "", "");
 
   AsianInputs asian = kFusaiMeucciInputs;
   const auto add_asian = [&](const std::string& id, const char* instrument, double strike,
@@ -579,33 +676,45 @@ std::vector<ReferenceRow> GenerateReferences(std::vector<std::string>& failures)
   add_asian("O9", cat::kArithmeticO9, 100, 50);
   add_asian("AA50K110", cat::kArithmeticN50K110, 110, 50);
 
-  for (double strike : {90.0, 100.0, 110.0}) {
+  for (const double strike : {90.0, 100.0, 110.0}) {
     AsianInputs three = kFusaiMeucciInputs;
     three.strike = strike;
     three.steps = 3;
-    const double recursion = ArithmeticAsianCall(three, AsianResolution{6.0, 14.0, 16.0}).value;
+    const double recursion =
+        ArithmeticAsianCall(
+            three, AsianResolution{.nodes_per_sd = 6.0, .grid_sd = 14.0, .kernel_sd = 16.0})
+            .value;
     const double brute = ArithmeticAsianBruteForce3(three);
     Require(std::fabs(recursion - brute) <= 1e-12,
             Describe("n=3 recursion against brute force", recursion, brute), failures);
   }
 
-  const std::vector<double> diagonal =
-      ArithmeticAsianRichardson({2.0, 2.0, 0.05, 0.0, 0.50, 1.0, 0}, 64, 4, AsianResolution{});
+  const std::vector<double> diagonal = ArithmeticAsianRichardson(
+      {.spot = 2.0, .strike = 2.0, .r = 0.05, .q = 0.0, .sigma = 0.50, .maturity = 1.0, .steps = 0},
+      64, 4, AsianResolution{});
   Require(std::fabs(diagonal.back() - kLinetskyCase5) <= kRichardsonTolerance,
           Describe("Richardson limit against Linetsky case 5", diagonal.back(), kLinetskyCase5),
           failures);
-  rows.push_back({"O10", "continuous average;S0=2;K=2;sigma=0.5;r=0.05;q=0;T=1;type=call",
-                  kLinetskyCase5, 1e-10, "published; Richardson limit check",
-                  "Linetsky 2004 Table 3 p. 866"});
+  rows.push_back({.id = "O10",
+                  .parameters = "continuous average;S0=2;K=2;sigma=0.5;r=0.05;q=0;T=1;type=call",
+                  .value = kLinetskyCase5,
+                  .b = 1e-10,
+                  .method = "published; Richardson limit check",
+                  .source = "Linetsky 2004 Table 3 p. 866"});
 
   // (S0 + S_T) / 2 against K is half a vanilla put at 2K - S0 = 84.
   const double two_fixing =
       0.5 *
-      BlackScholes(OptionType::kPut, 84.0, MarketParams<double>{90, 0.13, 0.025, 0.06, 11.0 / 12.0})
+      BlackScholes(OptionType::kPut, 84.0,
+                   MarketParams<double>{
+                       .spot = 90, .sigma = 0.13, .r = 0.025, .q = 0.06, .maturity = 11.0 / 12.0})
           .value;
-  rows.push_back({"O11", StripKind(cat::kArithmeticO11), two_fixing, 0.0,
-                  "identity: half a vanilla put at K=84",
-                  "corrects QuantLib 5d6defcc test-suite/asianoptions.cpp Levy value"});
+  rows.push_back({.id = "O11",
+                  .parameters = StripKind(cat::kArithmeticO11),
+                  .value = two_fixing,
+                  .b = 0.0,
+                  .method = "identity: half a vanilla put at K=84",
+                  .source = "corrects QuantLib 5d6defcc test-suite/asianoptions.cpp Levy value"});
   return rows;
 }
 
@@ -615,9 +724,9 @@ std::string RenderCsv(const std::vector<ReferenceRow>& rows) {
       "# Values print to 12 decimals, so libm differences beyond that do not change the file.\n"
       "id,parameters,value,b,method,source\n";
   for (const ReferenceRow& row : rows) {
-    char number[96];
-    std::snprintf(number, sizeof(number), ",%.12f,%.0e,", row.value, row.b);
-    out += row.id + "," + row.parameters + number + row.method + "," + row.source + "\n";
+    std::array<char, 96> number{};
+    std::snprintf(number.data(), number.size(), ",%.12f,%.0e,", row.value, row.b);
+    out += row.id + "," + row.parameters + number.data() + row.method + "," + row.source + "\n";
   }
   return out;
 }

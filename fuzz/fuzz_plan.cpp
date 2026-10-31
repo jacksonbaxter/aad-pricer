@@ -1,5 +1,6 @@
 // Plan decoder. Properties: no crash on any bytes, an error always says why, and an accepted plan
 // meets every invariant the runner relies on and survives a round trip through its encoder.
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -27,7 +28,7 @@ void PriceOnePath(const aadp::Instrument& instrument) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(reinterpret_cast<const char*>(data), size);
+  const std::string_view input(std::bit_cast<const char*>(data), size);
   const auto plan = aadp::DecodePlan(input);
   if (!plan) {
     Require(!plan.error().message.empty());
@@ -43,11 +44,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     Require(std::isfinite(row.se_ceiling) && row.se_ceiling > 0.0);
     Require(std::isfinite(row.b) && row.b >= 0.0);
     const auto instrument = aadp::DecodeInstrument(row.instrument);
-    Require(instrument.has_value());
+    if (!instrument) __builtin_trap();
     Require(instrument->market.spot > 0.0 && instrument->contract.steps >= 1);
     PriceOnePath(*instrument);
     const auto greek = aadp::DecodeGreek(row.greek);
-    Require(greek.has_value());
+    if (!greek) __builtin_trap();
     const auto step = aadp::FiniteDifferenceStep(row.reference);
     if (step) Require(*step > 0.0 && *greek != aadp::Greek::kValue);
   }

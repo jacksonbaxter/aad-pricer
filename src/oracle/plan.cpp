@@ -21,7 +21,7 @@ constexpr std::uint32_t kMaxBatches = 1U << 16;
 constexpr std::uint32_t kMaxSteps = 1U << 16;
 
 std::unexpected<decode::DecodeError> Fail(std::size_t line, std::string message) {
-  return std::unexpected(decode::DecodeError{line, std::move(message)});
+  return std::unexpected(decode::DecodeError{.line = line, .message = std::move(message)});
 }
 
 std::optional<std::string> ApplyDirective(std::string_view text, PlanHeader& header,
@@ -141,48 +141,72 @@ std::expected<PlanRow, std::string> DecodeRow(std::string_view line, const PlanH
 
 }  // namespace
 
+namespace {
+
+// The state of one decode. Each method returns why its line is bad, or nothing.
+class PlanReader {
+ public:
+  using Problem = std::optional<std::string>;
+
+  Problem Line(std::string_view line) {
+    if (line.size() > decode::kMaxLineBytes) return "line too long";
+    // A directive anywhere else would read as binding and change nothing.
+    if (line.starts_with("#!")) return Directive(line);
+    if (!line.empty() && line.front() == '#') {
+      if (!decode::IsPrintable(line)) return "bad comment";
+      plan_.comments.emplace_back(line);
+      return std::nullopt;
+    }
+    return header_seen_ ? Row(line) : Columns(line);
+  }
+
+  [[nodiscard]] bool header_seen() const { return header_seen_; }
+  Plan& plan() { return plan_; }
+
+ private:
+  Problem Directive(std::string_view line) {
+    if (header_seen_) return "directive after the columns line";
+    if (!line.starts_with(kDirectivePrefix)) return "bad directive";
+    return ApplyDirective(line.substr(kDirectivePrefix.size()), plan_.header, directives_);
+  }
+
+  Problem Columns(std::string_view line) {
+    if (line != kHeader) return "bad header";
+    if (!HeaderIsComplete(directives_)) return "missing directive";
+    if (plan_.header.batches < 2 || plan_.header.batches > kMaxBatches) {
+      return "bad B directive";
+    }
+    header_seen_ = true;
+    return std::nullopt;
+  }
+
+  Problem Row(std::string_view line) {
+    if (plan_.rows.size() >= decode::kMaxRows) return "too many rows";
+    auto row = DecodeRow(line, plan_.header);
+    if (!row) return row.error();
+    if (!ids_.emplace(row->id).second) return "duplicate id";
+    plan_.rows.push_back(*std::move(row));
+    return std::nullopt;
+  }
+
+  Plan plan_;
+  std::set<std::string, std::less<>> directives_;
+  std::set<std::string, std::less<>> ids_;
+  bool header_seen_ = false;
+};
+
+}  // namespace
+
 std::expected<Plan, decode::DecodeError> DecodePlan(std::string_view input) {
   if (input.size() > decode::kMaxInputBytes) return Fail(0, "input too large");
-  Plan plan;
-  std::set<std::string, std::less<>> directives;
-  std::set<std::string, std::less<>> ids;
-  bool header_seen = false;
+  PlanReader reader;
   std::size_t number = 0;
   for (const std::string_view line : decode::Lines(input)) {
     ++number;
-    if (line.size() > decode::kMaxLineBytes) return Fail(number, "line too long");
-    // A directive anywhere else would read as binding and change nothing.
-    if (line.starts_with("#!")) {
-      if (header_seen) return Fail(number, "directive after the columns line");
-      if (!line.starts_with(kDirectivePrefix)) return Fail(number, "bad directive");
-      if (const auto problem =
-              ApplyDirective(line.substr(kDirectivePrefix.size()), plan.header, directives)) {
-        return Fail(number, *problem);
-      }
-      continue;
-    }
-    if (!line.empty() && line.front() == '#') {
-      if (!decode::IsPrintable(line)) return Fail(number, "bad comment");
-      plan.comments.emplace_back(line);
-      continue;
-    }
-    if (!header_seen) {
-      if (line != kHeader) return Fail(number, "bad header");
-      if (!HeaderIsComplete(directives)) return Fail(number, "missing directive");
-      if (plan.header.batches < 2 || plan.header.batches > kMaxBatches) {
-        return Fail(number, "bad B directive");
-      }
-      header_seen = true;
-      continue;
-    }
-    if (plan.rows.size() >= decode::kMaxRows) return Fail(number, "too many rows");
-    auto row = DecodeRow(line, plan.header);
-    if (!row) return Fail(number, row.error());
-    if (!ids.emplace(row->id).second) return Fail(number, "duplicate id");
-    plan.rows.push_back(*std::move(row));
+    if (auto problem = reader.Line(line)) return Fail(number, *std::move(problem));
   }
-  if (!header_seen) return Fail(0, "missing header");
-  return plan;
+  if (!reader.header_seen()) return Fail(0, "missing header");
+  return std::move(reader.plan());
 }
 
 std::string EncodePlan(const Plan& plan) {
@@ -205,7 +229,7 @@ std::string EncodePlan(const Plan& plan) {
   directive("pilot_seed", std::to_string(h.pilot_seed));
   directive("measured_seed", std::to_string(h.measured_seed));
   out += kHeader;
-  out += "\n";
+  out += '\n';
   for (const PlanRow& row : plan.rows) {
     const bool run = row.status == RowStatus::kRun;
     const std::string dash(kNotYet);
@@ -215,91 +239,111 @@ std::string EncodePlan(const Plan& plan) {
     out += (run ? FormatDouble(row.se_ceiling) : dash) + ",";
     out += (run ? FormatDouble(row.b) : dash) + ",";
     out += run ? kStatusRun : kStatusAwaiting;
-    out += "\n";
+    out += '\n';
   }
   return out;
 }
 
+namespace {
+
+std::optional<Product> DecodeProduct(std::string_view kind) {
+  struct Name {
+    std::string_view text;
+    Product product;
+  };
+  static constexpr auto kNames = std::to_array<Name>({
+      {.text = "european", .product = Product::kEuropean},
+      {.text = "arithmetic", .product = Product::kAsianArithmetic},
+      {.text = "geometric", .product = Product::kAsianGeometric},
+      {.text = "hard", .product = Product::kDownOutHard},
+      {.text = "one_step", .product = Product::kDownOutOneStep},
+      {.text = "bridge", .product = Product::kDownOutBridge},
+  });
+  for (const Name& name : kNames) {
+    if (name.text == kind) return name.product;
+  }
+  return std::nullopt;
+}
+
+bool ApplyOptionType(std::string_view value, Instrument& out) {
+  if (value == "call") {
+    out.contract.type = OptionType::kCall;
+    return true;
+  }
+  if (value == "put") {
+    out.contract.type = OptionType::kPut;
+    return true;
+  }
+  return false;
+}
+
+bool ApplyCount(std::string_view key, std::string_view value, Instrument& out) {
+  const auto parsed = decode::ParseUnsigned(value);
+  if (!parsed) return false;
+  if (key == "m") {
+    if (*parsed < 1 || *parsed > kMaxSteps) return false;
+    out.contract.steps = static_cast<std::uint32_t>(*parsed);
+    return true;
+  }
+  if (*parsed > 1) return false;
+  out.contract.include_spot = *parsed == 1;
+  return true;
+}
+
+double* NumberField(std::string_view key, Instrument& out) {
+  if (key == "S0") return &out.market.spot;
+  if (key == "K") return &out.contract.strike;
+  if (key == "H") return &out.contract.barrier;
+  if (key == "sigma") return &out.market.sigma;
+  if (key == "r") return &out.market.r;
+  if (key == "q") return &out.market.q;
+  if (key == "T") return &out.market.maturity;
+  return nullptr;
+}
+
+bool ApplyField(std::string_view key, std::string_view value, Instrument& out) {
+  if (key == "type") return ApplyOptionType(value, out);
+  if (key == "m" || key == "spot") return ApplyCount(key, value, out);
+  const auto parsed = decode::ParseDouble(value);
+  if (!parsed) return false;
+  double* field = NumberField(key, out);
+  if (field == nullptr) return false;
+  *field = *parsed;
+  return true;
+}
+
+bool IsPriceable(const Instrument& in) {
+  if (!(in.market.spot > 0.0) || !(in.market.sigma > 0.0) || !(in.market.maturity > 0.0) ||
+      !(in.contract.strike > 0.0)) {
+    return false;
+  }
+  const bool barrier_kernel = in.contract.product == Product::kDownOutHard ||
+                              in.contract.product == Product::kDownOutOneStep ||
+                              in.contract.product == Product::kDownOutBridge;
+  if (barrier_kernel) return in.contract.barrier > 0.0 && in.contract.barrier < in.market.spot;
+  return in.contract.barrier == 0.0;
+}
+
+}  // namespace
+
 std::optional<Instrument> DecodeInstrument(std::string_view text) {
   const std::size_t colon = text.find(':');
   if (colon == std::string_view::npos) return std::nullopt;
-  const std::string_view kind = text.substr(0, colon);
+  const auto product = DecodeProduct(text.substr(0, colon));
+  if (!product) return std::nullopt;
   Instrument out;
-  if (kind == "european") {
-    out.contract.product = Product::kEuropean;
-  } else if (kind == "arithmetic") {
-    out.contract.product = Product::kAsianArithmetic;
-  } else if (kind == "geometric") {
-    out.contract.product = Product::kAsianGeometric;
-  } else if (kind == "hard") {
-    out.contract.product = Product::kDownOutHard;
-  } else if (kind == "one_step") {
-    out.contract.product = Product::kDownOutOneStep;
-  } else if (kind == "bridge") {
-    out.contract.product = Product::kDownOutBridge;
-  } else {
-    return std::nullopt;
-  }
+  out.contract.product = *product;
 
   std::set<std::string, std::less<>> seen;
   for (const std::string_view item : decode::Split(text.substr(colon + 1), ';')) {
     const std::size_t equals = item.find('=');
     if (equals == std::string_view::npos) return std::nullopt;
     const std::string_view key = item.substr(0, equals);
-    const std::string_view value = item.substr(equals + 1);
     if (!seen.emplace(key).second) return std::nullopt;
-    if (key == "type") {
-      if (value == "call") {
-        out.contract.type = OptionType::kCall;
-      } else if (value == "put") {
-        out.contract.type = OptionType::kPut;
-      } else {
-        return std::nullopt;
-      }
-    } else if (key == "m" || key == "spot") {
-      const auto parsed = decode::ParseUnsigned(value);
-      if (!parsed) return std::nullopt;
-      if (key == "m") {
-        if (*parsed < 1 || *parsed > kMaxSteps) return std::nullopt;
-        out.contract.steps = static_cast<std::uint32_t>(*parsed);
-      } else {
-        if (*parsed > 1) return std::nullopt;
-        out.contract.include_spot = *parsed == 1;
-      }
-    } else {
-      const auto parsed = decode::ParseDouble(value);
-      if (!parsed) return std::nullopt;
-      if (key == "S0") {
-        out.market.spot = *parsed;
-      } else if (key == "K") {
-        out.contract.strike = *parsed;
-      } else if (key == "H") {
-        out.contract.barrier = *parsed;
-      } else if (key == "sigma") {
-        out.market.sigma = *parsed;
-      } else if (key == "r") {
-        out.market.r = *parsed;
-      } else if (key == "q") {
-        out.market.q = *parsed;
-      } else if (key == "T") {
-        out.market.maturity = *parsed;
-      } else {
-        return std::nullopt;
-      }
-    }
+    if (!ApplyField(key, item.substr(equals + 1), out)) return std::nullopt;
   }
   if (seen.size() != 10) return std::nullopt;
-  if (!(out.market.spot > 0.0) || !(out.market.sigma > 0.0) || !(out.market.maturity > 0.0) ||
-      !(out.contract.strike > 0.0)) {
-    return std::nullopt;
-  }
-  const bool barrier_kernel = out.contract.product == Product::kDownOutHard ||
-                              out.contract.product == Product::kDownOutOneStep ||
-                              out.contract.product == Product::kDownOutBridge;
-  if (barrier_kernel && !(out.contract.barrier > 0.0 && out.contract.barrier < out.market.spot)) {
-    return std::nullopt;
-  }
-  if (!barrier_kernel && out.contract.barrier != 0.0) return std::nullopt;
+  if (!IsPriceable(out)) return std::nullopt;
   return out;
 }
 

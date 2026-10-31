@@ -4,6 +4,7 @@
 // - accepted rows have finite numbers and non-negative volume, open interest and settlement,
 //   negative prices appear only on calendar spreads, and fields and the session match the raw
 //   columns of their own line
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -67,7 +68,7 @@ void check_read(std::string_view input) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(reinterpret_cast<const char*>(data), size);
+  const std::string_view input(std::bit_cast<const char*>(data), size);
   check_read(input);
   // Without the header most inputs stop at line 1.
   std::string with_header = t::kFuturesHeader;

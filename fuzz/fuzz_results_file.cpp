@@ -1,5 +1,6 @@
 // Properties, beyond not crashing: a parsed file writes out and reads back equal, and whatever
 // the stamp accepts holds no dropped key, no host field and nothing the scan would find.
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -27,7 +28,7 @@ constexpr std::string_view kCapture =
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view text(reinterpret_cast<const char*>(data), size);
+  const std::string_view text(std::bit_cast<const char*>(data), size);
 
   const auto file = aadp::results::parse_results_file(text);
   if (file) {
@@ -38,9 +39,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     FUZZ_ASSERT(*back == *file);
 
     // Exercises the checks a reader makes. A table of any file it accepts must not crash.
-    static_cast<void>(aadp::results::validate_stamped(*file));
+    const auto valid = aadp::results::validate_stamped(*file);
+    FUZZ_ASSERT(valid.has_value() || !valid.error().empty());
     const std::span<const aadp::results::ResultsFile> one(&*file, 1);
-    static_cast<void>(aadp::results::render_tables(one));
+    const auto tables = aadp::results::render_tables(one);
+    FUZZ_ASSERT(tables.has_value() || !tables.error().empty());
   }
 
   aadp::results::StampRequest request;

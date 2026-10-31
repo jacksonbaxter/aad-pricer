@@ -20,14 +20,16 @@ using test::ActiveMarket;
 using test::Dual;
 using test::ReadGreek;
 
-constexpr MarketParams<double> kMarket{100.0, 0.30, 0.10, 0.02, 0.5};
+constexpr MarketParams<double> kMarket{
+    .spot = 100.0, .sigma = 0.30, .r = 0.10, .q = 0.02, .maturity = 0.5};
 constexpr std::size_t kStats = 7;
 
 using Table = std::vector<std::array<double, kStats>>;
 
 // Value, five Dual Greeks, one finite difference, so every code path a measured run takes.
 Table RunStub(const Contract& c, std::uint64_t paths, std::uint32_t threads) {
-  const RunConfig config{20261030, paths, 8, c.steps, threads};
+  const RunConfig config{
+      .seed = 20261030, .paths = paths, .batches = 8, .steps = c.steps, .threads = threads};
   return RunBatches<kStats>(config,
                             [&](std::span<const double> u, std::array<double, kStats>& out) {
                               const Dual dual = DiscountedPayoff<Dual>(c, ActiveMarket(kMarket), u);
@@ -47,12 +49,42 @@ bool BitIdentical(const Table& a, const Table& b) {
 
 TEST(ThreadInvariance, OneTwoAndFourThreadsAreBitIdentical) {
   const std::vector<Contract> contracts = {
-      {Product::kEuropean, OptionType::kCall, 100.0, 0.0, 1, false},
-      {Product::kAsianArithmetic, OptionType::kCall, 100.0, 0.0, 12, true},
-      {Product::kAsianGeometric, OptionType::kCall, 100.0, 0.0, 12, false},
-      {Product::kDownOutHard, OptionType::kCall, 100.0, 95.0, 12, false},
-      {Product::kDownOutOneStep, OptionType::kCall, 100.0, 95.0, 12, false},
-      {Product::kDownOutBridge, OptionType::kCall, 100.0, 95.0, 12, false},
+      {.product = Product::kEuropean,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 1,
+       .include_spot = false},
+      {.product = Product::kAsianArithmetic,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = true},
+      {.product = Product::kAsianGeometric,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 0.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kDownOutHard,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kDownOutOneStep,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
+      {.product = Product::kDownOutBridge,
+       .type = OptionType::kCall,
+       .strike = 100.0,
+       .barrier = 95.0,
+       .steps = 12,
+       .include_spot = false},
   };
   // Over three blocks per batch, so blocks are really taken out of order, plus a part block.
   constexpr std::uint64_t kPaths = 8 * (3 * kPathsPerBlock + 17);
@@ -65,14 +97,20 @@ TEST(ThreadInvariance, OneTwoAndFourThreadsAreBitIdentical) {
 
 // A check that cannot fail proves nothing: changing the data must change the bytes.
 TEST(ThreadInvariance, ComparisonSeesAChange) {
-  const Contract c{Product::kEuropean, OptionType::kCall, 100.0, 0.0, 1, false};
-  EXPECT_FALSE(BitIdentical(RunStub(c, 8 * 16, 1), RunStub(c, 8 * 17, 1)));
+  const Contract c{.product = Product::kEuropean,
+                   .type = OptionType::kCall,
+                   .strike = 100.0,
+                   .barrier = 0.0,
+                   .steps = 1,
+                   .include_spot = false};
+  EXPECT_FALSE(
+      BitIdentical(RunStub(c, std::uint64_t{8} * 16, 1), RunStub(c, std::uint64_t{8} * 17, 1)));
 }
 
 TEST(BatchRunner, BatchMeansPartitionThePathsInOrder) {
   // Each path's single statistic is its first uniform, so a batch mean can be recomputed here.
-  constexpr std::uint64_t kPaths = 4 * 2500;
-  const RunConfig config{5, kPaths, 4, 1, 3};
+  constexpr std::uint64_t kPaths = std::uint64_t{4} * 2500;
+  const RunConfig config{.seed = 5, .paths = kPaths, .batches = 4, .steps = 1, .threads = 3};
   const auto table = RunBatches<1>(
       config, [](std::span<const double> u, std::array<double, 1>& out) { out[0] = u[0]; });
   ASSERT_EQ(table.size(), 4U);

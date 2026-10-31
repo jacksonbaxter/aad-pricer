@@ -1,5 +1,6 @@
 // Reference decoder. Same properties as the plan: no crash, a stated error, and every accepted
 // table meets its invariants and survives a round trip.
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -18,7 +19,7 @@ void Require(bool condition) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(reinterpret_cast<const char*>(data), size);
+  const std::string_view input(std::bit_cast<const char*>(data), size);
   const auto table = aadp::DecodeReferences(input);
   if (!table) {
     Require(!table.error().message.empty());
@@ -31,7 +32,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     Require(std::isfinite(row.value));
     Require(std::isfinite(row.b) && row.b >= 0.0);
     Require(table->Find(row.id) != nullptr);
-    Require(row.parameters.find(',') == std::string::npos);
+    Require(!row.parameters.contains(','));
   }
   const std::string encoded = aadp::EncodeReferences(*table);
   const auto again = aadp::DecodeReferences(encoded);

@@ -4,7 +4,8 @@
 //
 // Counts are raw. When the kernel multiplexed the group, time_running is below time_enabled and
 // the report says so; scaling the counts up would make them an estimate.
-#pragma once
+#ifndef AADP_PLATFORM_PERF_COUNTERS_HPP_
+#define AADP_PLATFORM_PERF_COUNTERS_HPP_
 
 #include <cstdint>
 #include <optional>
@@ -35,6 +36,8 @@ class PerfCounterSession {
   ~PerfCounterSession();
   PerfCounterSession(const PerfCounterSession&) = delete;
   PerfCounterSession& operator=(const PerfCounterSession&) = delete;
+  PerfCounterSession(PerfCounterSession&&) = delete;
+  PerfCounterSession& operator=(PerfCounterSession&&) = delete;
 
   void start();
   // Stops counting and reports what happened since start().
@@ -43,7 +46,7 @@ class PerfCounterSession {
  private:
   std::string open_error_;
   bool started_ = false;
-#if defined(__linux__)
+#ifdef __linux__
   int leader_fd_ = -1;
   int instructions_fd_ = -1;
   // The reset ioctl clears counts but not these, so a region's times are differences.
@@ -56,3 +59,5 @@ class PerfCounterSession {
 };
 
 }  // namespace aadp::platform
+
+#endif  // AADP_PLATFORM_PERF_COUNTERS_HPP_

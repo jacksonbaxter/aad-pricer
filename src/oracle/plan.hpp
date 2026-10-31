@@ -23,7 +23,7 @@
 
 namespace aadp {
 
-enum class RowStatus { kRun, kAwaitingPhase3 };
+enum class RowStatus : std::uint8_t { kRun, kAwaitingPhase3 };
 
 struct Instrument {
   Contract contract;

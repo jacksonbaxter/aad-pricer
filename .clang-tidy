@@ -1,0 +1,67 @@
+---
+# Every disabled check says why on the line above it. Lines that only set an option say so
+# under CheckOptions. A NOLINT in the source names its check and gives a reason.
+Checks:
+  - '-*'
+  - 'bugprone-*'
+  - 'clang-analyzer-*'
+  - 'concurrency-*'
+  - 'cppcoreguidelines-*'
+  - 'misc-*'
+  - 'modernize-*'
+  - 'performance-*'
+  - 'portability-*'
+  - 'readability-*'
+
+  # Numeric signatures take several doubles by nature, and the oracles catch a swap.
+  - '-bugprone-easily-swappable-parameters'
+
+  # Coefficients and published constants are the source's own numbers; a name adds nothing.
+  - '-cppcoreguidelines-avoid-magic-numbers'
+  - '-readability-magic-numbers'
+  # Alias of misc-non-private-member-variables-in-classes, which stays on.
+  - '-cppcoreguidelines-non-private-member-variables-in-classes'
+  # Alias of modernize-avoid-c-arrays, which stays on.
+  - '-cppcoreguidelines-avoid-c-arrays'
+  # Fixed-size buffers decay at C and from_chars boundaries; ASan and the fuzzers check them.
+  - '-cppcoreguidelines-pro-bounds-array-to-pointer-decay'
+  # at() in numeric kernels would add the branch these loops are built to avoid.
+  - '-cppcoreguidelines-pro-bounds-avoid-unchecked-container-access'
+  - '-cppcoreguidelines-pro-bounds-constant-array-index'
+  # from_chars and C interfaces take pointer ranges; ASan and the fuzzers check them.
+  - '-cppcoreguidelines-pro-bounds-pointer-arithmetic'
+  # snprintf fixes the bytes of every results file, and those bytes are compared.
+  - '-cppcoreguidelines-pro-type-vararg'
+
+  # Same reason as pro-type-vararg, and std::print needs dylib symbols older macOS lacks.
+  - '-modernize-use-std-print'
+  # The project follows Google style, which writes the return type first.
+  - '-modernize-use-trailing-return-type'
+
+  # The platform layer reads FPCR, MXCSR and tick counters, which have no portable spelling.
+  - '-portability-no-assembler'
+
+  # Formula code keeps the source's symbols: S, K, T, h. Renaming them hides the mapping.
+  - '-readability-identifier-length'
+  # Formulas follow the published notation; precedence of * over + is not in doubt.
+  - '-readability-math-missing-parentheses'
+  # A trailing comma makes clang-format split coefficient tables to one value per line.
+  - '-readability-trailing-comma'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(src|tests|bench|tools|fuzz)/.*\.hpp$'
+ExcludeHeaderFilterRegex: '.*/(_deps|generated)/.*'
+SystemHeaders: false
+FormatStyle: file
+CheckOptions:
+  # gtest's ASSERT and EXPECT expand to do-while. Hand-written ones are still reported.
+  cppcoreguidelines-avoid-do-while.IgnoreMacros: true
+  # Literal shift counts and masks are positive, so they are not the bug this looks for.
+  bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true
+  # Plain data structs are all public by design.
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+  # Google style allows a short if on one line.
+  readability-braces-around-statements.ShortStatementLines: 1
+  # EXPECT and ASSERT expand to branches that say nothing about a function's own logic.
+  readability-function-cognitive-complexity.IgnoreMacros: true
+  # De Morgan on floats loses NaN: !(x >= 0.0) is true for NaN, and x < 0.0 is not.
+  readability-simplify-boolean-expr.SimplifyDeMorgan: false
