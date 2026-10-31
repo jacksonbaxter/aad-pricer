@@ -156,6 +156,29 @@ TEST(DiscreteBarrier, StrikeBelowBarrierAgreesAcrossMethods) {
   EXPECT_NEAR(a.delta, b.delta, kPin);
 }
 
+// Every pinned row above has q = 0, and the two methods share their log step, so they would agree
+// on a drift with q missing. A barrier too far down to touch leaves the vanilla, and the vanilla's
+// closed form has q of its own. Tolerance kPin, the b of the plan's discrete rows.
+TEST(DiscreteBarrier, DividendEntersTheDrift) {
+  const BarrierInputs in{.spot = 100,
+                         .strike = 100,
+                         .barrier = 20,
+                         .r = 0.05,
+                         .q = 0.03,
+                         .sigma = 0.30,
+                         .maturity = 0.5,
+                         .monitors = 12};
+  const auto vanilla = BlackScholes(
+      OptionType::kCall, 100.0,
+      MarketParams<double>{.spot = 100, .sigma = 0.30, .r = 0.05, .q = 0.03, .maturity = 0.5});
+  for (const BarrierResult& result :
+       {DiscreteDownOutGaussLegendre(in, {}), DiscreteDownOutSimpson(in, {})}) {
+    EXPECT_NEAR(result.value, vanilla.value, kPin);
+    EXPECT_NEAR(result.delta, vanilla.delta, kPin);
+    EXPECT_NEAR(result.naive_delta, vanilla.delta, kPin);
+  }
+}
+
 // Fusai and Meucci's printed sigma 0.17801 does not reproduce their table. All the geometric
 // rows match closed form only at sigma = 0.1780163, and the arithmetic rows then fall within
 // 2e-5. BENCHMARKS.md keeps the printed sigma, so both positions are pinned here.
