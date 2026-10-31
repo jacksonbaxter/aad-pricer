@@ -8,10 +8,15 @@ namespace aadp::platform {
 
 std::uint64_t peak_rss_bytes() {
   rusage usage{};
-  if (getrusage(RUSAGE_SELF, &usage) != 0 || usage.ru_maxrss < 0) {
+  if (getrusage(RUSAGE_SELF, &usage) != 0) {
     return 0;
   }
-  const auto value = static_cast<std::uint64_t>(usage.ru_maxrss);
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access): glibc declares it inside a union.
+  const long peak = usage.ru_maxrss;
+  if (peak < 0) {
+    return 0;
+  }
+  const auto value = static_cast<std::uint64_t>(peak);
 #ifdef __APPLE__
   return value;
 #else

@@ -17,10 +17,17 @@
 #include <system_error>
 #include <vector>
 
+#ifdef __linux__
+#include <sys/types.h>
+#endif
+
 #include "results/results_file.hpp"
 
-// POSIX gives no header for this.
+// macOS declares this in no header. glibc's <unistd.h> does, under the _GNU_SOURCE that g++ and
+// clang++ both set.
+#ifdef __APPLE__
 extern "C" char** environ;
+#endif
 
 namespace aadp::results {
 namespace {

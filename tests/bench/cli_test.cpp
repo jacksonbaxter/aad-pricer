@@ -2,7 +2,7 @@
 // them: exit status, and no output file on refusal.
 #include <gtest/gtest.h>
 #include <sys/resource.h>
-#include <sys/wait.h>
+#include <sys/wait.h>  // IWYU pragma: keep
 #include <unistd.h>
 
 #include <algorithm>

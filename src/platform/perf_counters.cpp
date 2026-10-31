@@ -11,7 +11,11 @@
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 #include <unistd.h>
+
+#include <array>
+#include <utility>
 #elifdef __APPLE__
 #include <libproc.h>
 #include <sys/resource.h>
@@ -65,15 +69,15 @@ int open_counter(std::uint64_t config, int group_fd) {
   attr.disabled = group_fd == -1 ? 1 : 0;
   attr.exclude_kernel = 1;
   attr.exclude_hv = 1;
-  attr.read_format =
-      PERF_FORMAT_GROUP | PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+  attr.read_format = static_cast<std::uint64_t>(PERF_FORMAT_GROUP) |
+                     static_cast<std::uint64_t>(PERF_FORMAT_TOTAL_TIME_ENABLED) |
+                     static_cast<std::uint64_t>(PERF_FORMAT_TOTAL_TIME_RUNNING);
   return static_cast<int>(syscall(SYS_perf_event_open, &attr, 0, -1, group_fd, 0UL));
 }
 
 }  // namespace
 
-PerfCounterSession::PerfCounterSession() {
-  leader_fd_ = open_counter(PERF_COUNT_HW_CPU_CYCLES, -1);
+PerfCounterSession::PerfCounterSession() : leader_fd_(open_counter(PERF_COUNT_HW_CPU_CYCLES, -1)) {
   if (leader_fd_ < 0) {
     open_error_ = std::string("perf_event_open cycles: ") + std::generic_category().message(errno);
     return;
@@ -100,8 +104,8 @@ void PerfCounterSession::start() {
     return;
   }
   ioctl(leader_fd_, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
-  std::uint64_t data[5] = {};
-  if (read(leader_fd_, data, sizeof(data)) == static_cast<ssize_t>(sizeof(data))) {
+  std::array<std::uint64_t, 5> data{};
+  if (std::cmp_equal(read(leader_fd_, data.data(), sizeof(data)), sizeof(data))) {
     start_enabled_ns_ = data[1];
     start_running_ns_ = data[2];
   }
@@ -122,9 +126,9 @@ PerfCounterReport PerfCounterSession::stop() {
   }
   ioctl(leader_fd_, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
   // Layout for PERF_FORMAT_GROUP with both time fields: nr, enabled, running, one value each.
-  std::uint64_t data[5] = {};
-  const ssize_t got = read(leader_fd_, data, sizeof(data));
-  if (got != static_cast<ssize_t>(sizeof(data)) || data[0] != 2) {
+  std::array<std::uint64_t, 5> data{};
+  const ssize_t got = read(leader_fd_, data.data(), sizeof(data));
+  if (std::cmp_not_equal(got, sizeof(data)) || data[0] != 2) {
     report.note = "short read from the counter group";
     return report;
   }

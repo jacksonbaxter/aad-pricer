@@ -2,7 +2,6 @@
 
 #include <sys/resource.h>
 
-#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <expected>
@@ -13,11 +12,15 @@
 #ifdef __linux__
 #include <sched.h>
 
+#include <cstddef>
 #include <system_error>
+#include <vector>
 #elifdef __APPLE__
 #include <pthread.h>
 #include <pthread/qos.h>
 #include <sys/qos.h>
+
+#include <array>
 #endif
 
 namespace aadp::platform {
@@ -29,7 +32,7 @@ AffinityState read_affinity() {
   CPU_ZERO(&mask);
   if (sched_getaffinity(0, sizeof(mask), &mask) == 0) {
     for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-      if (CPU_ISSET(cpu, &mask)) {
+      if (CPU_ISSET(static_cast<std::size_t>(cpu), &mask)) {
         state.cpus.push_back(cpu);
       }
     }
@@ -60,7 +63,7 @@ std::expected<AffinityState, std::string> pin_to_cpu(int cpu) {
   }
   cpu_set_t mask;
   CPU_ZERO(&mask);
-  CPU_SET(cpu, &mask);
+  CPU_SET(static_cast<std::size_t>(cpu), &mask);
   if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
     return std::unexpected("sched_setaffinity(" + std::to_string(cpu) +
                            "): " + std::generic_category().message(errno));

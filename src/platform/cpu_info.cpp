@@ -85,7 +85,7 @@ std::string read_first_line(const std::string& path) {
 }
 
 std::string read_file(const std::string& path) {
-  std::ifstream in(path);
+  const std::ifstream in(path);
   std::ostringstream text;
   text << in.rdbuf();
   return text.str();
