@@ -535,7 +535,7 @@
       "id": "check-asan",
       "kind": "check",
       "covers": "ASan, asan-ubsan preset",
-      "bug": "An off-by-one in the worker's exit test takes one block past the end, which writes one element beyond block_sums. Nothing fails without ASan unless the heap happens to complain.",
+      "bug": "An off-by-one in the worker's exit test takes one block past the end, which writes one element beyond block_sums.",
       "edits": [
         {
           "file": "src/mc/batch_runner.hpp",
