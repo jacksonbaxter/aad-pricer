@@ -64,8 +64,8 @@ CheckOptions:
   # benchmark.h is that library's public header, whatever it splits into behind it. libc++ keeps
   # <cmath> in private __math headers the check does not map back. Next come macOS internals
   # behind POSIX headers, which do not exist on Linux. Last, the same on glibc: its private bits/
-  # headers, and the POSIX parts of the C headers behind <cstdio> and <ctime>.
-  misc-include-cleaner.IgnoreHeaders: 'benchmark/.*;cmath;__math/.*;sys/_types/.*;/_time\.h$;/_stdio\.h$;sys/fcntl\.h$;linux-gnu/bits/.*;^/usr/include/stdio\.h$;^/usr/include/time\.h$'
+  # headers, and the POSIX parts of the C headers behind <cstdio>, <cstdlib> and <ctime>.
+  misc-include-cleaner.IgnoreHeaders: 'benchmark/.*;cmath;__math/.*;sys/_types/.*;/_time\.h$;/_stdio\.h$;sys/fcntl\.h$;linux-gnu/bits/.*;^/usr/include/stdio\.h$;^/usr/include/stdlib\.h$;^/usr/include/time\.h$'
   # EXPECT and ASSERT expand to branches that say nothing about a function's own logic.
   readability-function-cognitive-complexity.IgnoreMacros: true
   # De Morgan on floats loses NaN: !(x >= 0.0) is true for NaN, and x < 0.0 is not.

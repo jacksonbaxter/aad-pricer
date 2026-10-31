@@ -268,7 +268,9 @@ TEST(PerfCounters, EachRegionReportsItsOwnTimes) {
   session.start();
   spin(1'000'000);
   const PerfCounterReport second = session.stop();
-  ASSERT_TRUE(second.cycles.has_value()) << second.note;
+  if (!second.cycles) {
+    FAIL() << second.note;
+  }
   // Perf times come from the scheduler clock and the spin from CLOCK_MONOTONIC, which differ by
   // about 0.14% on debian. The bound allows 1%, the limit timer calibration works to.
   EXPECT_GE(first.time_enabled_ns, 29'700'000U);
