@@ -93,14 +93,16 @@ TEST_F(ChainProfile, PrintsCountsThroughTheReaders) {
 }
 
 TEST_F(ChainProfile, MissingFileFailsAndSaysHowToGetIt) {
-  const RunResult result = run("--options " + shell_arg((dir() / "no-such-file.csv").string()));
+  const RunResult result = run("--options " + shell_arg((dir() / "no-such-file.csv").string()) +
+                               " --futures " + shell_arg((dir() / "futures.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("scripts/fetch_data.sh"), std::string::npos) << result.output;
 }
 
 TEST_F(ChainProfile, WrongHeaderFails) {
   write_file(dir() / "bad.csv", "not,a,header\r\n");
-  const RunResult result = run("--options " + shell_arg((dir() / "bad.csv").string()));
+  const RunResult result = run("--options " + shell_arg((dir() / "bad.csv").string()) +
+                               " --futures " + shell_arg((dir() / "futures.csv").string()));
   EXPECT_NE(result.status, 0);
   EXPECT_NE(result.output.find("header mismatch"), std::string::npos) << result.output;
 }
