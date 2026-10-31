@@ -530,6 +530,91 @@
       "timeout_s": 1200,
       "mutated_exit": 1,
       "data": true
+    },
+    {
+      "id": "check-asan",
+      "kind": "check",
+      "covers": "ASan, asan-ubsan preset",
+      "bug": "An off-by-one in the worker's exit test takes one block past the end, which writes one element beyond block_sums. Nothing fails without ASan unless the heap happens to complain.",
+      "edits": [
+        {
+          "file": "src/mc/batch_runner.hpp",
+          "find": "      if (block >= block_count) return;\n",
+          "replace": "      if (block > block_count) return;\n"
+        }
+      ],
+      "preset": "asan-ubsan",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "asan-ubsan", "--jobs", "6"],
+      "detect": "test",
+      "reason": "AddressSanitizer: heap-buffer-overflow",
+      "timeout_s": 1800,
+      "mutated_exit": 1,
+      "data": true
+    },
+    {
+      "id": "check-ubsan",
+      "kind": "check",
+      "covers": "UBSan, asan-ubsan preset",
+      "bug": "The digit limit that is counted before accumulating is doubled, so a 19-digit field overflows the signed mantissa.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "  if (significant > kMaxDigits) {\n",
+          "replace": "  if (significant > 2 * kMaxDigits) {\n"
+        }
+      ],
+      "preset": "asan-ubsan",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "asan-ubsan", "--jobs", "6"],
+      "detect": "test",
+      "reason": "runtime error: signed integer overflow",
+      "timeout_s": 1800,
+      "mutated_exit": 1,
+      "data": true
+    },
+    {
+      "id": "check-tsan",
+      "kind": "check",
+      "covers": "TSan, tsan preset",
+      "bug": "The path buffer moves out of the worker to save an allocation per thread, so every worker writes the same uniforms while the others read them.",
+      "edits": [
+        {
+          "file": "src/mc/batch_runner.hpp",
+          "find": "  const auto worker = [&] {\n    std::vector<double> uniforms(config.steps);\n",
+          "replace": "  std::vector<double> uniforms(config.steps);\n  const auto worker = [&] {\n"
+        }
+      ],
+      "preset": "tsan",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "tsan", "--jobs", "6"],
+      "detect": "test",
+      "reason": "ThreadSanitizer: data race",
+      "timeout_s": 1800,
+      "mutated_exit": 1,
+      "data": true
+    },
+    {
+      "id": "check-clang-tidy",
+      "kind": "check",
+      "covers": "clang-tidy, scripts/run_clang_tidy.sh",
+      "bug": "A range-for copies each histogram value, two strings, where a reference did.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "  for (const HistogramValue& value : values) {\n",
+          "replace": "  for (const HistogramValue value : values) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/run_clang_tidy.sh", "--jobs", "6", "release", "fuzz"],
+      "detect": "test",
+      "reason": "src/results/table\\.cpp:\\d+:\\d+: error: .*\\[performance-for-range-copy",
+      "timeout_s": 1800,
+      "mutated_exit": 1,
+      "configure": ["release", "fuzz"],
+      "output_files": ["build/logs/tidy/*.log"]
     }
   ]
 }
