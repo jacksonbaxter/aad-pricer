@@ -93,7 +93,7 @@
       "targets": ["aadp_kernels_test"],
       "command": ["{build}/bin/aadp_kernels_test", "--gtest_filter=FiniteDifference.*"],
       "detect": "test",
-      "reason": "(?s)  theta\\n    Which is: \\S+\\n  -dvdt\\n.*\\[  FAILED  \\] FiniteDifference\\.RecoversSlopeOfAKnownPayoffWithTheta",
+      "reason": "(?s)  theta\\n    Which is: \\S+\\n  -dvdt\\n.*?\\[  FAILED  \\] FiniteDifference\\.RecoversSlopeOfAKnownPayoffWithTheta",
       "timeout_s": 120
     },
     {
@@ -131,7 +131,7 @@
       "targets": ["aadp_tolerance_test"],
       "command": ["{build}/bin/aadp_tolerance_test", "--gtest_filter=Tolerance.*"],
       "detect": "test",
-      "reason": "(?s)r\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"distance\"\\n.*\\[  FAILED  \\] Tolerance\\.ConditionOneFailsAlone",
+      "reason": "(?s)r\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"distance\"\\n.*?\\[  FAILED  \\] Tolerance\\.ConditionOneFailsAlone",
       "timeout_s": 120
     },
     {
@@ -150,7 +150,7 @@
       "targets": ["aadp_tolerance_test"],
       "command": ["{build}/bin/aadp_tolerance_test", "--gtest_filter=Tolerance.*"],
       "detect": "test",
-      "reason": "(?s)under\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"se-ceiling\"\\n.*\\[  FAILED  \\] Tolerance\\.CeilingIsOnTheSeItselfAndItIsInclusive",
+      "reason": "(?s)under\\.failed_condition\\(\\)\\n    Which is: \"none\"\\n  \"se-ceiling\"\\n.*?\\[  FAILED  \\] Tolerance\\.CeilingIsOnTheSeItselfAndItIsInclusive",
       "timeout_s": 120
     },
     {
