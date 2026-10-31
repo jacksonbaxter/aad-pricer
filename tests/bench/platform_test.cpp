@@ -297,7 +297,7 @@ TEST(Affinity, PinsAndReadsBackThenRestores) {
   cpu_set_t mask;
   CPU_ZERO(&mask);
   for (const int allowed : before.cpus) {
-    CPU_SET(allowed, &mask);
+    CPU_SET(static_cast<std::size_t>(allowed), &mask);
   }
   ASSERT_EQ(sched_setaffinity(0, sizeof(mask), &mask), 0);
 }

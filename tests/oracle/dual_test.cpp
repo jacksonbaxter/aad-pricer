@@ -182,7 +182,9 @@ TEST(DualGeneric, EveryUnaryOpMatchesFiniteDifferences) {
         EXPECT_NEAR(out.tangent[slot], expected, kFdTolerance * (1.0 + std::fabs(expected)))
             << op.name << " at " << x << " slot " << slot;
         for (std::size_t other = 0; other < kTangents; ++other) {
-          if (other != slot) EXPECT_EQ(out.tangent[other], 0.0) << op.name;
+          if (other != slot) {
+            EXPECT_EQ(out.tangent[other], 0.0) << op.name;
+          }
         }
       }
     }
