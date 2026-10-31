@@ -366,7 +366,8 @@ Stated before measuring. Each comparison passes only if both of these hold:
 SE is from B batch means, b is the reference or finite-difference truncation allowance, K is the number of comparisons in the suite, and α_F is the family-wise error rate. Bonferroni needs no independence assumption, which matters because Greeks from the same paths are correlated.
 
 - Source: NIST/SEMATECH e-Handbook, section 7.4.7.3. https://itl.nist.gov/div898/handbook/prc/section4/prc473.htm
-- Provisional constants: α_F = 0.01, B = 64, K = 100, giving a critical value of 4.155 (derived). K counts every Greek and case pair, including any skipped later. If K changes, the constant is recomputed before any run.
+- Constants, pre-registered in `references/comparison_plan.csv` at commit 5993b4a, before the first measured run: α_F = 0.01, B = 64, K = 147, giving a critical value of 4.2662 (computed in code, `src/oracle/student_t.hpp`). 90 rows run now and 57 wait for Phase 3. K counts every Greek and case pair, including rows not yet runnable. It was 100 provisionally, with a critical value of 4.155. If K changes again, the constant is recomputed before any run.
+- SE ceilings: `factor × SE_pilot × sqrt(N_pilot / N)`, from a pilot on seed 1729, a different seed from the measured 271828. The factor is 1.65 on reference rows and 3 on finite-difference rows. The factors are stated in the plan header with their reasons. The finite-difference factor and one step size were set from development seeds before the plan was committed, which the plan's order of commits does not by itself show, so it is stated here.
 
 QuantLib's 2.34 × SE pattern is useful for its two-part shape, but the multiplier has no documented basis and is not copied. Its fixed tolerances (for example `2.0e-2` for arithmetic Asians) are not tied to any SE.
 

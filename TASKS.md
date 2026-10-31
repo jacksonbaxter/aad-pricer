@@ -25,62 +25,57 @@ Build the harness before the implementation. Nothing in this phase may claim a p
 
 ### Repo and build
 
-- [ ] CMake project, C++23, presets for release, debug, asan-ubsan, tsan, fuzz
-- [ ] Toolchain taken from the environment (`CC`, `CXX`, `SDKROOT`). No hardcoded paths
-- [ ] `-Wall -Wextra -Werror` on project code, not on third-party code
-- [ ] `-ffp-contract=off`, no `-ffast-math`, on every target
-- [ ] Pinned FetchContent with `URL_HASH`: Google Benchmark, HdrHistogram_c, Highway, GoogleTest, Boost 1.92.0, QuantLib 1.44
-- [ ] Vendor nothing. Let's Be Rational through pinned FetchContent, with its notice preserved; note the host only serves plain http, so the hash is what protects it
-- [ ] Confirm that the toolchain's system libc++ link mode works with all dependencies. Fallback: static `libc++.a`
-- [ ] Do not depend on `<generator>` or `<stacktrace>`
+- [x] CMake project, C++23, presets for release, debug, asan-ubsan, tsan, fuzz
+- [x] Toolchain taken from the environment (`CC`, `CXX`, `SDKROOT`). No hardcoded paths
+- [x] `-Wall -Wextra -Werror` on project code, not on third-party code
+- [x] `-ffp-contract=off`, no `-ffast-math`, on every target
+- [x] Pinned FetchContent with `URL_HASH`: Google Benchmark, HdrHistogram_c, Highway, GoogleTest, Boost 1.92.0, QuantLib 1.44
+- [x] Confirm that the toolchain's system libc++ link mode works with all dependencies. Fallback: static `libc++.a`
+- [x] Do not depend on `<generator>` or `<stacktrace>`
 
 ### Platform layer, arm64 and x86-64
 
 All of this is written for both architectures from the start, so a Linux run needs no code change.
 
-- [ ] `platform/cpu_info`: macOS `sysctlbyname`; Linux `/proc/cpuinfo` and `uname`; arm64 Linux `midr_el1` fallback
-- [ ] `platform/timer`: `clock_gettime(CLOCK_MONOTONIC_RAW)` on both. Raw ticks: `mach_absolute_time` on macOS, `rdtscp` on x86-64, `cntvct_el0` on arm64 Linux. Calibrate on every run, never assume a frequency
-- [ ] `platform/affinity`: `sched_setaffinity` on Linux. On macOS, record `not pinned` in the header and never claim otherwise. QoS class is recorded as an influence, not a pin
-- [ ] `platform/perf_counters`: `perf_event_open` on Linux, `:u` events only. On macOS, process-wide `proc_pid_rusage` cycles and instructions, labelled as such. Missing counters are recorded, not substituted
-- [ ] `platform/cacheline`: project constant, 128 on Apple arm64, 64 on x86-64. Do not use `std::hardware_destructive_interference_size` in layouts: Apple clang reports 256 here
-- [ ] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
-- [ ] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
-- [ ] Own `exp`, `log` and inverse-normal kernels, so libm differences do not reach results
+- [x] `platform/cpu_info`: macOS `sysctlbyname`; Linux `/proc/cpuinfo` and `uname`; arm64 Linux `midr_el1` fallback
+- [x] `platform/timer`: `clock_gettime(CLOCK_MONOTONIC_RAW)` on both. Raw ticks: `mach_absolute_time` on macOS, `rdtscp` on x86-64, `cntvct_el0` on arm64 Linux. Calibrate on every run, never assume a frequency
+- [x] `platform/affinity`: `sched_setaffinity` on Linux. On macOS, record `not pinned` in the header and never claim otherwise. QoS class is recorded as an influence, not a pin
+- [x] `platform/perf_counters`: `perf_event_open` on Linux, `:u` events only. On macOS, process-wide `proc_pid_rusage` cycles and instructions, labelled as such. Missing counters are recorded, not substituted
+- [x] `platform/cacheline`: project constant, 128 on Apple arm64, 64 on x86-64. Do not use `std::hardware_destructive_interference_size` in layouts: Apple clang reports 256 here
+- [x] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
+- [x] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
 - [ ] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build
 - [ ] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON. Add a lane-width test matrix
-- [ ] Any code that depends on lane count takes it from the type, never a constant
-- [ ] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
-- [ ] Every reported benchmark runs through `.orchestrator/measure.sh` on the Mac, or `~/quant-projects/bin/measure.sh` on `debian`. Its load line goes in the results header. A results writer refuses to mark a run as reportable without it
-- [ ] `debian` is ready. Work only inside `~/quant-projects`. Measurement and Linux-only code only: development, sanitizers and fuzzing stay on the Mac. Sync the committed `HEAD` with `debian_sync.sh`, build in `~/quant-projects/aad-pricer/build`, fetch data with the repo's own script
-- [ ] `debian` runs: `~/quant-projects/bin/measure.sh taskset -c 4 <bench>`, `cpu5` idle, second thread on `cpu6`. Benchmark directly under `measure.sh`, with no wrapper that leaves background processes. Write output to a file on `debian`, never through SSH. A dropped connection kills the run, so a run with no complete output file is lost and is rerun, and `.logs/measure.log` is checked
-- [ ] Results header records core, governor, frequency, turbo. Every Linux number cites its commit
-- [ ] `perf record -g --user-callchains -e cycles:u` on `debian`. Perf cycles and TSC ticks are different units. Zen 1 `cache-misses` appears to count L2 misses: confirm in AMD's documentation and cite it before quoting the number
+- [x] Any code that depends on lane count takes it from the type, never a constant
+- [x] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
+- [x] Every reported benchmark runs through `.orchestrator/measure.sh` on the Mac, or `~/quant-projects/bin/measure.sh` on `debian`. Its load line goes in the results header. A results writer refuses to mark a run as reportable without it
+- [x] `debian` is ready. Work only inside `~/quant-projects`. Measurement and Linux-only code only: development, sanitizers and fuzzing stay on the Mac. Sync the committed `HEAD` with `debian_sync.sh`, build in `~/quant-projects/aad-pricer/build`, fetch data with the repo's own script
+- [x] `debian` runs: `~/quant-projects/bin/measure.sh taskset -c 4 <bench>`, `cpu5` idle, second thread on `cpu6`. Benchmark directly under `measure.sh`, with no wrapper that leaves background processes. Write output to a file on `debian`, never through SSH. A dropped connection kills the run, so a run with no complete output file is lost and is rerun, and `.logs/measure.log` is checked
+- [x] Results header records core, governor, frequency, turbo. Every Linux number cites its commit
 
 ### Benchmarks
 
-- [ ] Google Benchmark plus HdrHistogram, with warm-up
-- [ ] Results header: CPU model, kernel, compiler version, flags, pinning state, core, governor, frequency, turbo, FP state, load line, commit
-- [ ] Linux: batch or average anything below about 100 ns. Mac: anything below a few 42 ns ticks. Do not publish a percentile the timer cannot resolve
-- [ ] Peak RSS and tape bytes per path recorded by the harness
-- [ ] README results table generated by a script from raw results files, never typed
-- [ ] Each benchmark verifies its gradient inside the run (B33)
+- [x] Google Benchmark plus HdrHistogram, with warm-up
+- [x] Results header: CPU model, kernel, compiler version, flags, pinning state, core, governor, frequency, turbo, FP state, load line, commit
+- [x] Linux: batch or average anything below about 100 ns. Mac: anything below a few 42 ns ticks. Do not publish a percentile the timer cannot resolve
+- [x] Peak RSS recorded by the harness
+- [x] README results table generated by a script from raw results files, never typed
 
 ### Tests and oracles
 
-- [ ] GoogleTest unit test suite
-- [ ] Tolerance rule implemented once, in one header: batch means, Student t, Bonferroni, SE ceiling. Fix K, α_F, B, seeds and path counts in a committed file before the first measured run
-- [ ] Black-Scholes closed-form Greeks oracle: O1 to O3, with stated conventions (per unit, theta per year, theta = −dp/dT)
-- [ ] Barrier closed form and analytic Greeks: down-in via the Merton identity, all eight cases
-- [ ] Geometric Asian closed form and Greeks: O4
-- [ ] Discrete barrier and arithmetic Asian references: O5 to O11, from a committed quadrature tool, with the published value next to the derived one
-- [ ] Central finite-difference oracle with common random numbers and the same discontinuity treatment. Two-h truncation check
-- [ ] Generic operation harness: every tape operation against finite differences, with NaN, inf, zero and exception parity (B19)
-- [ ] Tangent-adjoint dot-product test (B20)
-- [ ] Naive-AAD failure test: the naive barrier delta converges to the wrong value, about 0.391 against 0.798 at H=95, and the test asserts that failure
-- [ ] Philox4x32-10 known-answer test, scalar. Open the vectors first: they were not opened in research
-- [ ] AS241 inverse normal against an independent high-precision reference
-- [ ] N-thread equals one-thread test (B11)
-- [ ] Comparison plan committed, K recorded, every row accounted for, pilot seed separate from measured seed
+- [x] GoogleTest unit test suite
+- [x] Tolerance rule implemented once, in one header: batch means, Student t, Bonferroni, SE ceiling. Fix K, α_F, B, seeds and path counts in a committed file before the first measured run
+- [x] Black-Scholes closed-form Greeks oracle: O1 to O3, with stated conventions (per unit, theta per year, theta = −dp/dT)
+- [x] Barrier closed form and analytic Greeks: down-in via the Merton identity, all eight cases
+- [x] Geometric Asian closed form and Greeks: O4
+- [x] Discrete barrier and arithmetic Asian references: O5 to O11, from a committed quadrature tool, with the published value next to the derived one
+- [x] Central finite-difference oracle with common random numbers and the same discontinuity treatment. Two-h truncation check
+- [x] Generic operation harness: every tape operation against finite differences, with NaN, inf, zero and exception parity (B19)
+- [x] Naive-AAD failure test: the naive barrier delta converges to the wrong value, about 0.391 against 0.798 at H=95, and the test asserts that failure
+- [x] Philox4x32-10 known-answer test, scalar. Open the vectors first: they were not opened in research
+- [x] AS241 inverse normal against an independent high-precision reference
+- [x] N-thread equals one-thread test (B11)
+- [x] Comparison plan committed, K recorded, every row accounted for, pilot seed separate from measured seed
 
 ### Fault injection
 
@@ -91,10 +86,8 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### Fuzzing
 
-- [ ] libFuzzer target for the TAIFEX CSV parser, including cp950 decoding
-- [ ] libFuzzer targets for every other parser and decoder: chain filters, config, any results reader
-- [ ] Pricer entry-point fuzzer under sanitizers (B23)
-- [ ] Tape operation-sequence fuzzer against finite differences (B23, exceeds)
+- [x] libFuzzer target for the TAIFEX CSV parser, including cp950 decoding
+- [x] libFuzzer targets for every other parser and decoder: chain filters, config, any results reader
 
 ### Checks and CI
 
@@ -106,16 +99,21 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### Data
 
-- [ ] `scripts/fetch_data.*` downloads the TAIFEX option and futures captures and verifies sha256. Descriptive User-Agent, as Internet Archive's developer guide requires. Data goes to gitignored `data/`, on both hosts
-- [ ] `NOTICE` with the exact attribution text for datasets 11320 and 11319. Failing attribution voids the licence ab initio, and this covers derivative outputs
-- [ ] Every generated output that uses the chain carries the attribution: one helper, tested, used by every writer
-- [ ] If a capture disappears, the script says so and stops. There is no fallback source
-- [ ] Fields are named for what they are: settlements, never quotes or mids
+- [x] `scripts/fetch_data.*` downloads the TAIFEX option and futures captures and verifies sha256. Descriptive User-Agent, as Internet Archive's developer guide requires. Data goes to gitignored `data/`, on both hosts
+- [x] `NOTICE` with the exact attribution text for datasets 11320 and 11319. Failing attribution voids the licence ab initio, and this covers derivative outputs
+- [x] Every generated output that uses the chain carries the attribution: one helper, tested, used by every writer
+- [x] If a capture disappears, the script says so and stops. There is no fallback source
+- [x] Fields are named for what they are: settlements, never quotes or mids
 
 ## Phase 3: Implementation
 
 ### Tape
 
+- [ ] Tape bytes per path recorded by the harness, beside peak RSS
+- [ ] Each benchmark verifies its gradient inside the run (B33)
+- [ ] Tangent-adjoint dot-product test (B20)
+- [ ] Pricer entry-point fuzzer under sanitizers (B23)
+- [ ] Tape operation-sequence fuzzer against finite differences (B23, exceeds)
 - [ ] Struct-of-arrays tape: statement and operand arrays, chunked, 16-byte active type, sizes asserted
 - [ ] Thread-local tape with RAII scope, mark and rewind per path, no allocation after warm-up
 - [ ] Surface and other set-up stay outside the per-path tape, swept once from a mark to the start. Per-path adjoint of shared set-up breaks the constant multiple
@@ -126,6 +124,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### Pricer
 
+- [ ] Own `exp`, `log` and inverse-normal kernels, so libm differences do not reach results
 - [ ] Arithmetic Asian, geometric Asian
 - [ ] Continuous barrier: log-space Brownian-bridge survival weight
 - [ ] Discrete barrier: one-step survival. Never apply the bridge to a discretely monitored contract: at H=97, 3.060 continuous against 3.834 discrete
@@ -154,6 +153,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### SVI
 
+- [ ] Vendor nothing. Let's Be Rational through pinned FetchContent, with its notice preserved; note the host only serves plain http, so the hash is what protects it
 - [ ] TAIFEX parser, filters and parity regression from `NOTES.md`, "Recommended calibration set"
 - [ ] Let's Be Rational inversion, accuracy and speed
 - [ ] Raw SVI per slice: quasi-explicit inner solve, multi-start, parity-noise weights
@@ -195,6 +195,7 @@ Build only behind an option, because 985 source files make it a long build.
 
 ### Iterate
 
+- [ ] `perf record -g --user-callchains -e cycles:u` on `debian`. Perf cycles and TSC ticks are different units. Zen 1 `cache-misses` appears to count L2 misses: confirm in AMD's documentation and cite it before quoting the number
 - [ ] Iterate against the harness. Record what was tried in `NOTES.md`, including what did not help
 - [ ] Reported numbers through `measure.sh` only
 - [ ] Run all benchmarks on `linux-zen1` once it is ready
