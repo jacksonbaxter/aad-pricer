@@ -83,6 +83,9 @@ manifest "$source_dir/sample.csv" "$wrong_hash" >"$bad"
 dir=$scratch/mismatch
 run_fetch code "$scratch/mismatch.out" --manifest "$bad" --data-dir "$dir"
 check 'wrong hash exits 2' equal "$code" 2
+check 'wrong hash names the file' contains "$scratch/mismatch.out" 'checksum mismatch: sample.csv'
+check 'wrong hash says it was discarded' contains "$scratch/mismatch.out" \
+  'The download was discarded.'
 check 'wrong hash lands no file' test ! -e "$dir/sample.csv"
 check 'wrong hash leaves no temp file' no_temp_left "$dir"
 
@@ -92,8 +95,14 @@ mkdir -p "$dir"
 printf 'damaged' >"$dir/sample.csv"
 run_fetch code "$scratch/corrupt.out" --manifest "$good" --data-dir "$dir" --verify
 check '--verify on a damaged file exits 2' equal "$code" 2
+check '--verify names the damaged file' contains "$scratch/corrupt.out" \
+  "checksum mismatch: $dir/sample.csv"
 run_fetch code "$scratch/corrupt2.out" --manifest "$good" --data-dir "$dir"
 check 'fetch over a damaged file exits 2' equal "$code" 2
+check 'fetch names the damaged file' contains "$scratch/corrupt2.out" \
+  "checksum mismatch: $dir/sample.csv"
+check 'fetch says the file was left alone' contains "$scratch/corrupt2.out" \
+  'The existing file was not touched.'
 check 'fetch does not overwrite a damaged file' equal "$(cat "$dir/sample.csv")" damaged
 
 # --- capture unavailable
@@ -113,15 +122,18 @@ check 'message says there is no fallback' contains "$scratch/gone.out" 'There is
 dir=$scratch/absent
 run_fetch code "$scratch/absent.out" --manifest "$good" --data-dir "$dir" --verify
 check '--verify on an absent file exits 4' equal "$code" 4
+check '--verify names the absent file' contains "$scratch/absent.out" "absent: $dir/sample.csv"
 
 climb=$scratch/climb.txt
 printf '../escape.csv file://%s %s\n' "$source_dir/sample.csv" "$good_hash" >"$climb"
 run_fetch code "$scratch/climb.out" --manifest "$climb" --data-dir "$scratch/climb"
 check 'a name that climbs out of the data dir is refused' equal "$code" 1
+check 'the refusal names the manifest line' contains "$scratch/climb.out" 'bad manifest line 1'
 check 'nothing escaped the data dir' test ! -e "$scratch/escape.csv"
 
 run_fetch code "$scratch/args.out" --no-such-option
 check 'unknown option exits 1' equal "$code" 1
+check 'unknown option prints the usage' contains "$scratch/args.out" 'usage: fetch_data.sh'
 
 # --- each hash tool alone, with PATH cut down to links to what the script needs
 make_path_without() {
@@ -149,6 +161,8 @@ for tool in sha256sum shasum; do
   check "file fetched with $tool is correct" cmp "$source_dir/sample.csv" "$dir/sample.csv"
   PATH=$bin "$fetch" --manifest "$bad" --data-dir "$dir-bad" >"$scratch/$tool-bad.out" 2>&1
   check "$tool alone still catches a mismatch" equal "$?" 2
+  check "$tool alone names the mismatch" contains "$scratch/$tool-bad.out" \
+    'checksum mismatch: sample.csv'
 done
 
 # --- the request itself, seen by a stand-in curl
@@ -162,8 +176,10 @@ printf '%s\n' "\$@" >'$scratch/curl.args'
 exit 22
 SHIM
 chmod +x "$bin/curl"
-PATH=$bin "$fetch" --manifest "$good" --data-dir "$scratch/agent" >/dev/null 2>&1
+PATH=$bin "$fetch" --manifest "$good" --data-dir "$scratch/agent" >"$scratch/agent.out" 2>&1
 check 'a curl HTTP failure exits 3' equal "$?" 3
+check 'a curl HTTP failure reports curl exit 22' contains "$scratch/agent.out" \
+  'curl exit code: 22'
 check 'User-Agent names the project' contains "$scratch/curl.args" 'aad-pricer'
 agent=$(grep -A1 -F -- '--user-agent' "$scratch/curl.args" | tail -n 1)
 check 'User-Agent carries a version' contains <(printf '%s' "$agent") '/1.0'
