@@ -214,7 +214,7 @@ class Verdicts(unittest.TestCase):
         )
         self.assertEqual(done.returncode, 0, done.stdout)
         self.assertEqual(rows["script"][5], "caught")
-        self.assertFalse((project.root / "build/fault/release").exists())
+        self.assertFalse((project.root / "build/fault/copy/build/release").exists())
 
     def test_a_failing_baseline_is_reported_as_such(self):
         done, rows, _ = self.verdict(
@@ -252,6 +252,162 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(rows["half"][5], "not-applied", done.stdout)
         self.assertEqual(rows["after"][2:], ["pass", "2", "LIMIT IS WRONG", "caught"])
         self.assertEqual((project.root / "build/fault/copy/main.cpp").read_text(), MAIN)
+
+
+def script(text):
+    """A check with no build: a small shell script, run in the copy."""
+    return {"targets": [], "command": ["sh", "-c", text]}
+
+
+class ChecksAsTheyReallyRun(unittest.TestCase):
+    def outcome(self, name, *faults, before=None):
+        project = Project(name, list(faults)).committed()
+        if before:
+            before(project)
+        done = project.run()
+        return done, project.rows(done.stdout), project
+
+    def test_a_baseline_that_passes_with_another_exit(self):
+        check = 'grep -q "a - b" main.cpp && { echo PLANTED; exit 3; }; exit 2'
+        done, rows, _ = self.outcome(
+            "baseline-exit",
+            fault("right", [swap("a + b", "a - b")], baseline_exit=2, reason="PLANTED",
+                  **script(check)),
+            fault("exact", [swap("a + b", "a - b")], baseline_exit=2, mutated_exit=3,
+                  reason="PLANTED", **script(check)),
+            fault("wrong", [swap("a + b", "a - b")], baseline_exit=2, mutated_exit=4,
+                  reason="PLANTED", **script(check)),
+            fault("same", [swap("a + b", "a + b + 0")], baseline_exit=2, reason="PLANTED",
+                  **script(check)),
+            fault("strict", [swap("a + b", "a - b")], reason="PLANTED", **script(check)),
+        )
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertEqual(rows["right"][2:], ["pass", "3", "PLANTED", "caught"])
+        self.assertEqual(rows["exact"][5], "caught")
+        self.assertEqual(rows["wrong"][3:], ["3", "expected exit 4", "not-caught"])
+        self.assertEqual(rows["same"][3:], ["2", "command passed", "not-caught"])
+        self.assertEqual(rows["strict"][2:4], ["fail", "-"])
+        self.assertEqual(rows["strict"][5], "baseline-failed")
+
+    def test_a_mutated_exit_equal_to_the_baseline_is_refused(self):
+        entry = fault("bad", [swap("a + b", "a - b")], baseline_exit=3, mutated_exit=3)
+        done = Project("exit-clash", [entry]).committed().run()
+        self.assertEqual(done.returncode, 2, done.stdout)
+        self.assertIn("mutated_exit equals", done.stdout)
+
+    def test_the_git_field_gives_a_tree_of_its_own_and_leaves_the_real_index(self):
+        check = (
+            'test "$(git ls-files main.cpp)" = main.cpp || { echo NO TREE; exit 2; }; '
+            'grep -q "a - b" main.cpp && { echo PLANTED; exit 1; }; exit 0'
+        )
+        real_tree = fault("tree", [swap("a + b", "a - b")], git=True, reason="PLANTED",
+                          **script(check))
+        no_tree = fault("no-tree", [swap("a + b", "a - b")], reason="PLANTED", **script(check))
+        done, rows, project = self.outcome("git-tree", real_tree, no_tree)
+        self.assertEqual(rows["tree"][5], "caught", done.stdout)
+        self.assertEqual(rows["no-tree"][5], "baseline-failed", done.stdout)
+        self.assertFalse((project.root / "build/fault/copy/.git").exists())
+        index = subprocess.run(
+            ["git", "-C", str(project.root), "ls-files"], stdout=subprocess.PIPE, text=True
+        )
+        self.assertNotIn("build/", index.stdout)
+        self.assertIn("main.cpp", index.stdout)
+
+    def test_the_data_field_gives_a_private_copy_and_a_missing_one_is_baseline_failed(self):
+        check = (
+            'read line < data/sample.txt; test "$line" = real || { echo NO DATA; exit 2; }; '
+            'grep -q "a - b" main.cpp || exit 0; '
+            "echo overwritten > data/sample.txt; echo PLANTED; exit 1"
+        )
+        entry = fault("reads", [swap("a + b", "a - b")], data=True, reason="PLANTED",
+                      **script(check))
+
+        def add_data(project):
+            (project.root / "data").mkdir()
+            (project.root / "data/sample.txt").write_text("real\n")
+
+        done, rows, project = self.outcome("data-copy", entry, before=add_data)
+        self.assertEqual(rows["reads"][5], "caught", done.stdout)
+        self.assertEqual((project.root / "data/sample.txt").read_text(), "real\n")
+        self.assertFalse((project.root / "build/fault/copy/data").exists())
+        done, rows, _ = self.outcome("data-gone", entry)
+        self.assertEqual(rows["reads"][5], "baseline-failed", done.stdout)
+        self.assertIn("no data/", rows["reads"][4])
+
+    def test_a_line_of_another_file_is_appended_and_a_short_file_is_not_applied(self):
+        def add_data(project):
+            (project.root / "data").mkdir()
+            (project.root / "data/sample.txt").write_bytes(b"header\r\nROW\xa4\x40\r\nlast\r\n")
+
+        check = 'LC_ALL=C grep -q "ROW" notes.txt && { echo PLANTED; exit 1; }; exit 0'
+
+        def appended(line):
+            return [{"file": "notes.txt", "append_line_of": "data/sample.txt", "line": line}]
+
+        project = Project(
+            "append-line",
+            [
+                fault("second", appended(2), data=True, reason="PLANTED", **script(check)),
+                fault("beyond", appended(9), data=True, reason="PLANTED", **script(check)),
+            ],
+        )
+        (project.root / "notes.txt").write_text("notes\n")
+        project.commit()
+        add_data(project)
+        done = project.run()
+        rows = project.rows(done.stdout)
+        self.assertEqual(rows["second"][5], "caught", done.stdout)
+        self.assertEqual(rows["beyond"][5], "not-applied", done.stdout)
+        self.assertIn("has 3 lines", rows["beyond"][4])
+        self.assertEqual((project.root / "build/fault/copy/notes.txt").read_text(), "notes\n")
+
+    def test_output_files_are_searched_and_never_stale(self):
+        check = (
+            "mkdir -p build/logs; test ! -e build/logs/a.log || exit 9; "
+            'grep -q "a - b" main.cpp && { echo PLANTED > build/logs/a.log; exit 1; }; exit 0'
+        )
+        entry = fault("logged", [swap("a + b", "a - b")], output_files=["build/logs/*.log"],
+                      reason="PLANTED", **script(check))
+        done, rows, project = self.outcome("output-files", entry)
+        self.assertEqual(rows["logged"][3:], ["1", "PLANTED", "caught"], done.stdout)
+        self.assertIn("PLANTED", (project.root / "build/fault/logs/logged-mutated-run.txt")
+                      .read_text())
+        done = project.run()
+        self.assertEqual(project.rows(done.stdout)["logged"][5], "caught", done.stdout)
+
+    def test_a_preset_tool_finds_the_build_tree_and_the_tools_where_it_expects_them(self):
+        check = (
+            'test -f build/release/CMakeCache.txt || { echo NO BUILD; exit 2; }; '
+            'test -x build/tools/fake-tool || { echo NO TOOL; exit 2; }; '
+            'grep -q "a - b" main.cpp && { echo PLANTED; exit 1; }; exit 0'
+        )
+        entry = fault("preset", [swap("a + b", "a - b")], configure=["release"], reason="PLANTED",
+                      **script(check))
+
+        def add_tool(project):
+            (project.root / "build/tools").mkdir(parents=True)
+            (project.root / "build/tools/fake-tool").write_text("")
+            (project.root / "build/tools/fake-tool").chmod(0o755)
+
+        done, rows, project = self.outcome("preset-paths", entry, before=add_tool)
+        self.assertEqual(rows["preset"][5], "caught", done.stdout)
+        # A second run keeps the build tree: only the export's files are synced.
+        kept = project.root / "build/fault/copy/build/release/kept.txt"
+        kept.write_text("kept\n")
+        self.assertEqual(project.run().returncode, 0)
+        self.assertTrue(kept.exists())
+
+    def test_a_run_that_was_killed_leaves_no_fixture_behind(self):
+        entry = fault("real", [swap("a + b", "a - b")])
+        project = Project("killed", [entry]).committed()
+        self.assertEqual(project.run().returncode, 0)
+        copy = project.root / "build/fault/copy"
+        (copy / ".git").mkdir()
+        (copy / "data").mkdir()
+        (copy / "data/left.txt").write_text("left\n")
+        self.assertEqual(project.run().returncode, 0)
+        self.assertFalse((copy / ".git").exists())
+        self.assertFalse((copy / "data").exists())
 
 
 class Refusals(unittest.TestCase):
