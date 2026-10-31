@@ -107,6 +107,21 @@ TEST(Tolerance, BoundIsCriticalTimesSePlusBAndItIsInclusive) {
   EXPECT_FALSE(wider.within_bound);
 }
 
+// The ceiling limits SE itself. Critical and b widen condition 1 and must not widen this one: a
+// margin of more than 4 here would let a run through at over 4 times its registered noise, and a
+// run that sits on the reference shows nothing else.
+TEST(Tolerance, CeilingIsOnTheSeItselfAndItIsInclusive) {
+  const double se = BatchMeansStatistics(kBatches).standard_error;
+  const ToleranceResult at =
+      CheckAgainstReference(kBatches, 2.5, {.b = 0.25, .se_ceiling = se, .critical = 3});
+  EXPECT_TRUE(at.within_ceiling);
+  EXPECT_STREQ(at.failed_condition(), "none");
+  const ToleranceResult under =
+      CheckAgainstReference(kBatches, 2.5, {.b = 0.25, .se_ceiling = 0.999 * se, .critical = 3});
+  EXPECT_FALSE(under.within_ceiling);
+  EXPECT_STREQ(under.failed_condition(), "se-ceiling");
+}
+
 TEST(Tolerance, NanCannotPass) {
   const double nan = std::numeric_limits<double>::quiet_NaN();
   const std::vector<double> poisoned = {1.0, nan, 3.0, 4.0};
