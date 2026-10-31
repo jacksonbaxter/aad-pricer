@@ -466,6 +466,58 @@
       "mutated_exit": 1
     },
     {
+      "id": "check-host-mixing-table",
+      "kind": "check",
+      "covers": "several hosts in one table, aadp_results_table --one-table",
+      "bug": "Two files go into one table and one of them says it came from mac-m4max while the other says linux-zen1. The seed sits under no host directory, so the wrong-directory refusal cannot fire first. The bad input is the fault.",
+      "edits": [
+        {
+          "file": "fuzz/fuzz_results_file_seeds/stamped",
+          "find": "host_label: linux-zen1\n",
+          "replace": "host_label: mac-m4max\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_table"],
+      "command": [
+        "{build}/bin/aadp_results_table",
+        "--one-table",
+        "fuzz/fuzz_results_file_seeds/stamped",
+        "results/linux-zen1/harness-selftest-20261030T221613Z.txt"
+      ],
+      "detect": "test",
+      "reason": "^results_table: refusing to put hosts mac-m4max and linux-zen1 in one table$",
+      "timeout_s": 60,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-stamp-forbidden-string",
+      "kind": "check",
+      "covers": "forbidden-string refusal, aadp_results_stamp",
+      "bug": "A raw file carries a string the stamp was told to forbid, on a line the other privacy checks have no reason to flag. The bad input is the fault.",
+      "edits": [
+        {
+          "file": "fuzz/fuzz_results_file_seeds/raw_run",
+          "find": "cpu_model: seed\n",
+          "replace": "cpu_model: seed project-nightjar\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_stamp"],
+      "command": [
+        "{build}/bin/aadp_results_stamp",
+        "--raw=fuzz/fuzz_results_file_seeds/raw_run",
+        "--stderr={build}/no-capture.txt",
+        "--out={build}/stamp-forbidden-string.txt",
+        "--not-reportable=fault injection",
+        "--forbid=project-nightjar"
+      ],
+      "detect": "test",
+      "reason": "^results_stamp: refused: refusing to write: line \\d+ has a forbidden string;$",
+      "timeout_s": 60,
+      "mutated_exit": 1
+    },
+    {
       "id": "check-skipped-test",
       "kind": "check",
       "covers": "scripts/check.sh and run_tests.py: a skipped test fails its step",
