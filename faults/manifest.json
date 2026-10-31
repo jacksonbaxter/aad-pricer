@@ -464,6 +464,72 @@
       "reason": "results_table: harness-selftest-\\S+\\.txt is under mac-m4max but its header says otherwise",
       "timeout_s": 60,
       "mutated_exit": 1
+    },
+    {
+      "id": "check-skipped-test",
+      "kind": "check",
+      "covers": "scripts/check.sh and run_tests.py: a skipped test fails its step",
+      "bug": "A real test skips itself, so it stops testing anything while ctest still reports success.",
+      "edits": [
+        {
+          "file": "tests/data/decimal_test.cpp",
+          "find": "TEST(Count, RejectsWhatIsNotACount) {\n",
+          "replace": "TEST(Count, RejectsWhatIsNotACount) {\n  GTEST_SKIP() << \"unreliable on this host\";\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "release"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+release\\s.*^run_tests: skipped, not allowed: Count\\.RejectsWhatIsNotACount$",
+      "timeout_s": 1200,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "configure": ["release"],
+      "data": true,
+      "output_files": ["build/logs/check/check-release.log"]
+    },
+    {
+      "id": "check-header-refusal",
+      "kind": "check",
+      "covers": "results header refusal, aadp_results_stamp",
+      "bug": "The harness stops writing perf_instructions. It checks only the run keys itself, so the raw file reaches the stamp tool, which must refuse it.",
+      "edits": [
+        {
+          "file": "bench/harness.cpp",
+          "find": "  add(\"perf_instructions\", perf.instructions ? std::to_string(*perf.instructions) : \"missing\");\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "release", "--jobs", "6"],
+      "detect": "test",
+      "reason": "results_stamp: refused: header is missing perf_instructions",
+      "timeout_s": 1200,
+      "mutated_exit": 1,
+      "data": true
+    },
+    {
+      "id": "check-attribution",
+      "kind": "check",
+      "covers": "attribution on output, tools/chain_profile",
+      "bug": "chain_profile prints its counts without the attribution that the data licence requires on derived output.",
+      "edits": [
+        {
+          "file": "tools/chain_profile/main.cpp",
+          "find": "  aadp::write_attribution(std::cout);\n  std::cout << '\\n';\n  print_options(*options);\n",
+          "replace": "  print_options(*options);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "release", "--jobs", "6"],
+      "detect": "test",
+      "reason": "^run_tests: failed: ChainProfile\\.OutputCarriesTheFullAttribution$",
+      "timeout_s": 1200,
+      "mutated_exit": 1,
+      "data": true
     }
   ]
 }
