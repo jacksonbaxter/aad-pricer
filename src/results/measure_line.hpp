@@ -10,6 +10,7 @@
 #define AADP_RESULTS_MEASURE_LINE_HPP_
 
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <optional>
 #include <string>

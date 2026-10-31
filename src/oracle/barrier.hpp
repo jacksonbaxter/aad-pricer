@@ -8,6 +8,7 @@
 #define AADP_ORACLE_BARRIER_HPP_
 
 #include <cmath>
+#include <cstdint>
 
 #include "oracle/black_scholes.hpp"
 #include "rng/normal.hpp"

@@ -4,6 +4,7 @@
 #define AADP_TESTS_BENCH_FIXTURES_HPP_
 
 #include <array>
+#include <expected>
 #include <filesystem>
 #include <string>
 #include <string_view>

@@ -3,6 +3,7 @@
 #ifndef AADP_RESULTS_JSON_LITE_HPP_
 #define AADP_RESULTS_JSON_LITE_HPP_
 
+#include <cstdint>
 #include <expected>
 #include <span>
 #include <string>

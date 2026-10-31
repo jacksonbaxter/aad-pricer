@@ -6,6 +6,7 @@
 #ifndef AADP_RESULTS_STAMP_HPP_
 #define AADP_RESULTS_STAMP_HPP_
 
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <string_view>

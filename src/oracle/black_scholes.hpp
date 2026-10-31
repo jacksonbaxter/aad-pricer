@@ -10,6 +10,7 @@
 #define AADP_ORACLE_BLACK_SCHOLES_HPP_
 
 #include <cmath>
+#include <cstdint>
 
 #include "rng/normal.hpp"
 

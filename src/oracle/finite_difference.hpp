@@ -4,6 +4,7 @@
 #ifndef AADP_ORACLE_FINITE_DIFFERENCE_HPP_
 #define AADP_ORACLE_FINITE_DIFFERENCE_HPP_
 
+#include <cstdint>
 #include <span>
 
 #include "mc/gbm_kernels.hpp"
