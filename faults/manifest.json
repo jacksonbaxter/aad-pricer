@@ -765,6 +765,56 @@
       "reason": "(AddressSanitizer: global-buffer-overflow(?=[\\s\\S]*? in aadp::parse_decimal\\()|decimal\\.cpp:\\d+:\\d+: runtime error: signed integer overflow)",
       "timeout_s": 120,
       "output_files": ["build/fuzz/fault-fuzz/fuzz-taifex-futures/*", "build/fuzz/fault-fuzz/fuzz-taifex-futures/corpus/*"]
+    },
+    {
+      "id": "fuzz-plan",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_plan",
+      "bug": "The row decoder refuses only too many columns, so a short row indexes past the end of its field list.",
+      "edits": [
+        {
+          "file": "src/oracle/plan.cpp",
+          "find": "if (fields.size() != 10) return std::unexpected(\"expected 10 columns\");",
+          "replace": "if (fields.size() > 10) return std::unexpected(\"expected 10 columns\");"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_plan"],
+      "command": [
+        "{build}/bin/aadp_fuzz_plan", "-dict=fuzz/fuzz_plan.dict", "-seed=1",
+        "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-plan/",
+        "{build}/fault-fuzz/fuzz-plan/corpus", "fuzz/fuzz_plan_seeds"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: (heap-buffer-overflow|container-overflow)(?=[\\s\\S]*? in aadp::\\(anonymous namespace\\)::DecodeRow\\()",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-plan/*", "build/fuzz/fault-fuzz/fuzz-plan/corpus/*"]
+    },
+    {
+      "id": "fuzz-references",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_references",
+      "bug": "ParseDouble loses its length check, so a number field longer than the 64-byte buffer is copied past the end of it.",
+      "edits": [
+        {
+          "file": "src/oracle/decode_util.hpp",
+          "find": "if (text.empty() || text.size() >= kMaxNumberBytes) return std::nullopt;",
+          "replace": "if (text.empty()) return std::nullopt;"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_references"],
+      "command": [
+        "{build}/bin/aadp_fuzz_references", "-dict=fuzz/fuzz_references.dict", "-seed=1",
+        "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-references/",
+        "{build}/fault-fuzz/fuzz-references/corpus", "fuzz/fuzz_references_seeds"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: stack-buffer-overflow(?=[\\s\\S]*? in aadp::decode::ParseDouble\\()",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-references/*", "build/fuzz/fault-fuzz/fuzz-references/corpus/*"]
     }
   ]
 }
