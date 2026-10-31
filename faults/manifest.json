@@ -390,6 +390,80 @@
       "mutated_exit": 1,
       "git": true,
       "data": true
+    },
+    {
+      "id": "check-wall",
+      "kind": "check",
+      "covers": "-Wall in cmake/AadpWarnings.cmake",
+      "bug": "A leftover local variable is never read. -Wunused-variable comes only from -Wall among the project's flags.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "  std::int64_t mantissa = 0;\n",
+          "replace": "  const std::size_t total_digits = integer_digits + fraction_digits;\n  std::int64_t mantissa = 0;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data"],
+      "detect": "build",
+      "reason": "error: unused variable 'total_digits' \\[-Werror,-Wunused-variable\\]",
+      "timeout_s": 60
+    },
+    {
+      "id": "check-wextra",
+      "kind": "check",
+      "covers": "-Wextra in cmake/AadpWarnings.cmake",
+      "bug": "A refactor drops the sign check and leaves its parameter unused. -Wunused-parameter comes only from -Wextra among the project's flags.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "  if (scanned->negative && sign == SignPolicy::kNonNegative) {\n    return std::unexpected(NumberError::kNegative);\n  }\n  const double magnitude =",
+          "replace": "  const double magnitude ="
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data"],
+      "detect": "build",
+      "reason": "error: unused parameter 'sign' \\[-Werror,-Wunused-parameter\\]",
+      "timeout_s": 60
+    },
+    {
+      "id": "check-werror",
+      "kind": "check",
+      "covers": "-Werror in cmake/AadpWarnings.cmake",
+      "bug": "A function is marked deprecated while a caller still uses it. That warning is on with no flag at all, so only -Werror can fail the build.",
+      "edits": [
+        {
+          "file": "src/data/decimal.hpp",
+          "find": "std::expected<std::int64_t, NumberError> parse_count(std::string_view text);",
+          "replace": "[[deprecated(\"use parse_decimal\")]] std::expected<std::int64_t, NumberError> parse_count(\n    std::string_view text);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data"],
+      "detect": "build",
+      "reason": "error: 'parse_count' is deprecated: use parse_decimal \\[-Werror,-Wdeprecated-declarations\\]",
+      "timeout_s": 60
+    },
+    {
+      "id": "check-host-mixing",
+      "kind": "check",
+      "covers": "host-mixing refusal, aadp_results_table",
+      "bug": "A results file under results/mac-m4max/ says it came from linux-zen1, so the README's command would mix two hosts' numbers. The bad input is the fault.",
+      "edits": [
+        {
+          "file": "results/mac-m4max/harness-selftest-20261030T231633Z.txt",
+          "find": "host_label: mac-m4max\n",
+          "replace": "host_label: linux-zen1\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_table"],
+      "command": ["{build}/bin/aadp_results_table", "results/"],
+      "detect": "test",
+      "reason": "results_table: harness-selftest-\\S+\\.txt is under mac-m4max but its header says otherwise",
+      "timeout_s": 60,
+      "mutated_exit": 1
     }
   ]
 }
