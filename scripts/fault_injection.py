@@ -46,7 +46,7 @@ all required unless marked:
                once, overlapping matches counted, or the fault is not-applied
                {"file": <path>, "append": <text>}
   preset     CMake configure preset, which also names the build directory
-  targets    list of build targets
+  targets    list of build targets. Empty for a check that needs no build, such as a script
   command    argv run from the root of the copy. "{build}" expands to the build directory. No
              shell. Optional when detect is "build"; if present it must pass on the baseline
   detect     "test": the build must succeed, and the command must fail with reason matched in its
@@ -148,12 +148,13 @@ def validate_fault(fault, seen):
     for key in ("covers", "bug", "preset", "reason"):
         require(isinstance(fault[key], str) and fault[key], f"{fault_id}: bad {key}")
     require(NAME.match(fault["preset"]), f"{fault_id}: bad preset")
-    for key in ("targets", "command"):
-        value = fault.get(key, ["-"])
+    for key, value in (("targets", fault["targets"]), ("command", fault.get("command", ["-"]))):
         require(
-            isinstance(value, list) and value and all(isinstance(v, str) and v for v in value),
-            f"{fault_id}: {key} must be a non-empty list of text",
+            isinstance(value, list) and all(isinstance(v, str) and v for v in value),
+            f"{fault_id}: {key} must be a list of text",
         )
+    require(fault.get("command", ["-"]), f"{fault_id}: empty command")
+    require(fault["detect"] == "test" or fault["targets"], f"{fault_id}: build mode, no targets")
     timeout = fault["timeout_s"]
     require(
         isinstance(timeout, (int, float)) and not isinstance(timeout, bool) and timeout > 0,
@@ -241,9 +242,7 @@ def clear_dir(path):
 
 def export_pristine(args, commit, layout):
     clear_dir(layout.pristine)
-    layout.pristine.mkdir(parents=True)
     if args.source:
-        shutil.rmtree(layout.pristine)
         shutil.copytree(
             args.source,
             layout.pristine,
@@ -253,6 +252,7 @@ def export_pristine(args, commit, layout):
             ],
         )
         return
+    layout.pristine.mkdir(parents=True)
     archive = subprocess.Popen(
         ["git", "-C", str(REPO), "archive", "--format=tar", commit], stdout=subprocess.PIPE
     )
@@ -340,13 +340,17 @@ def seed_deps(layout):
     pinned = pins.read_text(errors="replace")
     cache = deps_cache(layout)
     for subbuild in sorted(layout.root.parent.glob("*/_deps/*-subbuild/CMakeLists.txt")):
-        found = URL_HASH.search(subbuild.read_text(errors="replace"))
         name = subbuild.parent.name[: -len("-subbuild")]
         origin = subbuild.parent.parent / f"{name}-src"
-        if found and found.group(1) in pinned and origin.is_dir():
-            if not (cache / f"{name}-src").exists():
-                cache.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(origin, cache / f"{name}-src", symlinks=True)
+        if (cache / f"{name}-src").exists() or not origin.is_dir():
+            continue
+        try:
+            found = URL_HASH.search(subbuild.read_text(errors="replace"))
+        except OSError:  # Another job is replacing that build directory.
+            continue
+        if found and found.group(1) in pinned:
+            cache.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(origin, cache / f"{name}-src", symlinks=True)
 
 
 def harvest_deps(layout, build_dir):
@@ -377,6 +381,8 @@ def configure(layout, preset):
 
 
 def build(layout, fault, stage, jobs):
+    if not fault["targets"]:
+        return 0, ""
     command = ["cmake", "--build", str(layout.build_dir(fault["preset"])), "--target"]
     command += [*fault["targets"], "--parallel", str(jobs)]
     log = layout.logs / f"{fault['id']}-{stage}-build.txt"
@@ -428,7 +434,7 @@ def apply_edits(layout, fault, touched):
 
 def first_error_line(output):
     for line in output.splitlines():
-        if "error" in line.lower():
+        if "error:" in line:
             return line.strip()
     lines = output.strip().splitlines()
     return lines[-1].strip() if lines else "no output"
@@ -468,6 +474,8 @@ def run_baseline(layout, fault, reason, jobs):
     code, output = build(layout, fault, "baseline", jobs)
     if code != 0:
         return f"baseline build failed: {first_error_line(output)}"
+    if fault["detect"] == "build" and reason.search(output):
+        return "the reason regex matches the passing baseline build"
     if "command" not in fault:
         return None
     code, output = run_command(layout, fault, "baseline")
@@ -610,7 +618,7 @@ def run_all(selected, layout, commit, args):
     export_pristine(args, commit, layout)
     sync_copy(layout)
     counts = dict.fromkeys(VERDICTS, 0)
-    for preset in sorted({fault["preset"] for fault in selected}):
+    for preset in sorted({fault["preset"] for fault in selected if fault["targets"]}):
         configure(layout, preset)
     for fault in selected:
         baseline, mutated, reason, verdict = run_fault(layout, fault, args.jobs)

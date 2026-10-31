@@ -201,6 +201,21 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(rows["wrong"][5], "not-caught")
         self.assertEqual(rows["fine"][3:], ["0", "build succeeded", "not-caught"])
 
+    def test_a_check_with_no_build_runs_directly(self):
+        done, rows, project = self.verdict(
+            "no-build",
+            fault(
+                "script",
+                [swap("a + b", "a - b")],
+                targets=[],
+                command=["grep", "-c", "a [+] b", "main.cpp"],
+                reason="^0$",
+            ),
+        )
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertEqual(rows["script"][5], "caught")
+        self.assertFalse((project.root / "build/fault/release").exists())
+
     def test_a_failing_baseline_is_reported_as_such(self):
         done, rows, _ = self.verdict(
             "baseline",
