@@ -815,6 +815,78 @@
       "reason": "AddressSanitizer: stack-buffer-overflow(?=[\\s\\S]*? in aadp::decode::ParseDouble\\()",
       "timeout_s": 120,
       "output_files": ["build/fuzz/fault-fuzz/fuzz-references/*", "build/fuzz/fault-fuzz/fuzz-references/corpus/*"]
+    },
+    {
+      "id": "fuzz-measure-line",
+      "kind": "fuzz",
+      "covers": "fuzz_measure_line",
+      "bug": "The line classifier loses its exact-match case, so input that ends right after the start or end marker reads one byte past the end.",
+      "edits": [
+        {
+          "file": "src/results/measure_line.cpp",
+          "find": "return line == prefix || (line.starts_with(prefix) && line[prefix.size()] == ' ');",
+          "replace": "return line.starts_with(prefix) && line[prefix.size()] == ' ';"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_measure_line"],
+      "command": [
+        "{build}/bin/fuzz_measure_line", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-measure-line/",
+        "{build}/fault-fuzz/fuzz-measure-line/corpus", "fuzz/fuzz_measure_line_seeds"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: heap-buffer-overflow(?=[\\s\\S]*? in aadp::results::\\(anonymous namespace\\)::kind_of\\()",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-measure-line/*", "build/fuzz/fault-fuzz/fuzz-measure-line/corpus/*"]
+    },
+    {
+      "id": "fuzz-results-file",
+      "kind": "fuzz",
+      "covers": "fuzz_results_file",
+      "bug": "The body parser loses its refusal of data before the first section, so such a line appends to back() of an empty list.",
+      "edits": [
+        {
+          "file": "src/results/results_file.cpp",
+          "find": "  if (file.sections.empty()) {\n    return \"data before the first section\";\n  }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_results_file"],
+      "command": [
+        "{build}/bin/fuzz_results_file", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-results-file/",
+        "{build}/fault-fuzz/fuzz-results-file/corpus", "fuzz/fuzz_results_file_seeds"
+      ],
+      "detect": "test",
+      "reason": "runtime error: applying non-zero offset \\d+ to null pointer(?=[\\s\\S]*? in aadp::results::\\(anonymous namespace\\)::parse_body_line\\()",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-results-file/*", "build/fuzz/fault-fuzz/fuzz-results-file/corpus/*"]
+    },
+    {
+      "id": "fuzz-results-json",
+      "kind": "fuzz",
+      "covers": "fuzz_results_json",
+      "bug": "An off-by-one in the unicode-escape bounds check lets a three-digit escape at the end of the input read one byte past the end.",
+      "edits": [
+        {
+          "file": "src/results/json_lite.cpp",
+          "find": "if (at_ + 5 >= text_.size() ||",
+          "replace": "if (at_ + 4 >= text_.size() ||"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_results_json"],
+      "command": [
+        "{build}/bin/fuzz_results_json", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-results-json/",
+        "{build}/fault-fuzz/fuzz-results-json/corpus", "fuzz/fuzz_results_json_seeds"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: heap-buffer-overflow(?=[\\s\\S]*? in aadp::results::\\(anonymous namespace\\)::Parser::parse_string\\()",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-results-json/*", "build/fuzz/fault-fuzz/fuzz-results-json/corpus/*"]
     }
   ]
 }
