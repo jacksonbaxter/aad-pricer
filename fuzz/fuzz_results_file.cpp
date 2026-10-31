@@ -1,6 +1,5 @@
 // Properties, beyond not crashing: a parsed file writes out and reads back equal, and whatever
 // the stamp accepts holds no dropped key, no host field and nothing the scan would find.
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -28,7 +27,7 @@ constexpr std::string_view kCapture =
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view text(std::bit_cast<const char*>(data), size);
+  const std::string_view text(reinterpret_cast<const char*>(data), size);
 
   const auto file = aadp::results::parse_results_file(text);
   if (file) {
@@ -58,9 +57,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (!stamped) {
       continue;
     }
-    FUZZ_ASSERT(stamped->find("host=") == std::string::npos);
-    FUZZ_ASSERT(stamped->find("\"host_name\"") == std::string::npos);
-    FUZZ_ASSERT(stamped->find("\"executable\"") == std::string::npos);
+    FUZZ_ASSERT(!stamped->contains("host="));
+    FUZZ_ASSERT(!stamped->contains("\"host_name\""));
+    FUZZ_ASSERT(!stamped->contains("\"executable\""));
     aadp::results::PrivacyConfig privacy;
     privacy.hostnames = {"fuzzbox"};
     FUZZ_ASSERT(aadp::results::scan_private_text(*stamped, privacy).empty());

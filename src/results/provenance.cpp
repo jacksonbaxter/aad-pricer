@@ -7,8 +7,14 @@
 
 #include <array>
 #include <cerrno>
+#include <cstddef>
+#include <filesystem>
 #include <fstream>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <system_error>
 #include <vector>
 
 #include "results/results_file.hpp"

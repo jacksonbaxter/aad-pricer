@@ -46,23 +46,23 @@ struct Terms {
         y1(log(barrier * barrier_ratio / strike) / sd + drift_sd),
         y2(log(barrier / m.spot) / sd + drift_sd) {}
 
-  Real Vanilla(const Real& x, double phi) const {
+  [[nodiscard]] Real Vanilla(const Real& x, double phi) const {
     return phi * (m.spot * df_q * normal_cdf(phi * x) - strike * df_r * normal_cdf(phi * (x - sd)));
   }
-  Real Reflected(const Real& y, double eta, double phi) const {
+  [[nodiscard]] Real Reflected(const Real& y, double eta, double phi) const {
     return phi * (m.spot * df_q * reflect_spot * normal_cdf(eta * y) -
                   strike * df_r * reflect_strike * normal_cdf(eta * (y - sd)));
   }
-  Real A(double phi) const { return Vanilla(x1, phi); }
-  Real B(double phi) const { return Vanilla(x2, phi); }
-  Real C(double eta, double phi) const { return Reflected(y1, eta, phi); }
-  Real D(double eta, double phi) const { return Reflected(y2, eta, phi); }
-  Real E(double eta) const {
+  [[nodiscard]] Real A(double phi) const { return Vanilla(x1, phi); }
+  [[nodiscard]] Real B(double phi) const { return Vanilla(x2, phi); }
+  [[nodiscard]] Real C(double eta, double phi) const { return Reflected(y1, eta, phi); }
+  [[nodiscard]] Real D(double eta, double phi) const { return Reflected(y2, eta, phi); }
+  [[nodiscard]] Real E(double eta) const {
     if (rebate == 0.0) return Real(0.0);
     return rebate * df_r *
            (normal_cdf(eta * (x2 - sd)) - reflect_strike * normal_cdf(eta * (y2 - sd)));
   }
-  Real F(double eta) const {
+  [[nodiscard]] Real F(double eta) const {
     if (rebate == 0.0) return Real(0.0);
     const Real lambda = sqrt(mu * mu + 2.0 * m.r / variance_rate);
     const Real z = log(barrier / m.spot) / sd + lambda * sd;

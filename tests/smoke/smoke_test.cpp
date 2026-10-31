@@ -32,7 +32,7 @@ TEST(Smoke, HdrHistogramRecords) {
 TEST(Smoke, BenchmarkLinks) {
   int calls = 0;
   benchmark::RegisterBenchmark("noop", [&calls](benchmark::State& state) {
-    for (const auto _ : state) {
+    for ([[maybe_unused]] const auto _ : state) {
       benchmark::DoNotOptimize(calls);
     }
     ++calls;

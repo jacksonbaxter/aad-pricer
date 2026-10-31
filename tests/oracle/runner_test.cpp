@@ -5,13 +5,17 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstddef>
 #include <fstream>
+#include <ios>
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "oracle/black_scholes.hpp"
 #include "oracle/catalog.hpp"
+#include "oracle/decode_util.hpp"
 #include "oracle/plan.hpp"
 #include "oracle/references.hpp"
 #include "oracle/tolerance.hpp"

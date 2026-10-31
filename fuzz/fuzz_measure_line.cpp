@@ -1,6 +1,5 @@
 // Properties, beyond not crashing: a parsed line sanitizes to text with no host in it, the
 // sanitized text parses back to itself, and every parsed value is in its stated range.
-#include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +16,7 @@
   } while (false)
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view text(std::bit_cast<const char*>(data), size);
+  const std::string_view text(reinterpret_cast<const char*>(data), size);
 
   const auto line = aadp::results::parse_measure_line(text);
   if (line) {
@@ -29,7 +28,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     FUZZ_ASSERT(line->kind == aadp::results::MeasureKind::kStart || line->exit_status.has_value());
 
     const std::string clean = aadp::results::sanitized_measure_line(*line);
-    FUZZ_ASSERT(clean.find("host=") == std::string::npos);
+    FUZZ_ASSERT(!clean.contains("host="));
     const auto again = aadp::results::parse_measure_line(clean);
     FUZZ_ASSERT(again.has_value());
     FUZZ_ASSERT(aadp::results::sanitized_measure_line(*again) == clean);

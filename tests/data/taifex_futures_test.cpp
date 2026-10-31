@@ -3,8 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstddef>
 #include <string>
 
+#include "data/taifex_csv.hpp"
 #include "taifex_fixture.hpp"
 
 namespace aadp::taifex {

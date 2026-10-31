@@ -12,7 +12,8 @@
 
 #include "quadrature.hpp"
 
-int main(int argc, char* const* argv) try {
+// NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
+int main(int argc, char** argv) try {
   if (argc != 3) {
     std::fprintf(stderr, "usage: %s --write <file> | --check <file>\n", argv[0]);
     return 2;

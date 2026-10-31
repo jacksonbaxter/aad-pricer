@@ -1,12 +1,18 @@
 #include "results/table.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <expected>
 #include <map>
 #include <optional>
+#include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "results/json_lite.hpp"
 #include "results/measure_line.hpp"
+#include "results/results_file.hpp"
 
 namespace aadp::results {
 namespace {
@@ -55,6 +61,65 @@ std::optional<std::string> mean_time(const JsonValue& root, std::string_view nam
   return single;
 }
 
+// Takes a file into the table, or says why it cannot go in. The first file names the host.
+std::expected<void, std::string> admit_file(const ResultsFile& file, std::string& host) {
+  if (auto valid = validate_stamped(file); !valid) {
+    return std::unexpected(valid.error());
+  }
+  const std::string label(file.required("host_label"));
+  if (host.empty()) {
+    host = label;
+  } else if (host != label) {
+    return std::unexpected("refusing to put hosts " + host + " and " + label + " in one table");
+  }
+  if (file.required("reportable") != "yes") {
+    return std::unexpected("not reportable: " + std::string(file.required("reportable_reason")));
+  }
+  return {};
+}
+
+// One table row per histogram in an admitted file.
+std::expected<std::string, std::string> file_rows(const ResultsFile& file) {
+  const ResultsSection* benchmark = file.section(kBenchmarkSection);
+  if (benchmark == nullptr) {
+    return std::unexpected("no benchmark section");
+  }
+  auto json = parse_json(benchmark->body);
+  if (!json) {
+    return std::unexpected("benchmark JSON: " + json.error());
+  }
+  const auto start = parse_measure_line(file.required("measure_start"));
+  const auto end = parse_measure_line(file.required("measure_end"));
+  if (!start || !end) {
+    return std::unexpected("a reportable file has a malformed measure line");
+  }
+  std::string rows;
+  bool any_histogram = false;
+  for (const ResultsSection& section : file.sections) {
+    if (!section.name.starts_with(kHistogramPrefix)) {
+      continue;
+    }
+    any_histogram = true;
+    const std::string name = section.name.substr(kHistogramPrefix.size());
+    const auto values = parse_histogram_body(section.body);
+    const auto mean = mean_time(*json, name);
+    if (!mean) {
+      return std::unexpected("no benchmark entry for " + name);
+    }
+    rows += "| ";
+    rows += cell(name) + " | " + cell(file.required("repetitions")) + " | " +
+            cell(histogram_value(values, "batches")) + " | " + cell(*mean) + " | " +
+            cell(histogram_value(values, "p50")) + " | " + cell(histogram_value(values, "p99")) +
+            " | " + cell(histogram_value(values, "max")) + " | " + cell(start->load1) + " | " +
+            cell(end->load1) + " | " + cell(file.required("commit").substr(0, kShortCommit)) +
+            " | " + cell(file.required("claim")) + " |\n";
+  }
+  if (!any_histogram) {
+    return std::unexpected("a results file has no histogram");
+  }
+  return rows;
+}
+
 }  // namespace
 
 std::expected<std::string, std::string> render_host_table(std::span<const ResultsFile> files) {
@@ -65,56 +130,15 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
   bool any_without_claim = false;
   std::string rows;
   for (const ResultsFile& file : files) {
-    if (auto valid = validate_stamped(file); !valid) {
-      return std::unexpected(valid.error());
-    }
-    const std::string label(file.required("host_label"));
-    if (host.empty()) {
-      host = label;
-    } else if (host != label) {
-      return std::unexpected("refusing to put hosts " + host + " and " + label + " in one table");
-    }
-    if (file.required("reportable") != "yes") {
-      return std::unexpected("not reportable: " + std::string(file.required("reportable_reason")));
+    if (auto admitted = admit_file(file, host); !admitted) {
+      return std::unexpected(admitted.error());
     }
     any_without_claim = any_without_claim || file.required("claim") == "none";
-
-    const ResultsSection* benchmark = file.section(kBenchmarkSection);
-    if (benchmark == nullptr) {
-      return std::unexpected("no benchmark section");
+    auto file_text = file_rows(file);
+    if (!file_text) {
+      return std::unexpected(file_text.error());
     }
-    auto json = parse_json(benchmark->body);
-    if (!json) {
-      return std::unexpected("benchmark JSON: " + json.error());
-    }
-    const auto start = parse_measure_line(file.required("measure_start"));
-    const auto end = parse_measure_line(file.required("measure_end"));
-    if (!start || !end) {
-      return std::unexpected("a reportable file has a malformed measure line");
-    }
-    bool any_histogram = false;
-    for (const ResultsSection& section : file.sections) {
-      if (!section.name.starts_with(kHistogramPrefix)) {
-        continue;
-      }
-      any_histogram = true;
-      const std::string name = section.name.substr(kHistogramPrefix.size());
-      const auto values = parse_histogram_body(section.body);
-      const auto mean = mean_time(*json, name);
-      if (!mean) {
-        return std::unexpected("no benchmark entry for " + name);
-      }
-      rows += "| ";
-      rows += cell(name) + " | " + cell(file.required("repetitions")) + " | " +
-              cell(histogram_value(values, "batches")) + " | " + cell(*mean) + " | " +
-              cell(histogram_value(values, "p50")) + " | " + cell(histogram_value(values, "p99")) +
-              " | " + cell(histogram_value(values, "max")) + " | " + cell(start->load1) + " | " +
-              cell(end->load1) + " | " + cell(file.required("commit").substr(0, kShortCommit)) +
-              " | " + cell(file.required("claim")) + " |\n";
-    }
-    if (!any_histogram) {
-      return std::unexpected("a results file has no histogram");
-    }
+    rows += *file_text;
   }
 
   std::string out = "### " + host + "\n\n";

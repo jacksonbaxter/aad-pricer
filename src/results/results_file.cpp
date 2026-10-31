@@ -1,6 +1,14 @@
 #include "results/results_file.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <expected>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "results/measure_line.hpp"
 

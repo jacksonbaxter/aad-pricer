@@ -7,16 +7,19 @@
 #include <array>
 #include <cctype>
 #include <cstdlib>
-#include <fstream>
-#include <sstream>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
 
 #ifdef __APPLE__
 #include <sys/sysctl.h>
-#include <sys/types.h>
 #endif
 #ifdef __linux__
 #include <sched.h>
+
+#include <fstream>
+#include <sstream>
 #endif
 
 namespace aadp::platform {

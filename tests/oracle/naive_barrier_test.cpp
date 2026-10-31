@@ -19,8 +19,10 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <ios>
 #include <span>
 #include <sstream>
 #include <string>
@@ -28,6 +30,7 @@
 
 #include "mc/batch_runner.hpp"
 #include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
 #include "oracle/finite_difference.hpp"
 #include "oracle/references.hpp"
 #include "oracle/tolerance.hpp"

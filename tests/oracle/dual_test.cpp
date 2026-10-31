@@ -11,9 +11,11 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace aadp::test {

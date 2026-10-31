@@ -3,9 +3,11 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "fixtures.hpp"
+#include "results/results_file.hpp"
 
 namespace aadp::results {
 namespace {

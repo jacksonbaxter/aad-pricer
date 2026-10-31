@@ -1,5 +1,8 @@
 #include "platform/host_label.hpp"
 
+#include <string>
+#include <string_view>
+
 #include "platform/cpu_info.hpp"
 
 namespace aadp::platform {

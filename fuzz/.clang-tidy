@@ -4,5 +4,8 @@ InheritParentConfig: true
 Checks:
   # A throw from fixture data stops the target at start, visibly, which is the right result.
   - '-bugprone-throwing-static-initialization'
+  # libFuzzer hands over unsigned bytes and the code under test reads chars. One cast per target,
+  # and char may alias anything.
+  - '-cppcoreguidelines-pro-type-reinterpret-cast'
   # A failed property must trap on its own line, so the crash report names it.
   - '-cppcoreguidelines-macro-usage'

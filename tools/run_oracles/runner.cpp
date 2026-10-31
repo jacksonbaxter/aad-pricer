@@ -1,20 +1,29 @@
 #include "runner.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include "mc/batch_runner.hpp"
 #include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
 #include "oracle/catalog.hpp"
+#include "oracle/decode_util.hpp"
 #include "oracle/finite_difference.hpp"
+#include "oracle/plan.hpp"
+#include "oracle/references.hpp"
 #include "oracle/tolerance.hpp"
 #include "support/dual.hpp"
 #include "support/mc_support.hpp"
@@ -51,7 +60,7 @@ using Table = std::vector<std::array<double, kStats>>;
 Instrument RequireInstrument(std::string_view text) {
   auto instrument = DecodeInstrument(text);
   if (!instrument) throw std::logic_error("undecodable instrument in a decoded plan");
-  return *std::move(instrument);
+  return *instrument;
 }
 
 Greek RequireGreek(std::string_view text) {
@@ -216,9 +225,9 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
       continue;
     }
     ++summary.run;
-    if (problems[i]) {
+    if (const std::optional<std::string>& problem = problems[i]) {
       ++summary.skipped;
-      out << Format("%-18s SKIPPED: %s\n", row.id.c_str(), problems[i]->c_str());
+      out << Format("%-18s SKIPPED: %s\n", row.id.c_str(), problem->c_str());
       continue;
     }
     const ToleranceResult result =

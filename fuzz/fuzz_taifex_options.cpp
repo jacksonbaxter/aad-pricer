@@ -4,7 +4,7 @@
 // - accepted rows have finite numbers, non-negative prices, volume and open interest, a positive
 //   strike, and fields and a session that match the raw columns of their own line
 // - the calibration filter returns only rows that meet each of its conditions
-#include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -13,6 +13,7 @@
 
 #include "../tests/data/taifex_fixture.hpp"
 #include "data/calibration_set.hpp"
+#include "data/taifex_csv.hpp"
 #include "data/taifex_options.hpp"
 #include "fuzz_taifex_check.hpp"
 
@@ -90,7 +91,7 @@ void check_read(std::string_view input) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(std::bit_cast<const char*>(data), size);
+  const std::string_view input(reinterpret_cast<const char*>(data), size);
   check_read(input);
   // Without the header most inputs stop at line 1.
   std::string with_header = t::kOptionsHeader;

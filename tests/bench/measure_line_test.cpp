@@ -78,8 +78,10 @@ TEST(MeasureLine, RefusesMissingAndRepeatedFields) {
 TEST(MeasureLine, RefusesBadExitStatus) {
   const std::string at = " at=2026-10-30T15:00:00Z";
   for (const std::string status : {"", "-1", "256", "1000", "x", "0x0", "1 2"}) {
-    EXPECT_FALSE(parse_measure_line("measure.sh: end load1=1 exit=" + status + at).has_value())
-        << "exit=" << status;
+    std::string line = "measure.sh: end load1=1 exit=";
+    line += status;
+    line += at;
+    EXPECT_FALSE(parse_measure_line(line).has_value()) << "exit=" << status;
   }
   EXPECT_TRUE(parse_measure_line("measure.sh: end load1=1 exit=255" + at).has_value());
   EXPECT_FALSE(parse_measure_line("measure.sh: start load1=1 exit=0" + at).has_value());

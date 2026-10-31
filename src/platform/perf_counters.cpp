@@ -1,7 +1,10 @@
 #include "platform/perf_counters.hpp"
 
 #include <cerrno>
+#include <cstdint>
 #include <cstring>
+#include <optional>
+#include <string>
 #include <system_error>
 
 #ifdef __linux__
@@ -145,8 +148,9 @@ constexpr const char* kScope =
     "process-wide, user and kernel, all threads, measured repetitions only";
 
 bool read_rusage(rusage_info_v4& info) {
-  return proc_pid_rusage(getpid(), RUSAGE_INFO_V4,
-                         static_cast<rusage_info_t*>(static_cast<void*>(&info))) == 0;
+  // The SDK types this buffer as void**, and the call writes a rusage_info_v4 through it.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): see above.
+  return proc_pid_rusage(getpid(), RUSAGE_INFO_V4, reinterpret_cast<rusage_info_t*>(&info)) == 0;
 }
 
 }  // namespace

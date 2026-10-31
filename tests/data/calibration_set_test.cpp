@@ -2,12 +2,15 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "data/taifex_csv.hpp"
+#include "data/taifex_options.hpp"
 
 namespace aadp {
 namespace {

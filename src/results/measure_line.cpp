@@ -5,9 +5,13 @@
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
+#include <expected>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 namespace aadp::results {
 namespace {
@@ -196,7 +200,7 @@ Problem apply_field(std::string_view key, std::string_view value, std::array<boo
   });
   for (const RequiredField& field : kFields) {
     if (key == field.key) {
-      Problem problem = repeated(field.slot);
+      const Problem problem = repeated(field.slot);
       return problem ? problem : field.apply(value, out);
     }
   }
@@ -204,7 +208,7 @@ Problem apply_field(std::string_view key, std::string_view value, std::array<boo
     if (key != field.key) {
       continue;
     }
-    if (Problem problem = repeated(field.slot)) {
+    if (const Problem problem = repeated(field.slot)) {
       return problem;
     }
     if (value.empty()) {

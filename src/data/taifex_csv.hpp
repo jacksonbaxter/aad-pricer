@@ -121,10 +121,11 @@ class RowFields {
 inline bool is_missing(std::string_view field) { return field.empty() || field == "-"; }
 
 // Every line after the header, one row or one error each. Bad rows do not stop the read.
-template <typename Row, typename ParseRow>
-void read_rows(RecordReader& records, std::size_t column_count, ParseRow parse_row,
+template <typename Row>
+void read_rows(RecordReader& records, std::size_t column_count, Row (*parse_row)(RowFields&),
                std::vector<Row>& rows, std::vector<ReadError>& errors) {
   while (records.next()) {
+    // NOLINTNEXTLINE(misc-const-correctness): parse_row writes to it, through a dependent call.
     RowFields fields(records, column_count);
     Row row = fields.ok() ? parse_row(fields) : Row{};
     if (const std::optional<ReadError>& failure = fields.error()) {

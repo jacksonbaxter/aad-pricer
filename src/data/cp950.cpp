@@ -1,5 +1,11 @@
 #include "data/cp950.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <string_view>
+#include <vector>
+
 namespace aadp::cp950 {
 
 std::expected<Unit, DecodeError> decode_unit(std::string_view bytes, std::size_t offset) {

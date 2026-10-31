@@ -1,6 +1,5 @@
 // Turns a binary's raw output and the stderr captured around it into a results file. The rules
 // are in results/stamp.hpp; this file does the reading and the writing.
-#include <unistd.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "platform/cpu_info.hpp"
 #include "platform/host_label.hpp"
@@ -56,7 +56,8 @@ bool write_file(const std::string& path, std::string_view text) {
 
 }  // namespace
 
-int main(int argc, char* const* argv) try {
+// NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
+int main(int argc, char** argv) try {
   std::string raw_path;
   std::string stderr_path;
   std::string out_path;

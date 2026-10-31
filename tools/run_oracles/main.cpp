@@ -6,18 +6,24 @@
 // run exits non-zero on any failed or skipped run row, or if the row count differs from K.
 #include <algorithm>
 #include <charconv>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
+#include <utility>
 
+#include "oracle/plan.hpp"
+#include "oracle/references.hpp"
 #include "runner.hpp"
 
 namespace {

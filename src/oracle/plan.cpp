@@ -3,8 +3,21 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <functional>
+#include <optional>
 #include <set>
+#include <string>
+#include <string_view>
 #include <type_traits>
+#include <utility>
+
+#include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
+#include "oracle/decode_util.hpp"
+#include "oracle/finite_difference.hpp"
 
 namespace aadp {
 namespace {

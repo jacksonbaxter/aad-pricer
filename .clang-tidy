@@ -61,6 +61,10 @@ CheckOptions:
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   # Google style allows a short if on one line.
   readability-braces-around-statements.ShortStatementLines: 1
+  # benchmark.h is that library's public header, whatever it splits into behind it. libc++ keeps
+  # <cmath> in private __math headers the check does not map back. The rest are macOS internals
+  # behind POSIX headers, and they do not exist on Linux.
+  misc-include-cleaner.IgnoreHeaders: 'benchmark/.*;cmath;__math/.*;sys/_types/.*;/_time\.h$;/_stdio\.h$;sys/fcntl\.h$'
   # EXPECT and ASSERT expand to branches that say nothing about a function's own logic.
   readability-function-cognitive-complexity.IgnoreMacros: true
   # De Morgan on floats loses NaN: !(x >= 0.0) is true for NaN, and x < 0.0 is not.

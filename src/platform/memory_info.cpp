@@ -2,6 +2,8 @@
 
 #include <sys/resource.h>
 
+#include <cstdint>
+
 namespace aadp::platform {
 
 std::uint64_t peak_rss_bytes() {

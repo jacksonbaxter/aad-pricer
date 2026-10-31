@@ -7,7 +7,8 @@
 # is missing. The default is release, for everything but the fuzz targets, then fuzz, for
 # those. A file seen in an earlier preset is not repeated. clang-tidy comes from
 # $CLANG_TIDY, or from PATH, and its findings change between releases, so a different
-# version is an error.
+# version is an error. One job can reach about 900 MB, so the default is 4 jobs rather than
+# one per core.
 #
 # Exit codes: 0 clean, 1 findings, 2 could not run. Output: one summary line per file with
 # findings, and the full text under build/logs/tidy/.
@@ -18,7 +19,7 @@ readonly PINNED_VERSION=23.1.4
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_root" || exit 2
 
-jobs=
+jobs=4
 presets=()
 while (($# > 0)); do
   case $1 in
@@ -41,9 +42,6 @@ while (($# > 0)); do
   esac
 done
 ((${#presets[@]} > 0)) || presets=(release fuzz)
-if [[ -z $jobs ]]; then
-  jobs=$(getconf _NPROCESSORS_ONLN) || jobs=2
-fi
 
 missing=()
 clang_tidy=${CLANG_TIDY:-clang-tidy}

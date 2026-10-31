@@ -58,7 +58,7 @@ TEST(Histogram, PublishesPercentilesOfBatchesAtOrAboveTheGate) {
   std::vector<std::string> labels;
   for (const PublishedValue& value : values) {
     labels.push_back(value.label);
-    ASSERT_TRUE(value.ns.has_value()) << value.label;
+    if (!value.ns) FAIL() << value.label;
     EXPECT_GE(*value.ns, 1000) << value.label;
     EXPECT_LE(*value.ns, 2010) << value.label;
   }

@@ -6,8 +6,7 @@
 #include <string>
 
 #include "fixtures.hpp"
-#include "results/json_lite.hpp"
-#include "results/measure_line.hpp"
+#include "results/results_file.hpp"
 
 namespace aadp::results {
 namespace {

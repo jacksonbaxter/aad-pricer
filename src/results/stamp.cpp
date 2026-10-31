@@ -3,11 +3,16 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <expected>
 #include <optional>
+#include <span>
 #include <string>
+#include <string_view>
+#include <utility>
 
 #include "results/json_lite.hpp"
 #include "results/measure_line.hpp"
+#include "results/privacy.hpp"
 #include "results/results_file.hpp"
 
 namespace aadp::results {

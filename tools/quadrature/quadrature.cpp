@@ -3,14 +3,20 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <limits>
 #include <numbers>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "oracle/barrier.hpp"
 #include "oracle/black_scholes.hpp"
 #include "oracle/catalog.hpp"
+#include "oracle/finite_difference.hpp"
 #include "oracle/geometric_asian.hpp"
 #include "rng/normal.hpp"
 #include "support/dual.hpp"
@@ -394,7 +400,7 @@ std::vector<double> ArithmeticAsianRichardson(const AsianInputs& in, std::uint32
   std::vector<double> diagonal;
   for (int level = 0; level < levels; ++level) {
     AsianInputs at_level = in;
-    at_level.steps = first_steps * (1 << level);
+    at_level.steps = first_steps << static_cast<std::uint32_t>(level);
     double value = ArithmeticAsianCall(at_level, resolution).value;
     std::vector<double> updated{value};
     for (std::size_t k = 1; k <= column.size(); ++k) {

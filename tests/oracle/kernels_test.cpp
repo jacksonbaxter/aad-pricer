@@ -3,11 +3,13 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
-#include "mc/batch_runner.hpp"
 #include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
 #include "oracle/finite_difference.hpp"
+#include "rng/philox.hpp"
 #include "support/dual.hpp"
 #include "support/mc_support.hpp"
 
@@ -107,10 +109,11 @@ TEST(Kernels, PathwiseGreeksMatchPathDifferences) {
       const Dual dual = DiscountedPayoff<Dual>(c, ActiveMarket(kMarket), u);
       if (dual.value == 0.0) continue;
       const double base = std::fabs(dual.value);
-      if (c.product == Product::kEuropean || c.product == Product::kAsianArithmetic ||
-          c.product == Product::kAsianGeometric) {
-        // Skip a path that sits within the bump of the payoff kink.
-        if (base < 1e-3) continue;
+      // Skip a path that sits within the bump of the payoff kink.
+      if ((c.product == Product::kEuropean || c.product == Product::kAsianArithmetic ||
+           c.product == Product::kAsianGeometric) &&
+          base < 1e-3) {
+        continue;
       }
       for (const Greek greek :
            {Greek::kDelta, Greek::kVega, Greek::kRho, Greek::kDividendRho, Greek::kTheta}) {

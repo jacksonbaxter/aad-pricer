@@ -3,7 +3,6 @@
 // - units cover the input exactly, contiguously, and each is a legal shape
 // - the number of units lies between size / 2 and size
 // - an error lies inside the input, its kind fits the bytes there, and the prefix before it decodes
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -48,7 +47,7 @@ Walk walk(const std::uint8_t* data, std::size_t size) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view bytes(std::bit_cast<const char*>(data), size);
+  const std::string_view bytes(reinterpret_cast<const char*>(data), size);
   const auto units = aadp::cp950::decode(bytes);
   const Walk reference = walk(data, size);
   AADP_FUZZ_CHECK(units.has_value() == reference.accepted);

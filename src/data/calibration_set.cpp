@@ -2,8 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <expected>
 #include <iterator>
+#include <span>
+#include <string_view>
 #include <utility>
+#include <vector>
+
+#include "data/taifex_csv.hpp"
+#include "data/taifex_options.hpp"
 
 namespace aadp {
 

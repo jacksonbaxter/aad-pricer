@@ -1,9 +1,18 @@
 #include "latency.hpp"
 
+#include <hdr/hdr_histogram.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
+#include <expected>
+#include <functional>
+#include <optional>
+#include <span>
+#include <string>
+#include <vector>
 
 namespace aadp::bench {
 namespace {

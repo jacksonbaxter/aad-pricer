@@ -1,6 +1,11 @@
 #include "data/taifex_options.hpp"
 
 #include <array>
+#include <expected>
+#include <string_view>
+
+#include "data/decimal.hpp"
+#include "data/taifex_csv.hpp"
 
 namespace aadp::taifex {
 

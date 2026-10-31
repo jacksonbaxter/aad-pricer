@@ -2,6 +2,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <expected>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace aadp::results {
 namespace {

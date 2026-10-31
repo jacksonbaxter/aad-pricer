@@ -3,8 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstddef>
 #include <string>
 
+#include "data/taifex_csv.hpp"
 #include "taifex_fixture.hpp"
 
 namespace aadp::taifex {
@@ -315,7 +317,11 @@ TEST(OptionsReader, NulInANumberCannotTruncateIt) {
 TEST(OptionsReader, AcceptsCrlfAndLfLineEnds) {
   const std::string good = join(option_fields());
   for (const std::string end : {"\r\n", "\n"}) {
-    const auto file = read_options(kOptionsHeader + end + good + end + good + end);
+    std::string input(kOptionsHeader);
+    for (const std::string& line : {end, good + end, good + end}) {
+      input += line;
+    }
+    const auto file = read_options(input);
     ASSERT_TRUE(file.has_value());
     EXPECT_EQ(file->rows.size(), 2U);
     EXPECT_TRUE(file->row_errors.empty());
@@ -361,7 +367,9 @@ TEST(OptionsReader, NumbersAreAlwaysFinite) {
   ASSERT_TRUE(file.has_value());
   ASSERT_EQ(file->rows.size(), 1U);
   EXPECT_TRUE(std::isfinite(file->rows[0].strike));
-  EXPECT_TRUE(std::isfinite(*file->rows[0].settlement_price));
+  const auto settlement = file->rows[0].settlement_price;
+  if (!settlement) FAIL() << "no settlement price";
+  EXPECT_TRUE(std::isfinite(*settlement));
 }
 
 }  // namespace

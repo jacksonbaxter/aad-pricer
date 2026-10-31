@@ -2,7 +2,14 @@
 
 #include <array>
 #include <cstdio>
+#include <expected>
+#include <functional>
 #include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include "oracle/decode_util.hpp"
 
 namespace aadp {
 namespace {

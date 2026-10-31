@@ -2,13 +2,20 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
+#include <expected>
+#include <filesystem>
 #include <fstream>
 #include <ios>
 #include <iterator>
-#include <utility>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
 
 #include "data/cp950.hpp"
+#include "data/decimal.hpp"
 
 namespace aadp::taifex {
 

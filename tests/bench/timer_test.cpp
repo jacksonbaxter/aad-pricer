@@ -3,7 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <vector>
+#include <cstdint>
+#include <span>
 
 namespace aadp::platform {
 namespace {

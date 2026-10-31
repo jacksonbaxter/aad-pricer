@@ -3,9 +3,14 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
+#include <ios>
 #include <sstream>
 #include <string>
+#include <vector>
 
+#include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
+#include "oracle/decode_util.hpp"
 #include "oracle/plan.hpp"
 #include "oracle/references.hpp"
 
@@ -135,7 +140,7 @@ TEST(DecodePlan, KeepsADeclaredKThatDiffersFromTheRows) {
 TEST(DecodeInstrument, ReadsEveryField) {
   const auto in = DecodeInstrument(
       "one_step:S0=100;K=90;H=95;sigma=0.3;r=0.1;q=0.02;T=0.2;m=50;type=put;spot=1");
-  ASSERT_TRUE(in.has_value());
+  if (!in) FAIL() << "did not decode";
   EXPECT_EQ(in->contract.product, Product::kDownOutOneStep);
   EXPECT_EQ(in->contract.type, OptionType::kPut);
   EXPECT_EQ(in->contract.strike, 90.0);

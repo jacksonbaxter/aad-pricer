@@ -1,6 +1,5 @@
 // Plan decoder. Properties: no crash on any bytes, an error always says why, and an accepted plan
 // meets every invariant the runner relies on and survives a round trip through its encoder.
-#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -10,6 +9,7 @@
 #include <vector>
 
 #include "mc/gbm_kernels.hpp"
+#include "oracle/finite_difference.hpp"
 #include "oracle/plan.hpp"
 
 namespace {
@@ -28,7 +28,7 @@ void PriceOnePath(const aadp::Instrument& instrument) {
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) {
-  const std::string_view input(std::bit_cast<const char*>(data), size);
+  const std::string_view input(reinterpret_cast<const char*>(data), size);
   const auto plan = aadp::DecodePlan(input);
   if (!plan) {
     Require(!plan.error().message.empty());

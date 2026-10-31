@@ -32,7 +32,9 @@ struct Dual {
   std::array<double, kTangents> tangent{};
 
   constexpr Dual() = default;
-  constexpr Dual(double v) : value(v) {}  // NOLINT: mixed arithmetic with double is the point.
+  // Implicit, because mixed arithmetic with double is the point.
+  // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor,misc-explicit-constructor): see above.
+  constexpr Dual(double v) : value(v) {}
 
   static constexpr Dual Variable(double v, std::size_t slot) {
     Dual x(v);

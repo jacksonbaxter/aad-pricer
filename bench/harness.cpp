@@ -7,14 +7,22 @@
 #include <charconv>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <expected>
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 #include "build_info.hpp"
+#include "latency.hpp"
 #include "platform/affinity.hpp"
 #include "platform/cpu_info.hpp"
 #include "platform/fp_state.hpp"
@@ -24,6 +32,7 @@
 #include "platform/simd_info.hpp"
 #include "platform/timer.hpp"
 #include "results/provenance.hpp"
+#include "results/results_file.hpp"
 
 namespace aadp::bench {
 namespace {
@@ -72,7 +81,7 @@ void run_batches(benchmark::State& state, WorkloadRun& run) {
   std::vector<std::uint64_t>& ticks = run.calls.emplace_back();
   ticks.reserve(static_cast<std::size_t>(state.max_iterations));
   run.counters.start();
-  for (const auto _ : state) {
+  for ([[maybe_unused]] const auto _ : state) {
     const std::uint64_t start = read_ticks();
     run.workload.run(run.units);
     const std::uint64_t span = read_ticks() - start;
@@ -108,7 +117,7 @@ std::vector<results::HeaderField> build_header(
   add("simd_cmake_target", std::string(build_info::simd_target));
   add("simd_target", platform::simd_target_name());
   add("simd_double_lanes", std::to_string(platform::simd_double_lanes()));
-  add("pinning_state", platform::pinning_state_text(affinity));
+  add("pinning_state", std::string(platform::pinning_state_text(affinity)));
   add("pinned_cpus", affinity.pinned ? platform::format_cpu_list(affinity.cpus) : "none");
   add("pin_method", pin_method);
   add("observed_cpu", affinity.current ? std::to_string(*affinity.current) : "unavailable");

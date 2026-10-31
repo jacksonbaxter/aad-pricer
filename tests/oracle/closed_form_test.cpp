@@ -9,12 +9,17 @@
 // - O7: BGK 1997 Table 2.1, 4.398, closed form 4.3975025600.
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 #include "oracle/barrier.hpp"
 #include "oracle/black_scholes.hpp"
 #include "oracle/geometric_asian.hpp"
+#include "rng/normal.hpp"
 #include "support/dual.hpp"
 
 namespace aadp {
@@ -516,11 +521,8 @@ void ExpectGreeksMatchCentralDifference(const MarketParams<double>& m, Value val
   EXPECT_NEAR(result.value, value(m), 1e-12);
   const auto bumped = [&](int slot, double bump) {
     MarketParams<double> b = m;
-    (slot == 0   ? b.spot
-     : slot == 1 ? b.sigma
-     : slot == 2 ? b.r
-     : slot == 3 ? b.q
-                 : b.maturity) += bump;
+    const std::array<double*, 5> fields = {&b.spot, &b.sigma, &b.r, &b.q, &b.maturity};
+    *fields[static_cast<std::size_t>(slot)] += bump;
     return value(b);
   };
   for (int slot = 0; slot < 5; ++slot) {

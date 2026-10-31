@@ -7,11 +7,11 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
 
-#include "oracle/barrier.hpp"
 #include "oracle/black_scholes.hpp"
 #include "oracle/geometric_asian.hpp"
 

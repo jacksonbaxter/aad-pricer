@@ -10,6 +10,8 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 #include "results/results_file.hpp"
@@ -40,7 +42,8 @@ void collect(const fs::path& path, std::vector<fs::path>& out) {
 
 }  // namespace
 
-int main(int argc, char* const* argv) try {
+// NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
+int main(int argc, char** argv) try {
   bool one_table = false;
   std::vector<fs::path> paths;
   for (int i = 1; i < argc; ++i) {

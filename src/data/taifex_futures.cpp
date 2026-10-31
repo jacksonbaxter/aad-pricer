@@ -1,6 +1,12 @@
 #include "data/taifex_futures.hpp"
 
 #include <array>
+#include <expected>
+#include <optional>
+#include <string_view>
+
+#include "data/decimal.hpp"
+#include "data/taifex_csv.hpp"
 
 namespace aadp::taifex {
 

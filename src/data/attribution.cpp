@@ -1,6 +1,8 @@
 #include "data/attribution.hpp"
 
+#include <ios>
 #include <ostream>
+#include <string_view>
 
 namespace aadp {
 

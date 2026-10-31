@@ -5,14 +5,19 @@
 #include <array>
 #include <cerrno>
 #include <cstdio>
-#include <cstring>
-#include <system_error>
+#include <expected>
+#include <span>
+#include <string>
+#include <string_view>
 
 #ifdef __linux__
 #include <sched.h>
+
+#include <system_error>
 #elifdef __APPLE__
 #include <pthread.h>
 #include <pthread/qos.h>
+#include <sys/qos.h>
 #endif
 
 namespace aadp::platform {
@@ -76,7 +81,7 @@ int process_nice() {
   return getpriority(PRIO_PROCESS, 0);
 }
 
-std::string pinning_state_text(const AffinityState& state) {
+std::string_view pinning_state_text(const AffinityState& state) {
   return state.pinned ? "pinned" : "not pinned";
 }
 

@@ -1,7 +1,10 @@
 #include "platform/fp_state.hpp"
 
 #include <array>
+#include <cstdint>
 #include <cstdio>
+#include <expected>
+#include <string>
 
 namespace aadp::platform {
 

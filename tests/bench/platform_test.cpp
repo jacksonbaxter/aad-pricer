@@ -1,8 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <chrono>
+#include <cstddef>
 #include <cstdint>
-#include <fstream>
 #include <limits>
 #include <string>
 #include <vector>
@@ -21,6 +20,8 @@
 #endif
 #ifdef __linux__
 #include <sched.h>
+
+#include <chrono>
 #endif
 
 namespace aadp::platform {
@@ -243,7 +244,7 @@ TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
   EXPECT_EQ(report.source, "proc_pid_rusage");
   EXPECT_NE(report.scope.find("process-wide"), std::string::npos);
   ASSERT_TRUE(report.cycles.has_value()) << report.note;
-  ASSERT_TRUE(report.instructions.has_value()) << report.note;
+  if (!report.instructions) FAIL() << report.note;
   EXPECT_GT(*report.instructions, 1'000'000U);
 }
 #endif

@@ -8,8 +8,10 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 #include "fixtures.hpp"
 #include "results/results_file.hpp"
@@ -98,9 +100,10 @@ TEST(HarnessSelftest, CountersCoverOnlyTheMeasuredRepetitions) {
   ASSERT_EQ(run(selftest(dir / "raw.txt", kFastArgs)), 0);
   const auto file = results::parse_results_file(slurp(dir / "raw.txt"));
   ASSERT_TRUE(file.has_value()) << file.error();
-  const std::string cycles(*file->value("perf_cycles"));
-  if (cycles != "missing") {
-    EXPECT_LT(std::stod(cycles), 1e9);
+  const auto cycles = file->value("perf_cycles");
+  if (!cycles) FAIL() << "no perf_cycles field";
+  if (*cycles != "missing") {
+    EXPECT_LT(std::stod(std::string(*cycles)), 1e9);
   }
 }
 

@@ -2,11 +2,17 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstdio>
+#include <ctime>
 #include <numeric>
+#include <span>
+#include <string>
 #include <vector>
 
-#ifdef __x86_64__
+#ifdef __APPLE__
+#include <mach/mach_time.h>
+#elifdef __x86_64__
 #include <cpuid.h>
 #endif
 

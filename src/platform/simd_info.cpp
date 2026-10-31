@@ -3,6 +3,9 @@
 #include <hwy/highway.h>
 #include <hwy/targets.h>
 
+#include <cstddef>
+#include <string>
+
 HWY_BEFORE_NAMESPACE();
 
 namespace aadp::platform::HWY_NAMESPACE {

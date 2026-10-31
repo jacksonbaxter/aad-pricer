@@ -1,6 +1,7 @@
 // N-thread equals one-thread, bit for bit, on every kernel. Small enough to run under TSan.
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -9,7 +10,9 @@
 
 #include "mc/batch_runner.hpp"
 #include "mc/gbm_kernels.hpp"
+#include "oracle/black_scholes.hpp"
 #include "oracle/finite_difference.hpp"
+#include "rng/philox.hpp"
 #include "support/dual.hpp"
 #include "support/mc_support.hpp"
 

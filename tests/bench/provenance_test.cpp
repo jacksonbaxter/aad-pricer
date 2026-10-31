@@ -6,8 +6,10 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <string_view>
 
 #include "fixtures.hpp"
+#include "results/results_file.hpp"
 
 namespace aadp::results {
 namespace {

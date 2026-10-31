@@ -5,7 +5,7 @@
 namespace {
 
 void BM_SumOfOnes(benchmark::State& state) {
-  for (const auto _ : state) {
+  for ([[maybe_unused]] const auto _ : state) {
     benchmark::DoNotOptimize(aadp::smoke::sum_of_ones());
   }
 }

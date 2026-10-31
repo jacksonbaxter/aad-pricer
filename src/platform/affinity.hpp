@@ -23,7 +23,7 @@ AffinityState read_affinity();
 // Pins the calling thread and verifies by reading the mask back. Always fails on macOS.
 std::expected<AffinityState, std::string> pin_to_cpu(int cpu);
 
-std::string pinning_state_text(const AffinityState& state);
+std::string_view pinning_state_text(const AffinityState& state);
 
 // The nice value of this process. zsh runs background jobs at +5 by default, which is easy to
 // inherit without noticing and changes what a benchmark competes with.
