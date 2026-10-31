@@ -1,5 +1,5 @@
 // Runs the real binaries, because the refusals only matter if they survive the tools around
-// them: exit status, and no output file on refusal.
+// them: exit status, the stated reason, and no output file on refusal.
 #include <gtest/gtest.h>
 #include <sys/resource.h>
 #include <sys/wait.h>  // IWYU pragma: keep
@@ -47,6 +47,15 @@ std::string slurp(const fs::path& path) {
 }
 
 std::string quoted(const fs::path& path) { return "'" + path.string() + "'"; }
+
+std::string stderr_to_file(const fs::path& dir) { return " 2>" + quoted(dir / "err.txt"); }
+
+// Every refusal of a tool shares its exit status, so a test of one refusal has to read the reason
+// too, or it passes when the tool stops for something else.
+void expect_reason(const fs::path& dir, std::string_view reason) {
+  const std::string said = slurp(dir / "err.txt");
+  EXPECT_NE(said.find(reason), std::string::npos) << "wanted: " << reason << "\nsaid: " << said;
+}
 
 std::string short_name() {
   std::array<char, 256> name{};
@@ -134,7 +143,8 @@ TEST(HarnessSelftest, MacOsHeaderSaysNotPinned) {
 
 TEST(HarnessSelftest, RefusesToPretendToPinOnMacOs) {
   const fs::path dir = fresh_dir();
-  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --pin-cpu=0 2>/dev/null")), 6);
+  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --pin-cpu=0" + stderr_to_file(dir))), 6);
+  expect_reason(dir, "macOS has no way to pin a thread to CPU 0");
 }
 #endif
 
@@ -162,7 +172,8 @@ TEST(HarnessSelftest, RefusesAHistogramOfBatchesTooShortToResolve) {
 
 TEST(HarnessSelftest, ReportableRefusesAnUnknownTree) {
   const fs::path dir = fresh_dir();
-  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --reportable 2>/dev/null")), 4);
+  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --reportable" + stderr_to_file(dir))), 4);
+  expect_reason(dir, "reportable run refused: tree is unknown");
 }
 
 TEST(HarnessSelftest, ReportableRefusesADirtyTree) {
@@ -173,12 +184,15 @@ TEST(HarnessSelftest, ReportableRefusesADirtyTree) {
                       "-m first"),
             0);
   std::ofstream(dir / "dirty.txt") << "x\n";
-  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --reportable 2>/dev/null")), 4);
+  EXPECT_EQ(run(selftest(dir / "raw.txt", kFastArgs + " --reportable" + stderr_to_file(dir))), 4);
+  expect_reason(dir, "reportable run refused: tree is dirty");
 }
 
+// The harness passes what it does not know on to Google Benchmark, so this is that library's text.
 TEST(HarnessSelftest, RejectsAnUnknownFlag) {
   const fs::path dir = fresh_dir();
-  EXPECT_EQ(run(selftest(dir / "raw.txt", " --no-such-flag 2>/dev/null")), 2);
+  EXPECT_EQ(run(selftest(dir / "raw.txt", " --no-such-flag" + stderr_to_file(dir))), 2);
+  expect_reason(dir, "unrecognized command-line flag: --no-such-flag");
 }
 
 std::string stamp_command(const fs::path& dir, const std::string& mode) {
@@ -194,7 +208,7 @@ TEST(Stamp, ToolWritesNothingOnRefusal) {
   EXPECT_EQ(run(stamp_command(dir, "--reportable")), 1);
   EXPECT_FALSE(fs::exists(dir / "out.txt"));
   EXPECT_FALSE(fs::exists(dir / "out.txt.tmp"));
-  EXPECT_NE(slurp(dir / "err.txt").find("refused"), std::string::npos);
+  expect_reason(dir, "refused: no measure.sh start line");
 }
 
 TEST(Stamp, ToolRefusesAFileFromAnotherHost) {
@@ -230,7 +244,12 @@ TEST(Stamp, ToolRefusesAForbiddenString) {
   const fs::path dir = fresh_dir();
   ASSERT_EQ(run(selftest(dir / "raw.txt", kFastArgs)), 0);
   std::ofstream(dir / "stderr.txt") << "";
+  // The stamp accepts this input as it stands, so the refusal below can only come from the flag.
+  ASSERT_EQ(run(stamp_command(dir, "--not-reportable=x")), 0) << slurp(dir / "err.txt");
+  fs::remove(dir / "out.txt");
   EXPECT_EQ(run(stamp_command(dir, "--not-reportable=x --forbid=harness_selftest")), 1);
+  expect_reason(dir, "refused: refusing to write: line ");
+  expect_reason(dir, " has a forbidden string;");
   EXPECT_FALSE(fs::exists(dir / "out.txt"));
 }
 
@@ -262,16 +281,20 @@ TEST(Table, ToolRefusesTwoHostsInOneTable) {
   std::ofstream(dir / "in" / "a.txt") << text_of(stamped_file("linux-zen1"));
   std::ofstream(dir / "in" / "b.txt") << text_of(stamped_file("mac-m4max"));
   EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " --one-table " + quoted(dir / "in") + " > " +
-                quoted(dir / "table.md") + " 2>/dev/null"),
+                quoted(dir / "table.md") + stderr_to_file(dir)),
             1);
+  expect_reason(dir, "refusing to put hosts linux-zen1 and mac-m4max in one table");
   EXPECT_EQ(slurp(dir / "table.md"), "");
 }
 
 TEST(Table, ToolRefusesAFileUnderTheWrongHostDirectory) {
   const fs::path dir = fresh_dir();
-  fs::create_directories(dir / "mac-m4max");
-  std::ofstream(dir / "mac-m4max" / "a.txt") << text_of(stamped_file("linux-zen1"));
-  EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir) + " 2>/dev/null >/dev/null"), 1);
+  fs::create_directories(dir / "in" / "mac-m4max");
+  std::ofstream(dir / "in" / "mac-m4max" / "a.txt") << text_of(stamped_file("linux-zen1"));
+  EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir / "in") + " >/dev/null" +
+                stderr_to_file(dir)),
+            1);
+  expect_reason(dir, "a.txt is under mac-m4max but its header says otherwise");
 }
 
 }  // namespace
