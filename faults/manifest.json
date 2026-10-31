@@ -715,6 +715,56 @@
       "reason": "property failed: (units\\.has_value\\(\\) == reference\\.accepted|error\\.position == reference\\.stopped_at)",
       "timeout_s": 120,
       "output_files": ["build/fuzz/fault-fuzz/fuzz-cp950/*", "build/fuzz/fault-fuzz/fuzz-cp950/corpus/*"]
+    },
+    {
+      "id": "fuzz-taifex-options",
+      "kind": "fuzz",
+      "covers": "fuzz_taifex_options",
+      "bug": "The record reader drops the bounds check on its CRLF test, so a CR as the last byte of the input reads one byte past the end.",
+      "edits": [
+        {
+          "file": "src/data/taifex_csv.cpp",
+          "find": "} else if (c == '\\r' && offset + 1 < input_.size() && input_[offset + 1] == '\\n') {",
+          "replace": "} else if (c == '\\r' && input_[offset + 1] == '\\n') {"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_taifex_options"],
+      "command": [
+        "{build}/bin/fuzz_taifex_options", "-dict=fuzz/fuzz_taifex.dict", "-seed=1",
+        "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-taifex-options/",
+        "{build}/fault-fuzz/fuzz-taifex-options/corpus", "fuzz/fuzz_taifex_options_corpus"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: heap-buffer-overflow(?=[\\s\\S]*? in aadp::taifex::RecordReader::next\\(\\))",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-taifex-options/*", "build/fuzz/fault-fuzz/fuzz-taifex-options/corpus/*"]
+    },
+    {
+      "id": "fuzz-taifex-futures",
+      "kind": "fuzz",
+      "covers": "fuzz_taifex_futures",
+      "bug": "The digit limit counts only the integer part, so a long fraction overflows the mantissa or indexes past the table of powers of ten.",
+      "edits": [
+        {
+          "file": "src/data/decimal.cpp",
+          "find": "const std::size_t significant = (lone_zero ? 0 : integer_digits) + fraction_digits;",
+          "replace": "const std::size_t significant = lone_zero ? 0 : integer_digits;"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_taifex_futures"],
+      "command": [
+        "{build}/bin/fuzz_taifex_futures", "-dict=fuzz/fuzz_taifex.dict", "-seed=1",
+        "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-taifex-futures/",
+        "{build}/fault-fuzz/fuzz-taifex-futures/corpus", "fuzz/fuzz_taifex_futures_corpus"
+      ],
+      "detect": "test",
+      "reason": "(AddressSanitizer: global-buffer-overflow(?=[\\s\\S]*? in aadp::parse_decimal\\()|decimal\\.cpp:\\d+:\\d+: runtime error: signed integer overflow)",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-taifex-futures/*", "build/fuzz/fault-fuzz/fuzz-taifex-futures/corpus/*"]
     }
   ]
 }
