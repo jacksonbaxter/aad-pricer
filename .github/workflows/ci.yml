@@ -1,0 +1,140 @@
+# Mirrors scripts/check.sh job by job. The two share run_tests.py, so a skipped test fails here
+# as it does there. QuantLib stays off: AAD_PRICER_BUILD_QUANTLIB_COMPARE is set in configure.
+# Actions are pinned to the commit of the tag in the comment, resolved with git ls-remote.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AADP_JOBS: "4"
+  AADP_FUZZ_SECONDS: "30"
+  # Counters depend on the runner's kernel settings. The test skips itself without them.
+  ALLOWED_SKIPS: '^PerfCounters\.EachRegionReportsItsOwnTimes$'
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-clang-debug, os: ubuntu-24.04, compiler: clang, preset: debug, test: true }
+          - { name: linux-clang-release, os: ubuntu-24.04, compiler: clang, preset: release, test: true }
+          - { name: linux-gcc-debug, os: ubuntu-24.04, compiler: gcc, preset: debug, test: true }
+          - { name: linux-gcc-release, os: ubuntu-24.04, compiler: gcc, preset: release-gcc, test: true }
+          - { name: linux-asan-ubsan, os: ubuntu-24.04, compiler: clang, preset: asan-ubsan, test: true }
+          - { name: linux-tsan, os: ubuntu-24.04, compiler: clang, preset: tsan, test: true }
+          - { name: linux-avx2, os: ubuntu-24.04, compiler: clang, preset: release-avx2, test: true }
+          # Build only: no host here can run AVX-512, so the preset has no test preset.
+          - { name: linux-avx512-build, os: ubuntu-24.04, compiler: clang, preset: release-avx512, test: false }
+          - { name: macos-clang-debug, os: macos-15, compiler: clang, preset: debug, test: true }
+          - { name: macos-clang-release, os: macos-15, compiler: clang, preset: release, test: true }
+          - { name: macos-asan-ubsan, os: macos-15, compiler: clang, preset: asan-ubsan, test: true }
+          - { name: macos-tsan, os: macos-15, compiler: clang, preset: tsan, test: true }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          llvm: ${{ matrix.compiler == 'clang' }}
+          data: ${{ matrix.test }}
+
+      # The release-gcc preset names plain gcc. 14 is newer than the image's default of 13, and
+      # this override reaches the debug preset too, which names no compiler.
+      - name: Install g++ 14
+        if: matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get install -y g++-14
+          echo "COMPILER_ARGS=-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14" >> "$GITHUB_ENV"
+
+      - name: Configure
+        env:
+          PRESET: ${{ matrix.preset }}
+        # COMPILER_ARGS is two words, or empty, so it is left unquoted.
+        run: cmake --preset "$PRESET" -DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF ${COMPILER_ARGS:-}
+
+      - name: Build
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: cmake --build --preset "$PRESET" --parallel "$AADP_JOBS"
+
+      - name: Test
+        if: matrix.test
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: >-
+          python3 -I scripts/run_tests.py ctest "$PRESET" --jobs "$AADP_JOBS"
+          --allow-skipped "$ALLOWED_SKIPS"
+
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          ninja: "false"
+          data: "false"
+      - run: scripts/check_format.sh
+
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          data: "false"
+      - run: scripts/run_clang_tidy.sh --jobs "$AADP_JOBS" release fuzz
+
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          data: "false"
+      - run: cmake --preset fuzz -DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF
+      - run: cmake --build --preset fuzz --parallel "$AADP_JOBS"
+      - run: python3 -I scripts/run_tests.py fuzz --seconds "$AADP_FUZZ_SECONDS"
+
+  repo-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Data too, or the raw-row check cannot run.
+      - uses: ./.github/actions/setup
+        with:
+          ninja: "false"
+          llvm: "false"
+      - run: python3 -I scripts/scan_repo.py
+
+  actionlint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/fetch_tools.sh
+      - run: build/tools/actionlint -no-color .github/workflows/ci.yml

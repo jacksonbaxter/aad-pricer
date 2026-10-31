@@ -1,0 +1,66 @@
+name: Set up the job
+description: >
+  Installs Ninja, the pinned LLVM and the pinned data captures, each only if the job needs it.
+  LLVM comes from scripts/fetch_tools.sh, which checks its sha256, and from no other place.
+
+inputs:
+  ninja:
+    description: Install Ninja
+    default: "true"
+  llvm:
+    description: Install LLVM 23.1.4 and select clang
+    default: "true"
+  data:
+    description: Fetch the pinned TAIFEX captures into data/
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Ninja on Linux
+      if: inputs.ninja == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Install Ninja on macOS
+      if: inputs.ninja == 'true' && runner.os == 'macOS'
+      shell: bash
+      run: brew install ninja
+
+    - name: Restore LLVM
+      if: inputs.llvm == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: build/tools/llvm
+        key: llvm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/fetch_tools.sh') }}
+
+    - name: Install LLVM
+      if: inputs.llvm == 'true'
+      shell: bash
+      run: |
+        scripts/fetch_tools.sh --llvm
+        echo "$PWD/build/tools/llvm/bin" >> "$GITHUB_PATH"
+        echo "CC=clang" >> "$GITHUB_ENV"
+        echo "CXX=clang++" >> "$GITHUB_ENV"
+
+    - name: Select the macOS SDK
+      if: inputs.llvm == 'true' && runner.os == 'macOS'
+      shell: bash
+      run: echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+
+    - name: Restore the data captures
+      if: inputs.data == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: data
+        key: taifex-${{ hashFiles('scripts/data_manifest.txt') }}
+        enableCrossOsArchive: true
+
+    - name: Fetch and verify the data captures
+      if: inputs.data == 'true'
+      shell: bash
+      run: |
+        scripts/fetch_data.sh
+        scripts/fetch_data.sh --verify
