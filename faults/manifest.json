@@ -1096,6 +1096,178 @@
       "reason": "AddressSanitizer: heap-buffer-overflow(?=[\\s\\S]*? in aadp::results::\\(anonymous namespace\\)::Parser::parse_string\\()",
       "timeout_s": 120,
       "output_files": ["build/fuzz/fault-fuzz/fuzz-results-json/*", "build/fuzz/fault-fuzz/fuzz-results-json/corpus/*"]
+    },
+    {
+      "id": "pricer-path-agreement",
+      "kind": "check",
+      "covers": "pricer path-by-path agreement with src/mc, check 1",
+      "bug": "The pricer keys Philox on the next step, so its draws are a valid stream but not the reference kernels' one.",
+      "edits": [
+        {
+          "file": "src/pricer/draws.hpp",
+          "find": "static_cast<std::uint32_t>(path >> 32), step, 0U}",
+          "replace": "static_cast<std::uint32_t>(path >> 32), step + 1U, 0U}"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_path_agreement_test"],
+      "command": [
+        "{build}/bin/aadp_pricer_path_agreement_test",
+        "--gtest_filter=PathAgreement.PricerMatchesTheReferenceWithinTheBound"
+      ],
+      "detect": "test",
+      "reason": "Expected equality of these values:\\n  Bits\\(t\\.value\\.ref\\)",
+      "timeout_s": 300
+    },
+    {
+      "id": "pricer-thread-merge",
+      "kind": "check",
+      "covers": "pricer thread invariance, check 2",
+      "bug": "The blocks of each batch are merged last to first, which every thread count does alike, so only the comparison with the plain loop can see it.",
+      "edits": [
+        {
+          "file": "src/pricer/runner.hpp",
+          "find": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + i)];",
+          "replace": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + (blocks_per_batch - 1 - i))];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_thread_test"],
+      "command": ["{build}/bin/aadp_pricer_thread_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] PricerThreads\\.SingleThreadRunIsThePlainLoop",
+      "timeout_s": 120
+    },
+    {
+      "id": "pricer-bridge",
+      "kind": "check",
+      "covers": "pricer bridge against the continuous closed forms, check 3",
+      "bug": "The bridge's crossing exponent loses its factor 2, so the weight undercounts crossings and every bridge value is too high.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "weight = weight * (1.0 - Exp(-2.0 * d0 * d1 / variance));",
+          "replace": "weight = weight * (1.0 - Exp(-1.0 * d0 * d1 / variance));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_closed_form_test"],
+      "command": [
+        "{build}/bin/aadp_pricer_closed_form_test",
+        "--gtest_filter=PricerClosedForm.EveryRowPassesTheToleranceRule"
+      ],
+      "detect": "test",
+      "reason": "^bridge down-out call H95: estimate .*, FAIL$",
+      "timeout_s": 300
+    },
+    {
+      "id": "pricer-one-step",
+      "kind": "check",
+      "covers": "pricer one-step survival against the BGK references, check 3",
+      "bug": "The step is drawn from its unconditioned law while the path is still weighted by its survival probability.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "InverseNormal(Select(alive, q, Real(v)));",
+          "replace": "InverseNormal(Real(v));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_closed_form_test"],
+      "command": [
+        "{build}/bin/aadp_pricer_closed_form_test",
+        "--gtest_filter=PricerClosedForm.EveryRowPassesTheToleranceRule"
+      ],
+      "detect": "test",
+      "reason": "^one-step DB095: estimate .*, FAIL$",
+      "timeout_s": 300
+    },
+    {
+      "id": "pricer-parity",
+      "kind": "check",
+      "covers": "pricer knock-in parity per path, check 3",
+      "bug": "The vanilla leg of a knock-in reads the crossing uniforms when there are some, so in and out no longer share a path; each is still unbiased, so only the per-path identity sees it.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "const Real vanilla = European<Real>(c, model, u.normal).value;",
+          "replace": "const Real vanilla =\n          European<Real>(c, model, u.crossing.empty() ? u.normal : u.crossing).value;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_closed_form_test"],
+      "command": [
+        "{build}/bin/aadp_pricer_closed_form_test",
+        "--gtest_filter=PricerParity.KnockInIsVanillaLessKnockOutOnEveryPath"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] PricerParity\\.KnockInIsVanillaLessKnockOutOnEveryPath",
+      "timeout_s": 300
+    },
+    {
+      "id": "pricer-normal-cdf",
+      "kind": "check",
+      "covers": "pricer normal CDF against the 40-digit table",
+      "bug": "The first numerator coefficient of Cody's small region loses its last four digits, an error of about 1e-14 relative.",
+      "edits": [
+        {
+          "file": "src/pricer/normal_cdf.hpp",
+          "find": "{3.16112374387056560e00,",
+          "replace": "{3.16112374387060000e00,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_normal_cdf_test"],
+      "command": [
+        "{build}/bin/aadp_pricer_normal_cdf_test",
+        "--gtest_filter=NormalCdf.MatchesTheTableInEveryDomain"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] NormalCdf\\.MatchesTheTableInEveryDomain",
+      "timeout_s": 120
+    },
+    {
+      "id": "pricer-bias-table",
+      "kind": "check",
+      "covers": "pricer bias table tool, check 4",
+      "bug": "The bridge row is judged against the discrete reference, so the table would call its treatment bias a failure of the bridge.",
+      "edits": [
+        {
+          "file": "tools/pricer_bias/main.cpp",
+          "find": "DownOut(kContinuous, kBridge),\n       {\"O7\", kUnbiased},",
+          "replace": "DownOut(kContinuous, kBridge),\n       {\"O5\", kUnbiased},"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_bias"],
+      "command": ["{build}/bin/aadp_pricer_bias", "--paths", "65536", "--threads", "4"],
+      "detect": "test",
+      "reason": "^aadp_pricer_bias: expectation failed: bridge, value$",
+      "timeout_s": 300
+    },
+    {
+      "id": "pricer-fuzz",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_pricer, check 5",
+      "bug": "The bridge drops the Max that zeroes a gap on the dead side, so a step that ends past the barrier multiplies the weight by 1 - exp(positive).",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "    const Real d1 = Max(Gap(direction, next, log_barrier), Real(0.0));\n    weight = weight * (1.0 - Exp(",
+          "replace": "    const Real d1 = Gap(direction, next, log_barrier);\n    weight = weight * (1.0 - Exp("
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_pricer"],
+      "command": [
+        "{build}/bin/aadp_fuzz_pricer", "-seed=1", "-max_total_time=60", "-print_final_stats=1",
+        "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/pricer-fuzz/",
+        "{build}/fault-fuzz/pricer-fuzz/corpus", "fuzz/fuzz_pricer_seeds"
+      ],
+      "detect": "test",
+      "reason": "invariant failed: (weight outside \\[0, 1\\]|negative path value|knock-out above the vanilla)",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/pricer-fuzz/*", "build/fuzz/fault-fuzz/pricer-fuzz/corpus/*"]
     }
   ]
 }
