@@ -10,9 +10,13 @@
 //   with h = 2^-16 max(|x_k|, 1).
 //   Truncation: D_h - f' = c h^2 + ..., so D_2h - D_h is about 3 c h^2, and R = |D_h - D_2h|
 //   bounds the truncation at h three times over; it also carries the round-off of both.
-//   Round-off: random_program.hpp's ErrorModel bounds the absolute error E of f at the decoding
-//   point to first order, so each difference quotient carries at most about 2 E / w. Twice that
-//   for the change of E across the stencil.
+//   Round-off: random_program.hpp's ErrorModel bounds the absolute error of f to first order at
+//   each point it is evaluated at; E is the largest of those over the decoding point and the four
+//   stencil points, so each difference quotient carries at most about 2 E / w, and twice that
+//   covers the model's own second-order remainder. (E was first the decoding point's alone,
+//   doubled for the change across the stencil. That fails where the decoding point's error is
+//   zero to first order and the stencil's is not, as at the square of a value that is zero
+//   there; the fuzzer found one.)
 //   The tape's own association error, 2 gamma_n A (1 + 2 gamma_n) (bounds.hpp), A from the
 //   ErrorModel's absolute derivative, and its underflow error: 2^-1075 per product of the
 //   reverse sweep, reaching input k times the absolute tangent seeded on k (bounds.hpp, after
@@ -95,9 +99,22 @@ double Output(const t::Program& p, const std::vector<double>& values) {
   return f;
 }
 
+// The first-order error of f at the point whose values these are, the weighted sum's own
+// rounding included.
+double OutputError(const t::Program& p, const std::vector<double>& values) {
+  const t::ErrorModel model = t::Model(p, values);
+  double error = 0.0;
+  double weighted = 0.0;
+  for (const auto& [index, weight] : p.outputs) {
+    error += std::fabs(weight) * model.error[index];
+    weighted += std::fabs(weight * values[index]);
+  }
+  return error + (4.0 * t::kUnitRoundoff * weighted);
+}
+
 // f at x with input k moved by delta, or the reason the point is unusable.
 Outcome Evaluate(const t::Program& p, const t::Trace<double>& base, std::size_t k, double delta,
-                 double& x_k, double& f) {
+                 double& x_k, double& f, double& error) {
   std::vector<double> x = p.inputs;
   x[k] += delta;
   x_k = x[k];
@@ -109,6 +126,7 @@ Outcome Evaluate(const t::Program& p, const t::Trace<double>& base, std::size_t 
   if (trace.masks != base.masks) return kR2;
   if (!trace.in_domain) return kR3;
   f = Output(p, trace.values);
+  error = OutputError(p, trace.values);
   return kAccepted;
 }
 
@@ -116,6 +134,7 @@ struct Differences {
   double d_h = 0.0;
   double d_2h = 0.0;
   double width = 0.0;
+  double error = 0.0;  // the largest first-order error of f over the four stencil points
 };
 
 Outcome Difference(const t::Program& p, const t::Trace<double>& base, std::size_t k,
@@ -125,8 +144,10 @@ Outcome Difference(const t::Program& p, const t::Trace<double>& base, std::size_
   std::array<double, 4> x{};
   const std::array<double, 4> deltas = {h, -h, 2.0 * h, -2.0 * h};
   for (std::size_t i = 0; i < 4; ++i) {
-    const Outcome o = Evaluate(p, base, k, deltas[i], x[i], f[i]);
+    double error = 0.0;
+    const Outcome o = Evaluate(p, base, k, deltas[i], x[i], f[i], error);
     if (o != kAccepted) return o;
+    out.error = std::max(out.error, error);
   }
   out.width = x[0] - x[1];
   out.d_h = (f[0] - f[1]) / out.width;
@@ -225,7 +246,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
       return 0;
     }
     const Differences& d = differences[k];
-    tolerance[k] = (2.0 * std::fabs(d.d_h - d.d_2h)) + (4.0 * error / d.width) +
+    tolerance[k] = (2.0 * std::fabs(d.d_h - d.d_2h)) + (4.0 * std::max(error, d.error) / d.width) +
                    (2.0 * gamma * absolute[k] * (1.0 + (2.0 * gamma))) + underflow[k];
     if (absolute[k] > 0.0 && tolerance[k] > kConditioning * absolute[k]) {
       Count(kR4);
