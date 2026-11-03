@@ -14,7 +14,10 @@
 // of |terms|: the same sweep on |partials|, which the tape computes (SweepBackAbsolute) with
 // relative error at most gamma_n. Hence, per input,
 //   |tape - dual| <= 2 gamma_n A (1 + 2 gamma_n) + n 2^-1070,
-// the last term for products that fall below the normal range (each loses at most 2^-1075).
+// the last term for products that fall below the normal range (each loses at most 2^-1075). That
+// term assumes nothing downstream amplifies such a loss by more than 32. A path whose own values
+// are subnormal breaks that assumption, and the bound does not hold there: OneStepCorner's second
+// test measured 10.8 times it at a step with p near 1e-316.
 #ifndef AADP_TESTS_AD_BOUNDS_HPP_
 #define AADP_TESTS_AD_BOUNDS_HPP_
 

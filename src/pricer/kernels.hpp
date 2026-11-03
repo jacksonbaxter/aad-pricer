@@ -167,7 +167,12 @@ PathValue<Real> OutOneStep(const Contract& c, const Model& model, std::span<cons
     const Real q = p * v;
     const auto alive = q > 0.0;
     weight = weight * Select(alive, p, Real(0.0));
-    const Real conditional = InverseNormal(Select(alive, q, Real(v)));
+    // Below 2^-1000, dPhi^-1(q)/dq = 1 / phi(z) nears overflow, and an infinity there turns a
+    // Greek into NaN or infinity although its true value is finite. So below it the draw carries
+    // no derivative: what is dropped carries the path's weight, p = q / v < 2^-947. For double
+    // this is the same value, so prices do not change.
+    const Real drawn = Value(q) < 0x1p-1000 ? Real(Value(q)) : q;
+    const Real conditional = InverseNormal(Select(alive, drawn, Real(v)));
     const Real z = down ? -conditional : conditional;
     x = law.mean + law.sd * z;
   }

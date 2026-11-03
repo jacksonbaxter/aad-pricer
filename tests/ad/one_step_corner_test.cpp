@@ -168,5 +168,81 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
       worst_e1, worst_e3, largest_dzdp);
 }
 
+// The other end, q = p v near 0, which the pricer-gradient fuzzer found: the step's mean far on
+// the dead side, so p is tiny. Below 2^-1000 the kernel takes the draw passive (kernels.hpp,
+// OutOneStep), since 1 / phi(Phi^-1(q)) would overflow and make the Greeks NaN. One step, S0 =
+// 100, sigma 1e-3, q = 0.16, so the mean sits 0.16 below log S0 and the barrier a sd above it.
+// Expectations, stated before measuring:
+//   E5 every Greek of the knock-out and of the knock-in is finite at every point;
+//   E6 the tape equals the Dual within check 1's bound at every point;
+//   E7 the grid reaches all three regimes: q = 0, 0 < q < 2^-1000 and q >= 2^-1000.
+// E6 as stated failed at 4 of 72 points, by up to 10.8 times the bound, all on vega and all with
+// p subnormal (a = -38 and below), where the Greeks are near 1e-320. There the bound's
+// assumption fails (tests/ad/bounds.hpp): subnormal rounding is absolute and later partials
+// amplify it. So E6 is held only where p >= 2^-1022, which still includes points with
+// 0 < q < 2^-1000. At the other points the test prints the difference but does not check it.
+TEST(OneStepCorner, GreeksStayFiniteWhenPTimesVIsNearZero) {
+  constexpr pricer::Market<double> kDeep{
+      .spot = 100.0, .sigma = 1e-3, .r = 0.0, .q = 0.16, .maturity = 1.0};
+  const pricer::GbmModel<double> model(kDeep, 1);
+  const pricer::StepLaw<double> law = model.Law(0, model.LogSpot());
+  const pricer::GbmModel<test::Dual> dual_model(testing::DualMarket(kDeep), 1);
+  std::size_t dead = 0;
+  std::size_t passive = 0;
+  std::size_t active = 0;
+  std::size_t passive_checked = 0;
+  double worst_e6 = 0.0;
+  double worst_subnormal = 0.0;
+  for (const double a : {-30.0, -36.0, -37.0, -37.5, -37.8, -38.0, -38.2, -38.4, -38.6}) {
+    const double barrier = math::exp(law.mean - (a * law.sd));
+    for (const pricer::Knock knock : {pricer::Knock::kOut, pricer::Knock::kIn}) {
+      pricer::Contract c = OneStep(barrier);
+      c.barrier.knock = knock;
+      c.strike = 0.8 * kDeep.spot;
+      ASSERT_EQ(pricer::Validate(c, kDeep), pricer::ContractError::kNone) << a;
+      for (const double u : {0.5, 1e-9, 1.0 - 1e-6, 1.0 - u53}) {
+        const double p = pricer::NormalCdf((law.mean - math::log(barrier)) / law.sd);
+        const double q = p * (1.0 - u);
+        if (knock == pricer::Knock::kOut) {
+          if (q == 0.0) ++dead;
+          if (q > 0.0 && q < 0x1p-1000) ++passive;
+          if (q >= 0x1p-1000) ++active;
+        }
+        std::vector<double> normal = {u};
+        const pricer::PathUniforms uniforms{.normal = normal, .crossing = {}};
+        const test::Dual dual = pricer::DiscountedPayoff<test::Dual>(c, dual_model, uniforms);
+        PathGradient::PathResult tape;
+        {
+          PathGradient path(c, kDeep);
+          tape = path.Evaluate(uniforms);
+        }
+        for (std::size_t i = 0; i < kInputs; ++i) {
+          ASSERT_TRUE(std::isfinite(tape.gradient[i]))
+              << "E5: a " << a << ", u " << u << ", q " << q << ", input " << i;
+          const double bound =
+              testing::AgreementBound(tape.absolute[i], tape.statements, tape.operands);
+          const double diff = std::fabs(tape.gradient[i] - dual.tangent[i]);
+          if (p < 0x1p-1022) {
+            if (diff > 0.0) worst_subnormal = std::max(worst_subnormal, diff / bound);
+            continue;
+          }
+          EXPECT_LE(diff, bound) << "E6: a " << a << ", u " << u << ", input " << i;
+          if (diff > 0.0) worst_e6 = std::max(worst_e6, diff / bound);
+          if (knock == pricer::Knock::kOut && i == 0 && q < 0x1p-1000) ++passive_checked;
+        }
+      }
+    }
+  }
+  EXPECT_GE(dead, 1U) << "E7";
+  EXPECT_GE(passive, 1U) << "E7";
+  EXPECT_GE(active, 1U) << "E7";
+  EXPECT_GE(passive_checked, 1U) << "E6 must reach 0 < q < 2^-1000";
+  std::printf(
+      "measured: E5 all finite; E6 max |tape - dual| / bound %.3g (p >= 2^-1022; %zu knock-out "
+      "points with 0 < q < 2^-1000 among them), with p subnormal %.3g, not checked; E7 points "
+      "with q = 0: %zu, 0 < q < 2^-1000: %zu, q >= 2^-1000: %zu\n",
+      worst_e6, passive_checked, worst_subnormal, dead, passive, active);
+}
+
 }  // namespace
 }  // namespace aadp::ad

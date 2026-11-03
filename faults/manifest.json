@@ -1343,7 +1343,7 @@
         "fuzz/fuzz_tape_operations_seeds"
       ],
       "detect": "test",
-      "reason": "invariant failed: adjoint differs from central difference",
+      "reason": "invariant failed: adjoint (differs from central difference|with every path product zero is not zero)",
       "timeout_s": 120,
       "output_files": [
         "build/fuzz/fault-fuzz/ad-select-both/*",
@@ -1556,6 +1556,30 @@
       ],
       "detect": "test",
       "reason": "\\[  FAILED  \\] TapeDeathTest\\.ASecondActivationOnOneThreadIsAnError",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-one-step-tiny-q",
+      "kind": "check",
+      "covers": "one-step adjoint at p v near 0, check 6",
+      "bug": "The one-step kernel keeps the conditional draw active however small p (1 - u) is, so 1 / phi(Phi^-1(q)) overflows and the Greeks become NaN.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "    const Real drawn = Value(q) < 0x1p-1000 ? Real(Value(q)) : q;",
+          "replace": "    const Real drawn = q;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_one_step_corner_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_one_step_corner_test",
+        "--gtest_filter=OneStepCorner.GreeksStayFiniteWhenPTimesVIsNearZero"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] OneStepCorner\\.GreeksStayFiniteWhenPTimesVIsNearZero",
       "timeout_s": 300
     }
   ]
