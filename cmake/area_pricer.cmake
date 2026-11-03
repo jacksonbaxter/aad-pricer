@@ -37,3 +37,42 @@ if(AADP_BUILD_TESTS)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_math_reference_current PROPERTIES LABELS "math")
 endif()
+
+# src/pricer/ is the production scalar Monte Carlo pricer. Its kernels and runner are templates;
+# the library holds validation and the double entry point. It reads src/rng/philox.hpp and the
+# batch statistics of src/oracle/tolerance.hpp, which the oracle area provides.
+if(TARGET aadp_rng)
+  aadp_library(aadp_pricer
+    SOURCES src/pricer/pricer.cpp
+    LINK aadp_math aadp_rng)
+
+  aadp_test(aadp_pricer_normal_cdf_test
+    SOURCES tests/pricer/normal_cdf_test.cpp
+    LINK aadp_pricer aadp_test_support
+    LABELS pricer fast)
+  aadp_test(aadp_pricer_contract_test
+    SOURCES tests/pricer/contract_test.cpp
+    LINK aadp_pricer
+    LABELS pricer fast)
+
+  # Check 1: path by path against the frozen reference kernels in src/mc/.
+  aadp_test(aadp_pricer_path_agreement_test
+    SOURCES tests/pricer/path_agreement_test.cpp
+    LINK aadp_pricer aadp_test_support
+    LABELS pricer)
+
+  foreach(_aadp_sized IN ITEMS aadp_pricer_path_agreement_test)
+    if(TARGET ${_aadp_sized})
+      # Full size only where the numbers are reported. Everywhere else a smoke test.
+      target_compile_definitions(${_aadp_sized} PRIVATE
+        AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+    endif()
+  endforeach()
+
+  if(AADP_BUILD_TESTS)
+    add_test(NAME aadp_pricer_normal_cdf_reference_current
+      COMMAND "${Python3_EXECUTABLE}" -I tests/pricer/normal_cdf_reference.py --check
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(aadp_pricer_normal_cdf_reference_current PROPERTIES LABELS "pricer")
+  endif()
+endif()
