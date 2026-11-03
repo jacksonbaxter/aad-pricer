@@ -168,13 +168,20 @@ TEST(PathAgreement, PricerMatchesTheReferenceWithinTheBound) {
     const GbmModel<Tracked> tracked_model(TrackedMarket(c.market), contract.steps);
     const double scale = Scale(c);
     std::vector<double> normal(contract.steps);
+    std::vector<double> reference_uniforms(contract.steps);
     const PathUniforms u{.normal = normal, .crossing = {}};
     Summary value;
     Summary weight;
     for (std::uint64_t path = 0; path < kPaths; ++path) {
+      // Each side draws its own uniforms, the reference through src/rng/philox.hpp directly, so a
+      // pricer that keys Philox differently cannot pass.
       FillPath(kSeed, path, normal, {});
+      for (std::uint32_t step = 0; step < contract.steps; ++step) {
+        reference_uniforms[step] = PathUniform(kSeed, path, step);
+      }
       const PathValue<double> own = EvaluatePath<double>(contract, model, u);
-      const double reference = aadp::DiscountedPayoff<double>(c.contract, c.market, normal);
+      const double reference =
+          aadp::DiscountedPayoff<double>(c.contract, c.market, reference_uniforms);
       const PathValue<Tracked> t = EvaluatePath<Tracked>(contract, tracked_model, u);
 
       ASSERT_EQ(Bits(t.value.own), Bits(own.value)) << c.name << ", path " << path;
