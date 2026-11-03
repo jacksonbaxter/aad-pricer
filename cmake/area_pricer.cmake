@@ -112,6 +112,11 @@ if(TARGET aadp_rng)
     SOURCES tests/ad/tape_test.cpp
     LINK aadp_ad
     LABELS ad fast tsan)
+  # Thread-local tapes: independent across threads, and the same bits for any thread count.
+  aadp_test(aadp_ad_thread_test
+    SOURCES tests/ad/thread_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad fast threads tsan)
   # Check 1: per path against the forward-mode Dual, on every product and treatment.
   aadp_test(aadp_ad_dual_agreement_test
     SOURCES tests/ad/dual_agreement_test.cpp
@@ -120,6 +125,34 @@ if(TARGET aadp_rng)
   # Check 2: the tangent-adjoint dot-product identity, on random programs and priced paths.
   aadp_test(aadp_ad_dot_product_test
     SOURCES tests/ad/dot_product_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad)
+
+  # Check 5: tape bytes per path and peak tape memory, against MEM-1 to MEM-4.
+  aadp_test(aadp_ad_memory_test
+    SOURCES tests/ad/memory_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad)
+  # Check 6: the one-step survival adjoint at p near 1.
+  aadp_test(aadp_ad_one_step_corner_test
+    SOURCES tests/ad/one_step_corner_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad)
+  # Check 7: the oracle plan's run rows with the tape in place of the Dual, at a dev seed.
+  if(TARGET aadp_oracle_lib)
+    aadp_test(aadp_ad_oracle_equivalence_test
+      SOURCES tests/ad/oracle_equivalence_test.cpp
+      LINK aadp_ad aadp_oracle_lib aadp_test_support
+      LABELS ad)
+    if(TARGET aadp_ad_oracle_equivalence_test)
+      target_compile_definitions(aadp_ad_oracle_equivalence_test PRIVATE
+        AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+    endif()
+  endif()
+  # MEM-6: no heap allocation after warm-up, by a counting operator new. Its own binary, since
+  # it replaces the global allocation functions.
+  aadp_test(aadp_ad_allocation_test
+    SOURCES tests/ad/allocation_test.cpp
     LINK aadp_ad aadp_test_support
     LABELS ad)
 
