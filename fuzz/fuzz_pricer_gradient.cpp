@@ -169,8 +169,8 @@ Checked CheckPath(const Contract& c, const Market<double>& m, const PathUniforms
                                  .q = Dual::Variable(m.q, 3),
                                  .maturity = Dual::Variable(m.maturity, 4)};
   const GbmModel<Dual> dual_model(dual_market, c.steps);
-  const double value = DiscountedPayoff<double>(c, model, u);
-  const Dual dual = DiscountedPayoff<Dual>(c, dual_model, u);
+  const auto value = DiscountedPayoff<double>(c, model, u);
+  const auto dual = DiscountedPayoff<Dual>(c, dual_model, u);
   {
     PathGradient path(c, m);
     out.tape = path.Evaluate(u);

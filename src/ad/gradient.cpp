@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "ad/real.hpp"
 #include "ad/tape.hpp"
 #include "oracle/tolerance.hpp"
 #include "pricer/contract.hpp"

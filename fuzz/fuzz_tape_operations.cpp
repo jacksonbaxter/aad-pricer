@@ -41,7 +41,7 @@
 
 #include "ad/bounds.hpp"  // tests/ad/, through the test support include path
 #include "ad/random_program.hpp"
-#include "ad/real.hpp"
+#include "ad/real.hpp"  // IWYU pragma: keep (the Real operations random_program.hpp calls)
 #include "ad/tape.hpp"
 
 #define AADP_FUZZ_REQUIRE(condition, what)                                                   \
@@ -64,23 +64,26 @@ namespace t = aadp::ad::testing;
 constexpr double kConditioning = 1e-6;
 constexpr double kStepScale = 0x1p-16;
 
-enum Outcome : std::uint8_t { kAccepted, kR1, kR2, kR3, kR4, kOutcomes };
-std::array<std::atomic<std::uint64_t>, kOutcomes> g_counts{};
+enum class Outcome : std::uint8_t { kAccepted, kR1, kR2, kR3, kR4, kCount };
+using enum Outcome;
+// libFuzzer calls in with the input alone, so the tallies across inputs are a global.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables): see above.
+std::array<std::atomic<std::uint64_t>, static_cast<std::size_t>(kCount)> g_counts{};
+
+unsigned long long Tally(Outcome outcome) {
+  return static_cast<unsigned long long>(g_counts[static_cast<std::size_t>(outcome)].load());
+}
 
 void Count(Outcome outcome) {
-  g_counts[outcome].fetch_add(1);
+  g_counts[static_cast<std::size_t>(outcome)].fetch_add(1);
   std::uint64_t all = 0;
   for (const auto& c : g_counts) all += c.load();
   if ((all & ((std::uint64_t{1} << 17) - 1)) == 0) {
     std::fprintf(stderr,
                  "tape-operations: %llu draws: accepted %llu, rejected R1 %llu R2 %llu "
                  "R3 %llu R4 %llu\n",
-                 static_cast<unsigned long long>(all),
-                 static_cast<unsigned long long>(g_counts[kAccepted].load()),
-                 static_cast<unsigned long long>(g_counts[kR1].load()),
-                 static_cast<unsigned long long>(g_counts[kR2].load()),
-                 static_cast<unsigned long long>(g_counts[kR3].load()),
-                 static_cast<unsigned long long>(g_counts[kR4].load()));
+                 static_cast<unsigned long long>(all), Tally(kAccepted), Tally(kR1), Tally(kR2),
+                 Tally(kR3), Tally(kR4));
   }
 }
 
@@ -153,6 +156,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   Tape tape;
   const TapeScope scope(tape);
   std::vector<Real> x;
+  x.reserve(program.inputs.size());
   for (const double v : program.inputs) x.push_back(tape.Register(v));
   t::Trace<Real> trace;
   t::Run<Real>(program, x, trace);

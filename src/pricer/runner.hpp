@@ -49,6 +49,12 @@ struct PathShape {
   bool crossing = false;  // Whether the kernel reads crossing uniforms.
 };
 
+// The block-end hook described at the top, for a path function that has one.
+template <class PathFn, std::size_t M>
+void EndBlock(PathFn& path_fn, std::array<double, M>& sum) {
+  if constexpr (requires { path_fn.EndBlock(sum); }) path_fn.EndBlock(sum);
+}
+
 // Batch means of M statistics per path, in batch order. Precondition: ValidateRun passed.
 // make_path_fn() returns a callable (const PathUniforms&, std::array<double, M>&) -> void.
 template <std::size_t M, class MakePathFn>
@@ -80,7 +86,7 @@ std::vector<std::array<double, M>> RunBatches(const RunConfig& config, const Pat
         path_fn(uniforms, stats);
         for (std::size_t i = 0; i < M; ++i) sum[i] += stats[i];
       }
-      if constexpr (requires { path_fn.EndBlock(sum); }) path_fn.EndBlock(sum);
+      EndBlock(path_fn, sum);
       block_sums[static_cast<std::size_t>(block)] = sum;
     }
   };

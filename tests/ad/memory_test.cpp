@@ -120,7 +120,7 @@ TEST(TapeMemory, BytesPerPathAndPeakAgainstMem1ToMem4) {
   std::printf(
       "measured: largest path %.0f B against MEM-4 %.0f B; peak tape memory %.0f B against "
       "MEM-3 %.0f B (loose: see the header); process peak RSS %ld B, context only\n",
-      worst_path, kMem4Bytes, worst_allocated, kMem3Bytes, static_cast<long>(usage.ru_maxrss));
+      worst_path, kMem4Bytes, worst_allocated, kMem3Bytes, usage.ru_maxrss);
   EXPECT_LT(worst_path, kMem4Bytes);
   EXPECT_LT(worst_allocated, kMem3Bytes);
 }

@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "ad/gradient.hpp"
-#include "ad/real.hpp"
+#include "ad/real.hpp"  // IWYU pragma: keep (the Real operations random_program.hpp calls)
 #include "ad/tape.hpp"
 #include "bounds.hpp"
 #include "cases.hpp"
@@ -71,6 +71,7 @@ TEST(DotProduct, HoldsOnRandomStraightLinePrograms) {
     Tape tape;
     const TapeScope scope(tape);
     std::vector<Real> x;
+    x.reserve(program.inputs.size());
     for (const double v : program.inputs) x.push_back(tape.Register(v));
     testing::Trace<Real> trace;
     testing::Run<Real>(program, x, trace);

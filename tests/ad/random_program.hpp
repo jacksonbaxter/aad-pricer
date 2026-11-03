@@ -179,8 +179,8 @@ class Reader {
   std::uint8_t Byte() { return position_ < bytes_.size() ? bytes_[position_++] : 0; }
   std::int8_t Signed() { return static_cast<std::int8_t>(Byte()); }
   std::int16_t Signed16() {
-    const auto lo = static_cast<std::uint16_t>(Byte());
-    const auto hi = static_cast<std::uint16_t>(Byte());
+    const std::uint32_t lo = Byte();
+    const std::uint32_t hi = Byte();
     return static_cast<std::int16_t>(static_cast<std::uint16_t>(lo | (hi << 8U)));
   }
   [[nodiscard]] bool Done() const { return position_ >= bytes_.size(); }
@@ -255,9 +255,12 @@ inline Program Decode(std::span<const std::uint8_t> bytes) {
   Program p;
   const std::size_t n = 1 + (in.Byte() % kMaxInputs);
   const std::size_t m = 1 + (in.Byte() % 3);
+  p.inputs.reserve(n);
+  p.direction.reserve(n);
   for (std::size_t i = 0; i < n; ++i) p.inputs.push_back(in.Signed16() / 4096.0);
   for (std::size_t i = 0; i < n; ++i) p.direction.push_back(in.Signed() / 64.0);
   std::vector<double> weights;
+  weights.reserve(m);
   for (std::size_t j = 0; j < m; ++j) weights.push_back(in.Signed() / 32.0);
   std::vector<double> values = p.inputs;
   while (!in.Done() && p.steps.size() < kMaxSteps) {
@@ -314,6 +317,87 @@ inline double NormalPdf(double x) {
   return std::exp(-0.5 * x * x) / std::sqrt(2.0 * std::numbers::pi);
 }
 
+// |partial| on a and on b, the step's own rounding in units of u |y|, and for a selection the
+// operand it passes on.
+struct StepTerms {
+  double da = 0.0;
+  double db = 0.0;
+  double rounding = 1.0;
+  std::size_t chosen = 0;
+  bool select = false;
+};
+
+inline StepTerms Terms(const Step& s, const std::vector<double>& v, double a, double b, double y) {
+  StepTerms t{.chosen = s.a};
+  switch (s.op) {
+    case Op::kAdd:
+    case Op::kSub:
+      t.da = 1.0;
+      t.db = 1.0;
+      break;
+    case Op::kMul:
+      t.da = std::fabs(b);
+      t.db = std::fabs(a);
+      break;
+    case Op::kDiv:
+      t.da = 1.0 / std::fabs(b);
+      t.db = std::fabs(a) / (b * b);
+      break;
+    case Op::kNeg:
+      t.da = 1.0;
+      t.rounding = 0.0;
+      break;
+    case Op::kExp:
+      t.da = std::fabs(y);
+      t.rounding = 4.0;  // 0.613 ULP (stage 1a), at most 2 u |y| per ULP
+      break;
+    case Op::kLog:
+      t.da = 1.0 / std::fabs(a);
+      t.rounding = 4.0;  // 0.840 ULP
+      break;
+    case Op::kSqrt:
+      t.da = 0.5 / std::fabs(y);
+      break;
+    case Op::kNormalCdf:
+      t.da = NormalPdf(a);
+      // erfc within 4 ULP, and 4 y^2 u from rounding y = -x / sqrt 2 (normal_cdf.hpp).
+      t.rounding = 16.0 + (2.0 * a * a);
+      break;
+    case Op::kInverseNormal:
+      t.da = 1.0 / NormalPdf(y);
+      t.rounding = 16.0;  // AS241 within 1e-15 relative
+      break;
+    case Op::kMin:
+      t.chosen = b < a ? s.b : s.a;
+      t.select = true;
+      break;
+    case Op::kMax:
+      t.chosen = a < b ? s.b : s.a;
+      t.select = true;
+      break;
+    case Op::kSelect:
+      t.chosen = v[s.c] < v[s.d] ? s.a : s.b;
+      t.select = true;
+      break;
+    case Op::kAddConstant:
+    case Op::kConstantMinus:
+      t.da = 1.0;
+      break;
+    case Op::kMulConstant:
+      t.da = std::fabs(s.constant);
+      break;
+    case Op::kConstantOver:
+      t.da = std::fabs(s.constant) / (a * a);
+      break;
+    case Op::kSquare:
+      t.da = 2.0 * std::fabs(a);
+      break;
+    case Op::kCount:
+      break;
+  }
+  return t;
+}
+
 inline ErrorModel Model(const Program& p, const std::vector<double>& v) {
   constexpr double u = 0x1p-53;
   ErrorModel model;
@@ -326,83 +410,14 @@ inline ErrorModel Model(const Program& p, const std::vector<double>& v) {
     const double a = v[s.a];
     const double b = v[s.b];
     const double y = v[n + k];
-    // |partial| on a and on b, and the step's own rounding in units of u |y|.
-    double da = 0.0;
-    double db = 0.0;
-    double rounding = 1.0;
-    std::size_t chosen = s.a;
-    bool select = false;
-    switch (s.op) {
-      case Op::kAdd:
-      case Op::kSub:
-        da = 1.0;
-        db = 1.0;
-        break;
-      case Op::kMul:
-        da = std::fabs(b);
-        db = std::fabs(a);
-        break;
-      case Op::kDiv:
-        da = 1.0 / std::fabs(b);
-        db = std::fabs(a) / (b * b);
-        break;
-      case Op::kNeg:
-        da = 1.0;
-        rounding = 0.0;
-        break;
-      case Op::kExp:
-        da = std::fabs(y);
-        rounding = 4.0;  // 0.613 ULP (stage 1a), at most 2 u |y| per ULP
-        break;
-      case Op::kLog:
-        da = 1.0 / std::fabs(a);
-        rounding = 4.0;  // 0.840 ULP
-        break;
-      case Op::kSqrt:
-        da = 0.5 / std::fabs(y);
-        break;
-      case Op::kNormalCdf:
-        da = NormalPdf(a);
-        // erfc within 4 ULP, and 4 y^2 u from rounding y = -x / sqrt 2 (normal_cdf.hpp).
-        rounding = 16.0 + (2.0 * a * a);
-        break;
-      case Op::kInverseNormal:
-        da = 1.0 / NormalPdf(y);
-        rounding = 16.0;  // AS241 within 1e-15 relative
-        break;
-      case Op::kMin:
-        chosen = b < a ? s.b : s.a;
-        select = true;
-        break;
-      case Op::kMax:
-        chosen = a < b ? s.b : s.a;
-        select = true;
-        break;
-      case Op::kSelect:
-        chosen = v[s.c] < v[s.d] ? s.a : s.b;
-        select = true;
-        break;
-      case Op::kAddConstant:
-      case Op::kConstantMinus:
-        da = 1.0;
-        break;
-      case Op::kMulConstant:
-        da = std::fabs(s.constant);
-        break;
-      case Op::kConstantOver:
-        da = std::fabs(s.constant) / (a * a);
-        break;
-      case Op::kSquare:
-        da = 2.0 * std::fabs(a);
-        break;
-      case Op::kCount:
-        break;
-    }
+    const StepTerms t = Terms(s, v, a, b, y);
+    const double da = t.da;
+    const double db = t.db;
     std::array<double, kMaxInputs> derivative{};
     double error = 0.0;
-    if (select) {
-      derivative = model.derivative[chosen];
-      error = model.error[chosen];
+    if (t.select) {
+      derivative = model.derivative[t.chosen];
+      error = model.error[t.chosen];
     } else {
       const bool binary =
           s.op == Op::kAdd || s.op == Op::kSub || s.op == Op::kMul || s.op == Op::kDiv;
@@ -411,7 +426,7 @@ inline ErrorModel Model(const Program& p, const std::vector<double>& v) {
         if (binary) derivative[i] += db * model.derivative[s.b][i];
       }
       error = (da * model.error[s.a]) + (binary ? db * model.error[s.b] : 0.0) +
-              (rounding * u * std::fabs(y)) + 0x1p-1074;
+              (t.rounding * u * std::fabs(y)) + 0x1p-1074;
     }
     model.derivative.push_back(derivative);
     model.error.push_back(error);

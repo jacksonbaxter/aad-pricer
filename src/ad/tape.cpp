@@ -42,7 +42,7 @@ void Tape::EnterStatementChunk() {
   const std::size_t chunk = statements_ >> kChunkShift;
   if (chunk == statement_chunks_.size()) {
     if (statements_ >= kMaxStatements - kChunkEntries) Fail("tape index space exhausted");
-    statement_chunks_.push_back(std::make_unique<OperandCount[]>(kChunkEntries));
+    statement_chunks_.push_back(NewChunk<OperandCount>());
     adjoints_.resize(statement_chunks_.size() * kChunkEntries, 0.0);
     if (!tangents_.empty()) tangents_.resize(adjoints_.size(), 0.0);
   }
@@ -51,9 +51,8 @@ void Tape::EnterStatementChunk() {
 
 void Tape::SelectOperandChunk(std::size_t chunk) {
   if (chunk == operand_chunks_.size()) {
-    operand_chunks_.push_back({.partials = std::make_unique<double[]>(kChunkEntries),
-                               .indices = std::make_unique<Index[]>(kChunkEntries),
-                               .used = 0});
+    operand_chunks_.push_back(
+        {.partials = NewChunk<double>(), .indices = NewChunk<Index>(), .used = 0});
   }
   op_chunk_ = chunk;
   partials_ = operand_chunks_[chunk].partials.get();
@@ -68,8 +67,9 @@ void Tape::NextOperandChunk() {
 
 void Tape::Rewind(const Position& mark) {
   statements_ = mark.statements;
-  if ((statements_ & kChunkMask) != 0)
+  if ((statements_ & kChunkMask) != 0) {
     counts_ = statement_chunks_[statements_ >> kChunkShift].get();
+  }
   SelectOperandChunk(mark.operand_chunk);
   op_offset_ = mark.operand_offset;
 }

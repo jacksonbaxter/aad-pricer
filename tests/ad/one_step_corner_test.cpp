@@ -114,7 +114,7 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
     for (const double u : {0.5, 1e-2, 1e-5, 1e-9, 1e-13, u53}) {
       std::vector<double> normal = {u};
       const pricer::PathUniforms uniforms{.normal = normal, .crossing = {}};
-      const test::Dual dual = pricer::DiscountedPayoff<test::Dual>(c, dual_model, uniforms);
+      const auto dual = pricer::DiscountedPayoff<test::Dual>(c, dual_model, uniforms);
       PathGradient::PathResult tape;
       {
         PathGradient path(c, kMarket);
@@ -181,67 +181,79 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
 // assumption fails (tests/ad/bounds.hpp): subnormal rounding is absolute and later partials
 // amplify it. So E6 is held only where p >= 2^-1022, which still includes points with
 // 0 < q < 2^-1000. At the other points the test prints the difference but does not check it.
-TEST(OneStepCorner, GreeksStayFiniteWhenPTimesVIsNearZero) {
-  constexpr pricer::Market<double> kDeep{
-      .spot = 100.0, .sigma = 1e-3, .r = 0.0, .q = 0.16, .maturity = 1.0};
-  const pricer::GbmModel<double> model(kDeep, 1);
-  const pricer::StepLaw<double> law = model.Law(0, model.LogSpot());
-  const pricer::GbmModel<test::Dual> dual_model(testing::DualMarket(kDeep), 1);
+struct NearZeroTally {
   std::size_t dead = 0;
   std::size_t passive = 0;
   std::size_t active = 0;
   std::size_t passive_checked = 0;
   double worst_e6 = 0.0;
   double worst_subnormal = 0.0;
+};
+
+// E5 and E6 at one point; the tally collects E6's worst ratio and E7's regimes.
+void CheckNearZero(const pricer::Contract& c, const pricer::Market<double>& market,
+                   const pricer::GbmModel<test::Dual>& dual_model, double u, double p,
+                   NearZeroTally& tally) {
+  const double q = p * (1.0 - u);
+  const bool out = c.barrier.knock == pricer::Knock::kOut;
+  const bool tiny = q > 0.0 && q < 0x1p-1000;
+  if (out) {
+    tally.dead += q == 0.0 ? 1 : 0;
+    tally.passive += tiny ? 1 : 0;
+    tally.active += q >= 0x1p-1000 ? 1 : 0;
+  }
+  std::vector<double> normal = {u};
+  const pricer::PathUniforms uniforms{.normal = normal, .crossing = {}};
+  const auto dual = pricer::DiscountedPayoff<test::Dual>(c, dual_model, uniforms);
+  PathGradient::PathResult tape;
+  {
+    PathGradient path(c, market);
+    tape = path.Evaluate(uniforms);
+  }
+  for (std::size_t i = 0; i < kInputs; ++i) {
+    EXPECT_TRUE(std::isfinite(tape.gradient[i])) << "E5: u " << u << ", q " << q << ", input " << i;
+    const double bound = testing::AgreementBound(tape.absolute[i], tape.statements, tape.operands);
+    const double ratio = std::fabs(tape.gradient[i] - dual.tangent[i]) / bound;
+    if (p < 0x1p-1022) {
+      tally.worst_subnormal = std::max(tally.worst_subnormal, ratio);
+      continue;
+    }
+    EXPECT_LE(ratio, 1.0) << "E6: p " << p << ", u " << u << ", input " << i;
+    tally.worst_e6 = std::max(tally.worst_e6, ratio);
+    tally.passive_checked += out && i == 0 && tiny ? 1 : 0;
+  }
+}
+
+TEST(OneStepCorner, GreeksStayFiniteWhenPTimesVIsNearZero) {
+  constexpr pricer::Market<double> kDeep{
+      .spot = 100.0, .sigma = 1e-3, .r = 0.0, .q = 0.16, .maturity = 1.0};
+  const pricer::GbmModel<double> model(kDeep, 1);
+  const pricer::StepLaw<double> law = model.Law(0, model.LogSpot());
+  const pricer::GbmModel<test::Dual> dual_model(testing::DualMarket(kDeep), 1);
+  NearZeroTally tally;
   for (const double a : {-30.0, -36.0, -37.0, -37.5, -37.8, -38.0, -38.2, -38.4, -38.6}) {
     const double barrier = math::exp(law.mean - (a * law.sd));
+    const double p = pricer::NormalCdf((law.mean - math::log(barrier)) / law.sd);
     for (const pricer::Knock knock : {pricer::Knock::kOut, pricer::Knock::kIn}) {
       pricer::Contract c = OneStep(barrier);
       c.barrier.knock = knock;
       c.strike = 0.8 * kDeep.spot;
       ASSERT_EQ(pricer::Validate(c, kDeep), pricer::ContractError::kNone) << a;
       for (const double u : {0.5, 1e-9, 1.0 - 1e-6, 1.0 - u53}) {
-        const double p = pricer::NormalCdf((law.mean - math::log(barrier)) / law.sd);
-        const double q = p * (1.0 - u);
-        if (knock == pricer::Knock::kOut) {
-          if (q == 0.0) ++dead;
-          if (q > 0.0 && q < 0x1p-1000) ++passive;
-          if (q >= 0x1p-1000) ++active;
-        }
-        std::vector<double> normal = {u};
-        const pricer::PathUniforms uniforms{.normal = normal, .crossing = {}};
-        const test::Dual dual = pricer::DiscountedPayoff<test::Dual>(c, dual_model, uniforms);
-        PathGradient::PathResult tape;
-        {
-          PathGradient path(c, kDeep);
-          tape = path.Evaluate(uniforms);
-        }
-        for (std::size_t i = 0; i < kInputs; ++i) {
-          ASSERT_TRUE(std::isfinite(tape.gradient[i]))
-              << "E5: a " << a << ", u " << u << ", q " << q << ", input " << i;
-          const double bound =
-              testing::AgreementBound(tape.absolute[i], tape.statements, tape.operands);
-          const double diff = std::fabs(tape.gradient[i] - dual.tangent[i]);
-          if (p < 0x1p-1022) {
-            if (diff > 0.0) worst_subnormal = std::max(worst_subnormal, diff / bound);
-            continue;
-          }
-          EXPECT_LE(diff, bound) << "E6: a " << a << ", u " << u << ", input " << i;
-          if (diff > 0.0) worst_e6 = std::max(worst_e6, diff / bound);
-          if (knock == pricer::Knock::kOut && i == 0 && q < 0x1p-1000) ++passive_checked;
-        }
+        CheckNearZero(c, kDeep, dual_model, u, p, tally);
       }
     }
   }
-  EXPECT_GE(dead, 1U) << "E7";
-  EXPECT_GE(passive, 1U) << "E7";
-  EXPECT_GE(active, 1U) << "E7";
-  EXPECT_GE(passive_checked, 1U) << "E6 must reach 0 < q < 2^-1000";
+  EXPECT_GE(tally.dead, 1U) << "E7";
+  EXPECT_GE(tally.passive, 1U) << "E7";
+  EXPECT_GE(tally.active, 1U) << "E7";
+  EXPECT_GE(tally.passive_checked, 1U) << "E6 must reach 0 < q < 2^-1000";
   std::printf(
       "measured: E5 all finite; E6 max |tape - dual| / bound %.3g (p >= 2^-1022; %zu knock-out "
       "points with 0 < q < 2^-1000 among them), with p subnormal %.3g, not checked; E7 points "
       "with q = 0: %zu, 0 < q < 2^-1000: %zu, q >= 2^-1000: %zu\n",
-      worst_e6, passive_checked, worst_subnormal, dead, passive, active);
+      tally.worst_e6, tally.passive_checked, tally.worst_subnormal, tally.dead, tally.passive,
+      tally.active);
 }
 
 }  // namespace

@@ -15,6 +15,7 @@
 #include "ad/gradient.hpp"
 #include "cases.hpp"
 #include "pricer/draws.hpp"
+#include "pricer/pricer.hpp"
 #include "pricer/runner.hpp"
 
 namespace aadp::ad {
@@ -79,6 +80,7 @@ TEST(TapeThreads, TapesOnSeparateThreadsAreIndependent) {
   std::array<std::array<double, kInputs>, kWorkers> together{};
   {
     std::vector<std::jthread> threads;
+    threads.reserve(kWorkers);
     for (std::size_t w = 0; w < kWorkers; ++w) {
       threads.emplace_back([&, w] { together[w] = work(w); });
     }

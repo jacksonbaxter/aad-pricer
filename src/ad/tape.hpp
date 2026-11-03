@@ -55,13 +55,23 @@ static_assert(kOperandBytes <= 12, "MEM-1: an operand is at most 12 bytes");
 
 class Tape;
 
+// A chunk is a fixed buffer of kChunkEntries, allocated once and never resized, so it is an
+// owning pointer to an array: a vector would carry a size and a capacity it never uses.
+template <class T>
+using ChunkBuffer = std::unique_ptr<T[]>;  // NOLINT(modernize-avoid-c-arrays): see above.
+
+template <class T>
+ChunkBuffer<T> NewChunk() {
+  return std::make_unique<T[]>(kChunkEntries);  // NOLINT(modernize-avoid-c-arrays): see above.
+}
+
 // The active type. A Real made from a double is passive: it records nothing, and an operation
 // whose operands are all passive records nothing either.
 class Real {
  public:
   constexpr Real() = default;
   // Implicit, so that kernels mix Real and double freely; a double is a constant.
-  // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions): see above.
+  // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor,misc-explicit-constructor): see above.
   constexpr Real(double value) : value_(value) {}
 
   [[nodiscard]] constexpr double value() const { return value_; }
@@ -141,16 +151,18 @@ class Tape {
 
   // Recording, for the operations in real.hpp. a and b are active indices.
   Real Push(double value, Index a, double da) {
-    if (op_offset_ + 1 > kChunkEntries) [[unlikely]]
+    if (op_offset_ + 1 > kChunkEntries) [[unlikely]] {
       NextOperandChunk();
+    }
     partials_[op_offset_] = da;
     indices_[op_offset_] = a;
     op_offset_ += 1;
     return PushStatement(value, 1);
   }
   Real Push(double value, Index a, double da, Index b, double db) {
-    if (op_offset_ + 2 > kChunkEntries) [[unlikely]]
+    if (op_offset_ + 2 > kChunkEntries) [[unlikely]] {
       NextOperandChunk();
+    }
     partials_[op_offset_] = da;
     indices_[op_offset_] = a;
     partials_[op_offset_ + 1] = db;
@@ -161,14 +173,15 @@ class Tape {
 
  private:
   struct OperandChunk {
-    std::unique_ptr<double[]> partials;
-    std::unique_ptr<Index[]> indices;
+    ChunkBuffer<double> partials;
+    ChunkBuffer<Index> indices;
     std::size_t used = 0;  // Valid for chunks before the current one.
   };
 
   Real PushStatement(double value, OperandCount count) {
-    if ((statements_ & kChunkMask) == 0) [[unlikely]]
+    if ((statements_ & kChunkMask) == 0) [[unlikely]] {
       EnterStatementChunk();
+    }
     counts_[statements_ & kChunkMask] = count;
     const auto index = static_cast<Index>(statements_);
     statements_ += 1;
@@ -187,7 +200,7 @@ class Tape {
   template <bool kAbsolute>
   void Sweep(const Position& from, const Position& stop);
 
-  std::vector<std::unique_ptr<OperandCount[]>> statement_chunks_;
+  std::vector<ChunkBuffer<OperandCount>> statement_chunks_;
   std::vector<OperandChunk> operand_chunks_;
   std::vector<double> adjoints_;  // One per statement slot of every allocated chunk.
   std::vector<double> tangents_;
@@ -214,8 +227,9 @@ inline Tape*& ActiveSlot() {
 
 inline Tape& ActiveTape() {
   Tape* tape = detail::ActiveSlot();
-  if (tape == nullptr) [[unlikely]]
+  if (tape == nullptr) [[unlikely]] {
     detail::NoActiveTape();
+  }
   return *tape;
 }
 

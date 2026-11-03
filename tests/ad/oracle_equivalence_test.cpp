@@ -26,17 +26,17 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <ios>
 #include <map>
 #include <sstream>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "ad/gradient.hpp"
 #include "bounds.hpp"
 #include "cases.hpp"
-#include "oracle/black_scholes.hpp"
+#include "oracle/finite_difference.hpp"
 #include "oracle/plan.hpp"
 #include "oracle/tolerance.hpp"
 #include "pricer/contract.hpp"
@@ -80,7 +80,7 @@ class DualPathFn {
 
   void operator()(const pricer::PathUniforms& u, std::array<double, kStats>& stats) {
     stats = {};
-    const test::Dual dual = pricer::DiscountedPayoff<test::Dual>(contract_, dual_model_, u);
+    const auto dual = pricer::DiscountedPayoff<test::Dual>(contract_, dual_model_, u);
     const PathGradient::PathResult tape = tape_.Evaluate(u);
     stats[0] = dual.value;
     const double m = (2.0 * static_cast<double>(tape.statements)) +
@@ -147,7 +147,7 @@ TEST(OracleEquivalence, TapeEstimatesEqualTheDualOnEveryRunRow) {
                                   .crossing = pricer::NeedsCrossingUniforms(contract)};
     const auto dual = pricer::RunBatches<kStats>(
         config, shape, [&] { return DualPathFn(contract, market, block, blocks); });
-    const auto n = static_cast<double>(paths / batches);
+    const double n = static_cast<double>(paths) / static_cast<double>(batches);
 
     double failures = 0.0;
     for (const auto& row : dual) failures += row[kFailures];
@@ -172,6 +172,7 @@ TEST(OracleEquivalence, TapeEstimatesEqualTheDualOnEveryRunRow) {
         if (t != d) row_worst = std::max(row_worst, std::fabs(t - d) / bound);
       }
       std::vector<double> dual_means;
+      dual_means.reserve(batches);
       for (std::size_t b = 0; b < batches; ++b) dual_means.push_back(dual[b][kDualOffset + i]);
       std::printf("measured, %-18s tape %.10g dual %.10g, max batch |diff| / bound %.3g\n",
                   row->id.c_str(), tape->greeks[i].mean, BatchMeansStatistics(dual_means).mean,

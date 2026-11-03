@@ -18,17 +18,22 @@
 #include "ad/tape.hpp"
 #include "cases.hpp"
 #include "pricer/draws.hpp"
+#include "pricer/runner.hpp"
 
 namespace {
 
+// The replaced operator new has no way to reach state but a global.
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables): see above.
 std::atomic<bool> g_counting{false};
 std::atomic<std::uint64_t> g_allocations{0};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void* Allocate(std::size_t size) {
   if (g_counting.load(std::memory_order_relaxed)) {
     g_allocations.fetch_add(1, std::memory_order_relaxed);
   }
-  // NOLINTNEXTLINE(cppcoreguidelines-no-malloc): this is the allocator being replaced.
+  // This is the allocator being replaced.
+  // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory): see above.
   void* p = std::malloc(size == 0 ? 1 : size);
   if (p == nullptr) throw std::bad_alloc();
   return p;
@@ -40,6 +45,9 @@ void Free(void* p) noexcept { std::free(p); }
 }  // namespace
 
 // The replaceable global allocation functions ([new.delete]); aligned forms are not used here.
+// The library's declarations name their parameters with reserved identifiers, which this file
+// cannot use, so the names differ.
+// NOLINTBEGIN(readability-inconsistent-declaration-parameter-name): see above.
 void* operator new(std::size_t size) { return Allocate(size); }
 void* operator new[](std::size_t size) { return Allocate(size); }
 void* operator new(std::size_t size, const std::nothrow_t& /*tag*/) noexcept {
@@ -60,6 +68,7 @@ void operator delete(void* p) noexcept { Free(p); }
 void operator delete[](void* p) noexcept { Free(p); }
 void operator delete(void* p, std::size_t /*size*/) noexcept { Free(p); }
 void operator delete[](void* p, std::size_t /*size*/) noexcept { Free(p); }
+// NOLINTEND(readability-inconsistent-declaration-parameter-name)
 
 namespace aadp::ad {
 namespace {

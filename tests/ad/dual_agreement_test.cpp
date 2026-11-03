@@ -54,8 +54,8 @@ void CompareCase(const Case& c, Worst& worst) {
   const pricer::PathUniforms u{.normal = normal, .crossing = crossing};
   for (std::uint64_t path = 0; path < kPaths; ++path) {
     pricer::FillPath(kSeed, path, normal, crossing);
-    const double value = pricer::DiscountedPayoff<double>(c.contract, model, u);
-    const test::Dual dual = pricer::DiscountedPayoff<test::Dual>(c.contract, dual_model, u);
+    const auto value = pricer::DiscountedPayoff<double>(c.contract, model, u);
+    const auto dual = pricer::DiscountedPayoff<test::Dual>(c.contract, dual_model, u);
     const PathGradient::PathResult result = tape.Evaluate(u);
     EXPECT_EQ(Bits(result.value), Bits(value)) << c.name << ", path " << path;
     EXPECT_EQ(Bits(dual.value), Bits(value)) << c.name << ", path " << path;
