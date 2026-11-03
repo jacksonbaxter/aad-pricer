@@ -117,6 +117,25 @@ if(TARGET aadp_rng)
     SOURCES tests/ad/dual_agreement_test.cpp
     LINK aadp_ad aadp_test_support
     LABELS ad)
+  # Check 2: the tangent-adjoint dot-product identity, on random programs and priced paths.
+  aadp_test(aadp_ad_dot_product_test
+    SOURCES tests/ad/dot_product_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad)
+
+  # Check 3: operation sequences on the tape against central differences.
+  aadp_fuzz(aadp_fuzz_tape_operations
+    SOURCES fuzz/fuzz_tape_operations.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad
+    CORPUS fuzz/fuzz_tape_operations_seeds)
+  # Check 4: the pricer entry point on the tape, with gradient invariants. Same input layout and
+  # seed corpus as aadp_fuzz_pricer.
+  aadp_fuzz(aadp_fuzz_pricer_gradient
+    SOURCES fuzz/fuzz_pricer_gradient.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad
+    CORPUS fuzz/fuzz_pricer_seeds)
 
   if(AADP_BUILD_TESTS)
     add_test(NAME aadp_pricer_normal_cdf_reference_current
