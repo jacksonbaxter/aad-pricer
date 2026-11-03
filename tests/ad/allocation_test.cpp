@@ -107,14 +107,14 @@ TEST(TapeAllocation, NoHeapAllocationAfterWarmUp) {
         path_fn(u, stats);
         for (std::size_t i = 0; i < kGradientStats; ++i) sum[i] += stats[i];
         if (p % pricer::kBlockPaths == 0) path_fn.EndBlock(sum);
+        // One allocation already fails the test. A tape that never rewinds also makes every
+        // later sweep longer, so stop at the first one rather than run on.
+        if (g_allocations.load(std::memory_order_relaxed) != 0) break;
       }
       g_counting = false;
       const std::uint64_t allocations = g_allocations.load();
       total += allocations;
-      EXPECT_EQ(allocations, 0U) << c.name << ", " << steps << " steps";
-      if (allocations == 0) continue;
-      std::printf("measured, %s, %u steps: %llu allocations after warm-up\n", c.name.c_str(), steps,
-                  static_cast<unsigned long long>(allocations));
+      ASSERT_EQ(allocations, 0U) << c.name << ", " << steps << " steps: allocated after warm-up";
     }
   }
   std::printf(
