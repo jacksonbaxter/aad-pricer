@@ -80,10 +80,10 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ### Fault injection
 
-- [ ] Runner and `faults/manifest.json`: mutation on a copy under `build/`, baseline must pass, mutated run must fail for the named reason
-- [ ] One fault per oracle: Black-Scholes, barrier closed form, geometric Asian, quadrature references, finite differences, naive barrier, tolerance rule, SE ceiling, K count, reference drift, Philox, inverse normal, N-thread
-- [ ] One fault per check: ASan, UBSan, TSan, clang-tidy, clang-format, `-Wall`, `-Wextra`, `-Werror`, each fuzz target, data checksum, missing capture, actionlint, `scripts/check.sh` itself, results-header refusal, host-mixing refusal, attribution on output
-- [ ] Results file with baseline and mutated outcome for every fault, on `mac-m4max`, and on `linux-zen1` for what runs there
+- [x] Runner and `faults/manifest.json`: mutation on a copy under `build/`, baseline must pass, mutated run must fail for the named reason. `scripts/fault_injection.py`, with 36 tests of its own in `faults/test_fault_injection.py`
+- [x] One fault per oracle: Black-Scholes, barrier closed form, geometric Asian, quadrature references, finite differences, naive barrier, tolerance rule, SE ceiling, K count, reference drift, Philox, inverse normal, N-thread. 13 faults. Two found holes, fixed by new tests (493ad27, 3682442)
+- [x] One fault per check: ASan, UBSan, TSan, clang-tidy, clang-format, `-Wall`, `-Wextra`, `-Werror`, each fuzz target, data checksum, missing capture, actionlint, `scripts/check.sh` itself, results-header refusal, host-mixing refusal, attribution on output. 19 check faults and 9 fuzz faults
+- [x] Results file with baseline and mutated outcome for every fault, on `mac-m4max`, and on `linux-zen1` for what runs there. Mac: 41 of 41 caught at 4928e8f. Linux: 29 of 29 caught at dba8dc5, leaving out the 9 fuzz and 3 sanitizer faults, which run on the Mac only
 
 ### Fuzzing
 
@@ -105,7 +105,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] `scripts/verify_commits.sh` builds and tests each commit of a range from an export, on the `release` preset. Proved on three commits, 2490bd0 to 556a6c8
 - [ ] Full-range `verify_commits` run
 - [x] README for this phase: status, build, checks, data, CI. The results table waits for Phase 4
-- [ ] `scripts/check.sh` runs every check
+- [x] `scripts/check.sh` runs every check: 13 steps, fault injection last. Final run at 73bb647: 13 of 13 pass, 0 skipped
 
 ### Data
 

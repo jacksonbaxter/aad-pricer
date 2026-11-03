@@ -13,6 +13,7 @@ The test and measurement harness was built first, so that the oracles are proved
 - Philox random numbers, an inverse normal, and minimal path kernels for GBM with exact steps: European, arithmetic and geometric Asian, and down-and-out barriers.
 - Closed-form and finite-difference oracles, with the tolerance rule implemented once and every comparison fixed in `references/comparison_plan.csv`. K is 147: 90 rows run now and 57 wait for Phase 3.
 - cp950 and TAIFEX file readers, with libFuzzer targets on every parser and decoder.
+- A fault-injection runner that plants one bug at a time in a copy of the code, to show each oracle and check can fail.
 
 The tape does not exist yet. Greeks in this phase come from a forward-mode `Dual` in `tests/support/`, which is a stand-in and not AAD. The SVI fit, the bump-and-revalue benchmark, the GPU pricer and the QuantLib comparison are also still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets, none of which has been measured here, and `NOTES.md` the findings and decisions.
 
@@ -50,13 +51,27 @@ Run every check, one after another:
 scripts/check.sh
 ```
 
-Each step prints one PASS, FAIL or SKIP line and writes a log under `build/logs/check/`. The steps are the nice level, format, clang-tidy, the repo scan, build and ctest for `release`, `debug`, `asan-ubsan` and `tsan`, a timed run of every fuzz target, the measured oracle plan compared with `references/measured_results.csv`, data verification and actionlint. Every step runs even after a failure. `AADP_JOBS` sets the jobs, at most 6 and by default 6, and `AADP_FUZZ_SECONDS` the seconds per fuzz target, by default 60. A skipped test or a step that could not run is a failure unless `--allow-skipped-tests` or `--allow-skip-step` names it. `--only <step,...>` runs part of the list and always exits non-zero, so a partial run can never read as a pass.
+Each step prints one PASS, FAIL or SKIP line and writes a log under `build/logs/check/`. There are 13 steps: the nice level, format, clang-tidy, the repo scan, build and ctest for `release`, `debug`, `asan-ubsan` and `tsan`, a timed run of every fuzz target, the measured oracle plan compared with `references/measured_results.csv`, data verification, actionlint, and fault injection last. The fault-injection step runs against the committed `HEAD`, so uncommitted edits do not reach it. Every step runs even after a failure. `AADP_JOBS` sets the jobs, at most 6 and by default 6, and `AADP_FUZZ_SECONDS` the seconds per fuzz target, by default 60. A skipped test or a step that could not run is a failure unless `--allow-skipped-tests` or `--allow-skip-step` names it. `--only <step,...>` runs part of the list and always exits non-zero, so a partial run can never read as a pass.
 
 Other scripts:
 
 - `scripts/fetch_tools.sh` installs the pinned actionlint into `build/tools/`, checked by sha256. With `--llvm` it also installs LLVM 23.1.4, which is how CI gets its compiler.
 - `python3 -I scripts/scan_repo.py` fails if a tracked file holds a home path, an IP address, the current user or host name, an agent notes file, or a raw line of the market data. The exceptions are listed at the top of the script.
 - `scripts/verify_commits.sh <range>` builds and tests each commit of a range in an export under `build/commit-check/`. It never checks out a commit.
+
+## Fault injection
+
+A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 41 faults: 13 against the oracles, 19 against the checks and 9 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
+
+```sh
+python3 -I scripts/fault_injection.py --list                 # print the faults
+python3 -I scripts/fault_injection.py --only oracle-philox   # run one fault
+python3 -I scripts/fault_injection.py --jobs 6 --output <file>   # run all of them
+```
+
+It needs the toolchain in the environment, as the build does. `--kind` runs one kind, and `--source <dir>` mutates an export with no `.git`. The schema and the verdicts are described at the top of the script, and the runner's own tests are in `faults/test_fault_injection.py`. `scripts/check.sh` runs every fault as its last step.
+
+Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. On the Mac all 41 are caught. On the Linux host 29 run and all 29 are caught. The 9 fuzz faults and 3 sanitizer faults are left out there, because sanitizer and fuzz runs stay on the Mac. What the faults found is in `NOTES.md`, under "Fault injection results".
 
 ## Results
 
@@ -66,7 +81,7 @@ Results tables come only from `aadp_results_table`, which reads the raw results 
 build/release/bin/aadp_results_table results/
 ```
 
-No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. The files in `results/` so far are harness self-tests, not performance results, so this README has no table yet.
+No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. It leaves out a fault-injection report in a host directory, judged by the report's first line. The files in `results/` so far are harness self-tests and fault-injection reports, not performance results, so this README has no table yet.
 
 ## Data
 
@@ -89,4 +104,4 @@ The raw files are never committed. `scripts/fetch_data.sh` downloads the Interne
 
 ## CI
 
-`.github/workflows/ci.yml` has never executed on GitHub. It has only been checked with actionlint and by reading its commands against the scripts and presets, so treat it as untested. It covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy, format, a fuzz smoke, the repo scan, and AVX2 and AVX-512 builds. AVX-512 is build-only.
+`.github/workflows/ci.yml` has never executed on GitHub, so treat the workflow itself as untested. It passes actionlint. Its Linux commands, apart from the sanitizer and fuzz jobs, were run by hand on the Linux host, and the macOS commands on the Mac. The Linux sanitizer and fuzz-smoke jobs have not run anywhere. It covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy, format, a fuzz smoke, the repo scan, and AVX2 and AVX-512 builds. AVX-512 is build-only.
