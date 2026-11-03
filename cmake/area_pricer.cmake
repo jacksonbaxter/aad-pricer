@@ -102,6 +102,22 @@ if(TARGET aadp_rng)
     LABELS pricer
     CORPUS fuzz/fuzz_pricer_seeds)
 
+  # src/ad/ is the pricer's own tape (stage 2a). It instantiates the pricer kernels on its
+  # active type, so it lives in this area.
+  aadp_library(aadp_ad
+    SOURCES src/ad/tape.cpp src/ad/gradient.cpp
+    LINK aadp_pricer)
+
+  aadp_test(aadp_ad_tape_test
+    SOURCES tests/ad/tape_test.cpp
+    LINK aadp_ad
+    LABELS ad fast tsan)
+  # Check 1: per path against the forward-mode Dual, on every product and treatment.
+  aadp_test(aadp_ad_dual_agreement_test
+    SOURCES tests/ad/dual_agreement_test.cpp
+    LINK aadp_ad aadp_test_support
+    LABELS ad)
+
   if(AADP_BUILD_TESTS)
     add_test(NAME aadp_pricer_normal_cdf_reference_current
       COMMAND "${Python3_EXECUTABLE}" -I tests/pricer/normal_cdf_reference.py --check

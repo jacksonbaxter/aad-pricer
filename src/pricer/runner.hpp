@@ -6,7 +6,10 @@
 // depends on which worker ran what, so 1, 2, 3 or 8 threads give the same bits as one.
 //
 // Per-worker state. make_path_fn is called once on each worker, and the callable it returns is
-// used only there. That is where a later stage keeps a worker's tape.
+// used only there. That is where a worker's tape lives (src/ad/gradient.hpp). A callable that
+// also has EndBlock(std::array<double, M>&) is called once after each block's last path, before
+// the block's sum is stored, so it can add what it accumulated over the block: the tape's set-up
+// sweep runs there, once per block rather than once per path.
 #ifndef AADP_PRICER_RUNNER_HPP_
 #define AADP_PRICER_RUNNER_HPP_
 
@@ -77,6 +80,7 @@ std::vector<std::array<double, M>> RunBatches(const RunConfig& config, const Pat
         path_fn(uniforms, stats);
         for (std::size_t i = 0; i < M; ++i) sum[i] += stats[i];
       }
+      if constexpr (requires { path_fn.EndBlock(sum); }) path_fn.EndBlock(sum);
       block_sums[static_cast<std::size_t>(block)] = sum;
     }
   };
