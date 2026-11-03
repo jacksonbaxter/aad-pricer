@@ -143,9 +143,20 @@ class Tape {
   // Forward tangent sweep over [from, end). Tangents of independent variables are the seeds,
   // every other tangent is overwritten. Tangent storage is allocated on first use.
   void SweepForward(const Position& from);
+  // The same sweep on |partial| and |seed|, for error bounds.
+  void SweepForwardAbsolute(const Position& from);
   void SetTangent(const Real& x, double tangent);
   [[nodiscard]] double Tangent(const Real& x) const;
   void ClearTangents();
+
+  // For error bounds (tests/ad/bounds.hpp): over every operand of the statements in
+  // [stop, from), the sum of the statement's |adjoint| and the sum of the operand's |tangent|,
+  // as the sweeps last left them. Each operand is one product in either sweep.
+  struct OperandSums {
+    double adjoints = 0.0;
+    double tangents = 0.0;
+  };
+  [[nodiscard]] OperandSums SumOverOperands(const Position& from, const Position& stop) const;
 
   [[nodiscard]] MemoryReport Memory() const;
 
@@ -199,6 +210,8 @@ class Tape {
   }
   template <bool kAbsolute>
   void Sweep(const Position& from, const Position& stop);
+  template <bool kAbsolute>
+  void Forward(const Position& from);
 
   std::vector<ChunkBuffer<OperandCount>> statement_chunks_;
   std::vector<OperandChunk> operand_chunks_;

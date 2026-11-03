@@ -2,10 +2,12 @@
 // forward-mode Dual of tests/support/ on the same kernel and the same uniforms.
 //
 // Bound, stated before the comparison ran: bounds.hpp, |tape - dual| <= 2 gamma_n A (1 + 2
-// gamma_n) + n 2^-1070 per input, with A the path's absolute gradient and n = 2 T + O from the
-// path's own tape. The reason: both compute the same pathwise derivative from the same partials,
-// in different association, and that bounds what association can change. Also checked: the
-// tape's value is the double kernel's, bit for bit, as is the Dual's.
+// gamma_n) plus the underflow term, per input, with A the path's absolute gradient and
+// n = 2 T + O from the path's own tape. (The underflow term was first n 2^-1070; bounds.hpp
+// says why it changed. On these normal-range paths it is far below the first term.) The reason:
+// both compute the same pathwise derivative from the same partials, in different association, and
+// that bounds what association can change. Also checked: the tape's value is the double kernel's,
+// bit for bit, as is the Dual's.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -61,8 +63,8 @@ void CompareCase(const Case& c, Worst& worst) {
     EXPECT_EQ(Bits(dual.value), Bits(value)) << c.name << ", path " << path;
     worst.statements = std::max(worst.statements, result.statements);
     for (std::size_t i = 0; i < kInputs; ++i) {
-      const double bound =
-          testing::AgreementBound(result.absolute[i], result.statements, result.operands);
+      const double bound = testing::AgreementBound(result.absolute[i], result.operand_sums[i],
+                                                   result.statements, result.operands);
       const double diff = std::fabs(result.gradient[i] - dual.tangent[i]);
       ASSERT_TRUE(std::isfinite(result.gradient[i])) << c.name << ", path " << path;
       ASSERT_LE(diff, bound) << c.name << ", path " << path << ", input " << i << ": tape "
@@ -93,7 +95,7 @@ TEST(TapeVsDual, EveryProductAndTreatmentAgreesPerPathWithinTheAssociationBound)
 // The bound is not vacuous: one ULP of a Greek's own size in the wrong place is far outside it
 // on a long path, so it sees an error of the size a wrong partial makes.
 TEST(TapeVsDual, BoundIsFarBelowAWrongPartial) {
-  const double bound = testing::AgreementBound(1.0, 5000, 8000);
+  const double bound = testing::AgreementBound(1.0, 1e4, 5000, 8000);
   EXPECT_LT(bound, 1e-11);
   EXPECT_GT(bound, 0.0);
 }

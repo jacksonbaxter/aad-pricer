@@ -82,6 +82,14 @@ PathGradient::PathResult PathGradient::Evaluate(const pricer::PathUniforms& u) {
   tape_.AddAdjoint(payoff, 1.0);
   tape_.SweepBackAbsolute(end, Position{});
   result.absolute = ReadInputs();
+  for (std::size_t i = 0; i < kInputs; ++i) {
+    tape_.ClearTangents();
+    tape_.SetTangent(inputs_[i], 1.0);
+    tape_.SweepForwardAbsolute(Position{});
+    const Tape::OperandSums sums = tape_.SumOverOperands(end, Position{});
+    result.operand_sums[i] = sums.adjoints + sums.tangents;
+  }
+  tape_.ClearTangents();
   tape_.ClearAdjoints(end, Position{});
   const MemoryReport memory = tape_.Memory();
   result.statements = memory.statements;

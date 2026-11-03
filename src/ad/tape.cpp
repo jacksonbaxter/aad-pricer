@@ -110,7 +110,8 @@ void Tape::SweepBackAbsolute(const Position& from, const Position& stop) {
   Sweep<true>(from, stop);
 }
 
-void Tape::SweepForward(const Position& from) {
+template <bool kAbsolute>
+void Tape::Forward(const Position& from) {
   if (tangents_.size() != adjoints_.size()) tangents_.resize(adjoints_.size(), 0.0);
   std::size_t chunk = from.operand_chunk;
   std::size_t offset = from.operand_offset;
@@ -125,12 +126,44 @@ void Tape::SweepForward(const Position& from) {
     const double* partials = operand_chunks_[chunk].partials.get();
     const Index* indices = operand_chunks_[chunk].indices.get();
     double tangent = 0.0;
-    for (std::size_t j = 0; j < count; ++j) {
-      tangent += partials[offset + j] * tangents[indices[offset + j]];
+    if constexpr (kAbsolute) {
+      for (std::size_t j = 0; j < count; ++j) {
+        tangent += std::fabs(partials[offset + j]) * std::fabs(tangents[indices[offset + j]]);
+      }
+    } else {
+      for (std::size_t j = 0; j < count; ++j) {
+        tangent += partials[offset + j] * tangents[indices[offset + j]];
+      }
     }
     tangents[i] = tangent;
     offset += count;
   }
+}
+
+void Tape::SweepForward(const Position& from) { Forward<false>(from); }
+
+void Tape::SweepForwardAbsolute(const Position& from) { Forward<true>(from); }
+
+Tape::OperandSums Tape::SumOverOperands(const Position& from, const Position& stop) const {
+  OperandSums sums;
+  std::size_t chunk = stop.operand_chunk;
+  std::size_t offset = stop.operand_offset;
+  const bool tangents = tangents_.size() == adjoints_.size();
+  for (std::size_t i = stop.statements; i < from.statements; ++i) {
+    const OperandCount count = CountAt(i);
+    if (count == 0) continue;
+    if (offset + count > UsedOf(chunk)) {
+      chunk += 1;
+      offset = 0;
+    }
+    const Index* indices = operand_chunks_[chunk].indices.get();
+    for (std::size_t j = 0; j < count; ++j) {
+      sums.adjoints += std::fabs(adjoints_[i]);
+      if (tangents) sums.tangents += std::fabs(tangents_[indices[offset + j]]);
+    }
+    offset += count;
+  }
+  return sums;
 }
 
 void Tape::SetTangent(const Real& x, double tangent) {

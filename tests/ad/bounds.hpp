@@ -12,15 +12,25 @@
 // So each is within gamma_n A of the exact sum (Higham, Accuracy and Stability of Numerical
 // Algorithms, 2nd ed., lemma 3.1 and section 3.1), with n = 2 T + O covering both, and A the sum
 // of |terms|: the same sweep on |partials|, which the tape computes (SweepBackAbsolute) with
-// relative error at most gamma_n. Hence, per input,
-//   |tape - dual| <= 2 gamma_n A (1 + 2 gamma_n) + n 2^-1070,
-// the last term for products that fall below the normal range (each loses at most 2^-1075). That
-// term assumes nothing downstream amplifies such a loss by more than 32. A path whose own values
-// are subnormal breaks that assumption, and the bound does not hold there: OneStepCorner's second
-// test measured 10.8 times it at a step with p near 1e-316, and the pricer-gradient fuzzer 45.8
-// times it on a digital path worth 6e-319 whose theta terms were near 1e-311. So the bound is
-// claimed only in scope: per input, A = 0 or A >= 2^-960, which leaves 2^62 between a subnormal
-// loss and the bound's gamma_n A term for later partials to amplify.
+// relative error at most gamma_n.
+//
+// That model, fl(x op y) = (x op y)(1 + delta) with |delta| <= u, holds only in the normal range.
+// With gradual underflow it becomes fl(x op y) = (x op y)(1 + delta) + eta, |eta| <= 2^-1075,
+// half the smallest subnormal, and eta = 0 for addition and subtraction, which are exact when
+// their result is subnormal (Higham, section 2.2, underflow). So only products add an absolute
+// error, and each operand on the tape is one product in either sweep:
+//   reverse  adj_i d_ij puts eta into adj_j, which reaches input k's adjoint times at most
+//            Tbar_j, the absolute tangent of j seeded on input k (SweepForwardAbsolute);
+//   forward  d_ij t_j puts eta into t_i, which reaches the output times at most Abar_i, the
+//            absolute adjoint of i (SweepBackAbsolute).
+// The computed A carries the reverse term too. Tbar and Abar are computed to within gamma_n and
+// terms of order 2^-2150. With W_k the sum over operands of Abar of the statement plus Tbar of
+// the operand (Tape::SumOverOperands, PathResult::operand_sums), per input k,
+//   |tape - dual| <= 2 gamma_n A (1 + 2 gamma_n) + 2^-1074 W_k (1 + 2 gamma_n) + 2^-1072,
+// 2^-1074 being 2^-1075 twice, for the tape's reverse term and A's, and 2^-1072 the rounding of
+// the bound's own operations. This replaces n 2^-1070, which counted each loss once and not its
+// amplification, and failed below the normal range (10.8 times, OneStepCorner, p near 1e-316;
+// 45.8 times, a digital path worth 6e-319 in the pricer-gradient fuzzer).
 #ifndef AADP_TESTS_AD_BOUNDS_HPP_
 #define AADP_TESTS_AD_BOUNDS_HPP_
 
@@ -39,17 +49,17 @@ inline double RoundoffTerms(std::size_t statements, std::size_t operands) {
   return (2.0 * static_cast<double>(statements)) + static_cast<double>(operands);
 }
 
-inline constexpr double kMinBoundedAbsolute = 0x1p-960;
+// 2^-1075 per product counted twice (see above), times the weight W of the products.
+inline double UnderflowTerm(double weight) { return weight * 0x1p-1074; }
 
-// Whether AgreementBound is claimed for an input whose absolute sweep is A (see above).
-inline bool InBoundScope(double absolute) {
-  return absolute == 0.0 || absolute >= kMinBoundedAbsolute;
-}
+inline constexpr double kBoundRounding = 0x1p-1072;
 
-inline double AgreementBound(double absolute, std::size_t statements, std::size_t operands) {
+inline double AgreementBound(double absolute, double operand_sums, std::size_t statements,
+                             std::size_t operands) {
   const double n = RoundoffTerms(statements, operands);
   const double gamma = Gamma(n);
-  return (2.0 * gamma * absolute * (1.0 + (2.0 * gamma))) + (n * 0x1p-1070);
+  return (2.0 * gamma * absolute * (1.0 + (2.0 * gamma))) +
+         (UnderflowTerm(operand_sums) * (1.0 + (2.0 * gamma))) + kBoundRounding;
 }
 
 }  // namespace aadp::ad::testing

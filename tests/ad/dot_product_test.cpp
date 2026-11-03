@@ -6,7 +6,13 @@
 // over paths of products of the same partials. By the argument of bounds.hpp each side is within
 // gamma_n S of it, with S = sum_k A_k |x'_k|, A the absolute sweep seeded with |y-bar|, and
 // n = 2 T + O + 8 (the 8 for the two final dot products of at most 4 terms each, plus the seed
-// products). So |<y', y-bar> - <x', x-bar>| <= 2 gamma_n S (1 + 2 gamma_n) + n 2^-1070.
+// products). Below the normal range each product also loses up to 2^-1075 (bounds.hpp, after
+// Higham, section 2.2): the forward sweep's losses reach <y', y-bar> weighted by the absolute
+// adjoints seeded with |y-bar|, the reverse sweep's reach <x', x-bar> weighted by the absolute
+// tangents seeded with |x'|, and the final dot products add at most 8 more. So, with W the sum
+// over operands of both weights (Tape::SumOverOperands),
+//   |<y', y-bar> - <x', x-bar>| <= [2 gamma_n S + 2^-1074 (W + 8)] (1 + 2 gamma_n) + 2^-1072.
+// (The underflow term was first n 2^-1070; bounds.hpp says why it changed.)
 // On random straight-line programs (random_program.hpp) and on whole priced paths of every
 // product and treatment.
 #include <gtest/gtest.h>
@@ -39,10 +45,22 @@ constexpr std::uint64_t kPathSeed = 20261112;
 constexpr int kPrograms = 20000;
 constexpr std::uint64_t kPathsPerCase = 64;
 
-double DotBound(double s, std::size_t statements, std::size_t operands) {
+double DotBound(double s, double w, std::size_t statements, std::size_t operands) {
   const double n = testing::RoundoffTerms(statements, operands) + 8.0;
   const double gamma = testing::Gamma(n);
-  return (2.0 * gamma * s * (1.0 + (2.0 * gamma))) + (n * 0x1p-1070);
+  return (((2.0 * gamma * s) + testing::UnderflowTerm(w + 8.0)) * (1.0 + (2.0 * gamma))) +
+         testing::kBoundRounding;
+}
+
+// After SweepBackAbsolute seeded with |y-bar|: the absolute tangents seeded with |x'|, and W.
+double UnderflowWeight(Tape& tape, std::span<const Real> x, std::span<const double> direction,
+                       const Position& end) {
+  tape.ClearTangents();
+  for (std::size_t k = 0; k < x.size(); ++k) tape.SetTangent(x[k], std::fabs(direction[k]));
+  tape.SweepForwardAbsolute(Position{});
+  const Tape::OperandSums sums = tape.SumOverOperands(end, Position{});
+  tape.ClearTangents();
+  return sums.adjoints + sums.tangents;
 }
 
 struct Worst {
@@ -108,8 +126,9 @@ TEST(DotProduct, HoldsOnRandomStraightLinePrograms) {
     for (std::size_t k = 0; k < x.size(); ++k) {
       s += std::fabs(program.direction[k]) * tape.Adjoint(x[k]);
     }
+    const double w = UnderflowWeight(tape, x, program.direction, end);
 
-    const double bound = DotBound(s, memory.statements, memory.operands);
+    const double bound = DotBound(s, w, memory.statements, memory.operands);
     ASSERT_TRUE(std::isfinite(lhs) && std::isfinite(rhs)) << "draw " << draw;
     ASSERT_LE(std::fabs(lhs - rhs), bound)
         << "draw " << draw << ": <y', y-bar> " << lhs << ", <x', x-bar> " << rhs;
@@ -159,10 +178,11 @@ TEST(DotProduct, HoldsOnWholePricedPathsOfEveryProduct) {
         for (std::size_t k = 0; k < kInputs; ++k) {
           s += std::fabs(direction[k]) * tape.Adjoint(path.inputs()[k]);
         }
+        const double w = UnderflowWeight(tape, path.inputs(), direction, end);
         tape.ClearAdjoints(end, Position{});
         path.Rewind();
 
-        const double bound = DotBound(s, memory.statements, memory.operands);
+        const double bound = DotBound(s, w, memory.statements, memory.operands);
         ASSERT_LE(std::fabs(lhs - rhs), bound)
             << c.name << ", " << steps << " steps, path " << p << ": <y', y-bar> " << lhs
             << ", <x', x-bar> " << rhs;

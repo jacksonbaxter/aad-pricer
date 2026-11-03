@@ -1584,6 +1584,30 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] OneStepCorner\\.GreeksStayFiniteWhenPTimesVIsNearZero",
       "timeout_s": 300
+    },
+    {
+      "id": "ad-sweep-flush-subnormal",
+      "kind": "check",
+      "covers": "tape against the Dual below the normal range, check 6 E6",
+      "bug": "The reverse sweep flushes subnormal products to zero, as a flush-to-zero mode would, so the Greeks of paths whose values are subnormal are wrong while every normal-range path is unchanged.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "      adjoints[indices[offset + j]] += adjoint * partial;",
+          "replace": "      const double product = adjoint * partial;\n      adjoints[indices[offset + j]] += std::fabs(product) < 0x1p-1022 ? 0.0 : product;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_one_step_corner_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_one_step_corner_test",
+        "--gtest_filter=OneStepCorner.GreeksStayFiniteWhenPTimesVIsNearZero"
+      ],
+      "detect": "test",
+      "reason": "E6: p [0-9.e-]+, u",
+      "timeout_s": 300
     }
   ]
 }

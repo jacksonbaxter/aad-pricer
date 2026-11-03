@@ -14,8 +14,10 @@
 //   point to first order, so each difference quotient carries at most about 2 E / w. Twice that
 //   for the change of E across the stencil.
 //   The tape's own association error, 2 gamma_n A (1 + 2 gamma_n) (bounds.hpp), A from the
-//   ErrorModel's absolute derivative.
-//   tol_k = 2 R + 4 E / w_h + 2 gamma_n A_k (1 + 2 gamma_n).
+//   ErrorModel's absolute derivative, and its underflow error: 2^-1075 per product of the
+//   reverse sweep, reaching input k times the absolute tangent seeded on k (bounds.hpp, after
+//   Higham, section 2.2), counted twice as there, U_k = 2^-1074 W_k (1 + 2 gamma_n).
+//   tol_k = 2 R + 4 E / w_h + 2 gamma_n A_k (1 + 2 gamma_n) + U_k.
 // Rejection rule, applied to the draw before its adjoint is compared, and never by retrying:
 //   R1 a value at any stencil point is not finite or exceeds 1e6 in magnitude;
 //   R2 a comparison (Min, Max, Select) differs between the decoding point and a stencil point,
@@ -189,7 +191,29 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     s += std::fabs(program.direction[k]) * absolute[k];
   }
   AADP_FUZZ_REQUIRE(std::isfinite(lhs) && std::isfinite(rhs), "gradient not finite");
-  const double dot_bound = (2.0 * gamma * s * (1.0 + (4.0 * gamma))) + ((terms + 8.0) * 0x1p-1070);
+
+  // Underflow weights (bounds.hpp): the absolute adjoints seeded with |w|, then the absolute
+  // tangents seeded with |x'| for the dot product and with e_k for each adjoint.
+  for (const auto& [index, weight] : program.outputs) {
+    tape.AddAdjoint(trace.values[index], std::fabs(weight));
+  }
+  tape.SweepBackAbsolute(end, Position{});
+  tape.ClearTangents();
+  for (std::size_t k = 0; k < n; ++k) tape.SetTangent(x[k], std::fabs(program.direction[k]));
+  tape.SweepForwardAbsolute(Position{});
+  const Tape::OperandSums dot_sums = tape.SumOverOperands(end, Position{});
+  std::array<double, t::kMaxInputs> underflow{};
+  for (std::size_t k = 0; k < n; ++k) {
+    tape.ClearTangents();
+    tape.SetTangent(x[k], 1.0);
+    tape.SweepForwardAbsolute(Position{});
+    underflow[k] =
+        t::UnderflowTerm(tape.SumOverOperands(end, Position{}).tangents) * (1.0 + (2.0 * gamma));
+  }
+  const double dot_bound =
+      (((2.0 * gamma * s) + t::UnderflowTerm(dot_sums.adjoints + dot_sums.tangents + 8.0)) *
+       (1.0 + (4.0 * gamma))) +
+      t::kBoundRounding;
   AADP_FUZZ_REQUIRE(std::fabs(lhs - rhs) <= dot_bound, "dot-product identity");
 
   std::array<Differences, t::kMaxInputs> differences{};
@@ -202,7 +226,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     }
     const Differences& d = differences[k];
     tolerance[k] = (2.0 * std::fabs(d.d_h - d.d_2h)) + (4.0 * error / d.width) +
-                   (2.0 * gamma * absolute[k] * (1.0 + (2.0 * gamma)));
+                   (2.0 * gamma * absolute[k] * (1.0 + (2.0 * gamma))) + underflow[k];
     if (absolute[k] > 0.0 && tolerance[k] > kConditioning * absolute[k]) {
       Count(kR4);
       return 0;

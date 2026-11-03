@@ -20,9 +20,13 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
+#include <span>
 #include <vector>
 
 #include "ad/gradient.hpp"
@@ -39,6 +43,7 @@
 #include "pricer/kernels.hpp"
 #include "pricer/model.hpp"
 #include "pricer/normal_cdf.hpp"
+#include "pricer/real_ops.hpp"
 #include "support/dual.hpp"
 
 namespace aadp::ad {
@@ -122,8 +127,8 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
       }
       for (std::size_t i = 0; i < kInputs; ++i) {
         ASSERT_TRUE(std::isfinite(tape.gradient[i])) << "E2: a " << a << ", u " << u;
-        const double bound =
-            testing::AgreementBound(tape.absolute[i], tape.statements, tape.operands);
+        const double bound = testing::AgreementBound(tape.absolute[i], tape.operand_sums[i],
+                                                     tape.statements, tape.operands);
         const double diff = std::fabs(tape.gradient[i] - dual.tangent[i]);
         EXPECT_LE(diff, bound) << "E1: a " << a << ", u " << u << ", input " << i;
         if (diff > 0.0) worst_e1 = std::max(worst_e1, diff / bound);
@@ -176,16 +181,17 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
 //   E5 every Greek of the knock-out and of the knock-in is finite at every point;
 //   E6 the tape equals the Dual within check 1's bound at every point;
 //   E7 the grid reaches all three regimes: q = 0, 0 < q < 2^-1000 and q >= 2^-1000.
-// E6 as stated failed at 4 of 72 points, by up to 10.8 times the bound, all on vega and all with
-// p subnormal (a = -38 and below), where the Greeks are near 1e-320. There the bound's
-// assumption fails (tests/ad/bounds.hpp): subnormal rounding is absolute and later partials
-// amplify it. So E6 is held only where p >= 2^-1022, which still includes points with
-// 0 < q < 2^-1000. At the other points the test prints the difference but does not check it.
+// E6 first used check 1's bound with an underflow term of n 2^-1070, and failed at 4 of 72
+// points, by up to 10.8 times, all on vega with p subnormal (a = -38 and below), Greeks near
+// 1e-320. That term was the wrong model. The bound now carries the absolute error of gradual
+// underflow, propagated (tests/ad/bounds.hpp, after Higham, section 2.2), and E6 holds at every
+// point, subnormal ones included.
 struct NearZeroTally {
   std::size_t dead = 0;
   std::size_t passive = 0;
   std::size_t active = 0;
   std::size_t passive_checked = 0;
+  std::size_t subnormal_checked = 0;
   double worst_e6 = 0.0;
   double worst_subnormal = 0.0;
 };
@@ -212,15 +218,16 @@ void CheckNearZero(const pricer::Contract& c, const pricer::Market<double>& mark
   }
   for (std::size_t i = 0; i < kInputs; ++i) {
     EXPECT_TRUE(std::isfinite(tape.gradient[i])) << "E5: u " << u << ", q " << q << ", input " << i;
-    const double bound = testing::AgreementBound(tape.absolute[i], tape.statements, tape.operands);
+    const double bound = testing::AgreementBound(tape.absolute[i], tape.operand_sums[i],
+                                                 tape.statements, tape.operands);
     const double ratio = std::fabs(tape.gradient[i] - dual.tangent[i]) / bound;
-    if (p < 0x1p-1022) {
-      tally.worst_subnormal = std::max(tally.worst_subnormal, ratio);
-      continue;
-    }
     EXPECT_LE(ratio, 1.0) << "E6: p " << p << ", u " << u << ", input " << i;
     tally.worst_e6 = std::max(tally.worst_e6, ratio);
     tally.passive_checked += out && i == 0 && tiny ? 1 : 0;
+    if (p > 0.0 && p < 0x1p-1022) {
+      tally.subnormal_checked += 1;
+      tally.worst_subnormal = std::max(tally.worst_subnormal, ratio);
+    }
   }
 }
 
@@ -248,12 +255,103 @@ TEST(OneStepCorner, GreeksStayFiniteWhenPTimesVIsNearZero) {
   EXPECT_GE(tally.passive, 1U) << "E7";
   EXPECT_GE(tally.active, 1U) << "E7";
   EXPECT_GE(tally.passive_checked, 1U) << "E6 must reach 0 < q < 2^-1000";
+  EXPECT_GE(tally.subnormal_checked, 1U) << "E6 must reach a subnormal p";
   std::printf(
-      "measured: E5 all finite; E6 max |tape - dual| / bound %.3g (p >= 2^-1022; %zu knock-out "
-      "points with 0 < q < 2^-1000 among them), with p subnormal %.3g, not checked; E7 points "
-      "with q = 0: %zu, 0 < q < 2^-1000: %zu, q >= 2^-1000: %zu\n",
-      tally.worst_e6, tally.passive_checked, tally.worst_subnormal, tally.dead, tally.passive,
-      tally.active);
+      "measured: E5 all finite; E6 max |tape - dual| / bound %.3g over every point (%zu knock-out "
+      "points with 0 < q < 2^-1000), %.3g over %zu checks with p subnormal; E7 points with "
+      "q = 0: %zu, 0 < q < 2^-1000: %zu, q >= 2^-1000: %zu\n",
+      tally.worst_e6, tally.passive_checked, tally.worst_subnormal, tally.subnormal_checked,
+      tally.dead, tally.passive, tally.active);
+}
+
+// OutOneStep as it was before the guard, transcribed for double.
+pricer::PathValue<double> UnguardedOneStep(const pricer::Contract& c,
+                                           const pricer::GbmModel<double>& model,
+                                           std::span<const double> u) {
+  const bool down = c.barrier.direction == pricer::Direction::kDown;
+  const double log_barrier = pricer::Log(c.barrier.level);
+  double x = model.LogSpot();
+  double weight = 1.0;
+  for (std::uint32_t i = 0; i < c.steps; ++i) {
+    const pricer::StepLaw<double> law = model.Law(i, x);
+    const double gap = down ? law.mean - log_barrier : log_barrier - law.mean;
+    const double p = pricer::NormalCdf(gap / law.sd);
+    const double v = down ? 1.0 - u[i] : u[i];
+    const double q = p * v;
+    const bool alive = q > 0.0;
+    weight = weight * pricer::Select(alive, p, 0.0);
+    const double conditional = pricer::InverseNormal(pricer::Select(alive, q, v));
+    const double z = down ? -conditional : conditional;
+    x = law.mean + (law.sd * z);
+  }
+  return pricer::kernel_detail::Finish(c, model, x, weight);
+}
+
+// The guard leaves double results alone: kernels.hpp's OutOneStep<double> against the
+// transcription without it, bit for bit, on paths where it fires (q below 2^-1000) and on paths
+// where it does not, down and up. Over the full release tests the same is shown against src/mc/,
+// which has no guard, by tests/pricer/path_agreement_test.cpp.
+struct GuardTally {
+  std::size_t fired = 0;
+  std::size_t compared = 0;
+};
+
+// 64 paths of one contract, the first four with a hand-set first uniform.
+void CompareGuard(const pricer::Contract& c, const pricer::GbmModel<double>& model,
+                  GuardTally& tally) {
+  constexpr std::uint64_t kSeed = 20261118;  // development seed, never 1729 or 271828
+  const bool down = c.barrier.direction == pricer::Direction::kDown;
+  const pricer::StepLaw<double> law = model.Law(0, model.LogSpot());
+  const double gap =
+      down ? law.mean - math::log(c.barrier.level) : math::log(c.barrier.level) - law.mean;
+  const double p = pricer::NormalCdf(gap / law.sd);
+  std::vector<double> normal(c.steps);
+  std::vector<double> crossing(c.steps);
+  for (std::uint64_t path = 0; path < 64; ++path) {
+    pricer::FillPath(kSeed, path, normal, crossing);
+    if (path < 4) normal[0] = std::array{0.5, 1e-9, 1.0 - 1e-6, 1.0 - u53}[path];
+    const auto guarded = pricer::kernel_detail::OutOneStep<double>(c, model, normal);
+    const pricer::PathValue<double> plain = UnguardedOneStep(c, model, normal);
+    EXPECT_EQ(std::bit_cast<std::uint64_t>(guarded.value),
+              std::bit_cast<std::uint64_t>(plain.value))
+        << "p " << p << ", steps " << c.steps << ", path " << path;
+    EXPECT_EQ(std::bit_cast<std::uint64_t>(guarded.weight),
+              std::bit_cast<std::uint64_t>(plain.weight))
+        << "p " << p << ", steps " << c.steps << ", path " << path;
+    tally.compared += 1;
+    const double q = p * (down ? 1.0 - normal[0] : normal[0]);
+    tally.fired += q > 0.0 && q < 0x1p-1000 ? 1 : 0;
+  }
+}
+
+TEST(OneStepCorner, TheGuardChangesNoDoublePayoff) {
+  constexpr pricer::Market<double> kDown{
+      .spot = 100.0, .sigma = 1e-3, .r = 0.0, .q = 0.16, .maturity = 1.0};
+  constexpr pricer::Market<double> kUp{
+      .spot = 100.0, .sigma = 1e-3, .r = 0.16, .q = 0.0, .maturity = 1.0};
+  GuardTally tally;
+  for (const bool down : {true, false}) {
+    const pricer::Market<double>& market = down ? kDown : kUp;
+    for (const std::uint32_t steps : {1U, 4U}) {
+      const pricer::GbmModel<double> model(market, steps);
+      const pricer::StepLaw<double> law = model.Law(0, model.LogSpot());
+      for (const double a : {-30.0, -36.0, -37.0, -37.5, -38.0, -38.6, 1.0}) {
+        // a standard deviations from the first step's mean to the barrier, on the dead side.
+        pricer::Contract c =
+            OneStep(math::exp(down ? law.mean - (a * law.sd) : law.mean + (a * law.sd)));
+        c.steps = steps;
+        c.strike = market.spot;
+        c.barrier.direction = down ? pricer::Direction::kDown : pricer::Direction::kUp;
+        if (pricer::Validate(c, market) != pricer::ContractError::kNone) continue;
+        CompareGuard(c, model, tally);
+      }
+    }
+  }
+  EXPECT_GE(tally.fired, 1U);
+  std::printf(
+      "measured: %zu paths bit-identical with and without the guard, %zu where it fires "
+      "at the first step\n",
+      tally.compared, tally.fired);
 }
 
 }  // namespace

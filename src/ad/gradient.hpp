@@ -65,12 +65,16 @@ class PathGradient {
   [[nodiscard]] std::array<double, kInputs> SweepSetup();
 
   // One path alone, for checks: its value, its gradient, the same sweep on |partials| (the
-  // scale of every error bound in tests/ad/), and its size on the tape. Starts and ends with
-  // the set-up adjoints clear.
+  // scale of every error bound in tests/ad/), its underflow weights, and its size on the tape.
+  // Starts and ends with the set-up adjoints clear.
   struct PathResult {
     double value = 0.0;
     std::array<double, kInputs> gradient{};
     std::array<double, kInputs> absolute{};
+    // Per input, over every operand on the tape, the statement's absolute adjoint plus the
+    // operand's absolute tangent seeded on that input: the weight of the underflow term in
+    // tests/ad/bounds.hpp.
+    std::array<double, kInputs> operand_sums{};
     std::size_t statements = 0;  // Set-up and path.
     std::size_t operands = 0;
   };
