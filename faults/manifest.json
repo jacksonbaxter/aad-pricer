@@ -1142,7 +1142,7 @@
       "id": "pricer-bridge",
       "kind": "check",
       "covers": "pricer bridge against the continuous closed forms, check 3",
-      "bug": "The bridge's crossing exponent loses its factor 2, so the weight undercounts crossings and every bridge value is too high.",
+      "bug": "The bridge's crossing exponent loses its factor 2, so the crossing probability is too large and every bridge knock-out value is too low.",
       "edits": [
         {
           "file": "src/pricer/kernels.hpp",
@@ -1208,12 +1208,12 @@
       "id": "pricer-normal-cdf",
       "kind": "check",
       "covers": "pricer normal CDF against the 40-digit table",
-      "bug": "The first numerator coefficient of Cody's small region loses its last four digits, an error of about 1e-14 relative.",
+      "bug": "The constant term of the numerator of Cody's small region is mistyped in its 14th digit, about 40 ULP, which only the small region sees.",
       "edits": [
         {
           "file": "src/pricer/normal_cdf.hpp",
-          "find": "{3.16112374387056560e00,",
-          "replace": "{3.16112374387060000e00,"
+          "find": "3.20937758913846947e03,",
+          "replace": "3.20937758913850000e03,"
         }
       ],
       "preset": "release",
