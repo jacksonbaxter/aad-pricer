@@ -19,7 +19,6 @@
 //   the vanilla on the same path; knock-in plus knock-out parity exact; call and put on the same
 //   path satisfy put-call parity, which with both non-negative is the per-path no-arbitrage bound
 //   max(d (S - K), 0) <= C <= d S.
-#include <array>
 #include <bit>
 #include <cmath>
 #include <cstddef>
@@ -35,6 +34,7 @@
 #include "pricer/kernels.hpp"
 #include "pricer/model.hpp"
 #include "pricer/pricer.hpp"
+#include "pricer/runner.hpp"
 
 // A failed property aborts, so libFuzzer keeps the input, and says which one failed.
 #define AADP_FUZZ_REQUIRE(condition, what)                                                   \
@@ -144,9 +144,9 @@ void CheckPaths(const Input& in) {
       AADP_FUZZ_REQUIRE(v.value <= strike_bound, "put above the discounted strike");
     }
     if (c.product == Product::kBarrier) {
-      const double vanilla_value = DiscountedPayoff<double>(vanilla, model, u);
-      const double out_value = DiscountedPayoff<double>(out, model, u);
-      const double in_value = DiscountedPayoff<double>(in_contract, model, u);
+      const auto vanilla_value = DiscountedPayoff<double>(vanilla, model, u);
+      const auto out_value = DiscountedPayoff<double>(out, model, u);
+      const auto in_value = DiscountedPayoff<double>(in_contract, model, u);
       AADP_FUZZ_REQUIRE(std::bit_cast<std::uint64_t>(in_value) ==
                             std::bit_cast<std::uint64_t>(vanilla_value - out_value),
                         "knock-in parity");
@@ -159,11 +159,10 @@ void CheckPaths(const Input& in) {
       // within the roundings of the two subtractions and their products.
       Contract wide = c;
       wide.strike = 2.0 * c.strike;
-      const double call = DiscountedPayoff<double>(WithType(c, OptionType::kCall), model, u);
-      const double put = DiscountedPayoff<double>(WithType(c, OptionType::kPut), model, u);
-      const double call_wide =
-          DiscountedPayoff<double>(WithType(wide, OptionType::kCall), model, u);
-      const double put_wide = DiscountedPayoff<double>(WithType(wide, OptionType::kPut), model, u);
+      const auto call = DiscountedPayoff<double>(WithType(c, OptionType::kCall), model, u);
+      const auto put = DiscountedPayoff<double>(WithType(c, OptionType::kPut), model, u);
+      const auto call_wide = DiscountedPayoff<double>(WithType(wide, OptionType::kCall), model, u);
+      const auto put_wide = DiscountedPayoff<double>(WithType(wide, OptionType::kPut), model, u);
       AADP_FUZZ_REQUIRE(call >= 0.0 && put >= 0.0, "negative vanilla");
       const double gap = (call - put) - (call_wide - put_wide);
       const double rounding =

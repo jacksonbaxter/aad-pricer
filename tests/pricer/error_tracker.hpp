@@ -109,7 +109,7 @@ inline Tracked operator/(const Tracked& a, const Tracked& b) {
 
 inline TrackedMask Compare(bool own, bool ref, const Tracked& a, const Tracked& b) {
   const double slack = a.bound + b.bound;
-  return {own, ref, slack > 0.0 && std::fabs(a.own - b.own) <= slack};
+  return {.own = own, .ref = ref, .unsure = slack > 0.0 && std::fabs(a.own - b.own) <= slack};
 }
 inline TrackedMask operator<(const Tracked& a, const Tracked& b) {
   return Compare(a.own < b.own, a.ref < b.ref, a, b);
@@ -150,7 +150,8 @@ inline Tracked Exp(const Tracked& a) {
 inline Tracked Log(const Tracked& a) {
   const double own = math::log(a.own);
   const double margin = std::fabs(a.own) - a.bound;
-  const double propagated = a.bound == 0.0 ? 0.0 : (margin > 0.0 ? a.bound / margin : kInf);
+  const double reach = margin > 0.0 ? a.bound / margin : kInf;
+  const double propagated = a.bound == 0.0 ? 0.0 : reach;
   const double bound = propagated +
                        ((Accuracy::kOwnLog + Accuracy::kLibmLog) * 2.0 * kUnitRoundoff *
                         (std::fabs(own) + propagated)) +
@@ -162,8 +163,8 @@ inline Tracked Log(const Tracked& a) {
 inline Tracked Sqrt(const Tracked& a) {
   const double own = math::sqrt(a.own);
   const double margin = a.own - a.bound;
-  const double propagated =
-      a.bound == 0.0 ? 0.0 : (margin > 0.0 ? a.bound / (2.0 * std::sqrt(margin)) : kInf);
+  const double reach = margin > 0.0 ? a.bound / (2.0 * std::sqrt(margin)) : kInf;
+  const double propagated = a.bound == 0.0 ? 0.0 : reach;
   return tracker_detail::Combine(own, std::sqrt(a.ref), propagated, a, Tracked(0.0));
 }
 

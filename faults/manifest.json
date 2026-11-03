@@ -1234,8 +1234,8 @@
       "edits": [
         {
           "file": "tools/pricer_bias/main.cpp",
-          "find": "DownOut(kContinuous, kBridge),\n       {\"O7\", kUnbiased},",
-          "replace": "DownOut(kContinuous, kBridge),\n       {\"O5\", kUnbiased},"
+          "find": "DownOut(kContinuous, kBridge), \"O7\", kUnbiased,",
+          "replace": "DownOut(kContinuous, kBridge), \"O5\", kUnbiased,"
         }
       ],
       "preset": "release",

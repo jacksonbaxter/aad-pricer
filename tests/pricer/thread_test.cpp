@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 #include <bit>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -61,17 +62,18 @@ std::vector<Case> Cases() {
   using enum Monitoring;
   using enum Treatment;
   return {
-      {"european", Plain(Product::kEuropean, 1)},
-      {"digital", Plain(Product::kDigital, 4)},
-      {"arithmetic Asian", Plain(Product::kAsianArithmetic, 12, true)},
-      {"geometric Asian", Plain(Product::kAsianGeometric, 12)},
-      {"down-out bridge", WithBarrier(kDown, kOut, kContinuous, kBridge)},
-      {"down-out sampled crossing", WithBarrier(kDown, kOut, kContinuous, kHard)},
-      {"down-out one-step", WithBarrier(kDown, kOut, kDiscrete, kOneStep)},
-      {"down-out hard", WithBarrier(kDown, kOut, kDiscrete, kHard)},
-      {"up-out smoothed", WithBarrier(kUp, kOut, kDiscrete, kSmoothed)},
-      {"down-in one-step", WithBarrier(kDown, kIn, kDiscrete, kOneStep)},
-      {"up-in bridge", WithBarrier(kUp, kIn, kContinuous, kBridge)},
+      {.name = "european", .contract = Plain(Product::kEuropean, 1)},
+      {.name = "digital", .contract = Plain(Product::kDigital, 4)},
+      {.name = "arithmetic Asian", .contract = Plain(Product::kAsianArithmetic, 12, true)},
+      {.name = "geometric Asian", .contract = Plain(Product::kAsianGeometric, 12)},
+      {.name = "down-out bridge", .contract = WithBarrier(kDown, kOut, kContinuous, kBridge)},
+      {.name = "down-out sampled crossing",
+       .contract = WithBarrier(kDown, kOut, kContinuous, kHard)},
+      {.name = "down-out one-step", .contract = WithBarrier(kDown, kOut, kDiscrete, kOneStep)},
+      {.name = "down-out hard", .contract = WithBarrier(kDown, kOut, kDiscrete, kHard)},
+      {.name = "up-out smoothed", .contract = WithBarrier(kUp, kOut, kDiscrete, kSmoothed)},
+      {.name = "down-in one-step", .contract = WithBarrier(kDown, kIn, kDiscrete, kOneStep)},
+      {.name = "up-in bridge", .contract = WithBarrier(kUp, kIn, kContinuous, kBridge)},
   };
 }
 

@@ -27,13 +27,14 @@
 #include <iterator>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "oracle/references.hpp"
 #include "oracle/tolerance.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
-#include "pricer/dual_ops.hpp"
+#include "pricer/dual_ops.hpp"  // IWYU pragma: keep (the Dual overloads, found by ADL)
 #include "pricer/kernels.hpp"
 #include "pricer/model.hpp"
 #include "pricer/runner.hpp"
@@ -86,47 +87,39 @@ Contract DownOut(Monitoring monitoring, Treatment treatment, double width = 0.0)
   return c;
 }
 
+Row MakeRow(std::string treatment, std::string against, const Contract& contract,
+            const char* value_id, Expect value_expect, const char* delta_id, Expect delta_expect) {
+  return {.treatment = std::move(treatment),
+          .against = std::move(against),
+          .contract = contract,
+          .value = {.reference_id = value_id, .expect = value_expect},
+          .delta = {.reference_id = delta_id, .expect = delta_expect}};
+}
+
 std::vector<Row> Rows() {
   using enum Monitoring;
   using enum Treatment;
   using enum Expect;
   std::vector<Row> rows = {
-      {"bridge",
-       "continuous",
-       DownOut(kContinuous, kBridge),
-       {"O7", kUnbiased},
-       {"CB095.delta", kUnbiased}},
-      {"sampled crossing, hard",
-       "continuous",
-       DownOut(kContinuous, kHard),
-       {"O7", kUnbiased},
-       {"CB095.delta", kMeasured}},
-      {"one-step survival",
-       "discrete",
-       DownOut(kDiscrete, kOneStep),
-       {"O5", kUnbiased},
-       {"O6", kUnbiased}},
-      {"hard indicator", "discrete", DownOut(kDiscrete, kHard), {"O5", kUnbiased}, {"O6", kBiased}},
-      {"hard indicator, naive delta limit",
-       "discrete",
-       DownOut(kDiscrete, kHard),
-       {"O5", kMeasured},
-       {"DB095.naive", kUnbiased}},
+      MakeRow("bridge", "continuous", DownOut(kContinuous, kBridge), "O7", kUnbiased, "CB095.delta",
+              kUnbiased),
+      MakeRow("sampled crossing, hard", "continuous", DownOut(kContinuous, kHard), "O7", kUnbiased,
+              "CB095.delta", kMeasured),
+      MakeRow("one-step survival", "discrete", DownOut(kDiscrete, kOneStep), "O5", kUnbiased, "O6",
+              kUnbiased),
+      MakeRow("hard indicator", "discrete", DownOut(kDiscrete, kHard), "O5", kUnbiased, "O6",
+              kBiased),
+      MakeRow("hard indicator, naive delta limit", "discrete", DownOut(kDiscrete, kHard), "O5",
+              kMeasured, "DB095.naive", kUnbiased),
       // Priced as the continuous contract, judged against the discrete one: the refused misuse.
-      {"bridge on the discrete contract",
-       "discrete",
-       DownOut(kContinuous, kBridge),
-       {"O5", kBiased},
-       {"O6", kMeasured}},
+      MakeRow("bridge on the discrete contract", "discrete", DownOut(kContinuous, kBridge), "O5",
+              kBiased, "O6", kMeasured),
   };
   for (const double width : {0.005, 0.01, 0.02}) {
-    char name[64];
-    std::snprintf(name, sizeof(name), "smoothed, width %.3f S0", width);
-    rows.push_back({name,
-                    "discrete",
-                    DownOut(kDiscrete, kSmoothed, width),
-                    {"O5", kMeasured},
-                    {"O6", kMeasured}});
+    std::array<char, 64> name{};
+    std::snprintf(name.data(), name.size(), "smoothed, width %.3f S0", width);
+    rows.push_back(MakeRow(name.data(), "discrete", DownOut(kDiscrete, kSmoothed, width), "O5",
+                           kMeasured, "O6", kMeasured));
   }
   return rows;
 }
@@ -154,7 +147,7 @@ std::array<BatchStatistics, 2> Run(const Contract& c, const Options& options) {
                                     .threads = options.threads},
                                    {.steps = c.steps, .crossing = NeedsCrossingUniforms(c)}, [&] {
                                      return [&](const PathUniforms& u, std::array<double, 2>& out) {
-                                       const test::Dual payoff =
+                                       const auto payoff =
                                            DiscountedPayoff<test::Dual>(c, model, u);
                                        out[0] = payoff.value;
                                        out[1] = payoff.tangent[test::kSlotSpot];
@@ -213,8 +206,8 @@ int Usage(const char* message) {
   return 2;
 }
 
-int Main(const std::vector<std::string_view>& args) {
-  Options options;
+// The exit code of a usage error, or 0 when the options are good.
+int Parse(const std::vector<std::string_view>& args, Options& options) {
   for (std::size_t i = 0; i < args.size(); i += 2) {
     if (i + 1 >= args.size()) return Usage("an option has no value");
     std::uint64_t number = 0;
@@ -227,8 +220,8 @@ int Main(const std::vector<std::string_view>& args) {
     } else if (args[i] == "--seed") {
       options.seed = number;
     } else if (args[i] == "--threads") {
-      options.threads = static_cast<std::uint32_t>(number);
       if (number > kMaxThreads) return Usage("too many threads");
+      options.threads = static_cast<std::uint32_t>(number);
     } else {
       return Usage("unknown option");
     }
@@ -242,6 +235,37 @@ int Main(const std::vector<std::string_view>& args) {
                    .threads = options.threads}) != RunError::kNone) {
     return Usage("paths must be a positive multiple of 64, threads 1 to 256");
   }
+  return 0;
+}
+
+// Prints one row and returns how many of its expectations failed.
+int PrintRow(const Row& row, const Reference& value_ref, const Reference& delta_ref,
+             const Options& options, double critical) {
+  const auto stats = Run(row.contract, options);
+  const std::array<const Reference*, 2> refs = {&value_ref, &delta_ref};
+  const std::array<Expect, 2> expects = {row.value.expect, row.delta.expect};
+  std::printf("| %s | %s %s", row.treatment.c_str(), row.against.c_str(), row.value.reference_id);
+  int failures = 0;
+  for (std::size_t leg = 0; leg < 2; ++leg) {
+    const double bias = stats[leg].mean - refs[leg]->value;
+    const bool ok = Judge(stats[leg], refs[leg]->value, expects[leg], critical);
+    failures += ok ? 0 : 1;
+    std::printf(" | %.6f | %.2g | %.6f (%s) | %+.6f | %+.2f | %s%s", stats[leg].mean,
+                stats[leg].standard_error, refs[leg]->value, refs[leg]->id.c_str(), bias,
+                bias / stats[leg].standard_error, ExpectName(expects[leg]), ok ? "" : ", FAILED");
+    if (!ok) {
+      std::fprintf(stderr, "aadp_pricer_bias: expectation failed: %s, %s\n", row.treatment.c_str(),
+                   leg == 0 ? "value" : "delta");
+    }
+  }
+  std::printf(" |\n");
+  std::fflush(stdout);
+  return failures;
+}
+
+int Main(const std::vector<std::string_view>& args) {
+  Options options;
+  if (const int usage = Parse(args, options); usage != 0) return usage;
 
   std::ifstream in(options.references);
   const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -271,24 +295,7 @@ int Main(const std::vector<std::string_view>& args) {
     const Reference* value_ref = table->Find(row.value.reference_id);
     const Reference* delta_ref = table->Find(row.delta.reference_id);
     if (value_ref == nullptr || delta_ref == nullptr) return Usage("a reference id is missing");
-    const auto stats = Run(row.contract, options);
-    const std::array<const Reference*, 2> refs = {value_ref, delta_ref};
-    const std::array<Expect, 2> expects = {row.value.expect, row.delta.expect};
-    std::printf("| %s | %s %s", row.treatment.c_str(), row.against.c_str(), row.value.reference_id);
-    for (std::size_t leg = 0; leg < 2; ++leg) {
-      const double bias = stats[leg].mean - refs[leg]->value;
-      const bool ok = Judge(stats[leg], refs[leg]->value, expects[leg], critical);
-      failures += ok ? 0 : 1;
-      std::printf(" | %.6f | %.2g | %.6f (%s) | %+.6f | %+.2f | %s%s", stats[leg].mean,
-                  stats[leg].standard_error, refs[leg]->value, refs[leg]->id.c_str(), bias,
-                  bias / stats[leg].standard_error, ExpectName(expects[leg]), ok ? "" : ", FAILED");
-      if (!ok) {
-        std::fprintf(stderr, "aadp_pricer_bias: expectation failed: %s, %s\n",
-                     row.treatment.c_str(), leg == 0 ? "value" : "delta");
-      }
-    }
-    std::printf(" |\n");
-    std::fflush(stdout);
+    failures += PrintRow(row, *value_ref, *delta_ref, options, critical);
   }
   std::printf("# %s\n", failures == 0 ? "every expectation holds" : "an expectation FAILED");
   return failures == 0 ? 0 : 1;

@@ -20,8 +20,8 @@
 #include <fstream>
 #include <iterator>
 #include <optional>
-#include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "oracle/barrier.hpp"
@@ -114,8 +114,9 @@ Contract WithBarrier(OptionType type, double strike, std::uint32_t steps, Direct
 double BarrierValue(const Contract& c, const Market<double>& m) {
   const bool down = c.barrier.direction == Direction::kDown;
   const bool out = c.barrier.knock == Knock::kOut;
-  const BarrierType type = down ? (out ? BarrierType::kDownOut : BarrierType::kDownIn)
-                                : (out ? BarrierType::kUpOut : BarrierType::kUpIn);
+  const BarrierType down_type = out ? BarrierType::kDownOut : BarrierType::kDownIn;
+  const BarrierType up_type = out ? BarrierType::kUpOut : BarrierType::kUpIn;
+  const BarrierType type = down ? down_type : up_type;
   return BarrierOptionValue(type, Oracle(c.type), c.strike, c.barrier.level, 0.0, Oracle(m));
 }
 
@@ -294,9 +295,9 @@ TEST(PricerParity, KnockInIsVanillaLessKnockOutOnEveryPath) {
         int knocked = 0;
         for (std::uint64_t path = 0; path < 4096; ++path) {
           FillPath(kSeed, path, normal, crossing);
-          const double v = DiscountedPayoff<double>(vanilla, model, u);
-          const double o = DiscountedPayoff<double>(out, model, u);
-          const double i = DiscountedPayoff<double>(in, model, u);
+          const auto v = DiscountedPayoff<double>(vanilla, model, u);
+          const auto o = DiscountedPayoff<double>(out, model, u);
+          const auto i = DiscountedPayoff<double>(in, model, u);
           ASSERT_EQ(Bits(i), Bits(v - o)) << static_cast<int>(treatment) << ", path " << path;
           knocked += o != v ? 1 : 0;
         }

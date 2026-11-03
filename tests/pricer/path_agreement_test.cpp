@@ -31,10 +31,9 @@
 #include <string>
 #include <vector>
 
-#include "dual_ops.hpp"
+#include "dual_ops.hpp"  // IWYU pragma: keep (the Dual overloads, found by ADL)
 #include "error_tracker.hpp"
 #include "math/exp.hpp"
-#include "math/inverse_normal.hpp"
 #include "math/log.hpp"
 #include "math/reference_table.hpp"
 #include "mc/gbm_kernels.hpp"
@@ -101,34 +100,51 @@ std::vector<Case> Cases() {
   const aadp::MarketParams<double> cbk{
       .spot = 100.0, .sigma = 0.25, .r = 0.08, .q = 0.04, .maturity = 0.5};
   return {
-      {"european call", RefContract(Product::kEuropean, OptionType::kCall, 100, 0, 1, false), va},
-      {"european put", RefContract(Product::kEuropean, OptionType::kPut, 405, 0, 1, false), vc},
-      {"european call, 12 steps",
-       RefContract(Product::kEuropean, OptionType::kCall, 100, 0, 12, false), va},
-      {"arithmetic Asian with spot",
-       RefContract(Product::kAsianArithmetic, OptionType::kCall, 100, 0, 12, true), aa},
-      {"arithmetic Asian with spot, 50",
-       RefContract(Product::kAsianArithmetic, OptionType::kCall, 90, 0, 50, true), aa},
-      {"arithmetic Asian without spot, put",
-       RefContract(Product::kAsianArithmetic, OptionType::kPut, 100, 0, 12, false), ga},
-      {"geometric Asian",
-       RefContract(Product::kAsianGeometric, OptionType::kCall, 100, 0, 10, false), ga},
-      {"geometric Asian with spot, put",
-       RefContract(Product::kAsianGeometric, OptionType::kPut, 100, 0, 10, true), ga},
-      {"discrete hard", RefContract(Product::kDownOutHard, OptionType::kCall, 100, 95, 50, false),
-       db},
-      {"discrete one-step",
-       RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 95, 50, false), db},
-      {"discrete one-step, H 99",
-       RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 99, 50, false), db},
-      {"discrete one-step, sigma 0.6",
-       RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 95, 4, false), dbs},
-      {"discrete one-step, put",
-       RefContract(Product::kDownOutOneStep, OptionType::kPut, 100, 95, 50, false), db},
-      {"continuous bridge",
-       RefContract(Product::kDownOutBridge, OptionType::kCall, 100, 95, 50, false), db},
-      {"continuous bridge, K below H",
-       RefContract(Product::kDownOutBridge, OptionType::kCall, 90, 95, 25, false), cbk},
+      {.name = "european call",
+       .contract = RefContract(Product::kEuropean, OptionType::kCall, 100, 0, 1, false),
+       .market = va},
+      {.name = "european put",
+       .contract = RefContract(Product::kEuropean, OptionType::kPut, 405, 0, 1, false),
+       .market = vc},
+      {.name = "european call, 12 steps",
+       .contract = RefContract(Product::kEuropean, OptionType::kCall, 100, 0, 12, false),
+       .market = va},
+      {.name = "arithmetic Asian with spot",
+       .contract = RefContract(Product::kAsianArithmetic, OptionType::kCall, 100, 0, 12, true),
+       .market = aa},
+      {.name = "arithmetic Asian with spot, 50",
+       .contract = RefContract(Product::kAsianArithmetic, OptionType::kCall, 90, 0, 50, true),
+       .market = aa},
+      {.name = "arithmetic Asian without spot, put",
+       .contract = RefContract(Product::kAsianArithmetic, OptionType::kPut, 100, 0, 12, false),
+       .market = ga},
+      {.name = "geometric Asian",
+       .contract = RefContract(Product::kAsianGeometric, OptionType::kCall, 100, 0, 10, false),
+       .market = ga},
+      {.name = "geometric Asian with spot, put",
+       .contract = RefContract(Product::kAsianGeometric, OptionType::kPut, 100, 0, 10, true),
+       .market = ga},
+      {.name = "discrete hard",
+       .contract = RefContract(Product::kDownOutHard, OptionType::kCall, 100, 95, 50, false),
+       .market = db},
+      {.name = "discrete one-step",
+       .contract = RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 95, 50, false),
+       .market = db},
+      {.name = "discrete one-step, H 99",
+       .contract = RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 99, 50, false),
+       .market = db},
+      {.name = "discrete one-step, sigma 0.6",
+       .contract = RefContract(Product::kDownOutOneStep, OptionType::kCall, 100, 95, 4, false),
+       .market = dbs},
+      {.name = "discrete one-step, put",
+       .contract = RefContract(Product::kDownOutOneStep, OptionType::kPut, 100, 95, 50, false),
+       .market = db},
+      {.name = "continuous bridge",
+       .contract = RefContract(Product::kDownOutBridge, OptionType::kCall, 100, 95, 50, false),
+       .market = db},
+      {.name = "continuous bridge, K below H",
+       .contract = RefContract(Product::kDownOutBridge, OptionType::kCall, 90, 95, 25, false),
+       .market = cbk},
   };
 }
 
@@ -180,7 +196,7 @@ TEST(PathAgreement, PricerMatchesTheReferenceWithinTheBound) {
         reference_uniforms[step] = PathUniform(kSeed, path, step);
       }
       const PathValue<double> own = EvaluatePath<double>(contract, model, u);
-      const double reference =
+      const auto reference =
           aadp::DiscountedPayoff<double>(c.contract, c.market, reference_uniforms);
       const PathValue<Tracked> t = EvaluatePath<Tracked>(contract, tracked_model, u);
 
@@ -267,9 +283,9 @@ TEST(PathAgreement, DualMatchesTheDoubleKernelAndTheReferenceDual) {
     double worst = 0.0;
     for (std::uint64_t path = 0; path < kPaths / 8; ++path) {
       FillPath(kSeed, path, normal, {});
-      const test::Dual ours = DiscountedPayoff<test::Dual>(contract, dual_model, u);
+      const auto ours = DiscountedPayoff<test::Dual>(contract, dual_model, u);
       ASSERT_EQ(Bits(ours.value), Bits(DiscountedPayoff<double>(contract, model, u)));
-      const test::Dual theirs =
+      const auto theirs =
           aadp::DiscountedPayoff<test::Dual>(c.contract, test::ActiveMarket(c.market), normal);
       for (std::size_t i = 0; i < test::kTangents; ++i) {
         const double diff = std::fabs(ours.tangent[i] - theirs.tangent[i]);

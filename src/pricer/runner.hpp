@@ -58,6 +58,7 @@ std::vector<std::array<double, M>> RunBatches(const RunConfig& config, const Pat
 
   std::atomic<std::uint64_t> next_block{0};
   const auto worker = [&] {
+    // NOLINTNEXTLINE(misc-const-correctness): a path function may carry state, such as a tape.
     auto path_fn = make_path_fn();
     std::vector<double> normal(shape.steps);
     std::vector<double> crossing(shape.crossing ? shape.steps : 0);

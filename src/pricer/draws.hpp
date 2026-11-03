@@ -22,8 +22,8 @@ constexpr StepUniforms DrawStep(std::uint64_t seed, std::uint64_t path, std::uin
   const Philox4x32Output out = Philox4x32_10(
       {static_cast<std::uint32_t>(path), static_cast<std::uint32_t>(path >> 32), step, 0U},
       {static_cast<std::uint32_t>(seed), static_cast<std::uint32_t>(seed >> 32)});
-  return {UniformFromBits((std::uint64_t{out[0]} << 32) | out[1]),
-          UniformFromBits((std::uint64_t{out[2]} << 32) | out[3])};
+  return {.normal = UniformFromBits((std::uint64_t{out[0]} << 32) | out[1]),
+          .crossing = UniformFromBits((std::uint64_t{out[2]} << 32) | out[3])};
 }
 
 // What a kernel reads: one normal uniform per step, and one crossing uniform per step for the

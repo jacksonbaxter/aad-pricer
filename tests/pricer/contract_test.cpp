@@ -93,6 +93,7 @@ TEST(PricerValidate, RefusesEveryBadField) {
   c.product = static_cast<Product>(kProductCount);
   EXPECT_EQ(Validate(c, kMarket), ContractError::kProduct);
   c = european;
+  // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange): the value it must refuse.
   c.type = static_cast<OptionType>(2);
   EXPECT_EQ(Validate(c, kMarket), ContractError::kOptionType);
   c = european;

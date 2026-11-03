@@ -41,6 +41,7 @@ inline constexpr std::array<double, 5> kSmallNum = {3.16112374387056560e00, 1.13
 inline constexpr std::array<double, 4> kSmallDen = {2.36012909523441209e01, 2.44024637934444173e02,
                                                     1.28261652607737228e03, 2.84423683343917062e03};
 inline constexpr std::array<double, 9> kMiddleNum = {
+    // NOLINTNEXTLINE(modernize-use-std-numbers): Cody's fitted coefficient, not 1/sqrt(pi).
     5.64188496988670089e-1, 8.88314979438837594e00, 6.61191906371416295e01,
     2.98635138197400131e02, 8.81952221241769090e02, 1.71204761263407058e03,
     2.05107837782607147e03, 1.23033935479799725e03, 2.15311535474403846e-8};

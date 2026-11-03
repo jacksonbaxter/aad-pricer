@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <limits>
 #include <numbers>
+#include <utility>
 
 #include "math/reference_table.hpp"
 #include "rng/normal.hpp"
@@ -102,7 +103,9 @@ TEST(NormalCdf, TableMatchesTheKernelsArgument) {
   }
   for (std::size_t d = 0; d < kDomains.size(); ++d) {
     int count = 0;
-    for (const NormalCdfPoint& p : kNormalCdfReference) count += p.domain == static_cast<int>(d);
+    for (const NormalCdfPoint& p : kNormalCdfReference) {
+      count += std::cmp_equal(p.domain, d) ? 1 : 0;
+    }
     EXPECT_GE(count, 20) << kDomains[d];
   }
 }
@@ -157,7 +160,9 @@ TEST(NormalCdf, EdgeContract) {
 // values each within the target imply, and the largest is reported.
 TEST(NormalCdf, IsMonotone) {
   double previous = NormalCdf(-39.0);
-  for (double x = -39.0; x <= 9.0; x += 0x1p-10) {
+  // An integer counter: every x is a multiple of 2^-10, exact in a double.
+  for (int i = 0; i <= 48 * 1024; ++i) {
+    const double x = -39.0 + (i * 0x1p-10);
     const double value = NormalCdf(x);
     ASSERT_GE(value, previous) << x;
     previous = value;
@@ -184,7 +189,8 @@ TEST(NormalCdf, IsMonotone) {
 
 // Each side within 4 ULP of values below 1, plus the sum's rounding: 8 units of 2^-53 at most.
 TEST(NormalCdf, Symmetry) {
-  for (double x = 0.0; x <= 9.0; x += 0x1p-8) {
+  for (int i = 0; i <= 9 * 256; ++i) {
+    const double x = i * 0x1p-8;
     EXPECT_LE(std::fabs((NormalCdf(x) + NormalCdf(-x)) - 1.0), 0x1p-50) << x;
   }
 }
