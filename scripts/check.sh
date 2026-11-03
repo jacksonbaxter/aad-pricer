@@ -9,6 +9,10 @@
 # line and writes build/logs/check/check-<step>.log. Steps run strictly in sequence, so only
 # one sanitizer build or tidy run exists at a time.
 #
+# The last step, fault-injection, runs every fault in faults/manifest.json against the committed
+# HEAD, in a copy under build/fault, so uncommitted edits have no effect on it. Faults that test
+# this script run it in that copy with --only, so the step never runs itself.
+#
 # A required step that could not run, because a tool or file is missing, is a FAIL. So is any
 # test that ctest did not run. Two named flags relax that, and whatever they allow is printed
 # and counted in the total:
@@ -31,11 +35,7 @@ set -uo pipefail
 readonly MAX_JOBS=6
 readonly COULD_NOT_RUN=77
 readonly ALL_STEPS='nice format tidy repo-scan release debug asan-ubsan tsan fuzz measured-plan
-  data-verify actionlint'
-# ---- FAULT INJECTION: the place for the later step ------------------------------------------
-# When faults/manifest.json and its runner exist, add `fault-injection` to the end of ALL_STEPS
-# and a branch for it in run_body below. Nothing else here needs to change.
-# ---------------------------------------------------------------------------------------------
+  data-verify actionlint fault-injection'
 
 usage() {
   printf 'usage: check.sh [--only <step,...>] [--allow-skip-step <step,...>]\n' >&2
@@ -190,6 +190,12 @@ step_actionlint() {
   return "$code"
 }
 
+step_fault_injection() {
+  local output=$log_dir/check-fault-injection-results.txt
+  rm -f -- "$output"
+  tool python3 -I scripts/fault_injection.py --jobs "$jobs" --output "$output"
+}
+
 run_body() {
   case $1 in
     nice) step_nice ;;
@@ -201,6 +207,7 @@ run_body() {
     measured-plan) step_measured_plan ;;
     data-verify) step_data_verify ;;
     actionlint) step_actionlint ;;
+    fault-injection) step_fault_injection ;;
     *)
       printf 'no body for step %s\n' "$1"
       return 1
@@ -213,7 +220,7 @@ listed() {
 }
 
 report() {
-  printf '%-4s  %-13s %5ss  %s\n' "$1" "$2" "$3" "$4" | tee -a "$summary"
+  printf '%-4s  %-15s %5ss  %s\n' "$1" "$2" "$3" "$4" | tee -a "$summary"
 }
 
 summary=$log_dir/check-summary.txt
