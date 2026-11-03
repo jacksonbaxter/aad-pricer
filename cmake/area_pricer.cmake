@@ -61,13 +61,46 @@ if(TARGET aadp_rng)
     LINK aadp_pricer aadp_test_support
     LABELS pricer)
 
-  foreach(_aadp_sized IN ITEMS aadp_pricer_path_agreement_test)
+  # Check 2: bit-identical for any thread count. Small enough for the tsan preset.
+  aadp_test(aadp_pricer_thread_test
+    SOURCES tests/pricer/thread_test.cpp
+    LINK aadp_pricer
+    LABELS pricer fast threads tsan)
+  # Check 3: closed forms and committed references, and the knock-in parity identity.
+  aadp_test(aadp_pricer_closed_form_test
+    SOURCES tests/pricer/closed_form_test.cpp
+    LINK aadp_pricer aadp_oracle_lib
+    LABELS pricer)
+
+  foreach(_aadp_sized IN ITEMS aadp_pricer_path_agreement_test aadp_pricer_closed_form_test)
     if(TARGET ${_aadp_sized})
       # Full size only where the numbers are reported. Everywhere else a smoke test.
       target_compile_definitions(${_aadp_sized} PRIVATE
         AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
     endif()
   endforeach()
+
+  # Check 4: the bias table of every barrier treatment. Reported runs use the default size; ctest
+  # runs it small, so its expectations are checked on every build but its numbers are not results.
+  if(TARGET aadp_oracle_lib)
+    aadp_tool(aadp_pricer_bias
+      SOURCES tools/pricer_bias/main.cpp
+      LINK aadp_pricer aadp_oracle_lib aadp_test_support)
+    if(AADP_BUILD_TESTS)
+      add_test(NAME aadp_pricer_bias_smoke_reduced_size_not_a_result
+        COMMAND aadp_pricer_bias --paths 65536 --threads 4
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+      set_tests_properties(aadp_pricer_bias_smoke_reduced_size_not_a_result PROPERTIES
+        LABELS "pricer;smoke")
+    endif()
+  endif()
+
+  # Check 5: the pricer entry point under libFuzzer, ASan and UBSan (EVIDENCE B23).
+  aadp_fuzz(aadp_fuzz_pricer
+    SOURCES fuzz/fuzz_pricer.cpp
+    LINK aadp_pricer
+    LABELS pricer
+    CORPUS fuzz/fuzz_pricer_seeds)
 
   if(AADP_BUILD_TESTS)
     add_test(NAME aadp_pricer_normal_cdf_reference_current
