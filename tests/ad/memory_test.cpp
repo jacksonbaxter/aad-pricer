@@ -5,9 +5,11 @@
 //   MEM-1  16-byte Real, 1-byte statement, 12-byte operand: static_asserts in src/ad/tape.hpp.
 //   MEM-2  tape bytes per statement are exactly 1 + 12 k, k the mean operand count: the layout
 //          stores nothing else. The adjoint vector, 8 bytes per statement, is reported beside it.
-//   counts one node per operation and nothing for a constant, so per path, with m steps:
-//          European 3 m + 3 statements, arithmetic Asian 5 m + 3, geometric Asian 4 m + 4
-//          (per step: drift, sd z, sum; then exp, the average, the strike, the discount).
+//   counts one node per operation and no operand for a constant, so per path, with m steps,
+//          the largest path records: European 3 m + 3 statements and 5 m + 4 operands,
+//          arithmetic Asian 5 m + 3 and 8 m + 3, geometric Asian 4 m + 4 and 7 m + 4, one more
+//          operand for either Asian with S0 in the average (per step: the drift, sd z with z a
+//          constant, the sum; then exp, the average, the strike and the discount).
 //   bound  the tape never holds more than the set-up and one path: after many paths the position
 //          is the mark and the allocated bytes are what the first path needed.
 //   MEM-4  every path's tape is below 50 MB.
@@ -98,14 +100,18 @@ TEST(TapeMemory, BytesPerPathAndPeakAgainstMem1ToMem4) {
       worst_path = std::max(worst_path, static_cast<double>(path_bytes));
       worst_allocated = std::max(worst_allocated, static_cast<double>(row.allocated_last));
       const std::size_t m = steps;
+      const std::size_t spot = c.contract.include_spot ? 1 : 0;
       if (c.contract.product == pricer::Product::kEuropean) {
         EXPECT_EQ(row.statements, (3 * m) + 3) << c.name;
+        EXPECT_EQ(row.operands, (5 * m) + 4) << c.name;
       }
       if (c.contract.product == pricer::Product::kAsianArithmetic) {
         EXPECT_EQ(row.statements, (5 * m) + 3) << c.name;
+        EXPECT_EQ(row.operands, (8 * m) + 3 + spot) << c.name;
       }
       if (c.contract.product == pricer::Product::kAsianGeometric) {
         EXPECT_EQ(row.statements, (4 * m) + 4) << c.name;
+        EXPECT_EQ(row.operands, (7 * m) + 4 + spot) << c.name;
       }
     }
   }

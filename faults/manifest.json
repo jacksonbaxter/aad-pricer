@@ -1268,6 +1268,295 @@
       "reason": "invariant failed: (weight outside \\[0, 1\\]|negative path value|knock-out above the vanilla)",
       "timeout_s": 120,
       "output_files": ["build/fuzz/fault-fuzz/pricer-fuzz/*", "build/fuzz/fault-fuzz/pricer-fuzz/corpus/*"]
+    },
+    {
+      "id": "ad-log-partial",
+      "kind": "check",
+      "covers": "tape against the Dual per path, check 1",
+      "bug": "The tape's log records 1 / x^2 as its partial instead of 1 / x, so every delta through log S0 is wrong.",
+      "edits": [
+        {
+          "file": "src/ad/real.hpp",
+          "find": "  return detail::Record(value, x, 1.0 / x.value());",
+          "replace": "  return detail::Record(value, x, 1.0 / (x.value() * x.value()));"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_dual_agreement_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_dual_agreement_test",
+        "--gtest_filter=TapeVsDual.EveryProductAndTreatmentAgreesPerPathWithinTheAssociationBound"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeVsDual\\.EveryProductAndTreatmentAgreesPerPathWithinTheAssociationBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-dot-tangent-sign",
+      "kind": "check",
+      "covers": "tangent-adjoint dot-product identity, check 2",
+      "bug": "The forward tangent sweep subtracts each operand's contribution instead of adding it.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "      tangent += partials[offset + j] * tangents[indices[offset + j]];",
+          "replace": "      tangent -= partials[offset + j] * tangents[indices[offset + j]];"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_dot_product_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_dot_product_test"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DotProduct\\.HoldsOn(RandomStraightLinePrograms|WholePricedPathsOfEveryProduct)",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-select-both",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_tape_operations against central differences, check 3",
+      "bug": "Select records a statement that sends its adjoint to both operands with partial 1, not only to the chosen one. The pricer's Selects all have one passive operand, so only operation sequences can see it.",
+      "edits": [
+        {
+          "file": "src/ad/real.hpp",
+          "find": "  return mask ? if_true : if_false;",
+          "replace": "  return detail::Record((mask ? if_true : if_false).value(), if_true, 1.0, if_false, 1.0);"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": [
+        "aadp_fuzz_tape_operations"
+      ],
+      "command": [
+        "{build}/bin/aadp_fuzz_tape_operations",
+        "-seed=1",
+        "-max_total_time=60",
+        "-print_final_stats=1",
+        "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/ad-select-both/",
+        "{build}/fault-fuzz/ad-select-both/corpus",
+        "fuzz/fuzz_tape_operations_seeds"
+      ],
+      "detect": "test",
+      "reason": "invariant failed: adjoint differs from central difference",
+      "timeout_s": 120,
+      "output_files": [
+        "build/fuzz/fault-fuzz/ad-select-both/*",
+        "build/fuzz/fault-fuzz/ad-select-both/corpus/*"
+      ]
+    },
+    {
+      "id": "ad-normal-cdf-partial",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_pricer_gradient against the Dual, check 4",
+      "bug": "The tape's normal CDF evaluates its density one percent away from its argument.",
+      "edits": [
+        {
+          "file": "src/ad/real.hpp",
+          "find": "  return detail::Record(value, x, NormalPdf(x.value()));",
+          "replace": "  return detail::Record(value, x, NormalPdf(1.01 * x.value()));"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": [
+        "aadp_fuzz_pricer_gradient"
+      ],
+      "command": [
+        "{build}/bin/aadp_fuzz_pricer_gradient",
+        "-seed=1",
+        "-max_total_time=60",
+        "-print_final_stats=1",
+        "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/ad-normal-cdf-partial/",
+        "{build}/fault-fuzz/ad-normal-cdf-partial/corpus",
+        "fuzz/fuzz_pricer_seeds"
+      ],
+      "detect": "test",
+      "reason": "invariant failed: tape gradient differs from the Dual",
+      "timeout_s": 120,
+      "output_files": [
+        "build/fuzz/fault-fuzz/ad-normal-cdf-partial/*",
+        "build/fuzz/fault-fuzz/ad-normal-cdf-partial/corpus/*"
+      ]
+    },
+    {
+      "id": "ad-sweep-zeroing",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_pricer_gradient, block sweep against one path at a time, check 4",
+      "bug": "The reverse sweep leaves each statement's adjoint in place, so the next path recorded at the same positions starts from the last path's adjoints.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "    if constexpr (!kAbsolute) adjoints[i] = 0.0;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "fuzz",
+      "targets": [
+        "aadp_fuzz_pricer_gradient"
+      ],
+      "command": [
+        "{build}/bin/aadp_fuzz_pricer_gradient",
+        "-seed=1",
+        "-max_total_time=60",
+        "-print_final_stats=1",
+        "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/ad-sweep-zeroing/",
+        "{build}/fault-fuzz/ad-sweep-zeroing/corpus",
+        "fuzz/fuzz_pricer_seeds"
+      ],
+      "detect": "test",
+      "reason": "invariant failed: greek batch mean differs from the paths taken one at a time",
+      "timeout_s": 120,
+      "output_files": [
+        "build/fuzz/fault-fuzz/ad-sweep-zeroing/*",
+        "build/fuzz/fault-fuzz/ad-sweep-zeroing/corpus/*"
+      ]
+    },
+    {
+      "id": "ad-passive-operand",
+      "kind": "check",
+      "covers": "tape bytes and counts per path, check 5",
+      "bug": "A binary operation with one passive operand records it too, as an operand pointing at the passive slot: gradients stay right, but every such statement costs 12 bytes more.",
+      "edits": [
+        {
+          "file": "src/ad/real.hpp",
+          "find": "    return ActiveTape().Push(value, a.index(), da);\n  }",
+          "replace": "    return ActiveTape().Push(value, a.index(), da, b.index(), db);\n  }"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_memory_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_memory_test"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeMemory\\.BytesPerPathAndPeakAgainstMem1ToMem4",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-corner-clamp",
+      "kind": "check",
+      "covers": "one-step adjoint at p near 1, check 6",
+      "bug": "The inverse normal's partial is capped at 1e8 as a guard against blow-up, which no ordinary path reaches but the one-step corner does.",
+      "edits": [
+        {
+          "file": "src/ad/real.hpp",
+          "find": "  return detail::Record(value, p, 1.0 / NormalPdf(value));",
+          "replace": "  return detail::Record(value, p, 1.0 / NormalPdf(value) < 1e8 ? 1.0 / NormalPdf(value) : 1e8);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_one_step_corner_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_one_step_corner_test"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] OneStepCorner\\.AdjointAtPNearOneMeetsItsFourExpectations",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-theta-sign",
+      "kind": "check",
+      "covers": "tape in place of the Dual on the plan's run rows, check 7",
+      "bug": "PriceWithGradient reports dV/dT as theta instead of -dV/dT.",
+      "edits": [
+        {
+          "file": "src/ad/gradient.cpp",
+          "find": "    sum[1 + i] += i == kMaturityInput ? -gradient[i] : gradient[i];",
+          "replace": "    sum[1 + i] += gradient[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_oracle_equivalence_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_oracle_equivalence_test"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] OracleEquivalence\\.TapeEstimatesEqualTheDualOnEveryRunRow",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-setup-sweep",
+      "kind": "check",
+      "covers": "tape in place of the Dual on the plan's run rows, check 7",
+      "bug": "The set-up sweep from the mark to the start is missing, so the Greeks are only what the paths add straight into the market inputs.",
+      "edits": [
+        {
+          "file": "src/ad/gradient.cpp",
+          "find": "  tape_.SweepBack(mark_, Position{});\n  const std::array<double, kInputs> gradient",
+          "replace": "  const std::array<double, kInputs> gradient"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_oracle_equivalence_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_oracle_equivalence_test"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] OracleEquivalence\\.TapeEstimatesEqualTheDualOnEveryRunRow",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-mark-rewind",
+      "kind": "check",
+      "covers": "no heap allocation after warm-up, MEM-6",
+      "bug": "The per-path mark does not rewind, so every path is recorded after the last and the tape grows without bound.",
+      "edits": [
+        {
+          "file": "src/ad/gradient.cpp",
+          "find": "  tape_.Rewind(mark_);\n  return payoff.value();",
+          "replace": "  return payoff.value();"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_allocation_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_allocation_test",
+        "--gtest_filter=TapeAllocation.NoHeapAllocationAfterWarmUp"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeAllocation\\.NoHeapAllocationAfterWarmUp",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-activation",
+      "kind": "check",
+      "covers": "one active tape per thread, EVIDENCE B10",
+      "bug": "A second TapeScope on a thread silently replaces the active tape.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "  if (slot != nullptr) Fail(\"a second tape activated on one thread\");\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=TapeDeathTest.ASecondActivationOnOneThreadIsAnError"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeDeathTest\\.ASecondActivationOnOneThreadIsAnError",
+      "timeout_s": 300
     }
   ]
 }

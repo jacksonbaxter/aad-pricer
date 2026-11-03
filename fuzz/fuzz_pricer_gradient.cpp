@@ -4,6 +4,10 @@
 // Properties on a valid contract with at most kMaxPricedSteps steps:
 // - PriceWithGradient succeeds, its value estimate is Price()'s bit for bit (mean, SE and every
 //   batch mean), and every Greek's mean and SE are finite, the SE not negative;
+// - each Greek's batch means, from one set-up sweep per block, equal the batch means of the same
+//   paths' gradients taken one path at a time, within the round-off bound of check 7
+//   (tests/ad/oracle_equivalence_test.cpp): so the block sweep, the zeroing between paths and
+//   theta's sign are all judged on every input;
 // - per path, on a few paths: the tape's value is the double kernel's bit for bit; its gradient
 //   is finite; it agrees with the forward-mode Dual within check 1's association bound
 //   (tests/ad/bounds.hpp), which covers vega of a European and every other Greek;
@@ -116,6 +120,37 @@ void CheckEstimates(const Input& in) {
     AADP_FUZZ_REQUIRE(std::isfinite(greek.mean), "greek estimate not finite");
     AADP_FUZZ_REQUIRE(std::isfinite(greek.standard_error) && greek.standard_error >= 0.0,
                       "greek standard error not finite");
+  }
+
+  // The same paths one at a time. P paths per block, one block per batch here.
+  const std::uint64_t per_batch = kPaths / kBatches;
+  const auto p = static_cast<double>(per_batch);
+  std::vector<double> normal(in.contract.steps);
+  std::vector<double> crossing(in.contract.steps);
+  const PathUniforms u{.normal = normal, .crossing = crossing};
+  PathGradient path(in.contract, in.market);
+  for (std::size_t b = 0; b < kBatches; ++b) {
+    std::array<double, kInputs> sum{};
+    std::array<double, kInputs> bound{};
+    for (std::uint64_t i = 0; i < per_batch; ++i) {
+      FillPath(in.run.seed, (b * per_batch) + i, normal, crossing);
+      const PathGradient::PathResult r = path.Evaluate(u);
+      const double m = (2.0 * static_cast<double>(r.statements)) +
+                       ((p + 1.0) * static_cast<double>(r.operands)) + p + 6.0;
+      const double gamma = aadp::ad::testing::Gamma(m);
+      for (std::size_t k = 0; k < kInputs; ++k) {
+        sum[k] += k == aadp::ad::kMaturityInput ? -r.gradient[k] : r.gradient[k];
+        bound[k] += 2.0 * gamma * r.absolute[k] * (1.0 + (2.0 * gamma));
+      }
+    }
+    for (std::size_t k = 0; k < kInputs; ++k) {
+      const double one_at_a_time = sum[k] / p;
+      const double blocked = gradient->greeks[k].batch_means[b];
+      const double allowed = (bound[k] / p) + (p * 0x1p-1070) +
+                             (0x1p-52 * (std::fabs(one_at_a_time) + std::fabs(blocked)));
+      AADP_FUZZ_REQUIRE(std::fabs(blocked - one_at_a_time) <= allowed,
+                        "greek batch mean differs from the paths taken one at a time");
+    }
   }
 }
 
