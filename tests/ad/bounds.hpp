@@ -17,7 +17,10 @@
 // the last term for products that fall below the normal range (each loses at most 2^-1075). That
 // term assumes nothing downstream amplifies such a loss by more than 32. A path whose own values
 // are subnormal breaks that assumption, and the bound does not hold there: OneStepCorner's second
-// test measured 10.8 times it at a step with p near 1e-316.
+// test measured 10.8 times it at a step with p near 1e-316, and the pricer-gradient fuzzer 45.8
+// times it on a digital path worth 6e-319 whose theta terms were near 1e-311. So the bound is
+// claimed only in scope: per input, A = 0 or A >= 2^-960, which leaves 2^62 between a subnormal
+// loss and the bound's gamma_n A term for later partials to amplify.
 #ifndef AADP_TESTS_AD_BOUNDS_HPP_
 #define AADP_TESTS_AD_BOUNDS_HPP_
 
@@ -34,6 +37,13 @@ inline double Gamma(double n) {
 
 inline double RoundoffTerms(std::size_t statements, std::size_t operands) {
   return (2.0 * static_cast<double>(statements)) + static_cast<double>(operands);
+}
+
+inline constexpr double kMinBoundedAbsolute = 0x1p-960;
+
+// Whether AgreementBound is claimed for an input whose absolute sweep is A (see above).
+inline bool InBoundScope(double absolute) {
+  return absolute == 0.0 || absolute >= kMinBoundedAbsolute;
 }
 
 inline double AgreementBound(double absolute, std::size_t statements, std::size_t operands) {

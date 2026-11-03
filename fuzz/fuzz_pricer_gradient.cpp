@@ -15,6 +15,8 @@
 //   the sum of the three paths' bounds and the rounding of the sum;
 // - per path, on a European: delta of the call minus delta of the put is d S_T / S0, which by
 //   put-call parity on the path is (C - P + d K) / S0, within both bounds and its own rounding.
+// Every comparison that uses check 1's bound is made only where the bound is claimed, per input
+// (InBoundScope, tests/ad/bounds.hpp): not on paths whose terms are near the subnormal range.
 #include <array>
 #include <bit>
 #include <cmath>
@@ -132,6 +134,8 @@ void CheckEstimates(const Input& in) {
   for (std::size_t b = 0; b < kBatches; ++b) {
     std::array<double, kInputs> sum{};
     std::array<double, kInputs> bound{};
+    std::array<bool, kInputs> in_scope{};
+    in_scope.fill(true);
     for (std::uint64_t i = 0; i < per_batch; ++i) {
       FillPath(in.run.seed, (b * per_batch) + i, normal, crossing);
       const PathGradient::PathResult r = path.Evaluate(u);
@@ -141,9 +145,11 @@ void CheckEstimates(const Input& in) {
       for (std::size_t k = 0; k < kInputs; ++k) {
         sum[k] += k == aadp::ad::kMaturityInput ? -r.gradient[k] : r.gradient[k];
         bound[k] += 2.0 * gamma * r.absolute[k] * (1.0 + (2.0 * gamma));
+        in_scope[k] = in_scope[k] && aadp::ad::testing::InBoundScope(r.absolute[k]);
       }
     }
     for (std::size_t k = 0; k < kInputs; ++k) {
+      if (!in_scope[k]) continue;
       const double one_at_a_time = sum[k] / p;
       const double blocked = gradient->greeks[k].batch_means[b];
       const double allowed = (bound[k] / p) + (p * 0x1p-1070) +
@@ -157,6 +163,7 @@ void CheckEstimates(const Input& in) {
 struct Checked {
   PathGradient::PathResult tape;
   std::array<double, kInputs> bound{};
+  std::array<bool, kInputs> in_scope{};
 };
 
 // One path of one contract on its own tape, against the double kernel and the Dual.
@@ -180,6 +187,8 @@ Checked CheckPath(const Contract& c, const Market<double>& m, const PathUniforms
     AADP_FUZZ_REQUIRE(std::isfinite(out.tape.gradient[i]), "path gradient not finite");
     out.bound[i] = aadp::ad::testing::AgreementBound(out.tape.absolute[i], out.tape.statements,
                                                      out.tape.operands);
+    out.in_scope[i] = aadp::ad::testing::InBoundScope(out.tape.absolute[i]);
+    if (!out.in_scope[i]) continue;
     AADP_FUZZ_REQUIRE(std::fabs(out.tape.gradient[i] - dual.tangent[i]) <= out.bound[i],
                       "tape gradient differs from the Dual");
   }
@@ -205,6 +214,7 @@ void CheckPaths(const Input& in) {
       const Checked o = CheckPath(out, in.market, u);
       const Checked k = CheckPath(knock_in, in.market, u);
       for (std::size_t i = 0; i < kInputs; ++i) {
+        if (!(k.in_scope[i] && o.in_scope[i] && v.in_scope[i])) continue;
         const double sum = k.tape.gradient[i] + o.tape.gradient[i];
         const double allowed = k.bound[i] + o.bound[i] + v.bound[i] +
                                (4.0 * aadp::ad::testing::kUnitRoundoff *
@@ -229,6 +239,7 @@ void CheckPaths(const Input& in) {
                               (cp.tape.value + pp.tape.value + dk) / in.market.spot;
       const double delta = cp.tape.gradient[0] - pp.tape.gradient[0];
       if (cp.tape.value == 0.0 && pp.tape.value == 0.0) continue;
+      if (!(cp.in_scope[0] && pp.in_scope[0])) continue;
       AADP_FUZZ_REQUIRE(std::fabs(delta - expected) <=
                             cp.bound[0] + pp.bound[0] + rounding +
                                 (4.0 * aadp::ad::testing::kUnitRoundoff *
