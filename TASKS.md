@@ -103,7 +103,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] libstdc++ path for the data area compiled and run: g++ 14.2 release and debug at 89dbee8, with the real-file tests run, not skipped
 - [x] `scripts/scan_repo.py` scans tracked files for private content and raw data rows. Clean on the Mac and Linux
 - [x] `scripts/verify_commits.sh` builds and tests each commit of a range from an export, on the `release` preset. Proved on three commits, 2490bd0 to 556a6c8
-- [ ] Full-range `verify_commits` run
+- [x] Full-range `verify_commits` run: `.orchestrator/heavy.sh scripts/verify_commits.sh --jobs 6 5ca2bd7..HEAD` at 73bb647 on the Mac, exit 0. 89 commits: 78 pass, 11 no-build (df1bb18 through 0899a0e, before CMake existed), 0 fail, 0 skipped tests. The root commit 5ca2bd7 is outside the range and has no CMake. Mac `release` only, so it does not cover Linux, g++ or the sanitizer presets per commit. `NOTES.md` says which commits failed on Linux
 - [x] README for this phase: status, build, checks, data, CI. The results table waits for Phase 4
 - [x] `scripts/check.sh` runs every check: 13 steps, fault injection last. Final run at 73bb647: 13 of 13 pass, 0 skipped
 
