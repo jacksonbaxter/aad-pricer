@@ -169,8 +169,16 @@ PathValue<Real> OutOneStep(const Contract& c, const Model& model, std::span<cons
     weight = weight * Select(alive, p, Real(0.0));
     // Below 2^-1000, dPhi^-1(q)/dq = 1 / phi(z) nears overflow, and an infinity there turns a
     // Greek into NaN or infinity although its true value is finite. So below it the draw carries
-    // no derivative: what is dropped carries the path's weight, p = q / v < 2^-947. For double
-    // this is the same value, so prices do not change.
+    // no derivative. For double this is the same value, so prices do not change
+    // (tests/pricer/path_agreement_test.cpp, against src/mc/, which has no guard;
+    // OneStepCorner.TheGuardChangesNoDoublePayoff, where it fires).
+    // Reach: v >= 2^-53 on the Philox grid, so q < 2^-1000 needs p < 2^-947, a < -36.1. The path
+    // is on the live side, so that needs the drift per step towards the barrier to exceed 36.1 sd:
+    // with |r - q - sigma^2 / 2| dt < 36.1 sigma sqrt(dt) no path reaches the guard.
+    // Bias: every dropped term carries the path's final weight W <= p < 2^-947 (8.4e-286),
+    // times dz/dtheta, which Mills' ratio bounds by (|a| + 1 / |a|) |da/dtheta| / |z|. So the
+    // guard moves any Greek by less than 2^-947 times the unweighted derivative scale of the
+    // paths that reach it, and not at all when none can.
     const Real drawn = Value(q) < 0x1p-1000 ? Real(Value(q)) : q;
     const Real conditional = InverseNormal(Select(alive, drawn, Real(v)));
     const Real z = down ? -conditional : conditional;
