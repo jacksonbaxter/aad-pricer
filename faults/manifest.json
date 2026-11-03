@@ -259,6 +259,215 @@
       "timeout_s": 120
     },
     {
+      "id": "oracle-math-exp",
+      "kind": "oracle",
+      "covers": "math::exp accuracy, decimal table",
+      "bug": "An off-by-one in the exponent bias of the second power of two halves every result.",
+      "edits": [
+        {
+          "file": "src/math/exp.hpp",
+          "find": "static_cast<std::uint64_t>(k2 + detail::kExponentBias)",
+          "replace": "static_cast<std::uint64_t>(k2 + detail::kExponentBias - 1)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathExp.MatchesTheTableInEveryDomain"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathExp\\.MatchesTheTableInEveryDomain \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-exp-edges",
+      "kind": "oracle",
+      "covers": "math::exp edge contract",
+      "bug": "The final NaN select is dropped, so exp(NaN) returns the main path's dummy result, 1.",
+      "edits": [
+        {
+          "file": "src/math/exp.hpp",
+          "find": "return is_nan ? detail::kNaN : result;",
+          "replace": "return result;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathExp.EdgeContract"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathExp\\.EdgeContract \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-log",
+      "kind": "oracle",
+      "covers": "math::log accuracy, decimal table",
+      "bug": "The ninth hex digit of the second log coefficient is mistyped, an error that vanishes near 1 and reaches a few ULP at the sqrt 2 boundary.",
+      "edits": [
+        {
+          "file": "src/math/log.hpp",
+          "find": "0x1.9999999999a38p-2",
+          "replace": "0x1.9999999989a38p-2"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathLog.MatchesTheTableInEveryDomain"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathLog\\.MatchesTheTableInEveryDomain \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-log-edges",
+      "kind": "oracle",
+      "covers": "math::log edge contract",
+      "bug": "The select for zero is dropped, so log(0) returns log of the dummy argument, 0, not -inf.",
+      "edits": [
+        {
+          "file": "src/math/log.hpp",
+          "find": "result = x == 0.0 ? -kInf : result;",
+          "replace": "result = x == 0.0 ? result : result;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathLog.EdgeContract"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathLog\\.EdgeContract \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-sqrt-edges",
+      "kind": "oracle",
+      "covers": "math::sqrt edge contract",
+      "bug": "The domain test excludes zero, so sqrt(+0) and sqrt(-0) return NaN.",
+      "edits": [
+        {
+          "file": "src/math/sqrt.hpp",
+          "find": "const bool in_domain = x >= 0.0;",
+          "replace": "const bool in_domain = x > 0.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathSqrt.EdgeContract"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathSqrt\\.EdgeContract \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-double-double",
+      "kind": "oracle",
+      "covers": "double-double reference for the dense sweeps",
+      "bug": "The Taylor series of the double-double exp stops at degree 6, so the reference loses about half its digits and could no longer judge a sweep.",
+      "edits": [
+        {
+          "file": "tests/math/double_double.hpp",
+          "find": "for (int n = 2; n <= 14; ++n) {",
+          "replace": "for (int n = 2; n <= 6; ++n) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_exp_log_test"],
+      "command": ["{build}/bin/aadp_math_exp_log_test", "--gtest_filter=MathReference.DoubleDoubleMatchesTheTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathReference\\.DoubleDoubleMatchesTheTable \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-inverse-normal",
+      "kind": "oracle",
+      "covers": "math::inverse_normal accuracy, decimal table",
+      "bug": "The far tail takes the middle region's shift, 1.6 for 5, a copy-paste slip that only p below exp(-25) can see.",
+      "edits": [
+        {
+          "file": "src/math/inverse_normal.hpp",
+          "find": "const double tail_t = far ? r - kFarBound : r - kMiddleShift;",
+          "replace": "const double tail_t = far ? r - kMiddleShift : r - kMiddleShift;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.ProductionMatchesTheTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.ProductionMatchesTheTable \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-inverse-normal-edges",
+      "kind": "oracle",
+      "covers": "math::inverse_normal edge contract",
+      "bug": "The domain test excludes 1, so p = 1 returns NaN instead of +inf.",
+      "edits": [
+        {
+          "file": "src/math/inverse_normal.hpp",
+          "find": "return (p >= 0.0 && p <= 1.0) ? x : detail::kNaN;",
+          "replace": "return (p >= 0.0 && p < 1.0) ? x : detail::kNaN;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.EdgeContract"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.EdgeContract \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-central-identity",
+      "kind": "oracle",
+      "covers": "inverse normal, bit identity with the reference",
+      "bug": "The central branch divides before multiplying by q, q * (N / D) for (q * N) / D, which keeps the accuracy and changes the last bit of some results.",
+      "edits": [
+        {
+          "file": "src/math/inverse_normal.hpp",
+          "find": "const double ratio = (central ? q * num : num) / den;",
+          "replace": "const double ratio = central ? q * (num / den) : num / den;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.CentralRegionIsBitIdenticalToTheReference"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.CentralRegionIsBitIdenticalToTheReference \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "check-math-host-hash",
+      "kind": "check",
+      "covers": "host-independence hash",
+      "bug": "exp adds the error term of 1 + r after rounding the sum, (s + s_err) + w, the kind of reassociation a different compiler or flag would make. Outputs move by up to half an ULP; the hash sees it from the bits alone, though here the accuracy test fails too, at 1.04 ULP.",
+      "edits": [
+        {
+          "file": "src/math/exp.hpp",
+          "find": "const double m = s + (s_err + w);",
+          "replace": "const double m = (s + s_err) + w;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_host_independence_test"],
+      "command": ["{build}/bin/aadp_math_host_independence_test", "--gtest_filter=MathHostIndependence.ExpHashIsCommitted"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathHostIndependence\\.ExpHashIsCommitted \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-reference-drift",
+      "kind": "oracle",
+      "covers": "math reference table drift, tests/math",
+      "bug": "One exact value in the committed table moves by one unit in the last hex digit of its lo part, the smallest edit the table can hold.",
+      "edits": [
+        {
+          "file": "tests/math/reference_values.inc",
+          "find": "{0x1.3559c49774256p-1, 0x1.0e93910290ad0p-2, -0x1.87f1e19a80111p-58, 0},",
+          "replace": "{0x1.3559c49774256p-1, 0x1.0e93910290ad0p-2, -0x1.87f1e19a80112p-58, 0},"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tools/math_reference/generate.py", "--check"],
+      "detect": "test",
+      "reason": "generate: tests/math/reference_values\\.inc differs from the regenerated output",
+      "timeout_s": 120
+    },
+    {
       "id": "check-format",
       "kind": "check",
       "covers": "clang-format, scripts/check_format.sh",
