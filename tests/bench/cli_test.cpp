@@ -297,5 +297,50 @@ TEST(Table, ToolRefusesAFileUnderTheWrongHostDirectory) {
   expect_reason(dir, "a.txt is under mac-m4max but its header says otherwise");
 }
 
+TEST(Table, ToolLeavesOutAFaultReportFoundInADirectoryAndSaysSo) {
+  const fs::path dir = fresh_dir();
+  fs::create_directories(dir / "in" / "mac-m4max");
+  std::ofstream(dir / "in" / "mac-m4max" / "a.txt") << text_of(stamped_file("mac-m4max"));
+  std::ofstream(dir / "in" / "mac-m4max" / "fault-injection-1.txt")
+      << "aadp-fault-injection 1\nclaim: none\nsummary: caught=1\n";
+  ASSERT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir / "in") + " > " +
+                quoted(dir / "table.md") + stderr_to_file(dir)),
+            0);
+  const std::string table = slurp(dir / "table.md");
+  EXPECT_NE(table.find("### mac-m4max"), std::string::npos);
+  EXPECT_EQ(table.find("fault"), std::string::npos);
+  expect_reason(dir, "left out fault-injection-1.txt: a fault-injection report");
+}
+
+TEST(Table, ToolRefusesAFaultReportNamedDirectly) {
+  const fs::path dir = fresh_dir();
+  std::ofstream(dir / "fault-injection-1.txt") << "aadp-fault-injection 1\nclaim: none\n";
+  EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir / "fault-injection-1.txt") +
+                " >/dev/null" + stderr_to_file(dir)),
+            1);
+  expect_reason(dir, "first line is not the results magic");
+}
+
+TEST(Table, ToolRefusesAFaultReportOutsideAHostDirectory) {
+  const fs::path dir = fresh_dir();
+  fs::create_directories(dir / "in" / "scratch");
+  std::ofstream(dir / "in" / "scratch" / "fault-injection-1.txt")
+      << "aadp-fault-injection 1\nclaim: none\n";
+  EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir / "in") + " >/dev/null" +
+                stderr_to_file(dir)),
+            1);
+  expect_reason(dir, "first line is not the results magic");
+}
+
+TEST(Table, ToolStillRefusesAnUnknownFileWhateverItIsCalled) {
+  const fs::path dir = fresh_dir();
+  fs::create_directories(dir / "in");
+  std::ofstream(dir / "in" / "fault-injection-1.txt") << "not a report\n";
+  EXPECT_EQ(run(std::string(AADP_TABLE_BIN) + " " + quoted(dir / "in") + " >/dev/null" +
+                stderr_to_file(dir)),
+            1);
+  expect_reason(dir, "first line is not the results magic");
+}
+
 }  // namespace
 }  // namespace aadp::testing

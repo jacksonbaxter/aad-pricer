@@ -28,10 +28,30 @@ bool is_host_directory(std::string_view name) {
   return name == "mac-m4max" || name == "linux-zen1" || name == "other";
 }
 
+// scripts/fault_injection.py files its report beside the host's results, and it holds no
+// benchmark. The first line decides, not the name, so a results file cannot leave the table by
+// being renamed, and any other file in the directory is still refused. Outside a host directory
+// nothing is left out.
+bool is_fault_report(const fs::path& path) {
+  if (!is_host_directory(path.parent_path().filename().string())) {
+    return false;
+  }
+  std::ifstream in(path, std::ios::binary);
+  std::string first_line;
+  std::getline(in, first_line);
+  return first_line == "aadp-fault-injection 1";
+}
+
 void collect(const fs::path& path, std::vector<fs::path>& out) {
   if (fs::is_directory(path)) {
     for (const auto& entry : fs::recursive_directory_iterator(path)) {
-      if (entry.is_regular_file() && entry.path().extension() == ".txt") {
+      if (!entry.is_regular_file() || entry.path().extension() != ".txt") {
+        continue;
+      }
+      if (is_fault_report(entry.path())) {
+        std::cerr << "results_table: left out " << entry.path().filename().string()
+                  << ": a fault-injection report, not a benchmark result\n";
+      } else {
         out.push_back(entry.path());
       }
     }
