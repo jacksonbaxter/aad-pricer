@@ -1,0 +1,40 @@
+aadp-fault-injection 1
+claim: none
+commit: dba8dc54d203504670fa443a077d6e214f290836
+host_label: linux-zen1
+compiler: clang version 23.1.4 (https://github.com/llvm/llvm-project 7a941dfb2877a0b8cf30323fefa85ad019e0b0f5)
+utc_time: 2026-11-03T16:53:05Z
+jobs: 2
+selected: 29
+scope: subset, 29 of 41 faults, leaving out check-asan, check-ubsan, check-tsan, fuzz-smoke, fuzz-cp950, fuzz-taifex-options, fuzz-taifex-futures, fuzz-plan, fuzz-references, fuzz-measure-line, fuzz-results-file, fuzz-results-json. Linux host run: the 9 fuzz faults and the check-asan, check-ubsan and check-tsan sanitizer faults run only on the Mac by rule, so they are left out here
+columns: id | covers | baseline | mutated_exit | reason | verdict
+oracle-black-scholes | Black-Scholes closed form | pass | 1 | [ FAILED ] BlackScholes.PutCallParity | caught
+oracle-barrier | barrier closed form | pass | 1 | [ FAILED ] BarrierClosedForm.HaugTable | caught
+oracle-geometric-asian | geometric Asian closed form | pass | 1 | [ FAILED ] GeometricAsian.O4TenFixings | caught
+oracle-quadrature | quadrature references, tools/quadrature | pass | 1 | [ FAILED ] DiscreteBarrier.DividendEntersTheDrift | caught
+oracle-finite-difference | finite differences, src/oracle/finite_difference.hpp | pass | 1 | theta Which is: 8.8161851046208994 -dvdt Which is: -8.8161851046208994 [ FAILED ] FiniteDifference.RecoversSlopeOfAKnownPayoffWithTheta | caught
+oracle-naive-barrier | naive barrier failing test | pass | 1 | Value of: against_truth.passed() Actual: true Expected: false | caught
+oracle-tolerance | tolerance rule, condition 1 | pass | 1 | r.failed_condition() Which is: "none" "distance" [ FAILED ] Tolerance.ConditionOneFailsAlone | caught
+oracle-se-ceiling | SE ceiling, condition 2 | pass | 1 | under.failed_condition() Which is: "none" "se-ceiling" [ FAILED ] Tolerance.CeilingIsOnTheSeItselfAndItIsInclusive | caught
+oracle-k-count | K count, references/comparison_plan.csv | pass | 1 | header.declared_k Which is: 146 rows.size() Which is: 147 | caught
+oracle-reference-drift | reference drift, references/oracle_values.csv | pass | 1 | references/oracle_values.csv differs from the regenerated values | caught
+oracle-philox | Philox4x32-10 known answers | pass | 1 | philox_test.cpp:43:17: error: static assertion failed | caught
+oracle-inverse-normal | inverse normal, AS241 | pass | 1 | Expected: (worst) <= (kTolerance), actual: 8.6848172500735813e-14 vs 2.0000000000000002e-15 middle 1.4e-11 to 0.075 | caught
+oracle-n-thread | N-thread invariance, src/mc/batch_runner.hpp | pass | 1 | Value of: BitIdentical(one, RunStub(c, kPaths, 2)) Actual: false Expected: true | caught
+check-format | clang-format, scripts/check_format.sh | pass | 1 | src/data/decimal.cpp:64:15: error: code should be clang-formatted | caught
+check-data-checksum | data checksum, scripts/fetch_data.sh --verify | pass | 2 | checksum mismatch: <copy>/data/DailyMarketReportOpt.csv | caught
+check-data-missing-capture | missing capture, scripts/fetch_data.sh | pass | 3 | capture unavailable: CaptureThatIsGone.csv fetch_data: URL: file:///nonexistent/aadp-fault/gone.csv fetch_data: curl exit code: 37 fetch_data: This capture is gone or cannot be reached. Report this... | caught
+check-actionlint | actionlint on .github/workflows/ci.yml | pass | 1 | ci.yml:23:18: property "oss" is not defined in object type | caught
+check-script-keeps-going | scripts/check.sh: a failed step, then the steps after it | pass | 1 | FAIL format 1s build/logs/check/check-format.log exit 1: check_format: FAIL, see the diagnostics above SKIP tidy 0s not selected by --only SKIP repo-scan 0s not selected by --only SKIP release 0s n... | caught
+check-repo-scan | scripts/scan_repo.py | pass | 1 | tests/data/taifex_fixture.hpp:131: home-path tests/data/taifex_fixture.hpp:132: taifex-row | caught
+check-wall | -Wall in cmake/AadpWarnings.cmake | pass | 1 | error: unused variable 'total_digits' [-Werror,-Wunused-variable] | caught
+check-wextra | -Wextra in cmake/AadpWarnings.cmake | pass | 1 | error: unused parameter 'sign' [-Werror,-Wunused-parameter] | caught
+check-werror | -Werror in cmake/AadpWarnings.cmake | pass | 1 | error: 'parse_count' is deprecated: use parse_decimal [-Werror,-Wdeprecated-declarations] | caught
+check-host-mixing | host-mixing refusal, aadp_results_table | pass | 1 | results_table: harness-selftest-20261030T231633Z.txt is under mac-m4max but its header says otherwise | caught
+check-host-mixing-table | several hosts in one table, aadp_results_table --one-table | pass | 1 | results_table: refusing to put hosts mac-m4max and linux-zen1 in one table | caught
+check-stamp-forbidden-string | forbidden-string refusal, aadp_results_stamp | pass | 1 | results_stamp: refused: refusing to write: line 6 has a forbidden string; | caught
+check-skipped-test | scripts/check.sh and run_tests.py: a skipped test fails its step | pass | 1 | FAIL release 214s build/logs/check/check-release.log exit 1: run_tests: release total=370 passed=369 failed=0 skipped=1 allowed=0 SKIP debug 0s not selected by --only SKIP asan-ubsan 0s not selecte... | caught
+check-header-refusal | results header refusal, aadp_results_stamp | pass | 1 | results_stamp: refused: header is missing perf_instructions | caught
+check-attribution | attribution on output, tools/chain_profile | pass | 1 | run_tests: failed: ChainProfile.OutputCarriesTheFullAttribution | caught
+check-clang-tidy | clang-tidy, scripts/run_clang_tidy.sh | pass | 1 | src/results/table.cpp:23:29: error: the loop variable's type is not a reference type; this creates a copy in each iteration; consider making this a reference [performance-for-range-copy | caught
+summary: caught=29 not-caught=0 not-applied=0 baseline-failed=0
