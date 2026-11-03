@@ -1335,6 +1335,7 @@
       "command": [
         "{build}/bin/aadp_fuzz_tape_operations",
         "-seed=1",
+        "-handle_abrt=0",
         "-max_total_time=60",
         "-print_final_stats=1",
         "-create_missing_dirs=1",
@@ -1369,6 +1370,7 @@
       "command": [
         "{build}/bin/aadp_fuzz_pricer_gradient",
         "-seed=1",
+        "-handle_abrt=0",
         "-max_total_time=60",
         "-print_final_stats=1",
         "-create_missing_dirs=1",
@@ -1403,6 +1405,7 @@
       "command": [
         "{build}/bin/aadp_fuzz_pricer_gradient",
         "-seed=1",
+        "-handle_abrt=0",
         "-max_total_time=60",
         "-print_final_stats=1",
         "-create_missing_dirs=1",
