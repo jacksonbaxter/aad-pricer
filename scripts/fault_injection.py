@@ -3,7 +3,7 @@
 
     python3 -I scripts/fault_injection.py [--only <id,...>] [--kind oracle|check|fuzz]
         [--jobs <n>] [--source <dir>] [--output <file>] [--list]
-        [--manifest <file>] [--build-root <dir>]
+        [--manifest <file>] [--build-root <dir>] [--scope-note <text>]
 
 Run it with the toolchain in the environment (CC, CXX, SDKROOT, PATH). Standard library only.
 Exit codes: 0 every selected fault was caught, 1 otherwise, 2 could not run.
@@ -58,8 +58,10 @@ all required unless marked:
                in the manifest, such as a row of the raw data
   preset     CMake configure preset, which also names the build directory
   targets    list of build targets. Empty for a check that needs no build, such as a script
-  command    argv run from the root of the copy. "{build}" expands to the build directory. No
-             shell. Optional when detect is "build"; if present it must pass on the baseline
+  command    argv run from the root of the copy. "{build}" expands to the build directory and
+             "{jobs}" to --jobs, which AADP_JOBS also carries to a nested check.sh, so that a
+             fault can never exceed a host's job limit. No shell. Optional when detect is "build";
+             if present it must pass on the baseline
   detect     "test": the build must succeed, and the command must fail with reason matched in its
              output. "build": the build must fail with reason matched in its output
   reason     Python regex, searched with re.MULTILINE. It must name the test or the reason, and it
@@ -83,7 +85,9 @@ And these, all optional:
 To add a fault: add an entry, commit it, and run --only <id>. No other file changes.
 
 The output has no absolute paths into a home directory, host names or user names, because it gets
-committed. Anything that would leak after scrubbing makes the run refuse to write it.
+committed. Anything that would leak after scrubbing makes the run refuse to write it. Its scope
+line says how much of the manifest the run covered, names whatever it left out, and carries
+--scope-note, the reason, so a subset cannot read as the full set.
 """
 
 import argparse
@@ -508,9 +512,11 @@ def output_files(layout, fault):
     ]
 
 
-def run_command(layout, fault, stage):
+def run_command(layout, fault, stage, jobs):
     build_dir = str(layout.build_dir(fault["preset"]))
-    command = [part.replace("{build}", build_dir) for part in fault["command"]]
+    command = [
+        part.replace("{build}", build_dir).replace("{jobs}", str(jobs)) for part in fault["command"]
+    ]
     log = layout.logs / f"{fault['id']}-{stage}-run.txt"
     for stale in output_files(layout, fault):
         stale.unlink()
@@ -616,7 +622,7 @@ def run_baseline(layout, fault, reason, jobs):
         return "the reason regex matches the passing baseline build"
     if "command" not in fault:
         return None
-    code, output = run_command(layout, fault, "baseline")
+    code, output = run_command(layout, fault, "baseline", jobs)
     if code is None:
         return f"baseline timed out after {fault['timeout_s']} s"
     if code != fault.get("baseline_exit", 0):
@@ -639,7 +645,7 @@ def run_fault(layout, fault, jobs):
         build_code, build_output = build(layout, fault, "mutated", jobs)
         run_code, run_output = None, ""
         if fault["detect"] == "test" and build_code == 0:
-            run_code, run_output = run_command(layout, fault, "mutated")
+            run_code, run_output = run_command(layout, fault, "mutated", jobs)
         mutated, text, verdict = judge(fault, reason, build_code, build_output, run_code, run_output)
         return "pass", mutated, text, verdict
     except NoFixture as error:
@@ -721,7 +727,17 @@ def host_label():
     return "other"
 
 
-def header_lines(commit, selected, args):
+def scope_line(faults, selected, note):
+    if len(selected) == len(faults):
+        scope = f"all {len(faults)} faults"
+    else:
+        chosen = {fault["id"] for fault in selected}
+        left_out = ", ".join(fault["id"] for fault in faults if fault["id"] not in chosen)
+        scope = f"subset, {len(selected)} of {len(faults)} faults, leaving out {left_out}"
+    return f"scope: {scope}" + (f". {field(note)}" if note else "")
+
+
+def header_lines(commit, faults, selected, args):
     return [
         "aadp-fault-injection 1",
         "claim: none",
@@ -731,6 +747,7 @@ def header_lines(commit, selected, args):
         f"utc_time: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
         f"jobs: {args.jobs}",
         f"selected: {len(selected)}",
+        scope_line(faults, selected, args.scope_note),
         f"columns: {COLUMNS}",
     ]
 
@@ -753,9 +770,9 @@ def default_build_root(args):
     return (args.source.parent if args.source else REPO) / "build" / "fault"
 
 
-def run_all(selected, layout, commit, args):
+def run_all(faults, selected, layout, commit, args):
     scrub = Scrubber(layout)
-    lines = [scrub(line) for line in header_lines(commit, selected, args)]
+    lines = [scrub(line) for line in header_lines(commit, faults, selected, args)]
     print("\n".join(lines), flush=True)
     export_pristine(args, commit, layout)
     sync_copy(layout)
@@ -767,7 +784,9 @@ def run_all(selected, layout, commit, args):
     for fault in selected:
         baseline, mutated, reason, verdict = run_fault(layout, fault, args.jobs)
         counts[verdict] += 1
-        lines.append(scrub(format_row(fault, baseline, mutated, reason, verdict)))
+        # The reason is scrubbed before the row cuts it short, since half a path matches
+        # nothing, and the whole row again after, since every field reaches the file.
+        lines.append(scrub(format_row(fault, baseline, mutated, scrub(reason), verdict)))
         print(lines[-1], flush=True)
     summary = " ".join(f"{verdict}={count}" for verdict, count in counts.items())
     lines.append(f"summary: {summary}")
@@ -791,6 +810,7 @@ def parse_arguments():
     parser.add_argument("--list", action="store_true", help="print the faults and stop")
     parser.add_argument("--manifest", type=Path, help="a manifest other than the committed one")
     parser.add_argument("--build-root", type=Path, help="default build/fault")
+    parser.add_argument("--scope-note", help="why this run covers what it covers")
     args = parser.parse_args()
     if not 1 <= args.jobs <= MAX_JOBS:
         parser.error(f"--jobs must be between 1 and {MAX_JOBS}")
@@ -806,9 +826,11 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
+    os.environ["AADP_JOBS"] = str(args.jobs)
     try:
         commit = source_commit(args)
-        selected = select_faults(parse_manifest(read_manifest_text(args, commit)), args)
+        faults = parse_manifest(read_manifest_text(args, commit))
+        selected = select_faults(faults, args)
         if args.list:
             for fault in selected:
                 print(" | ".join((fault["id"], fault["kind"], fault["detect"], fault["covers"])))
@@ -820,7 +842,7 @@ def main():
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as error:
                 raise CannotRun(f"another run holds {layout.root}") from error
-            return run_all(selected, layout, commit, args)
+            return run_all(faults, selected, layout, commit, args)
     except Exception as error:  # A crash here must not read as exit 1, a fault that got through.
         print(f"fault_injection: could not run: {error!r}", file=sys.stderr)
         return 2

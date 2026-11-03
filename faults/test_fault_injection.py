@@ -289,6 +289,17 @@ class ChecksAsTheyReallyRun(unittest.TestCase):
         self.assertEqual(rows["strict"][2:4], ["fail", "-"])
         self.assertEqual(rows["strict"][5], "baseline-failed")
 
+    def test_the_job_limit_reaches_the_command_and_a_nested_check(self):
+        check = (
+            'test "$1" = 3 && test "$AADP_JOBS" = 3 || { echo WRONG JOBS; exit 2; }; '
+            'grep -q "a - b" main.cpp && { echo PLANTED; exit 1; }; exit 0'
+        )
+        entry = fault("jobs", [swap("a + b", "a - b")], targets=[],
+                      command=["sh", "-c", check, "sh", "{jobs}"], reason="PLANTED")
+        project = Project("job-limit", [entry]).committed()
+        done = project.run("--jobs", "3")
+        self.assertEqual(project.rows(done.stdout)["jobs"][5], "caught", done.stdout)
+
     def test_a_mutated_exit_equal_to_the_baseline_is_refused(self):
         entry = fault("bad", [swap("a + b", "a - b")], baseline_exit=3, mutated_exit=3)
         done = Project("exit-clash", [entry]).committed().run()
@@ -452,6 +463,26 @@ class Refusals(unittest.TestCase):
         self.assertEqual(done.returncode, 2, done.stdout)
 
 
+class TheRealManifest(unittest.TestCase):
+    def setUp(self):
+        self.faults = json.loads((REPO / "faults" / "manifest.json").read_text())["faults"]
+
+    def test_no_fault_runs_all_of_check_sh_so_the_step_cannot_run_itself(self):
+        nested = [f for f in self.faults if f.get("command", [""])[0] == "scripts/check.sh"]
+        self.assertTrue(nested)
+        for entry in nested:
+            command = entry["command"]
+            self.assertIn("--only", command, entry["id"])
+            steps = command[command.index("--only") + 1].split(",")
+            self.assertNotIn("fault-injection", steps, entry["id"])
+
+    def test_no_fault_fixes_its_own_job_count(self):
+        for entry in self.faults:
+            command = entry.get("command", [])
+            if "--jobs" in command:
+                self.assertEqual(command[command.index("--jobs") + 1], "{jobs}", entry["id"])
+
+
 class Modes(unittest.TestCase):
     def test_source_mode_reads_an_export_with_no_git(self):
         project = Project("export-root", [])
@@ -508,6 +539,31 @@ class Modes(unittest.TestCase):
         done = project.run("--output", "build/result.txt")
         self.assertEqual(done.returncode, 0, done.stdout)
         self.assertIn("<home>/secret/thing.cpp", (project.root / "build/result.txt").read_text())
+
+    def test_a_reason_cut_short_inside_a_path_is_still_scrubbed(self):
+        # The home directory straddles the 200-character limit once the padding is counted.
+        hook = swap("a + b", "a - b")
+        padding = "x" * (195 - len(str(Path.home())) // 2)
+        text = f'{padding} {Path.home()}/secret/thing.cpp ADD IS WRONG'
+        edit = swap('std::puts("ADD IS WRONG");\n    return 1;',
+                    f'std::puts("{text}");\n    return 1;')
+        project = Project("cut", [fault("cut", [hook, edit], reason="x+ .*ADD IS WRONG")])
+        done = project.committed().run("--output", "build/result.txt")
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertIn("<home>", (project.root / "build/result.txt").read_text())
+
+    def test_the_scope_line_names_what_a_subset_left_out_and_why(self):
+        faults = [
+            fault("one", [swap("a + b", "a - b")]),
+            fault("two", [swap("kLimit = 3", "kLimit = 4")], reason="LIMIT IS WRONG"),
+        ]
+        project = Project("scope", faults).committed()
+        done = project.run()
+        self.assertIn("scope: all 2 faults\n", done.stdout)
+        done = project.run("--only", "two", "--scope-note", "One is for another host.")
+        self.assertIn(
+            "scope: subset, 1 of 2 faults, leaving out one. One is for another host.\n", done.stdout
+        )
 
 
 if __name__ == "__main__":
