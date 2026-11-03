@@ -8,6 +8,10 @@ aadp_test(aadp_math_exp_log_test
   SOURCES tests/math/exp_log_test.cpp
   LINK aadp_math
   LABELS math)
+aadp_test(aadp_math_host_independence_test
+  SOURCES tests/math/host_independence_test.cpp
+  LINK aadp_math
+  LABELS math fast)
 # Compares with the frozen reference in src/rng/, which the oracle area provides.
 if(TARGET aadp_rng)
   aadp_test(aadp_math_inverse_normal_test
