@@ -213,6 +213,18 @@ Fuzz faults:
 Warning flags:
 - The `-Wall`, `-Wextra` and `-Werror` faults each have a control: dropping just that flag removes the failure.
 
+## Phase 3 oracle policy
+
+Fixed before any Phase 3 code exists, so git history shows it came first.
+
+- `references/measured_results.csv` is measured run 1: 90 rows, the Phase 2 reference kernels in `src/mc/`, Greeks from the forward-mode `Dual`. It is history and never changes.
+- The reference kernels in `src/mc/` stay frozen, so `check.sh` keeps reproducing run 1. The production pricer is checked against them path by path, within a bound stated before the check runs.
+- The production pricer and tape are judged by measured run 2: one run of all 147 rows of the same pre-registered plan, on seed 271828, at stage 8.
+- Run 2 is a correlated look at the 90 run-1 rows, on the same paths with the same estimator. So it is reported beside run 1, never instead of it. A run-2 row that fails is reported as a failure, even if run 1 passed it.
+- The 57 awaiting rows get SE ceilings from a pilot on seed 1729, committed before run 2, as the plan header says.
+- No ceiling or b changes after a measured result.
+- Development and unit tests never use seeds 1729 or 271828.
+
 ## Option chain
 
 ### Result
