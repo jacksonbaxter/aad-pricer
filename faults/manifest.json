@@ -2125,6 +2125,102 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] IterationTable\\.AdmitsAFileThatIsNotReportableUnderABanner",
       "timeout_s": 300
+    },
+    {
+      "id": "stamp-two-cpu-pin",
+      "kind": "check",
+      "covers": "a two-CPU pin cross-checked CPU by CPU against measure.sh's cpus=, aadp_results_stamp",
+      "bug": "Only the first CPU of the read-back mask is looked for in measure.sh's CPU list, so a second CPU the governor and frequency were never reported on passes.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "  for (const int cpu : *pinned) {\n",
+          "replace": "  for (const int cpu : std::span(*pinned).first(1)) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=Stamp.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stamp\\.RefusesASecondPinnedCpuOutsideWhatMeasureReportedOn",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-pin-too-wide",
+      "kind": "check",
+      "covers": "at most two pinned CPUs, aadp_results_stamp",
+      "bug": "A mask of three CPUs is stamped as a pin.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "if (pinned->size() > kMaxPinnedCpus) {",
+          "replace": "if (pinned->size() > kMaxPinnedCpus + 1) {"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=Stamp.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stamp\\.RefusesAPinToThreeCpus",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-idle-named",
+      "kind": "check",
+      "covers": "a linux-zen1 run names the CPUs it leaves idle, aadp_results_stamp",
+      "bug": "The idle check runs on every host but linux-zen1, so a linux-zen1 header that does not say cpu5 is meant to be idle is stamped.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "  if (zen1) {\n    if (auto idle = check_idle(",
+          "replace": "  if (!zen1) {\n    if (auto idle = check_idle("
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=Stamp.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stamp\\.RefusesAZen1RunThatNamesNoIdleCpu",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-idle-pinned",
+      "kind": "check",
+      "covers": "a CPU meant to be idle is not pinned, aadp_results_stamp",
+      "bug": "The meant-idle list is read but never compared with the mask, so a run pinned on cpu5 is stamped as leaving it idle.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "  for (const int cpu : *idle) {\n",
+          "replace": "  for (const int cpu : std::span(*idle).last(0)) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=Stamp.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stamp\\.RefusesAMeantIdleCpuInsideThePin",
+      "timeout_s": 300
     }
   ]
 }

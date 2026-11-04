@@ -132,6 +132,30 @@ else
 fi
 clear_results
 
+# Pins. Only linux-zen1 pins, on one CPU or two (a threaded row), never on cpu5, which is meant
+# to be idle; every other host refuses a pin it cannot make.
+if [[ $("$bin_dir/aadp_results_stamp" --print-host-label) == linux-zen1 ]]; then
+  check "a pin to three CPUs is refused" fails_with 64 'one or two CPUs' env AADP_PIN_CPUS=4,6,7 \
+    AADP_MEASURE="$scratch/measure_ok.sh" "$script" "$binary" script-pin "${fast[@]}"
+  check "a pin to one CPU twice is refused" fails_with 64 'the same CPU twice' env \
+    AADP_PIN_CPUS=6,6 AADP_MEASURE="$scratch/measure_ok.sh" "$script" "$binary" script-pin \
+    "${fast[@]}"
+  check "a pin on the idle CPU is refused" fails_with 64 'cpu5 is meant to be idle' env \
+    AADP_PIN_CPUS=4,5 AADP_MEASURE="$scratch/measure_ok.sh" "$script" "$binary" script-pin \
+    "${fast[@]}"
+  AADP_PIN_CPUS=4,6 AADP_MEASURE=$scratch/measure_ok.sh "$script" "$binary" script-two \
+    "${fast[@]}" >/dev/null 2>"$scratch/two.err"
+  check "a two-CPU run is stamped" test $? -eq 0
+  check "the header names both CPUs" grep -q '^pinned_cpus: 4,6$' "$(latest)"
+  check "the header says cpu5 is meant to be idle" \
+    grep -q '^meant_idle_cpus: 5 (not enforced)$' "$(latest)"
+  clear_results
+else
+  check "a host that cannot pin refuses a pin" fails_with 64 'AADP_PIN_CPUS is for linux-zen1' \
+    env AADP_PIN_CPUS=4,6 AADP_MEASURE="$scratch/measure_ok.sh" "$script" "$binary" script-pin \
+    "${fast[@]}"
+fi
+
 # A dirty tree stops a reportable run before it measures anything.
 git -C "$scratch/source" init -q
 git -C "$scratch/source" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty \

@@ -57,6 +57,7 @@ struct RunExtras {
 
 struct HarnessOptions {
   std::optional<int> pin_cpu;
+  std::vector<int> meant_idle_cpus;  // --meant-idle-cpus=5: written to the header, not enforced
   bool reportable = false;
   std::filesystem::path source_root = ".";
   std::int64_t batches = 20'000;

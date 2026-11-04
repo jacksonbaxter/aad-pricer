@@ -15,6 +15,7 @@
 #define AADP_RESULTS_RESULTS_FILE_HPP_
 
 #include <array>
+#include <cstddef>
 #include <expected>
 #include <optional>
 #include <span>
@@ -115,6 +116,16 @@ inline constexpr auto kPerfHeaderKeys = std::to_array<std::string_view>({
     "perf_instructions",
     "perf_counters_note",
 });
+
+// The CPUs a run means to leave idle, such as cpu5, the SMT sibling of linux-zen1's cpu4: a
+// list and "(not enforced)", or "none". The harness writes it since Phase 3 stage 3b and the stamp
+// requires it on linux-zen1. It is not in kRunHeaderKeys, so files stamped before it still read.
+inline constexpr std::string_view kMeantIdleCpusKey = "meant_idle_cpus";
+inline constexpr std::string_view kNotEnforced = " (not enforced)";
+
+// pinned_cpus holds at most this many CPUs: one, or two for a threaded row (taskset -c 4,6). The
+// harness calls the same limit platform::kMaxPinnedCpus, and checks the two agree.
+inline constexpr std::size_t kMaxPinnedCpus = 2;
 
 // Keys only the stamp tool may write. A binary's output that has them is refused.
 inline constexpr auto kStampHeaderKeys = std::to_array<std::string_view>({

@@ -131,6 +131,19 @@ TEST(HarnessSelftest, CountersCoverOnlyTheMeasuredRepetitions) {
   }
 }
 
+// Recorded on every host, enforced on none: the stamp is what requires it on linux-zen1.
+TEST(HarnessSelftest, TheHeaderRecordsTheCpusMeantToBeIdle) {
+  const fs::path dir = fresh_dir();
+  ASSERT_EQ(run(selftest(dir / "none.txt", kFastArgs)), 0);
+  const auto none = results::parse_results_file(slurp(dir / "none.txt"));
+  ASSERT_TRUE(none.has_value()) << none.error();
+  EXPECT_EQ(none->value(results::kMeantIdleCpusKey), "none");
+  ASSERT_EQ(run(selftest(dir / "idle.txt", kFastArgs + " --meant-idle-cpus=5")), 0);
+  const auto idle = results::parse_results_file(slurp(dir / "idle.txt"));
+  ASSERT_TRUE(idle.has_value()) << idle.error();
+  EXPECT_EQ(idle->value(results::kMeantIdleCpusKey), "5 (not enforced)");
+}
+
 #ifdef __APPLE__
 TEST(HarnessSelftest, MacOsHeaderSaysNotPinned) {
   const fs::path dir = fresh_dir();
@@ -157,6 +170,22 @@ TEST(HarnessSelftest, PinCpuPinsAndTheHeaderReadsItBack) {
   EXPECT_EQ(file->value("pinning_state"), "pinned");
   EXPECT_EQ(file->value("pinned_cpus"), "0");
   EXPECT_EQ(file->value("observed_cpu"), "0");
+}
+
+// What a threaded row on linux-zen1 does (taskset -c 4,6), on two CPUs any Linux host has.
+TEST(HarnessSelftest, ATwoCpuMaskIsAPinAndTheHeaderNamesBoth) {
+  if (sysconf(_SC_NPROCESSORS_ONLN) < 3) {
+    FAIL() << "needs three online CPUs, so that two are a pin";
+  }
+  const fs::path dir = fresh_dir();
+  ASSERT_EQ(run("taskset -c 0,2 " + selftest(dir / "raw.txt", kFastArgs + " --meant-idle-cpus=1")),
+            0);
+  const auto file = results::parse_results_file(slurp(dir / "raw.txt"));
+  ASSERT_TRUE(file.has_value()) << file.error();
+  EXPECT_EQ(file->value("pinning_state"), "pinned");
+  EXPECT_EQ(file->value("pinned_cpus"), "0,2");
+  EXPECT_EQ(file->value("pin_method"), "inherited mask, read back");
+  EXPECT_EQ(file->value(results::kMeantIdleCpusKey), "1 (not enforced)");
 }
 #endif
 

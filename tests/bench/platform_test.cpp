@@ -20,6 +20,7 @@
 #endif
 #ifdef __linux__
 #include <sched.h>
+#include <unistd.h>
 
 #include <chrono>
 #include <fstream>
@@ -224,6 +225,15 @@ TEST(Affinity, FormatsCpuLists) {
   EXPECT_EQ(format_cpu_list(std::vector<int>{0, 2, 3, 7}), "0,2-3,7");
 }
 
+TEST(Affinity, OneOrTwoCpusOutOfMoreArePinned) {
+  EXPECT_TRUE(counts_as_pinned(std::vector<int>{4}, 8));
+  EXPECT_TRUE(counts_as_pinned(std::vector<int>{4, 6}, 8));
+  EXPECT_FALSE(counts_as_pinned(std::vector<int>{4, 5, 6}, 8));
+  EXPECT_FALSE(counts_as_pinned(std::vector<int>{}, 8));
+  EXPECT_FALSE(counts_as_pinned(std::vector<int>{0, 1}, 2));
+  EXPECT_FALSE(counts_as_pinned(std::vector<int>{0}, 1));
+}
+
 #ifdef __APPLE__
 TEST(Affinity, MacOsNeverClaimsAPin) {
   const AffinityState state = read_affinity();
@@ -282,7 +292,7 @@ TEST(Affinity, ReadsTheRealMask) {
   const AffinityState state = read_affinity();
   EXPECT_FALSE(state.cpus.empty());
   ASSERT_TRUE(state.current.has_value());
-  EXPECT_EQ(state.pinned, state.cpus.size() == 1);
+  EXPECT_EQ(state.pinned, counts_as_pinned(state.cpus, sysconf(_SC_NPROCESSORS_ONLN)));
 }
 
 TEST(Affinity, PinsAndReadsBackThenRestores) {

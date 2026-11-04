@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "results/json_lite.hpp"
 #include "results/measure_line.hpp"
@@ -92,23 +93,74 @@ std::expected<void, StampRefusal> check_build(const ResultsFile& run, const Meas
   return {};
 }
 
+// The list before " (not enforced)". Absent, "none" or malformed gives no list.
+std::optional<std::vector<int>> meant_idle_cpus(const ResultsFile& run) {
+  std::string_view text = run.value(kMeantIdleCpusKey).value_or(std::string_view{});
+  if (!text.ends_with(kNotEnforced)) {
+    return std::nullopt;
+  }
+  text.remove_suffix(kNotEnforced.size());
+  auto cpus = expand_cpu_list(text);
+  if (!cpus) {
+    return std::nullopt;
+  }
+  return std::move(*cpus);
+}
+
+// A linux-zen1 run names the CPUs it leaves idle (cpu5, the SMT sibling of cpu4), and pins none
+// of them.
+std::expected<void, StampRefusal> check_idle(const ResultsFile& run, std::span<const int> pinned) {
+  const auto idle = meant_idle_cpus(run);
+  if (!idle) {
+    return refuse(StampError::kNoIdleCpu, "linux-zen1 run does not name the CPUs it leaves idle");
+  }
+  for (const int cpu : *idle) {
+    if (std::ranges::find(pinned, cpu) != pinned.end()) {
+      return refuse(StampError::kIdleCpuPinned,
+                    "CPU " + std::to_string(cpu) + " is meant to be idle but is pinned");
+    }
+  }
+  return {};
+}
+
+// Every CPU of the mask the process read back must be one measure.sh reported its governor and
+// frequency on. A two-CPU pin is checked CPU by CPU.
 std::expected<void, StampRefusal> check_pinning(const ResultsFile& run, const MeasureLine& start) {
   const std::string_view pinning = run.required("pinning_state");
-  if (run.required("host_label") == "linux-zen1" && pinning != "pinned") {
+  const bool zen1 = run.required("host_label") == "linux-zen1";
+  if (zen1 && pinning != "pinned") {
     return refuse(StampError::kNotPinned, "linux-zen1 run is not pinned");
   }
-  if (pinning != "pinned" || !start.cpus) {
+  if (pinning != "pinned") {
+    return {};
+  }
+  const auto pinned = expand_cpu_list(run.required("pinned_cpus"));
+  if (!pinned) {
+    return refuse(StampError::kPinMismatch,
+                  "pinned_cpus " + std::string(run.required("pinned_cpus")) + " is not a CPU list");
+  }
+  if (pinned->size() > kMaxPinnedCpus) {
+    return refuse(StampError::kPinTooWide, "pinned to " + std::to_string(pinned->size()) +
+                                               " CPUs, at most " + std::to_string(kMaxPinnedCpus));
+  }
+  if (zen1) {
+    if (auto idle = check_idle(run, *pinned); !idle) {
+      return idle;
+    }
+  }
+  if (!start.cpus) {
     return {};
   }
   const auto cpus = expand_cpu_list(*start.cpus);
   if (!cpus) {
     return refuse(StampError::kBadMeasureLine, cpus.error());
   }
-  const auto pinned = expand_cpu_list(run.required("pinned_cpus"));
-  if (!pinned || pinned->size() != 1 || std::ranges::find(*cpus, pinned->front()) == cpus->end()) {
-    return refuse(StampError::kPinMismatch,
-                  "pinned CPU " + std::string(run.required("pinned_cpus")) +
-                      " is not in the measure.sh CPU list " + *start.cpus);
+  for (const int cpu : *pinned) {
+    if (std::ranges::find(*cpus, cpu) == cpus->end()) {
+      return refuse(StampError::kPinMismatch, "pinned CPU " + std::to_string(cpu) +
+                                                  " is not in the measure.sh CPU list " +
+                                                  *start.cpus);
+    }
   }
   return {};
 }

@@ -4,6 +4,7 @@
 
 #include <span>
 #include <string>
+#include <string_view>
 
 #include "fixtures.hpp"
 #include "results/results_file.hpp"
@@ -169,9 +170,78 @@ TEST(Stamp, RefusesARunAtAnotherPriority) {
 TEST(Stamp, RefusesAPinOutsideWhatMeasureReportedOn) {
   StampCase test_case;
   ResultsFile raw = testing::raw_file();
-  testing::set_field(raw, "pinned_cpus", "5");
+  // Not cpu5: that is meant to be idle, which the stamp refuses for its own reason.
+  testing::set_field(raw, "pinned_cpus", "7");
   test_case.raw = testing::text_of(raw);
   expect_refused(test_case, StampError::kPinMismatch);
+}
+
+// A threaded row on linux-zen1: taskset -c 4,6 around the binary, so measure.sh reports on both.
+std::string two_cpu_capture(std::string_view cpus) {
+  return "measure.sh: start load1=0.31 host=testbox at=2026-01-02T03:04:05Z cpus=" +
+         std::string(cpus) +
+         " governor=performance freq_khz=cpu4:3500000,cpu6:3500000 perf_event_paranoid=2\n"
+         "measure.sh: end load1=0.42 exit=0 at=2026-01-02T03:04:09Z cpus=" +
+         std::string(cpus) +
+         " governor=performance freq_khz=cpu4:3400000,cpu6:3400000 perf_event_paranoid=2\n";
+}
+
+TEST(Stamp, AcceptsATwoCpuPinThatMeasureReportedOn) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_file();
+  testing::set_field(raw, "pinned_cpus", "4,6");
+  test_case.raw = testing::text_of(raw);
+  test_case.captured = two_cpu_capture("4,6");
+  const auto out = test_case.run();
+  ASSERT_TRUE(out.has_value()) << out.error().detail;
+  const auto file = parse_results_file(*out);
+  ASSERT_TRUE(file.has_value()) << file.error();
+  EXPECT_EQ(file->value("pinned_cpus"), "4,6");
+  EXPECT_EQ(file->value(kMeantIdleCpusKey), "5 (not enforced)");
+  EXPECT_NE(out->find("cpus=4,6 governor=performance"), std::string::npos);
+}
+
+// The first CPU matches, so only a check of every CPU of the mask sees the second one.
+TEST(Stamp, RefusesASecondPinnedCpuOutsideWhatMeasureReportedOn) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_file();
+  testing::set_field(raw, "pinned_cpus", "4,6");
+  test_case.raw = testing::text_of(raw);
+  test_case.captured = two_cpu_capture("4");
+  expect_refused(test_case, StampError::kPinMismatch);
+}
+
+TEST(Stamp, RefusesAPinToThreeCpus) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_file();
+  testing::set_field(raw, "pinned_cpus", "4,6-7");
+  test_case.raw = testing::text_of(raw);
+  test_case.captured = two_cpu_capture("4,6-7");
+  expect_refused(test_case, StampError::kPinTooWide);
+}
+
+TEST(Stamp, RefusesAZen1RunThatNamesNoIdleCpu) {
+  for (const std::string_view value : {"none", "5", "", "x (not enforced)"}) {
+    StampCase test_case;
+    ResultsFile raw = testing::raw_file();
+    if (value.empty()) {
+      testing::remove_field(raw, kMeantIdleCpusKey);
+    } else {
+      testing::set_field(raw, kMeantIdleCpusKey, value);
+    }
+    test_case.raw = testing::text_of(raw);
+    SCOPED_TRACE(std::string(value));
+    expect_refused(test_case, StampError::kNoIdleCpu);
+  }
+}
+
+TEST(Stamp, RefusesAMeantIdleCpuInsideThePin) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_file();
+  testing::set_field(raw, "pinned_cpus", "4-5");
+  test_case.raw = testing::text_of(raw);
+  test_case.captured = two_cpu_capture("4-5");
+  expect_refused(test_case, StampError::kIdleCpuPinned);
 }
 
 TEST(Stamp, AcceptsAnUnpinnedMacRun) {

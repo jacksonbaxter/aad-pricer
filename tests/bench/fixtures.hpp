@@ -64,6 +64,7 @@ inline results::ResultsFile raw_file() {
   set("tree_state", "exported");
   set("pinning_state", "pinned");
   set("pinned_cpus", "4");
+  add(results::kMeantIdleCpusKey, "5" + std::string(results::kNotEnforced));
   set("process_nice", "0");
   set("repetitions", "3");
   set("run_started_at", "2026-01-02T03:04:06Z");

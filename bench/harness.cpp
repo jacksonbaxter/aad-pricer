@@ -31,10 +31,15 @@
 #include "platform/perf_counters.hpp"
 #include "platform/simd_info.hpp"
 #include "platform/timer.hpp"
+#include "results/measure_line.hpp"
 #include "results/provenance.hpp"
 #include "results/results_file.hpp"
 
 namespace aadp::bench {
+
+static_assert(platform::kMaxPinnedCpus == results::kMaxPinnedCpus,
+              "the harness must not call pinned what the stamp refuses");
+
 namespace {
 
 using platform::read_ticks;
@@ -120,6 +125,10 @@ std::vector<results::HeaderField> build_header(
   add("simd_double_lanes", std::to_string(platform::simd_double_lanes()));
   add("pinning_state", std::string(platform::pinning_state_text(affinity)));
   add("pinned_cpus", affinity.pinned ? platform::format_cpu_list(affinity.cpus) : "none");
+  add(results::kMeantIdleCpusKey, options.meant_idle_cpus.empty()
+                                      ? "none"
+                                      : platform::format_cpu_list(options.meant_idle_cpus) +
+                                            std::string(results::kNotEnforced));
   add("pin_method", pin_method);
   add("observed_cpu", affinity.current ? std::to_string(*affinity.current) : "unavailable");
   add("qos_class", affinity.qos_class);
@@ -183,6 +192,16 @@ bool apply_pin_cpu(std::string_view text, HarnessOptions& options) {
   return true;
 }
 
+// Recorded, not enforced: nothing stops another process from running there.
+bool apply_meant_idle_cpus(std::string_view text, HarnessOptions& options) {
+  auto cpus = results::expand_cpu_list(text);
+  if (!cpus) {
+    return false;
+  }
+  options.meant_idle_cpus = std::move(*cpus);
+  return true;
+}
+
 bool apply_source_root(std::string_view text, HarnessOptions& options) {
   options.source_root = std::string(text);
   return true;
@@ -223,6 +242,7 @@ struct ValueOption {
 
 constexpr auto kValueOptions = std::to_array<ValueOption>({
     {.flag = "--pin-cpu=", .apply = apply_pin_cpu},
+    {.flag = "--meant-idle-cpus=", .apply = apply_meant_idle_cpus},
     {.flag = "--source-root=", .apply = apply_source_root},
     {.flag = "--batches=", .apply = apply_batches},
     {.flag = "--repetitions=", .apply = apply_repetitions},

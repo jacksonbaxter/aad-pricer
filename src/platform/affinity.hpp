@@ -2,6 +2,7 @@
 #ifndef AADP_PLATFORM_AFFINITY_HPP_
 #define AADP_PLATFORM_AFFINITY_HPP_
 
+#include <cstddef>
 #include <expected>
 #include <optional>
 #include <span>
@@ -11,8 +12,16 @@
 
 namespace aadp::platform {
 
+// A threaded row on linux-zen1 runs on two named CPUs (taskset -c 4,6), so a mask of one or two
+// CPUs is a pin. Anything wider is a placement left to the scheduler.
+inline constexpr std::size_t kMaxPinnedCpus = 2;
+
+// True for a read-back mask of one to kMaxPinnedCpus CPUs that leaves some online CPU out, so a
+// two-CPU machine running unpinned does not read as pinned.
+bool counts_as_pinned(std::span<const int> cpus, long online_cpus);
+
 struct AffinityState {
-  bool pinned = false;         // True only when a read-back mask holds exactly one CPU
+  bool pinned = false;         // counts_as_pinned of the read-back mask
   std::vector<int> cpus;       // The real mask, read back. Empty where no such mask exists
   std::optional<int> current;  // Where this thread is running now, if the OS can say
   std::string qos_class;       // macOS: an influence on placement, not a pin

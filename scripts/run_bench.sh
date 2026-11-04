@@ -7,6 +7,11 @@
 # the repo, $HOME/quant-projects/bin/measure.sh. Without it the run is marked not reportable.
 # Set AADP_NOT_REPORTABLE=<reason> to mark an iteration run the same way.
 #
+# On linux-zen1 the binary runs under taskset -c 4, or taskset -c $AADP_PIN_CPUS for a threaded
+# row: one or two CPUs, such as 4,6. cpu5, the SMT sibling of cpu4, is meant to be idle, which
+# nothing enforces; the header records it (meant_idle_cpus) and the stamp checks it is not pinned.
+# Other hosts cannot pin, and AADP_PIN_CPUS there is refused, so their runs say they are unpinned.
+#
 # Raw output and the stderr capture stay in the build tree, under <build>/bench-runs/. The
 # stamped file goes to <build>/results/<host>/, or $AADP_RESULTS_DIR. It only reaches results/
 # when somebody copies it there, after looking at it.
@@ -46,6 +51,27 @@ fi
 
 host=$("$stamp" --print-host-label) || exit 1
 
+idle_cpu=5
+pin=
+if [[ $host == linux-zen1 ]]; then
+  pin=${AADP_PIN_CPUS:-4}
+  if [[ ! $pin =~ ^[0-9]+(,[0-9]+)?$ ]]; then
+    echo "run_bench.sh: AADP_PIN_CPUS must name one or two CPUs, such as 4 or 4,6" >&2
+    exit 64
+  fi
+  if [[ $pin == *,* && ${pin%,*} == "${pin#*,}" ]]; then
+    echo "run_bench.sh: AADP_PIN_CPUS names the same CPU twice" >&2
+    exit 64
+  fi
+  if [[ ${pin%,*} == "$idle_cpu" || ${pin#*,} == "$idle_cpu" ]]; then
+    echo "run_bench.sh: cpu$idle_cpu is meant to be idle and cannot be pinned" >&2
+    exit 64
+  fi
+elif [[ -n ${AADP_PIN_CPUS:-} ]]; then
+  echo "run_bench.sh: AADP_PIN_CPUS is for linux-zen1; $host cannot pin" >&2
+  exit 64
+fi
+
 # The header reads the commit from the source tree, and an exported tree says so itself.
 source_root=${AADP_SOURCE_ROOT:-$repo}
 
@@ -76,8 +102,8 @@ captured=$run_dir/stderr.txt
 out=$results_dir/$name-$when.txt
 
 command=("$binary_path")
-if [[ $host == linux-zen1 ]]; then
-  command=(taskset -c 4 "$binary_path")
+if [[ -n $pin ]]; then
+  command=(taskset -c "$pin" "$binary_path")
 fi
 if [[ -n $measure ]]; then
   command=("$measure" "${command[@]}")
@@ -86,6 +112,9 @@ fi
 # Run from the source root, so --source-root needs no path. Google Benchmark still sees the
 # binary's full path in argv[0]; the stamp drops that.
 harness_args=(--source-root=.)
+if [[ -n $pin ]]; then
+  harness_args+=("--meant-idle-cpus=$idle_cpu")
+fi
 stamp_args=()
 if [[ -z $reason ]]; then
   harness_args+=(--reportable)

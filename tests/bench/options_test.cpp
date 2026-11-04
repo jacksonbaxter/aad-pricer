@@ -34,10 +34,21 @@ TEST(HarnessOptions, TakesItsOwnFlagsAndPassesTheRestOn) {
   EXPECT_EQ(options->passthrough, (std::vector<std::string>{"bench", "--benchmark_filter=x"}));
 }
 
+TEST(HarnessOptions, TakesTheCpusMeantToBeIdle) {
+  const auto none = parse({});
+  ASSERT_TRUE(none.has_value()) << none.error();
+  EXPECT_TRUE(none->meant_idle_cpus.empty());
+  const auto options = parse({"--meant-idle-cpus=5,7"});
+  ASSERT_TRUE(options.has_value()) << options.error();
+  EXPECT_EQ(options->meant_idle_cpus, (std::vector<int>{5, 7}));
+  EXPECT_EQ(options->passthrough, (std::vector<std::string>{"bench"}));
+}
+
 TEST(HarnessOptions, RefusesBadValues) {
-  for (const std::string arg : {"--pin-cpu=", "--pin-cpu=-1", "--pin-cpu=x", "--batches=0",
-                                "--batches=1x", "--repetitions=0", "--warmup-ms=-1",
-                                "--gb-warmup-s=0", "--gb-warmup-s=x", "--batch-units=0"}) {
+  for (const std::string arg :
+       {"--pin-cpu=", "--pin-cpu=-1", "--pin-cpu=x", "--meant-idle-cpus=", "--meant-idle-cpus=none",
+        "--meant-idle-cpus=5-", "--batches=0", "--batches=1x", "--repetitions=0", "--warmup-ms=-1",
+        "--gb-warmup-s=0", "--gb-warmup-s=x", "--batch-units=0"}) {
     EXPECT_FALSE(parse({arg}).has_value()) << arg;
   }
 }

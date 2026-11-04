@@ -3,16 +3,18 @@
 #include <sys/resource.h>
 
 #include <cerrno>
+#include <cstddef>
 #include <cstdio>
 #include <expected>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #ifdef __linux__
 #include <sched.h>
+#include <unistd.h>
 
-#include <cstddef>
 #include <system_error>
 #include <vector>
 #elifdef __APPLE__
@@ -24,6 +26,10 @@
 #endif
 
 namespace aadp::platform {
+
+bool counts_as_pinned(std::span<const int> cpus, long online_cpus) {
+  return !cpus.empty() && cpus.size() <= kMaxPinnedCpus && std::cmp_less(cpus.size(), online_cpus);
+}
 
 AffinityState read_affinity() {
   AffinityState state;
@@ -37,7 +43,7 @@ AffinityState read_affinity() {
       }
     }
   }
-  state.pinned = state.cpus.size() == 1;
+  state.pinned = counts_as_pinned(state.cpus, sysconf(_SC_NPROCESSORS_ONLN));
   const int current = sched_getcpu();
   if (current >= 0) {
     state.current = current;
