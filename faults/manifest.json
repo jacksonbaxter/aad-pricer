@@ -2472,12 +2472,12 @@
       "id": "ad-second-unconditioned-draw",
       "kind": "check",
       "covers": "one-step survival gamma against quadrature, check 5",
-      "bug": "One-step survival weights the path by the survival probability but draws the step from the unconditional law, so paths that would have crossed are kept at full weight.",
+      "bug": "One-step survival weights the path by the survival probability but draws the step from the unconditional law, inverting the uniform itself rather than p times it, so paths that would have crossed are kept.",
       "edits": [
         {
           "file": "src/pricer/conditional_kernels.hpp",
-          "find": "InverseNormal(Select(alive, drawn, Real(v)));",
-          "replace": "InverseNormal(Real(v));"
+          "find": "  const Real drawn = Value(q) < 0x1p-1000 ? Real(Value(q)) : q;",
+          "replace": "  const Real drawn = Real(v);"
         }
       ],
       "preset": "release",
@@ -2536,6 +2536,130 @@
       "detect": "test",
       "reason": "arithmetic Asian AA12K100, gamma: [^\\n]*: (distance|both)",
       "timeout_s": 300
+    },
+    {
+      "id": "bench-second-value-kernel",
+      "kind": "check",
+      "covers": "second-order bench: each variant's value against its own kernels' primal",
+      "bug": "cond-price runs Price() on the production kernels, so it is not the primal of the conditional variants it is the denominator of.",
+      "edits": [
+        {
+          "file": "bench/aad_workloads.cpp",
+          "find": "        auto run = ad::PriceConditional(c, m, config);\n",
+          "replace": "        auto run = pricer::Price(c, m, config);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_bench_aad",
+        "--aadp-workload=aad8-asian12",
+        "--aadp-scale=500",
+        "--aadp-require-valid",
+        "--batches=1",
+        "--repetitions=1",
+        "--warmup-ms=0",
+        "--gb-warmup-s=0.001"
+      ],
+      "detect": "test",
+      "reason": "aad8-asian12: check value-bits FAILED",
+      "timeout_s": 600,
+      "mutated_exit": 9
+    },
+    {
+      "id": "bench-second-theta-sign",
+      "kind": "check",
+      "covers": "second-order bench: forward over reverse's Greeks are the first-order tape's",
+      "bug": "The second-order run reports d V / d T as theta, without the sign the first-order tape gives it.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.cpp",
+          "find": "? -s.gradient[i] : s.gradient[i];",
+          "replace": "? s.gradient[i] : s.gradient[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_bench_aad",
+        "--aadp-workload=aad8-asian12",
+        "--aadp-scale=500",
+        "--aadp-require-valid",
+        "--batches=1",
+        "--repetitions=1",
+        "--warmup-ms=0",
+        "--gb-warmup-s=0.001"
+      ],
+      "detect": "test",
+      "reason": "aad8-asian12: check for-gradient-bits FAILED",
+      "timeout_s": 600,
+      "mutated_exit": 9
+    },
+    {
+      "id": "bench-second-row-layout",
+      "kind": "check",
+      "covers": "second-order bench: the spot row of two lanes is the spot row of one",
+      "bug": "The block sums store Hessian entry (k, i) at k + N i instead of i + 5 k, which one lane cannot see and two lanes transpose.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.cpp",
+          "find": "        sum[1 + kInputs + (k * kInputs) + i] += s.rows[k][i];",
+          "replace": "        sum[1 + kInputs + (i * N) + k] += s.rows[k][i];"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_bench_aad",
+        "--aadp-workload=aad8-asian12",
+        "--aadp-scale=500",
+        "--aadp-require-valid",
+        "--batches=1",
+        "--repetitions=1",
+        "--warmup-ms=0",
+        "--gb-warmup-s=0.001"
+      ],
+      "detect": "test",
+      "reason": "aad8-asian12: check spot-row-bits FAILED",
+      "timeout_s": 600,
+      "mutated_exit": 9
+    },
+    {
+      "id": "bench-second-dual-product",
+      "kind": "check",
+      "covers": "second-order bench: vanna symmetry per batch within its round-off bound",
+      "bug": "The Dual product's tangent drops a.value b', so every second derivative through a product of two active Duals is wrong while every value and first derivative holds.",
+      "edits": [
+        {
+          "file": "src/ad/dual.hpp",
+          "find": "      out.tangent[k] = (a.tangent[k] * b.value) + (a.value * b.tangent[k]);",
+          "replace": "      out.tangent[k] = (a.tangent[k] * b.value);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_bench_aad",
+        "--aadp-workload=aad8-asian12",
+        "--aadp-scale=500",
+        "--aadp-require-valid",
+        "--batches=1",
+        "--repetitions=1",
+        "--warmup-ms=0",
+        "--gb-warmup-s=0.001"
+      ],
+      "detect": "test",
+      "reason": "aad8-asian12: check vanna-symmetry FAILED",
+      "timeout_s": 600,
+      "mutated_exit": 9
     }
   ]
 }
