@@ -538,8 +538,8 @@
       "edits": [
         {
           "file": ".github/workflows/ci.yml",
-          "find": "    runs-on: ${{ matrix.os }}\n",
-          "replace": "    runs-on: ${{ matrix.oss }}\n"
+          "find": "    name: ${{ matrix.name }}\n    runs-on: ${{ matrix.os }}\n",
+          "replace": "    name: ${{ matrix.name }}\n    runs-on: ${{ matrix.oss }}\n"
         }
       ],
       "preset": "release",
