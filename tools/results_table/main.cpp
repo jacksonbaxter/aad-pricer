@@ -23,6 +23,10 @@ namespace fs = std::filesystem;
 
 constexpr int kExitRefused = 1;
 constexpr int kExitUsage = 2;
+// --iteration admits files that are not reportable, under a banner: for looking at a run while
+// working on it, never for the README.
+constexpr std::string_view kUsage =
+    "usage: aadp_results_table [--one-table] [--iteration] <file or directory>...\n";
 
 bool is_host_directory(std::string_view name) {
   return name == "mac-m4max" || name == "linux-zen1" || name == "other";
@@ -65,13 +69,16 @@ void collect(const fs::path& path, std::vector<fs::path>& out) {
 // NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
 int main(int argc, char** argv) try {
   bool one_table = false;
+  aadp::results::TableOptions options;
   std::vector<fs::path> paths;
   for (int i = 1; i < argc; ++i) {
     const std::string_view arg = argv[i];
     if (arg == "--one-table") {
       one_table = true;
+    } else if (arg == "--iteration") {
+      options.iteration = true;
     } else if (arg.starts_with("--")) {
-      std::cerr << "usage: aadp_results_table [--one-table] <file or directory>...\n";
+      std::cerr << kUsage;
       return kExitUsage;
     } else {
       std::error_code error;
@@ -83,7 +90,7 @@ int main(int argc, char** argv) try {
     }
   }
   if (paths.empty()) {
-    std::cerr << "usage: aadp_results_table [--one-table] <file or directory>...\n";
+    std::cerr << kUsage;
     return kExitUsage;
   }
   std::ranges::sort(paths);
@@ -107,8 +114,8 @@ int main(int argc, char** argv) try {
     files.push_back(std::move(*file));
   }
 
-  const auto table =
-      one_table ? aadp::results::render_host_table(files) : aadp::results::render_tables(files);
+  const auto table = one_table ? aadp::results::render_host_table(files, options)
+                               : aadp::results::render_tables(files, options);
   if (!table) {
     std::cerr << "results_table: " << table.error() << "\n";
     return kExitRefused;

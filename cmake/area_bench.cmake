@@ -23,7 +23,8 @@ aadp_library(aadp_results
     src/results/provenance.cpp
     src/results/results_file.cpp
     src/results/stamp.cpp
-    src/results/table.cpp)
+    src/results/table.cpp
+    src/results/aad_table.cpp)
 
 set(_aadp_bench_scratch "${PROJECT_BINARY_DIR}/bench-test-scratch")
 
@@ -36,6 +37,7 @@ aadp_test(aadp_results_unit
     tests/bench/results_file_test.cpp
     tests/bench/stamp_test.cpp
     tests/bench/table_test.cpp
+    tests/bench/aad_table_test.cpp
   LINK aadp_results)
 
 if(TARGET aadp_results_unit)

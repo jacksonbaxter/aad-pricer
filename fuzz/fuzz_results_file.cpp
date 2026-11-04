@@ -43,6 +43,10 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     const std::span<const aadp::results::ResultsFile> one(&*file, 1);
     const auto tables = aadp::results::render_tables(one);
     FUZZ_ASSERT(tables.has_value() || !tables.error().empty());
+    // The iteration table admits more files, so it reaches the AAD tables on more inputs.
+    const auto iteration = aadp::results::render_tables(one, {.iteration = true});
+    FUZZ_ASSERT(iteration.has_value() || !iteration.error().empty());
+    FUZZ_ASSERT(!tables.has_value() || iteration.has_value());
   }
 
   aadp::results::StampRequest request;
