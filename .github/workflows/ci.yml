@@ -93,13 +93,27 @@ jobs:
         if: runner.os == 'macOS'
         run: sysctl kern.hv_vmm_present hw.model
 
+      # The macOS runners start a job at nice -10, and the stamp tool refuses any level but 0, as
+      # its tests check. Raising niceness needs no privilege, so the tests go up by the measured
+      # offset; a job above 0 could only come down with privilege, so it fails instead.
       - name: Test
         if: matrix.test
         env:
           PRESET: ${{ matrix.preset }}
-        run: >-
-          python3 -I scripts/run_tests.py ctest "$PRESET" --jobs "$AADP_JOBS"
-          --allow-skipped "$ALLOWED_SKIPS"
+        run: |
+          level=$(ps -o ni= -p $$)
+          level=${level//[[:space:]]/}
+          if ((level > 0)); then
+            echo "::error::the job runs at nice $level, which only privilege could lower to 0"
+            exit 1
+          fi
+          offset=$((-level))
+          now=$(nice -n "$offset" python3 -I -c 'import os; print(os.nice(0))')
+          printf 'the job runs at nice %s; the tests run under nice -n %s, at nice %s\n' \
+            "$level" "$offset" "$now"
+          [[ $now == 0 ]] || exit 1
+          nice -n "$offset" python3 -I scripts/run_tests.py ctest "$PRESET" --jobs "$AADP_JOBS" \
+            --allow-skipped "$ALLOWED_SKIPS"
 
   # The lane matrix: one job per SIMD lane width, each running the simd-labelled tests (the lane
   # kernels, Philox lanes, paths and prices against the scalar ones, bit for bit, and the SIMD
@@ -221,12 +235,24 @@ jobs:
         if: steps.cpu.outputs.run == 'true'
         env:
           PRESET: ${{ matrix.preset }}
+        # At nice 0, as in build-test: the macOS runners start a job at nice -10.
         run: |
+          level=$(ps -o ni= -p $$)
+          level=${level//[[:space:]]/}
+          if ((level > 0)); then
+            echo "::error::the job runs at nice $level, which only privilege could lower to 0"
+            exit 1
+          fi
+          offset=$((-level))
+          now=$(nice -n "$offset" python3 -I -c 'import os; print(os.nice(0))')
+          printf 'the job runs at nice %s; the tests run under nice -n %s, at nice %s\n' \
+            "$level" "$offset" "$now"
+          [[ $now == 0 ]] || exit 1
           junit="$PWD/build/logs/simd-lanes-junit.xml"
           mkdir -p build/logs
           status=0
-          ctest --test-dir "build/$PRESET" -L simd --no-tests=error --output-on-failure \
-            --parallel "$AADP_JOBS" --output-junit "$junit" || status=$?
+          nice -n "$offset" ctest --test-dir "build/$PRESET" -L simd --no-tests=error \
+            --output-on-failure --parallel "$AADP_JOBS" --output-junit "$junit" || status=$?
           python3 -I scripts/run_tests.py verdict "$junit" || status=1
           exit "$status"
 
