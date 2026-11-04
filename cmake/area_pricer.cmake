@@ -43,7 +43,7 @@ endif()
 # batch statistics of src/oracle/tolerance.hpp, which the oracle area provides.
 if(TARGET aadp_rng)
   aadp_library(aadp_pricer
-    SOURCES src/pricer/pricer.cpp
+    SOURCES src/pricer/pricer.cpp src/pricer/bump.cpp
     LINK aadp_math aadp_rng)
 
   aadp_test(aadp_pricer_normal_cdf_test
@@ -155,6 +155,14 @@ if(TARGET aadp_rng)
     SOURCES tests/ad/allocation_test.cpp
     LINK aadp_ad aadp_test_support
     LABELS ad)
+
+  # Bump and revalue against closed-form difference quotients, with the tape SE as the ceiling.
+  if(TARGET aadp_oracle_lib)
+    aadp_test(aadp_pricer_bump_test
+      SOURCES tests/pricer/bump_test.cpp
+      LINK aadp_ad aadp_oracle_lib
+      LABELS pricer bump)
+  endif()
 
   # Check 3: operation sequences on the tape against central differences.
   aadp_fuzz(aadp_fuzz_tape_operations
