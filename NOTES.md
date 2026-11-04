@@ -387,6 +387,18 @@ Oracle, stated before any test runs. No tolerance anywhere:
 
 The basis: each lane's values are the scalar's bits (stage 5a); each partial is the scalar's formula on them; no `MulAdd`, and `-ffp-contract=off`; round to nearest; the sweep's multiply and add in the scalar's order with masked lanes doing nothing; and set-up contributions added in path order, then sweep order, which is the order in which the scalar tape adds them. Nothing is expected to differ. One reservation, stated now: the payload of a NaN, should a gradient ever be NaN, since a compiler may commute a scalar multiply. The tests and fuzzers here require finite Greeks, so it is outside their reach. If one turns up, it is reported, not masked.
 
+Results, at 77dd0c8. Nothing differed from the scalar tape in any bit, at any width:
+- Widths run: 1 and 2 (NEON) on the Mac; 1, 2 and 4 (AVX2) on the Linux host, on cores 6 and 7; 1, 2 and 4 in CI's lane jobs. AVX-512 built on the Linux host. CI run 41918421254's 8-lane runner lacked AVX-512, so that job was build-only and the 8-lane tests have not yet run.
+- Item 1: 7168 paths per width on each of 1, 12 and 50 steps and the wild and dying markets, all bit-identical.
+- Item 2: 28 cases at every width on 1, 2, 3 and 8 threads, 4 batches of 3 · 1024 + 17 paths, all bit-identical; 224 runs at widths up to 2 and 336 at widths up to 4. No pricer kernel fell back.
+- Item 3: 8000 programs. 245 diverged at 2 lanes and 587 at 4, as the spread is meant to make them; every other lane matched.
+- Item 4: 672, 1344 and 2688 priced paths at 1, 2 and 4 lanes, at worst 0.0195 of the bound. The random programs reached at worst 0.0872.
+- Item 5: the diverging kernel fell back on 3064 groups and 6127 paths of 12 356 at 2 lanes, and on 2710 and 10 828 at 4. Each count was exact, and the bits were still the scalar's.
+- Tape bytes per path at 252 steps, against the scalar tape's (equal to the 1-lane figures): European call 15 927, 13 651.5, 11 881.8; arithmetic Asian with spot 25 503, 21 841.5, 19 000.8; down-in bridge 73 472, 62 867.5, 54 661.8, at 1, 2 and 4 lanes. The largest group, 4 lanes, held 218 647 B.
+- No heap allocation after warm-up at any width. TSan on the Mac: 537 of 537, with no reports.
+- Fuzzer, seed 20261126, 900 s each: 481 569 runs on the Mac (NEON) and 79 090 on the Linux host under `fuzz-avx2`, both clean.
+- Faults: all 11 new faults caught. The allocation fault first missed: `v = {}` keeps a vector's capacity, so it freed nothing. It now swaps with an empty vector.
+
 ### CI
 
 - CI first ran on GitHub as run 41770201004 at bc3e6d3 and failed 9 of 17 jobs: actionlint, clang-tidy, `linux-gcc-release`, `linux-gcc-debug`, `linux-tsan` and the four macOS jobs. The Linux clang, AVX2, AVX-512, ASan and UBSan, fuzz-smoke, format and repo-scan jobs passed.
