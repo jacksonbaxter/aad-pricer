@@ -79,7 +79,7 @@ void Tape::ClearAdjoints(const Position& from, const Position& stop) {
   for (std::size_t i = stop.statements; i < from.statements; ++i) adjoints_[i] = 0.0;
 }
 
-template <bool kAbsolute>
+template <bool kAbsolute, bool kSkipZero>
 void Tape::Sweep(const Position& from, const Position& stop) {
   swept_.statements += from.statements - stop.statements;
   const std::size_t setup_top = std::min(from.statements, setup_end_);
@@ -101,6 +101,9 @@ void Tape::Sweep(const Position& from, const Position& stop) {
       indices = operand_chunks_[chunk].indices.get();
     }
     offset -= count;
+    if constexpr (kSkipZero) {
+      if (adjoint == 0.0) continue;
+    }
     for (std::size_t j = 0; j < count; ++j) {
       const double partial = kAbsolute ? std::fabs(partials[offset + j]) : partials[offset + j];
       adjoints[indices[offset + j]] += adjoint * partial;
@@ -109,6 +112,10 @@ void Tape::Sweep(const Position& from, const Position& stop) {
 }
 
 void Tape::SweepBack(const Position& from, const Position& stop) { Sweep<false>(from, stop); }
+
+void Tape::SweepBackSkippingZeros(const Position& from, const Position& stop) {
+  Sweep<false, true>(from, stop);
+}
 
 void Tape::SweepBackAbsolute(const Position& from, const Position& stop) {
   Sweep<true>(from, stop);

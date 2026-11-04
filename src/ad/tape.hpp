@@ -136,6 +136,11 @@ class Tape {
 
   // Reverse sweep over [stop, from), described above.
   void SweepBack(const Position& from, const Position& stop);
+  // The same sweep with a zero-adjoint skip (EVIDENCE B9): a statement whose adjoint is zero
+  // propagates nothing, so its operands are not read. The result equals SweepBack's in value
+  // wherever every partial is finite; only the sign of a zero can differ. It exists to be timed
+  // against SweepBack (bench/aad_workloads.hpp), not as the default.
+  void SweepBackSkippingZeros(const Position& from, const Position& stop);
   // The same sweep on |partial| from |seed|, for error bounds. It keeps every adjoint it computes,
   // so the caller can read them, and must clear them with ClearAdjoints.
   void SweepBackAbsolute(const Position& from, const Position& stop);
@@ -218,7 +223,7 @@ class Tape {
   [[nodiscard]] std::size_t UsedOf(std::size_t chunk) const {
     return chunk == op_chunk_ ? op_offset_ : operand_chunks_[chunk].used;
   }
-  template <bool kAbsolute>
+  template <bool kAbsolute, bool kSkipZero = false>
   void Sweep(const Position& from, const Position& stop);
   template <bool kAbsolute>
   void Forward(const Position& from);
