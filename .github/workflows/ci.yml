@@ -55,13 +55,18 @@ jobs:
         if: matrix.compiler == 'gcc'
         run: |
           sudo apt-get install -y g++-14
-          echo "COMPILER_ARGS=-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14" >> "$GITHUB_ENV"
+          echo "GCC_CC=gcc-14" >> "$GITHUB_ENV"
+          echo "GCC_CXX=g++-14" >> "$GITHUB_ENV"
 
       - name: Configure
         env:
           PRESET: ${{ matrix.preset }}
-        # COMPILER_ARGS is two words, or empty, so it is left unquoted.
-        run: cmake --preset "$PRESET" -DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF ${COMPILER_ARGS:-}
+        run: |
+          args=(-DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF)
+          if [[ -n ${GCC_CXX:-} ]]; then
+            args+=("-DCMAKE_C_COMPILER=$GCC_CC" "-DCMAKE_CXX_COMPILER=$GCC_CXX")
+          fi
+          cmake --preset "$PRESET" "${args[@]}"
 
       - name: Build
         env:
@@ -137,4 +142,5 @@ jobs:
         with:
           persist-credentials: false
       - run: scripts/fetch_tools.sh
-      - run: build/tools/actionlint -no-color .github/workflows/ci.yml
+      # Named, so the pinned shellcheck lints every run: step and not whatever the image has.
+      - run: build/tools/actionlint -no-color -shellcheck build/tools/shellcheck .github/workflows/ci.yml

@@ -182,7 +182,7 @@ step_data_verify() {
 
 step_actionlint() {
   scripts/fetch_tools.sh || return "$COULD_NOT_RUN"
-  build/tools/actionlint -no-color .github/workflows/ci.yml
+  build/tools/actionlint -no-color -shellcheck build/tools/shellcheck .github/workflows/ci.yml
   local code=$?
   if ((code == 0)); then
     printf 'actionlint: no findings\n'

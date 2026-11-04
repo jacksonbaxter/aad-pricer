@@ -544,12 +544,44 @@
       ],
       "preset": "release",
       "targets": [],
-      "command": ["build/tools/actionlint", "-no-color", ".github/workflows/ci.yml"],
+      "command": [
+        "build/tools/actionlint",
+        "-no-color",
+        "-shellcheck",
+        "build/tools/shellcheck",
+        ".github/workflows/ci.yml"
+      ],
       "detect": "test",
       "reason": "ci\\.yml:\\d+:\\d+: property \"oss\" is not defined in object type",
       "timeout_s": 120,
       "mutated_exit": 1,
       "git": true
+    },
+    {
+      "id": "check-actionlint-shellcheck",
+      "kind": "check",
+      "covers": "shellcheck on every run: step, through actionlint",
+      "bug": "The build step leaves the preset name unquoted, so a name with a space or a glob would split.",
+      "edits": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "find": "run: cmake --build --preset \"$PRESET\" --parallel",
+          "replace": "run: cmake --build --preset $PRESET --parallel"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": [
+        "build/tools/actionlint",
+        "-no-color",
+        "-shellcheck",
+        "build/tools/shellcheck",
+        ".github/workflows/ci.yml"
+      ],
+      "detect": "test",
+      "reason": "ci\\.yml:\\d+:\\d+: shellcheck reported issue in this script: SC2086:",
+      "timeout_s": 120,
+      "mutated_exit": 1
     },
     {
       "id": "check-script-keeps-going",

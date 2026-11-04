@@ -3,12 +3,15 @@
 #
 #   scripts/fetch_tools.sh [--llvm]
 #
-# Always installs actionlint, as build/tools/actionlint. --llvm also installs clang, clang-format
+# Always installs actionlint, as build/tools/actionlint, and the shellcheck it runs on every
+# run: step, as build/tools/shellcheck. Without shellcheck, actionlint skips that check without a
+# word, so local and CI runs must both name this one. --llvm also installs clang, clang-format
 # and clang-tidy under build/tools/llvm/, for CI: a local build takes its compiler from the
 # environment. A tool already installed at the pinned version is left alone, with no download.
 #
-# The actionlint hashes are from the release's published checksums file. LLVM publishes no such
-# file, so its hashes are the sha256 digests GitHub reports for the release assets.
+# The actionlint hashes are from the release's published checksums file. LLVM and shellcheck
+# publish no such file, so their hashes are the sha256 digests GitHub reports for the release
+# assets.
 #
 # Exit codes:
 #   0  everything is installed
@@ -25,6 +28,10 @@ readonly EXIT_USAGE=1 EXIT_MISMATCH=2 EXIT_DOWNLOAD=3 EXIT_VERSION=4
 readonly ACTIONLINT_VERSION=1.7.12
 readonly ACTIONLINT_SHA256_DARWIN_ARM64=aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f
 readonly ACTIONLINT_SHA256_LINUX_AMD64=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+readonly SHELLCHECK_VERSION=0.11.0
+readonly SHELLCHECK_SHA256_DARWIN_ARM64=339b930feb1ea764467013cc1f72d09cd6b869ebf1013296ba9055ab2ffbd26f
+readonly SHELLCHECK_SHA256_LINUX_AMD64=b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6
 
 readonly LLVM_VERSION=23.1.4
 readonly LLVM_SHA256_DARWIN_ARM64=5d3179db39adeca5b17a34d82708fe976bc60e055b05fe557878fb3fb64d39ef
@@ -56,12 +63,16 @@ case $platform in
   Darwin-arm64)
     actionlint_asset=actionlint_${ACTIONLINT_VERSION}_darwin_arm64.tar.gz
     actionlint_sha256=$ACTIONLINT_SHA256_DARWIN_ARM64
+    shellcheck_asset=shellcheck-v$SHELLCHECK_VERSION.darwin.aarch64.tar.gz
+    shellcheck_sha256=$SHELLCHECK_SHA256_DARWIN_ARM64
     llvm_name=LLVM-$LLVM_VERSION-macOS-ARM64
     llvm_sha256=$LLVM_SHA256_DARWIN_ARM64
     ;;
   Linux-x86_64)
     actionlint_asset=actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz
     actionlint_sha256=$ACTIONLINT_SHA256_LINUX_AMD64
+    shellcheck_asset=shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.gz
+    shellcheck_sha256=$SHELLCHECK_SHA256_LINUX_AMD64
     llvm_name=LLVM-$LLVM_VERSION-Linux-X64
     llvm_sha256=$LLVM_SHA256_LINUX_AMD64
     ;;
@@ -141,6 +152,33 @@ install_actionlint() {
   say "installed actionlint $ACTIONLINT_VERSION at build/tools/actionlint"
 }
 
+shellcheck_version_ok() {
+  local output
+  output=$("$1" --version 2>/dev/null) || return 1
+  [[ $output == *$'\n'"version: $SHELLCHECK_VERSION"$'\n'* ]]
+}
+
+install_shellcheck() {
+  local binary=$tools_dir/shellcheck archive
+  if shellcheck_version_ok "$binary"; then
+    say "shellcheck $SHELLCHECK_VERSION already installed"
+    return 0
+  fi
+  archive=$work_dir/$shellcheck_asset
+  fetch_verified \
+    "https://github.com/koalaman/shellcheck/releases/download/v$SHELLCHECK_VERSION/$shellcheck_asset" \
+    "$shellcheck_sha256" "$archive"
+  mkdir -p -- "$work_dir/shellcheck" || exit "$EXIT_USAGE"
+  tar -xzf "$archive" -C "$work_dir/shellcheck" --strip-components=1 \
+    "shellcheck-v$SHELLCHECK_VERSION/shellcheck" || exit "$EXIT_USAGE"
+  if ! shellcheck_version_ok "$work_dir/shellcheck/shellcheck"; then
+    fail "the archive does not hold shellcheck $SHELLCHECK_VERSION"
+    exit "$EXIT_VERSION"
+  fi
+  mv -f -- "$work_dir/shellcheck/shellcheck" "$binary" || exit "$EXIT_USAGE"
+  say "installed shellcheck $SHELLCHECK_VERSION at build/tools/shellcheck"
+}
+
 llvm_version_ok() {
   local root=$1 output
   output=$("$root/bin/clang" --version 2>/dev/null) || return 1
@@ -189,6 +227,7 @@ install_llvm() {
 }
 
 install_actionlint
+install_shellcheck
 if ((with_llvm != 0)); then
   install_llvm
 fi
