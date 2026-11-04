@@ -43,7 +43,7 @@ endif()
 # batch statistics of src/oracle/tolerance.hpp, which the oracle area provides.
 if(TARGET aadp_rng)
   aadp_library(aadp_pricer
-    SOURCES src/pricer/pricer.cpp src/pricer/bump.cpp
+    SOURCES src/pricer/pricer.cpp src/pricer/bump.cpp src/pricer/conditional.cpp
     LINK aadp_math aadp_rng)
 
   aadp_test(aadp_pricer_normal_cdf_test
@@ -105,7 +105,7 @@ if(TARGET aadp_rng)
   # src/ad/ is the pricer's own tape (stage 2a). It instantiates the pricer kernels on its
   # active type, so it lives in this area.
   aadp_library(aadp_ad
-    SOURCES src/ad/tape.cpp src/ad/gradient.cpp
+    SOURCES src/ad/tape.cpp src/ad/gradient.cpp src/ad/second_order.cpp
     LINK aadp_pricer)
 
   aadp_test(aadp_ad_tape_test
@@ -132,6 +132,12 @@ if(TARGET aadp_rng)
   aadp_test(aadp_ad_memory_test
     SOURCES tests/ad/memory_test.cpp
     LINK aadp_ad aadp_platform aadp_test_support
+    LABELS ad)
+  # Second-order Greeks by forward over reverse, per path: exactness against the first-order
+  # tape, central differences of its gradient (check 3) and vanna symmetry (check 4).
+  aadp_test(aadp_ad_second_order_test
+    SOURCES tests/ad/second_order_test.cpp
+    LINK aadp_ad
     LABELS ad)
   # Check 6: the one-step survival adjoint at p near 1.
   aadp_test(aadp_ad_one_step_corner_test
