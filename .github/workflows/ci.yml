@@ -25,6 +25,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Linux clang uses the pinned LLVM's libc++, as the Linux measurement host's clang++ does
+        # (the setup action writes the same clang++.cfg). The GCC jobs use libstdc++, which keeps
+        # that library built and tested.
         include:
           - { name: linux-clang-debug, os: ubuntu-24.04, compiler: clang, preset: debug, test: true }
           - { name: linux-clang-release, os: ubuntu-24.04, compiler: clang, preset: release, test: true }
@@ -276,6 +279,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # On libc++, as the Linux measurement host builds.
       - uses: ./.github/actions/setup
         with:
           data: "false"
@@ -286,6 +290,29 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: clang-tidy-logs
+          path: build/logs/tidy/
+          if-no-files-found: warn
+          retention-days: 14
+
+  # The same on libstdc++, which the GCC jobs build: include-cleaner's findings differ by library
+  # (on the Linux host, 10 findings in 8 files with libstdc++ and 2 with libc++, before bb7b26f).
+  clang-tidy-libstdcxx:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          data: "false"
+          libcxx: "false"
+      - run: scripts/run_clang_tidy.sh --jobs "$AADP_JOBS" release fuzz
+      - name: Keep the tidy logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: clang-tidy-libstdcxx-logs
           path: build/logs/tidy/
           if-no-files-found: warn
           retention-days: 14

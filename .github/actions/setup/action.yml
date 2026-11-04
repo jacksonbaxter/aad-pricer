@@ -13,6 +13,11 @@ inputs:
   data:
     description: Fetch the pinned TAIFEX captures into data/
     default: "true"
+  libcxx:
+    description: >
+      On Linux, have clang++ use the pinned LLVM's own libc++, as on the Linux measurement host.
+      "false" leaves it on the image's libstdc++.
+    default: "true"
 
 runs:
   using: composite
@@ -44,6 +49,49 @@ runs:
         echo "$PWD/build/tools/llvm/bin" >> "$GITHUB_PATH"
         echo "CC=clang" >> "$GITHUB_ENV"
         echo "CXX=clang++" >> "$GITHUB_ENV"
+
+    # The Linux measurement host's clang++ defaults to libc++ through a clang++.cfg beside the
+    # binary: -stdlib=libc++, and an rpath to LLVM's lib/x86_64-unknown-linux-gnu applied at link
+    # time only (the $ prefix). This writes the same file. Without it the LLVM release's clang++
+    # uses the image's libstdc++, which the GCC jobs cover. The LLVM cache may hold a cfg from
+    # another job, so the libstdc++ case deletes it. A probe then shows which library a program
+    # gets and that it runs.
+    - name: Choose the C++ library for clang++ on Linux
+      if: inputs.llvm == 'true' && runner.os == 'Linux'
+      shell: bash
+      env:
+        LIBCXX: ${{ inputs.libcxx }}
+      run: |
+        llvm=$PWD/build/tools/llvm
+        cfg=$llvm/bin/clang++.cfg
+        triple=x86_64-unknown-linux-gnu
+        if [[ $LIBCXX == true ]]; then
+          for file in "lib/$triple/libc++.so.1" "lib/$triple/libc++abi.so.1" \
+            include/c++/v1/vector "include/$triple/c++/v1/__config_site"; do
+            if [[ ! -e $llvm/$file ]]; then
+              echo "::error::the LLVM release has no $file"
+              exit 1
+            fi
+          done
+          printf '%s\n' '-stdlib=libc++' "\$-Wl,-rpath,<CFGDIR>/../lib/$triple" >"$cfg"
+          want=libc++
+        else
+          rm -f -- "$cfg"
+          want=libstdc++
+        fi
+        if [[ -f $cfg ]]; then cat -- "$cfg"; else echo "no clang++.cfg"; fi
+        probe=$RUNNER_TEMP/stdlib-probe
+        printf '%s\n' '#include <cstdio>' '#include <version>' 'int main() {' \
+          '#ifdef _LIBCPP_VERSION' '  std::puts("libc++");' '#else' '  std::puts("libstdc++");' \
+          '#endif' '}' >"$probe.cpp"
+        "$llvm/bin/clang++" -o "$probe" "$probe.cpp"
+        got=$("$probe")
+        ldd "$probe" | grep -E 'libc\+\+|libstdc\+\+'
+        echo "clang++ uses $got"
+        if [[ $got != "$want" ]]; then
+          echo "::error::clang++ uses $got, not $want"
+          exit 1
+        fi
 
     # The measurement Mac builds against the macOS 27.2 SDK. On the xcode-27 image that SDK comes
     # with Xcode 27.2; the default Xcode there, 27.1, has 27.0. The macOS jobs in ci.yml say why.
