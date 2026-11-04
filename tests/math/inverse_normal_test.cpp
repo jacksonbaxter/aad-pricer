@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <limits>
-#include <string_view>
+#include <string>
 
 #include "reference_table.hpp"
 #include "rng/normal.hpp"
@@ -67,22 +67,22 @@ std::array<Worst, kInverseNormalReferenceDomains.size()> MeasureAgainstTable(
   return worst;
 }
 
-// A string_view, not a const char*: g++ 14 at -O3 calls the pointer possibly null in the printf
-// (-Wformat-overflow) though every caller passes a literal.
-void ReportAndCheck(std::string_view name, double (*kernel)(double)) {
+// A std::string, not a const char*: g++ 14 at -O3 calls the pointer possibly null in the printf
+// (-Wformat-overflow) though every caller passes a literal. Not a string_view either: its data()
+// need not end in a NUL, which clang-tidy rightly flags at a %s.
+void ReportAndCheck(const std::string& name, double (*kernel)(double)) {
   const auto worst = MeasureAgainstTable(kernel);
-  const int name_length = static_cast<int>(name.size());
   Worst overall;
   for (std::size_t d = 0; d < worst.size(); ++d) {
-    std::printf("measured max relative error, %.*s, %s: %.3e at p = %a (%.6e), %zu points\n",
-                name_length, name.data(), kInverseNormalReferenceDomains[d], worst[d].error,
-                worst[d].at, worst[d].at, worst[d].count);
+    std::printf("measured max relative error, %s, %s: %.3e at p = %a (%.6e), %zu points\n",
+                name.c_str(), kInverseNormalReferenceDomains[d], worst[d].error, worst[d].at,
+                worst[d].at, worst[d].count);
     EXPECT_GT(worst[d].count, 0U);
     EXPECT_LE(worst[d].error, kTargetRelative) << name << ", " << kInverseNormalReferenceDomains[d];
     if (!(worst[d].error <= overall.error)) overall = worst[d];
   }
-  std::printf("RNG-3, %.*s: maximum %.3e at p = %a against the target 6.0e-16: %s\n", name_length,
-              name.data(), overall.error, overall.at, overall.error <= kRng3 ? "met" : "missed");
+  std::printf("RNG-3, %s: maximum %.3e at p = %a against the target 6.0e-16: %s\n", name.c_str(),
+              overall.error, overall.at, overall.error <= kRng3 ? "met" : "missed");
 }
 
 TEST(MathInverseNormal, ProductionMatchesTheTable) {

@@ -11,6 +11,10 @@
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
+// POSIX defines pid_t and ssize_t here. Which header defines them first depends on the C++
+// library: with libstdc++ it is this one, so include-cleaner wants it; with libc++ it names
+// another, or on macOS a private one it ignores, and calls this one unused. Keep it either way.
+#include <sys/types.h>  // IWYU pragma: keep
 #include <unistd.h>
 
 #include <array>

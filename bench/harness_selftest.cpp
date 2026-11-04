@@ -37,6 +37,7 @@ void selftest_workload(std::uint64_t units) {
 
 }  // namespace
 
+// NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
 int main(int argc, char** argv) try {
   return aadp::bench::harness_main(argc, argv,
                                    {{.name = "harness_selftest", .run = selftest_workload}});

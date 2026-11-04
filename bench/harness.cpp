@@ -253,7 +253,7 @@ constexpr auto kValueOptions = std::to_array<ValueOption>({
 
 }  // namespace
 
-std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char** argv) {
+std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char* const* argv) {
   HarnessOptions options;
   if (argc > 0) {
     options.passthrough.emplace_back(argv[0]);
@@ -371,7 +371,8 @@ int add_histograms(const std::vector<std::unique_ptr<WorkloadRun>>& runs,
 
 }  // namespace
 
-int harness_main(int argc, char** argv, std::vector<Workload> workloads, const RunExtras& extras) {
+int harness_main(int argc, char* const* argv, std::vector<Workload> workloads,
+                 const RunExtras& extras) {
   auto parsed = parse_harness_options(argc, argv);
   if (!parsed) {
     std::cerr << "harness: " << parsed.error() << "\n";

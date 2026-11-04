@@ -890,7 +890,7 @@
     {
       "id": "check-clang-tidy",
       "kind": "check",
-      "covers": "clang-tidy, scripts/run_clang_tidy.sh",
+      "covers": "clang-tidy, scripts/run_clang_tidy.sh, which must print the finding itself",
       "bug": "A range-for copies each histogram value, two strings, where a reference did.",
       "edits": [
         {
@@ -906,8 +906,7 @@
       "reason": "src/results/table\\.cpp:\\d+:\\d+: error: .*\\[performance-for-range-copy",
       "timeout_s": 1800,
       "mutated_exit": 1,
-      "configure": ["release", "fuzz"],
-      "output_files": ["build/logs/tidy/*.log"]
+      "configure": ["release", "fuzz"]
     },
     {
       "id": "fuzz-smoke",

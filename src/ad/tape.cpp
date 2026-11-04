@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
-#include <memory>
 
 namespace aadp::ad {
 

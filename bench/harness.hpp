@@ -68,13 +68,13 @@ struct HarnessOptions {
   std::vector<std::string> passthrough;      // argv[0] and the --benchmark_ flags
 };
 
-std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char** argv);
+std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char* const* argv);
 
 // The body of a histogram section.
 std::string render_histogram(std::uint64_t batch_units, const LatencyHistogram& histogram,
                              double timer_resolution_ns);
 
-int harness_main(int argc, char** argv, std::vector<Workload> workloads,
+int harness_main(int argc, char* const* argv, std::vector<Workload> workloads,
                  const RunExtras& extras = {});
 
 }  // namespace aadp::bench

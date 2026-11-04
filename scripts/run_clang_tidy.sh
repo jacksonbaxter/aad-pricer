@@ -11,7 +11,8 @@
 # core.
 #
 # Exit codes: 0 clean, 1 findings, 2 could not run. Output: one summary line per file with
-# findings, and the full text under build/logs/tidy/.
+# findings, then every finding once, repo-relative, so a CI log says what failed by itself. The
+# full text, with notes and source lines, stays under build/logs/tidy/.
 set -uo pipefail
 
 readonly PINNED_VERSION=23.1.4
@@ -141,6 +142,13 @@ if ((total == 0)); then
   exit 2
 fi
 if ((status != 0)); then
+  # A header's finding shows up in every unit that includes it, hence sort -u. A log with no
+  # diagnostic line (a crash) still fails the run, and is named above.
+  findings=$(grep -h -E '(^|: )(warning|error|fatal error): ' -- "$log_dir"/*.log |
+    sed "s|^$repo_root/||" | sort -u)
+  if [[ -n $findings ]]; then
+    printf 'run_clang_tidy: %d findings:\n%s\n' "$(printf '%s\n' "$findings" | wc -l)" "$findings"
+  fi
   printf 'run_clang_tidy: FAIL, %d units checked, logs under build/logs/tidy/\n' "$total"
   exit 1
 fi

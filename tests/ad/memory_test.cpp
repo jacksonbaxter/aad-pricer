@@ -17,7 +17,6 @@
 //          n = 10 inputs and 360 steps; ours is the tape alone, with n = 5, so it is a loose
 //          comparison, stated as such. Process peak RSS is printed for context only.
 #include <gtest/gtest.h>
-#include <sys/resource.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -28,6 +27,7 @@
 #include "ad/gradient.hpp"
 #include "ad/tape.hpp"
 #include "cases.hpp"
+#include "platform/memory_info.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
 
@@ -115,12 +115,12 @@ TEST(TapeMemory, BytesPerPathAndPeakAgainstMem1ToMem4) {
       }
     }
   }
-  rusage usage{};
-  getrusage(RUSAGE_SELF, &usage);
+  // peak_rss_bytes, not ru_maxrss: Linux reports that in KiB, and glibc puts it in a union.
   std::printf(
       "measured: largest path %.0f B against MEM-4 %.0f B; peak tape memory %.0f B against "
-      "MEM-3 %.0f B (loose: see the header); process peak RSS %ld B, context only\n",
-      worst_path, kMem4Bytes, worst_allocated, kMem3Bytes, usage.ru_maxrss);
+      "MEM-3 %.0f B (loose: see the header); process peak RSS %llu B, context only\n",
+      worst_path, kMem4Bytes, worst_allocated, kMem3Bytes,
+      static_cast<unsigned long long>(platform::peak_rss_bytes()));
   EXPECT_LT(worst_path, kMem4Bytes);
   EXPECT_LT(worst_allocated, kMem3Bytes);
 }

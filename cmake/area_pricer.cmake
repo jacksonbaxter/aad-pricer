@@ -131,7 +131,7 @@ if(TARGET aadp_rng)
   # Check 5: tape bytes per path and peak tape memory, against MEM-1 to MEM-4.
   aadp_test(aadp_ad_memory_test
     SOURCES tests/ad/memory_test.cpp
-    LINK aadp_ad aadp_test_support
+    LINK aadp_ad aadp_platform aadp_test_support
     LABELS ad)
   # Check 6: the one-step survival adjoint at p near 1.
   aadp_test(aadp_ad_one_step_corner_test

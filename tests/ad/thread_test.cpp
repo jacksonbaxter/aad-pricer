@@ -226,6 +226,7 @@ TEST(TapeThreads, ManyShortPathsReuseEachTapeAcrossBlocks) {
   constexpr std::uint64_t kShortPaths = kShortBatches * kPerBatch;
   constexpr std::uint64_t kBlocksPerBatch =
       (kPerBatch + pricer::kBlockPaths - 1) / pricer::kBlockPaths;
+  constexpr std::uint64_t kShortBlocks = kShortBatches * kBlocksPerBatch;
   const std::vector<testing::Case> cases = {
       {.name = "european call, 1 step", .contract = testing::Plain(kEuropean, kCall, 1)},
       {.name = "digital put, 1 step", .contract = testing::Plain(kDigital, kPut, 1)},
@@ -283,8 +284,8 @@ TEST(TapeThreads, ManyShortPathsReuseEachTapeAcrossBlocks) {
   std::printf(
       "measured: many short paths, %llu paths in %llu blocks, 8 threads: worst batch "
       "|run - one path at a time| / bound %.3g\n",
-      static_cast<unsigned long long>(kShortPaths),
-      static_cast<unsigned long long>(kShortBatches * kBlocksPerBatch), worst);
+      static_cast<unsigned long long>(kShortPaths), static_cast<unsigned long long>(kShortBlocks),
+      worst);
 }
 
 // Four threads, each with its own tape on a different contract, run at once; each gradient is
