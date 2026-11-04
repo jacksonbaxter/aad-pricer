@@ -2,6 +2,11 @@
 // allocation functions with ones that count while counting is on, warms each worker's tape up
 // with one path, and then counts across many paths and block-end set-up sweeps, exactly as
 // RunBatches drives them. The expectation, stated before measuring, is zero.
+//
+// Not built under TSan on Linux: that runtime is linked statically and its libclang_rt.tsan_cxx.a
+// defines these same replaceable functions, so the link fails with multiple definitions. It runs
+// in every other preset, macOS TSan included, where the runtime is a dylib. See
+// cmake/area_pricer.cmake.
 #include <gtest/gtest.h>
 
 #include <array>

@@ -151,10 +151,19 @@ if(TARGET aadp_rng)
   endif()
   # MEM-6: no heap allocation after warm-up, by a counting operator new. Its own binary, since
   # it replaces the global allocation functions.
-  aadp_test(aadp_ad_allocation_test
-    SOURCES tests/ad/allocation_test.cpp
-    LINK aadp_ad aadp_test_support
-    LABELS ad)
+  #
+  # Left out of TSan builds on Linux, and only there. The Linux TSan runtime is linked statically,
+  # and libclang_rt.tsan_cxx.a defines the same replaceable operator new and delete, so the link
+  # fails with multiple definitions; there is no way to replace them twice. On macOS the runtime
+  # is a dylib, the executable's definitions win, and the test links and passes under TSan. Every
+  # other preset runs it. Thread safety of the tape stays under TSan in aadp_ad_thread_test,
+  # which replaces nothing.
+  if(NOT (AADP_TSAN AND CMAKE_SYSTEM_NAME STREQUAL "Linux"))
+    aadp_test(aadp_ad_allocation_test
+      SOURCES tests/ad/allocation_test.cpp
+      LINK aadp_ad aadp_test_support
+      LABELS ad)
+  endif()
 
   # Bump and revalue against closed-form difference quotients, with the tape SE as the ceiling.
   if(TARGET aadp_oracle_lib)

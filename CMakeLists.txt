@@ -24,6 +24,12 @@ if("${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS_${_aadp_build_type}} ${C
    MATCHES "-ffast-math|-Ofast")
   message(FATAL_ERROR "Fast-math flags are forbidden in this project")
 endif()
+# A TSan build, for the one test that cannot link under the Linux runtime (area_pricer.cmake).
+if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=([^ ]*,)?thread")
+  set(AADP_TSAN ON)
+else()
+  set(AADP_TSAN OFF)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(AadpSimd)
