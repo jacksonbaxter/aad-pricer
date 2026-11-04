@@ -160,6 +160,16 @@ class Tape {
 
   [[nodiscard]] MemoryReport Memory() const;
 
+  // Statements the reverse sweeps (both kinds) have visited, in all and below the set-up end, so
+  // a check can count how often the set-up is swept (tests/ad/thread_test.cpp). Two additions
+  // per sweep, not per statement.
+  struct SweepCount {
+    std::size_t statements = 0;
+    std::size_t setup_statements = 0;  // Those in [0, SetSetupEnd's position).
+  };
+  void SetSetupEnd(const Position& end) { setup_end_ = end.statements; }
+  [[nodiscard]] SweepCount Swept() const { return swept_; }
+
   // Recording, for the operations in real.hpp. a and b are active indices.
   Real Push(double value, Index a, double da) {
     if (op_offset_ + 1 > kChunkEntries) [[unlikely]] {
@@ -224,6 +234,9 @@ class Tape {
   std::size_t op_offset_ = 0;
   double* partials_ = nullptr;
   Index* indices_ = nullptr;
+
+  std::size_t setup_end_ = 0;
+  SweepCount swept_;
 };
 
 namespace detail {

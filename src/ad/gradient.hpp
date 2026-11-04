@@ -15,6 +15,36 @@
 // of dV/d(input), and clears them. So set-up costs one sweep per block, not one per path, and a
 // larger set-up (the SVI surface) does not change the per-path cost (NOTES.md, "AAD"). Batch
 // statistics come from the block sums as they do for the price.
+//
+// Threads. One tape per worker, each recording its own set-up. RunBatches calls make_path_fn on
+// each worker, so a GradientPathFn, its tape and its TapeScope are built, used and destroyed on
+// one thread and no tape is ever read by another. A shared read-only set-up was the other
+// choice. It would save recording the set-up's 18 statements on each worker, against 1,263 for
+// one 252-step Asian path, but path operands would then point into a second tape, and the
+// set-up adjoints, which every block writes, would need one copy per worker anyway. Recording it
+// per worker costs threads times the set-up, whatever N is, and since every worker records the
+// same operations on the same doubles, the set-up's partials are the same bits on every worker.
+//
+// The set-up is swept once per block (EndBlock), on the worker that ran the block: never per
+// path, and the same number of times for any thread count. Not once per worker: a worker's
+// blocks belong to several batches, and which ones depends on scheduling, so one sweep over all
+// of them could not give per-batch Greeks, and their SE, that do not depend on the thread count,
+// unless it kept one set-up adjoint vector per block, which costs what the block's sweep does.
+// Per block it is 1 / 1024 of a set-up sweep per path. tests/ad/thread_test.cpp counts the
+// set-up statements swept.
+//
+// EVIDENCE B11, B13 and B14 (BENCHMARKS.md section 14):
+//   B11  met, with no tolerance at all: the value, every Greek and every batch mean, hence each
+//        SE, are the same bits for 1, 2, 3 and 8 threads, and equal to a plain loop with no
+//        threads (tests/ad/thread_test.cpp). No skip-ahead is needed, since a path's uniforms
+//        depend only on (seed, path, step) (pricer/draws.hpp).
+//   B13  not met here: it is a timing, the slot in tape.hpp with and without thread_local, and
+//        timed benchmarks are stage 3's. Every recorded operation reads the slot once.
+//   B14  met: each block's sums, Greeks included, go to that block's own slot, and the slots are
+//        merged in block order after every worker has joined (pricer/runner.hpp). The two
+//        reference designs, Stan's accumulate-into-parent and Savine's sum over per-worker
+//        models (EVIDENCE B14), group the sum by worker, so its bits can change with the thread
+//        count. Here nothing depends on which worker ran which block.
 #ifndef AADP_AD_GRADIENT_HPP_
 #define AADP_AD_GRADIENT_HPP_
 
@@ -81,6 +111,7 @@ class PathGradient {
   [[nodiscard]] PathResult Evaluate(const pricer::PathUniforms& u);
 
   [[nodiscard]] Tape& tape() { return tape_; }
+  [[nodiscard]] const Tape& tape() const { return tape_; }
   [[nodiscard]] const std::array<Real, kInputs>& inputs() const { return inputs_; }
   [[nodiscard]] Position mark() const { return mark_; }
   // Records one path after the mark and returns its payoff, leaving it on the tape. The caller
@@ -113,6 +144,8 @@ class GradientPathFn {
     stats[0] = path_.Accumulate(u);
   }
   void EndBlock(std::array<double, kGradientStats>& sum);
+
+  [[nodiscard]] const PathGradient& path() const { return path_; }
 
  private:
   PathGradient path_;

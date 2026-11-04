@@ -1608,6 +1608,107 @@
       "detect": "test",
       "reason": "E6: p [0-9.e-]+, u",
       "timeout_s": 300
+    },
+    {
+      "id": "ad-thread-merge-per-worker",
+      "kind": "check",
+      "covers": "threaded gradient, thread-count invariance, EVIDENCE B11 and B14",
+      "bug": "Each worker carries one running sum across all the blocks it takes, so what a block's slot holds depends on which blocks the same worker ran before it, and the merge is by worker rather than by block.",
+      "edits": [
+        {
+          "file": "src/pricer/runner.hpp",
+          "find": "    std::array<double, M> stats{};\n    for (;;) {\n",
+          "replace": "    std::array<double, M> stats{};\n    std::array<double, M> sum{};\n    for (;;) {\n"
+        },
+        {
+          "file": "src/pricer/runner.hpp",
+          "find": "      std::array<double, M> sum{};\n      for (std::uint64_t path = first; path < last; ++path) {\n",
+          "replace": "      for (std::uint64_t path = first; path < last; ++path) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_thread_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_thread_test",
+        "--gtest_filter=TapeThreads.OneTwoThreeAndEightThreadsGiveTheSameBitsForEveryGreek"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeThreads\\.OneTwoThreeAndEightThreadsGiveTheSameBitsForEveryGreek",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-thread-merge-order",
+      "kind": "check",
+      "covers": "threaded gradient against the plain loop, block-merge order",
+      "bug": "The blocks of each batch are merged last to first, which every thread count does alike, so only the comparison of the gradient with the plain block-by-block loop can see it.",
+      "edits": [
+        {
+          "file": "src/pricer/runner.hpp",
+          "find": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + i)];",
+          "replace": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + (blocks_per_batch - 1 - i))];"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_thread_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_thread_test",
+        "--gtest_filter=TapeThreads.SingleAndThreeThreadRunsAreThePlainLoopBlockByBlock"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeThreads\\.SingleAndThreeThreadRunsAreThePlainLoopBlockByBlock",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-setup-sweep-per-path",
+      "kind": "check",
+      "covers": "set-up swept once per block, counted in statements swept",
+      "bug": "Each path's sweep runs on through the set-up to the start instead of stopping at the mark, so the Greeks come out the same but the set-up is swept once per path.",
+      "edits": [
+        {
+          "file": "src/ad/gradient.cpp",
+          "find": "  tape_.SweepBack(tape_.GetPosition(), mark_);\n  tape_.Rewind(mark_);\n  return payoff.value();",
+          "replace": "  tape_.SweepBack(tape_.GetPosition(), Position{});\n  tape_.Rewind(mark_);\n  return payoff.value();"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_thread_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_thread_test",
+        "--gtest_filter=TapeThreads.TheSetUpIsSweptOncePerBlockNeverPerPath"
+      ],
+      "detect": "test",
+      "reason": "set-up statements swept, against [0-9]+ blocks",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-block-reuse",
+      "kind": "check",
+      "covers": "many short paths, each tape reused across blocks",
+      "bug": "The set-up sweep leaves the market inputs' adjoints in place, so each block's Greeks carry every earlier block the same worker ran.",
+      "edits": [
+        {
+          "file": "src/ad/gradient.cpp",
+          "find": "  tape_.ClearAdjoints(mark_, Position{});\n  return gradient;",
+          "replace": "  return gradient;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_thread_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_thread_test",
+        "--gtest_filter=TapeThreads.ManyShortPathsReuseEachTapeAcrossBlocks"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeThreads\\.ManyShortPathsReuseEachTapeAcrossBlocks",
+      "timeout_s": 300
     }
   ]
 }

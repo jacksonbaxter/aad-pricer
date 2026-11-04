@@ -44,7 +44,9 @@ PathGradient::PathGradient(const pricer::Contract& contract, const pricer::Marke
       scope_(tape_),
       inputs_(RegisterInputs(tape_, market)),
       model_(ActiveMarket(inputs_), contract.steps),
-      mark_(tape_.GetPosition()) {}
+      mark_(tape_.GetPosition()) {
+  tape_.SetSetupEnd(mark_);
+}
 
 Real PathGradient::Record(const pricer::PathUniforms& u) {
   return pricer::DiscountedPayoff<Real>(contract_, model_, u);

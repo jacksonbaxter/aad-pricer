@@ -1,5 +1,6 @@
 #include "ad/tape.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -80,6 +81,9 @@ void Tape::ClearAdjoints(const Position& from, const Position& stop) {
 
 template <bool kAbsolute>
 void Tape::Sweep(const Position& from, const Position& stop) {
+  swept_.statements += from.statements - stop.statements;
+  const std::size_t setup_top = std::min(from.statements, setup_end_);
+  if (setup_top > stop.statements) swept_.setup_statements += setup_top - stop.statements;
   std::size_t chunk = from.operand_chunk;
   std::size_t offset = from.operand_offset;
   const double* partials = operand_chunks_[chunk].partials.get();
