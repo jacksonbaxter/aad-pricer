@@ -43,6 +43,19 @@ foreach(_aadp_sized IN ITEMS aadp_simd_math_agreement_test aadp_simd_path_agreem
   endif()
 endforeach()
 
+# Stage 5b: the vector tape. It keeps the set-up on the scalar tape, so it needs the ad library.
+if(TARGET aadp_ad)
+  # B16 and the dot product on lanes: random programs against one scalar sweep per lane.
+  aadp_test(aadp_simd_lane_tape_test
+    SOURCES tests/simd/lane_tape_test.cpp
+    LINK aadp_simd aadp_ad aadp_test_support
+    LABELS simd ad)
+  if(TARGET aadp_simd_lane_tape_test)
+    target_compile_definitions(aadp_simd_lane_tape_test PRIVATE
+      AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+  endif()
+endif()
+
 # Check 4: the SIMD kernels against the scalar ones on arbitrary inputs, under libFuzzer, ASan and
 # UBSan. The fuzz-avx2 preset builds it for AVX2, for the Linux host.
 aadp_fuzz(aadp_fuzz_simd_kernels
