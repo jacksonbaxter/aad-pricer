@@ -44,6 +44,16 @@ using BumpSteps = std::array<double, kInputCount>;
 // The market with one input moved by h.
 Market<double> Bumped(const Market<double>& market, Input input, double h);
 
+// The contract a bumped market is revalued with: the same terms in currency as at the base
+// market. Savine's smoothing half-width is width * S0 with S0 a plain double
+// (kernels.hpp, OutSmoothed), so the tape holds it fixed in currency. A spot bump with the width
+// unchanged would move it with the spot, and its delta would carry a term, dV/ds ds/dS0, that the
+// tape's does not: 0.002 of a delta of 0.004 on AAD-1, 30 SEs of the difference at 50,000 paths.
+// So the width is rescaled by base / bumped spot, which holds the half-width to within 2 units in
+// the last place. Every other contract term is already in currency.
+Contract ContractAt(const Contract& contract, const Market<double>& base,
+                    const Market<double>& bumped);
+
 // One pricing, and the mean of |V| over its paths.
 struct Revaluation {
   Estimate value;

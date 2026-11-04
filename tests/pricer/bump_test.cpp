@@ -158,6 +158,29 @@ TEST(Bump, MatchesTheClosedFormDifferenceQuotient) {
       compared, worst, critical);
 }
 
+TEST(Bump, HoldsTheSmoothingHalfWidthInCurrency) {
+  Contract c = Plain(Product::kBarrier, OptionType::kCall, 4);
+  c.barrier = {.direction = Direction::kUp,
+               .knock = Knock::kOut,
+               .monitoring = Monitoring::kDiscrete,
+               .treatment = Treatment::kSmoothed,
+               .level = 150.0,
+               .smoothing_width = 0.05};
+  const double half_width = c.barrier.smoothing_width * kMarket.spot;
+  for (const double h : {kSteps[0], -kSteps[0], 0x1p-20, 3.0}) {
+    const Market<double> up = Bumped(kMarket, Input::kSpot, h);
+    const double held = ContractAt(c, kMarket, up).barrier.smoothing_width * up.spot;
+    EXPECT_LE(std::fabs(held - half_width), 2.0 * (std::nextafter(half_width, 1e300) - half_width))
+        << h;
+  }
+  // Other inputs and other products keep their terms.
+  const Market<double> vol = Bumped(kMarket, Input::kSigma, 0.01);
+  EXPECT_EQ(ContractAt(c, kMarket, vol).barrier.smoothing_width, c.barrier.smoothing_width);
+  const Contract european = Plain(Product::kEuropean, OptionType::kCall, 1);
+  const Market<double> spot = Bumped(kMarket, Input::kSpot, 1.0);
+  EXPECT_EQ(ContractAt(european, kMarket, spot).barrier.smoothing_width, 0.0);
+}
+
 TEST(Bump, RefusesABumpedMarketAndNamesTheInput) {
   Contract c = Plain(Product::kBarrier, OptionType::kCall, 4);
   c.barrier = {.direction = Direction::kDown,

@@ -45,9 +45,10 @@ double FieldOf(const pricer::Market<double>& m, pricer::Input input) {
   return m.spot;
 }
 
+// As PriceWithBumps revalues: the contract's terms held in currency (pricer::ContractAt).
 pricer::Revaluation Revalue(const Workload& w, const pricer::Market<double>& m,
                             const pricer::RunConfig& config) {
-  auto run = pricer::Revalue(w.contract, m, config);
+  auto run = pricer::Revalue(pricer::ContractAt(w.contract, w.market, m), m, config);
   if (!run) throw std::runtime_error("the study's bumped market was refused");
   return std::move(*run);
 }

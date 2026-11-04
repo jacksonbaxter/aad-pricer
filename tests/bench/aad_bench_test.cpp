@@ -73,6 +73,16 @@ TEST(AadChecks, EveryCheckPassesOnEveryWorkloadAtASmallSize) {
   }
 }
 
+// At 1/500 of its paths the barrier's delta gap between a bump that moved the smoothing with the
+// spot and the tape, which holds it, is under 4 SEs of the difference; at 1/25 it is near 20.
+TEST(AadChecks, TheBarrierBumpsDifferenceTheFunctionTheTapeDifferentiates) {
+  const Workload* w = FindWorkload("aad1-barrier");
+  const WorkloadReport report = Verify(*w, *ConfigFor(*w, 25, 4));
+  for (const CheckResult& c : report.checks) {
+    EXPECT_TRUE(c.passed) << c.name << ": " << c.detail;
+  }
+}
+
 TEST(AadChecks, ABumpWithTheWrongThetaSignFails) {
   WorkloadReport report = AsianReport();
   pricer::Estimate& theta = Mutable(report, Variant::kBumpCentral).greeks[4];

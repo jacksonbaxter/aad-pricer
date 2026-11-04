@@ -71,6 +71,16 @@ Market<double> Bumped(const Market<double>& market, Input input, double h) {
   return out;
 }
 
+Contract ContractAt(const Contract& contract, const Market<double>& base,
+                    const Market<double>& bumped) {
+  Contract out = contract;
+  if (contract.product == Product::kBarrier && contract.barrier.treatment == Treatment::kSmoothed &&
+      bumped.spot != base.spot) {
+    out.barrier.smoothing_width = contract.barrier.smoothing_width * (base.spot / bumped.spot);
+  }
+  return out;
+}
+
 std::expected<Revaluation, PriceError> Revalue(const Contract& contract,
                                                const Market<double>& market,
                                                const RunConfig& config) {
@@ -112,12 +122,12 @@ std::expected<BumpEstimate, BumpError> PriceWithBumps(const Contract& contract,
   for (std::size_t i = 0; i < kInputCount; ++i) {
     const auto input = static_cast<Input>(i);
     const Market<double> up_market = Bumped(market, input, steps[i]);
-    auto up = Revalue(contract, up_market, config);
+    auto up = Revalue(ContractAt(contract, market, up_market), up_market, config);
     if (!up) return std::unexpected(BumpError{.price = up.error(), .bumped = true, .input = input});
     out.pricings += 1;
     if (scheme == BumpScheme::kCentral) {
       const Market<double> down_market = Bumped(market, input, -steps[i]);
-      auto down = Revalue(contract, down_market, config);
+      auto down = Revalue(ContractAt(contract, market, down_market), down_market, config);
       if (!down) {
         return std::unexpected(BumpError{.price = down.error(), .bumped = true, .input = input});
       }

@@ -10,9 +10,9 @@ namespace aadp::bench::aad {
 
 inline constexpr StepChoices kAad1Central{{
     {.h = 2.384185791015625e-05,
-     .bias = -1.9340726236508065e-07,
-     .bias_se = 1.3919805390634644e-07,
-     .truncation = 3.2326750127118744e-07},  // delta
+     .bias = -1.4431991924836762e-07,
+     .bias_se = 1.0102938223251197e-07,
+     .truncation = 3.2326750127108627e-07},  // delta
     {.h = 1.1920928955078125e-07,
      .bias = -1.8253922462463379e-09,
      .bias_se = 4.8891303707319091e-09,
@@ -32,9 +32,9 @@ inline constexpr StepChoices kAad1Central{{
 }};
 inline constexpr StepChoices kAad1Forward{{
     {.h = 2.384185791015625e-05,
-     .bias = 2.5229845196015266e-07,
-     .bias_se = 3.6009771094394072e-07,
-     .truncation = 9.6980252398990703e-07},  // delta
+     .bias = 3.5065244883285882e-07,
+     .bias_se = 2.1276356760521971e-07,
+     .truncation = 9.6980254108836589e-07},  // delta
     {.h = 4.76837158203125e-07,
      .bias = 2.0136656239628792e-05,
      .bias_se = 0.00020350922108979965,
