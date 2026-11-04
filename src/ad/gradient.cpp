@@ -120,8 +120,11 @@ std::expected<GradientEstimate, pricer::PriceError> PriceWithGradient(
   }
   const pricer::PathShape shape{.steps = contract.steps,
                                 .crossing = pricer::NeedsCrossingUniforms(contract)};
-  const auto table = pricer::RunBatches<kGradientStats>(
-      config, shape, [&] { return GradientPathFn(contract, market); });
+  return EstimateFromTable(pricer::RunBatches<kGradientStats>(
+      config, shape, [&] { return GradientPathFn(contract, market); }));
+}
+
+GradientEstimate EstimateFromTable(const std::vector<std::array<double, kGradientStats>>& table) {
   std::array<std::vector<double>, kGradientStats> columns;
   for (auto& column : columns) column.reserve(table.size());
   for (const auto& row : table) {

@@ -1709,6 +1709,102 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] TapeThreads\\.ManyShortPathsReuseEachTapeAcrossBlocks",
       "timeout_s": 300
+    },
+    {
+      "id": "ad-hand-theta-term",
+      "kind": "check",
+      "covers": "hand-written adjoint against the tape per path, check 8",
+      "bug": "The hand adjoint drops the discount's term from the theta adjoint, d(-r T)/dT = -r, so theta misses -r D max(A - K, 0) on every path in the money.",
+      "edits": [
+        {
+          "file": "src/ad/hand_adjoint.hpp",
+          "find": "  double maturity = n * s.minus_r;",
+          "replace": "  double maturity = 0.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_dual_agreement_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_dual_agreement_test",
+        "--gtest_filter=HandAdjoint.AgreesWithTheTapePerPathWithinTheAssociationBound"
+      ],
+      "detect": "test",
+      "reason": "path [0-9]+, theta: hand",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-hand-block-clear",
+      "kind": "check",
+      "covers": "hand-written adjoint run against the tape run per batch, check 8",
+      "bug": "The hand adjoint's path function keeps its boundary adjoints after a block's set-up adjoint, so each block's Greeks carry every earlier block the same worker ran.",
+      "edits": [
+        {
+          "file": "src/ad/hand_adjoint.hpp",
+          "find": "    boundary_ = {};\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_dual_agreement_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_dual_agreement_test",
+        "--gtest_filter=HandAdjoint.RunMatchesPriceBitForBitAndTheTapeBatchByBatch"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] HandAdjoint\\.RunMatchesPriceBitForBitAndTheTapeBatchByBatch",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-hand-threads",
+      "kind": "check",
+      "covers": "hand-written adjoint, thread-count invariance",
+      "bug": "The hand adjoint's path function keeps its boundary adjoints after a block's set-up adjoint, so what a block holds depends on which blocks its worker ran before.",
+      "edits": [
+        {
+          "file": "src/ad/hand_adjoint.hpp",
+          "find": "    boundary_ = {};\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_thread_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_thread_test",
+        "--gtest_filter=HandAdjointThreads.OneTwoThreeAndEightThreadsGiveTheSameBits"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] HandAdjointThreads\\.OneTwoThreeAndEightThreadsGiveTheSameBits",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-hand-unsupported",
+      "kind": "check",
+      "covers": "hand-written adjoint refuses the products it does not price",
+      "bug": "The hand adjoint accepts every product but the digital, so a geometric Asian or a barrier is priced as a European.",
+      "edits": [
+        {
+          "file": "src/ad/hand_adjoint.hpp",
+          "find": "  return c.product == pricer::Product::kAsianArithmetic || c.product == pricer::Product::kEuropean;",
+          "replace": "  return c.product != pricer::Product::kDigital;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_dual_agreement_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_dual_agreement_test",
+        "--gtest_filter=HandAdjoint.RefusesWhatItDoesNotPrice"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] HandAdjoint\\.RefusesWhatItDoesNotPrice",
+      "timeout_s": 300
     }
   ]
 }

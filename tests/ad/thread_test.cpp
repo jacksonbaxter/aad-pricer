@@ -9,7 +9,9 @@
 //   - many short paths, so each worker's tape is rewound and reused across many blocks: every
 //     Greek's batch means equal the same paths' gradients taken one path at a time, within
 //     check 7's bound (tests/ad/oracle_equivalence_test.cpp), restated below;
-//   - tapes on separate threads do not see each other.
+//   - tapes on separate threads do not see each other;
+//   - the hand-written adjoint (src/ad/hand_adjoint.hpp), on the same runner, gives the same bits
+//     for 1, 2, 3 and 8 threads too.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -24,6 +26,7 @@
 #include <vector>
 
 #include "ad/gradient.hpp"
+#include "ad/hand_adjoint.hpp"
 #include "ad/tape.hpp"
 #include "bounds.hpp"
 #include "cases.hpp"
@@ -315,6 +318,37 @@ TEST(TapeThreads, TapesOnSeparateThreadsAreIndependent) {
   for (std::size_t w = 0; w < kWorkers; ++w) {
     for (std::size_t i = 0; i < kInputs; ++i) {
       EXPECT_EQ(Bits(alone[w][i]), Bits(together[w][i])) << "worker " << w << ", input " << i;
+    }
+  }
+}
+
+// The hand adjoint has no tape but the same per-worker state and block hook.
+TEST(HandAdjointThreads, OneTwoThreeAndEightThreadsGiveTheSameBits) {
+  using enum pricer::Product;
+  using enum pricer::OptionType;
+  const std::vector<testing::Case> cases = {
+      {.name = "arithmetic Asian call with spot",
+       .contract = testing::Plain(kAsianArithmetic, kCall, 8, true)},
+      {.name = "arithmetic Asian put", .contract = testing::Plain(kAsianArithmetic, kPut, 8)},
+      {.name = "european call", .contract = testing::Plain(kEuropean, kCall, 8)},
+      {.name = "european put, 1 step", .contract = testing::Plain(kEuropean, kPut, 1)},
+  };
+  const auto run = [](const pricer::Contract& c, std::uint32_t threads) {
+    const auto estimate = hand::PriceWithHandAdjoint(
+        c, kMarket, {.seed = kSeed, .paths = kPaths, .batches = kBatches, .threads = threads});
+    EXPECT_TRUE(estimate.has_value());
+    return estimate ? *estimate : GradientEstimate{};
+  };
+  for (const testing::Case& c : cases) {
+    const GradientEstimate one = run(c.contract, 1);
+    ASSERT_EQ(one.value.batch_means.size(), kBatches) << c.name;
+    for (const std::uint32_t threads : {2U, 3U, 8U}) {
+      const GradientEstimate many = run(c.contract, threads);
+      EXPECT_TRUE(Same(one.value, many.value)) << c.name << ", value, " << threads << " threads";
+      for (std::size_t g = 0; g < kInputs; ++g) {
+        EXPECT_TRUE(Same(one.greeks[g], many.greeks[g]))
+            << c.name << ", greek " << g << ", " << threads << " threads";
+      }
     }
   }
 }

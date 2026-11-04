@@ -43,6 +43,10 @@ class GbmModel {
   [[nodiscard]] const Real& Spot() const { return spot_; }
   [[nodiscard]] const Real& LogSpot() const { return log_spot_; }
   [[nodiscard]] const Real& Discount() const { return discount_; }
+  // The step's drift and standard deviation, which Law adds and returns, for code that writes
+  // the step out by hand (src/ad/hand_adjoint.hpp).
+  [[nodiscard]] const Real& Drift() const { return drift_; }
+  [[nodiscard]] const Real& StepSd() const { return sd_; }
   [[nodiscard]] StepLaw<Real> Law(std::uint32_t /*step*/, const Real& x) const {
     return {x + drift_, sd_};
   }

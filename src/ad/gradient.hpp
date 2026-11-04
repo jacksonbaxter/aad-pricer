@@ -52,6 +52,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <vector>
 
 #include "ad/real.hpp"
 #include "ad/tape.hpp"
@@ -150,6 +151,9 @@ class GradientPathFn {
  private:
   PathGradient path_;
 };
+
+// Batch means of RunBatches<kGradientStats> as estimates: the value, then the Greeks.
+GradientEstimate EstimateFromTable(const std::vector<std::array<double, kGradientStats>>& table);
 
 }  // namespace aadp::ad
 
