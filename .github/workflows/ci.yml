@@ -33,8 +33,7 @@ jobs:
           - { name: linux-asan-ubsan, os: ubuntu-24.04, compiler: clang, preset: asan-ubsan, test: true }
           - { name: linux-tsan, os: ubuntu-24.04, compiler: clang, preset: tsan, test: true }
           - { name: linux-avx2, os: ubuntu-24.04, compiler: clang, preset: release-avx2, test: true }
-          # Build only: no host here can run AVX-512, so the preset has no test preset.
-          - { name: linux-avx512-build, os: ubuntu-24.04, compiler: clang, preset: release-avx512, test: false }
+          # AVX-512 is built, and tested where the runner can run it, by simd-lanes below.
           # The measurement Mac compiles against LLVM 23.1.4's own libc++ headers and links the
           # system /usr/lib/libc++.1.dylib, on macOS 27.2 with the 27.2 SDK. The xcode-27 image
           # (a preview) runs macOS 27, and the setup action selects Xcode 27.2 for its 27.2 SDK.
@@ -94,6 +93,135 @@ jobs:
         run: >-
           python3 -I scripts/run_tests.py ctest "$PRESET" --jobs "$AADP_JOBS"
           --allow-skipped "$ALLOWED_SKIPS"
+
+  # The lane matrix: one job per SIMD lane width, each running the simd-labelled tests (the lane
+  # kernels, Philox lanes, paths and prices against the scalar ones, bit for bit, and the SIMD
+  # bench's smoke run with its in-run checks). Widths 2 and 4 also run the full suite in
+  # build-test (macos-*, linux-clang-*, linux-avx2). A job whose CPU lacks its target's features
+  # fails, except AVX-512: a GitHub runner may or may not have it, so that job builds the whole
+  # tree and runs the tests only if /proc/cpuinfo lists every x86-64-v4 feature. Otherwise it says
+  # it was build-only, in a warning and in the job summary; it never passes silently.
+  simd-lanes:
+    name: simd-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: lanes-1-scalar
+            os: ubuntu-24.04
+            arch: x86_64
+            preset: release
+            target: scalar
+            cpu: ""
+            optional: false
+            all: false
+          - name: lanes-2-sse2
+            os: ubuntu-24.04
+            arch: x86_64
+            preset: release
+            target: baseline
+            cpu: sse2
+            optional: false
+            all: false
+          - name: lanes-2-neon
+            os: xcode-27
+            arch: arm64
+            preset: release
+            target: baseline
+            cpu: ""
+            optional: false
+            all: false
+          - name: lanes-4-avx2
+            os: ubuntu-24.04
+            arch: x86_64
+            preset: release-avx2
+            target: avx2
+            cpu: avx avx2 bmi1 bmi2 f16c fma abm movbe aes pclmulqdq
+            optional: false
+            all: false
+          - name: lanes-8-avx512
+            os: ubuntu-24.04
+            arch: x86_64
+            preset: release-avx512
+            target: avx512
+            cpu: >-
+              avx avx2 bmi1 bmi2 f16c fma abm movbe aes pclmulqdq
+              avx512f avx512bw avx512cd avx512dq avx512vl
+            optional: true
+            all: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          data: "false"
+
+      - name: Check the CPU
+        id: cpu
+        env:
+          LANE_JOB: ${{ matrix.name }}
+          ARCH: ${{ matrix.arch }}
+          NEEDS: ${{ matrix.cpu }}
+          OPTIONAL: ${{ matrix.optional }}
+        run: |
+          missing=()
+          machine=$(uname -m)
+          [[ $machine == "$ARCH" ]] || missing+=("$ARCH (the runner is $machine)")
+          if [[ -n $NEEDS ]]; then
+            flags=" $(grep -m1 '^flags' /proc/cpuinfo | cut -d: -f2) "
+            for flag in $NEEDS; do
+              [[ $flags == *" $flag "* ]] || missing+=("$flag")
+            done
+          fi
+          if ((${#missing[@]} == 0)); then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            printf '%s: the runner has %s\n' "$LANE_JOB" "${NEEDS:-$ARCH}"
+          elif [[ $OPTIONAL == true ]]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            message="BUILD ONLY: the runner's CPU lacks ${missing[*]}, so the agreement tests did not run"
+            echo "::warning title=$LANE_JOB was build-only::$message"
+            printf '### %s\n\n%s\n' "$LANE_JOB" "$message" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error title=$LANE_JOB cannot run::the runner's CPU lacks ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Configure
+        env:
+          PRESET: ${{ matrix.preset }}
+          TARGET: ${{ matrix.target }}
+        run: cmake --preset "$PRESET" -DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF "-DAADP_SIMD_TARGET=$TARGET"
+
+      - name: Build
+        env:
+          PRESET: ${{ matrix.preset }}
+          ALL: ${{ matrix.all }}
+        run: |
+          targets=()
+          if [[ $ALL != true ]]; then
+            for target in aadp_simd_math_agreement_test aadp_simd_philox_lanes_test \
+              aadp_simd_path_agreement_test aadp_simd_price_agreement_test aadp_bench_simd; do
+              targets+=(--target "$target")
+            done
+          fi
+          cmake --build --preset "$PRESET" --parallel "$AADP_JOBS" "${targets[@]}"
+
+      - name: Test the simd label
+        if: steps.cpu.outputs.run == 'true'
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: |
+          junit="$PWD/build/logs/simd-lanes-junit.xml"
+          mkdir -p build/logs
+          status=0
+          ctest --test-dir "build/$PRESET" -L simd --no-tests=error --output-on-failure \
+            --parallel "$AADP_JOBS" --output-junit "$junit" || status=$?
+          python3 -I scripts/run_tests.py verdict "$junit" || status=1
+          exit "$status"
 
   format:
     runs-on: ubuntu-24.04

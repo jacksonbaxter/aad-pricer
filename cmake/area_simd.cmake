@@ -2,9 +2,9 @@
 # cmake/AadpTargets.cmake for the helpers. It instantiates the pricer's kernels and model, so it
 # needs the pricer area.
 #
-# The agreement tests carry the label simd, which the CI lane matrix runs on every width that can
-# run (.github/workflows/ci.yml): NEON on the macOS jobs, AVX2 on linux-avx2, AVX-512 where the
-# runner has it.
+# The agreement tests carry the label simd, which the CI lane matrix (simd-lanes in
+# .github/workflows/ci.yml) runs at every width: HWY_SCALAR 1, SSE2 2, NEON 2 and AVX2 4, and
+# AVX-512 8 where the runner has it, build-only and saying so where it does not.
 if(NOT TARGET aadp_pricer)
   return()
 endif()
