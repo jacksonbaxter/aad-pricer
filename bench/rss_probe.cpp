@@ -3,18 +3,19 @@
 #include <fcntl.h>
 #include <spawn.h>
 #include <sys/resource.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <cerrno>
 #include <cstdint>
-#include <cstring>
 #include <expected>
 #include <string>
+#include <system_error>
 #include <vector>
 
-extern char** environ;  // NOLINT(readability-redundant-declaration): POSIX declares it nowhere.
+// POSIX declares it nowhere, and posix_spawn takes it as it is.
+// NOLINTNEXTLINE(readability-redundant-declaration,cppcoreguidelines-avoid-non-const-global-variables)
+extern char** environ;
 
 namespace aadp::bench {
 
@@ -39,14 +40,13 @@ std::expected<std::uint64_t, std::string> ChildPeakRss(const std::string& execut
       posix_spawn(&pid, executable.c_str(), &actions, nullptr, argv.data(), environ);
   posix_spawn_file_actions_destroy(&actions);
   if (spawned != 0) {
-    return std::unexpected(std::string("posix_spawn failed: ") + std::strerror(spawned));
+    return std::unexpected("posix_spawn failed: " +
+                           std::error_code(spawned, std::generic_category()).message());
   }
   int status = 0;
   rusage usage{};
-  pid_t waited = 0;
-  do {
-    waited = wait4(pid, &status, 0, &usage);
-  } while (waited == -1 && errno == EINTR);
+  pid_t waited = wait4(pid, &status, 0, &usage);
+  while (waited == -1 && errno == EINTR) waited = wait4(pid, &status, 0, &usage);
   if (waited != pid) return std::unexpected("wait4 failed");
   if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     return std::unexpected("the probe did not exit cleanly");

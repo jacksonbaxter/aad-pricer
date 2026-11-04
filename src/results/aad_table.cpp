@@ -94,6 +94,61 @@ std::vector<std::string_view> words(std::string_view line) {
   return out;
 }
 
+// The repeated lines. Each returns false when its words do not parse.
+bool parse_check(const std::vector<std::string_view>& w, Section& out) {
+  if (w.size() < 3 || (w[1] != "pass" && w[1] != "fail")) {
+    return false;
+  }
+  out.checks.push_back(
+      {.name = std::string(w[0]), .passed = w[1] == "pass", .worst = std::string(w[2])});
+  return true;
+}
+
+bool parse_rss(const std::vector<std::string_view>& w, Section& out) {
+  const auto bytes = w.size() == 2 ? parse_number(w[1]) : std::nullopt;
+  if (!bytes) {
+    return false;
+  }
+  out.rss[std::string(w[0])] = *bytes;
+  return true;
+}
+
+bool parse_variant(const std::vector<std::string_view>& w, Section& out) {
+  if (w.size() != 2) {
+    return false;
+  }
+  out.benchmarks[std::string(w[0])] = std::string(w[1]);
+  return true;
+}
+
+bool parse_estimate(const std::vector<std::string_view>& w, Section& out) {
+  const auto mean = w.size() == 4 ? parse_number(w[2]) : std::nullopt;
+  const auto se = w.size() == 4 ? parse_number(w[3]) : std::nullopt;
+  if (!mean || !se) {
+    return false;
+  }
+  out.estimates.push_back(
+      {.variant = std::string(w[0]), .quantity = std::string(w[1]), .mean = *mean, .se = *se});
+  return true;
+}
+
+// step <scheme> <input> <h> <bias> <bias_se> [<bias bound>]
+bool parse_step(const std::vector<std::string_view>& w, Section& out) {
+  const bool sized = w.size() == 5 || w.size() == 6;
+  const auto h = sized ? parse_number(w[2]) : std::nullopt;
+  const auto bias = sized ? parse_number(w[3]) : std::nullopt;
+  const auto bias_se = sized ? parse_number(w[4]) : std::nullopt;
+  if (!h || !bias || !bias_se) {
+    return false;
+  }
+  out.steps.push_back({.scheme = std::string(w[0]),
+                       .input = std::string(w[1]),
+                       .h = *h,
+                       .bias = *bias,
+                       .bias_se = *bias_se});
+  return true;
+}
+
 std::expected<void, std::string> parse_line(std::string_view line, Section& out) {
   const std::size_t space = line.find(' ');
   if (space == std::string_view::npos) {
@@ -102,46 +157,23 @@ std::expected<void, std::string> parse_line(std::string_view line, Section& out)
   const std::string_view key = line.substr(0, space);
   const std::string_view rest = line.substr(space + 1);
   const std::vector<std::string_view> w = words(rest);
-  const auto bad = [&line] { return std::unexpected("a malformed line: " + std::string(line)); };
-  if (key == "check") {
-    if (w.size() < 3 || (w[1] != "pass" && w[1] != "fail")) {
-      return bad();
+  using Parser = bool (*)(const std::vector<std::string_view>&, Section&);
+  constexpr std::array<std::pair<std::string_view, Parser>, 5> kRepeated = {{
+      {"check", parse_check},
+      {"peak_rss", parse_rss},
+      {"variant", parse_variant},
+      {"estimate", parse_estimate},
+      {"step", parse_step},
+  }};
+  for (const auto& [name, parse] : kRepeated) {
+    if (key == name) {
+      if (!parse(w, out)) {
+        return std::unexpected("a malformed line: " + std::string(line));
+      }
+      return {};
     }
-    out.checks.push_back(
-        {.name = std::string(w[0]), .passed = w[1] == "pass", .worst = std::string(w[2])});
-  } else if (key == "peak_rss") {
-    const auto bytes = w.size() == 2 ? parse_number(w[1]) : std::nullopt;
-    if (!bytes) {
-      return bad();
-    }
-    out.rss[std::string(w[0])] = *bytes;
-  } else if (key == "variant") {
-    if (w.size() != 2) {
-      return bad();
-    }
-    out.benchmarks[std::string(w[0])] = std::string(w[1]);
-  } else if (key == "estimate") {
-    const auto mean = w.size() == 4 ? parse_number(w[2]) : std::nullopt;
-    const auto se = w.size() == 4 ? parse_number(w[3]) : std::nullopt;
-    if (!mean || !se) {
-      return bad();
-    }
-    out.estimates.push_back(
-        {.variant = std::string(w[0]), .quantity = std::string(w[1]), .mean = *mean, .se = *se});
-  } else if (key == "step") {
-    const bool sized = w.size() == 5 || w.size() == 6;
-    const auto h = sized ? parse_number(w[2]) : std::nullopt;
-    const auto bias = sized ? parse_number(w[3]) : std::nullopt;
-    const auto bias_se = sized ? parse_number(w[4]) : std::nullopt;
-    if (!h || !bias || !bias_se) {
-      return bad();
-    }
-    out.steps.push_back({.scheme = std::string(w[0]),
-                         .input = std::string(w[1]),
-                         .h = *h,
-                         .bias = *bias,
-                         .bias_se = *bias_se});
-  } else if (!out.fields.emplace(std::string(key), std::string(rest)).second) {
+  }
+  if (!out.fields.emplace(std::string(key), std::string(rest)).second) {
     return std::unexpected("a repeated key: " + std::string(key));
   }
   return {};
@@ -196,9 +228,11 @@ bool section_valid(const Section& section) {
 }
 
 const Step* find_step(const Section& section, std::string_view variant, std::string_view quantity) {
-  const std::string_view scheme = variant == "bump-central"   ? "central"
-                                  : variant == "bump-forward" ? "forward"
-                                                              : "";
+  constexpr std::string_view kBump = "bump-";
+  if (!variant.starts_with(kBump)) {
+    return nullptr;
+  }
+  const std::string_view scheme = variant.substr(kBump.size());
   for (const Step& step : section.steps) {
     if (step.scheme == scheme && (step.input == quantity || step.input == "all")) {
       return &step;
@@ -317,6 +351,40 @@ std::string accuracy_table(const Section& section,
   return out;
 }
 
+// Mean real time per run of each variant, in ns.
+std::expected<std::map<std::string, double, std::less<>>, std::string> variant_times(
+    const Section& section, const JsonValue& json) {
+  std::map<std::string, double, std::less<>> times;
+  for (const auto& [variant, name] : section.benchmarks) {
+    const auto mean = benchmark_mean_time(json, name);
+    const auto ns = mean ? parse_number(*mean) : std::nullopt;
+    if (!ns || !(*ns > 0.0)) {
+      return std::unexpected("no benchmark entry for " + name);
+    }
+    times[variant] = *ns;
+  }
+  return times;
+}
+
+std::string workload_heading(const Section& section) {
+  std::string out = "\n##### " + cell(section.field("workload")) + " (" +
+                    cell(section.field("targets")) + ")" +
+                    (section_valid(section) ? "" : ": INVALID") + "\n\n";
+  out += cell(section.field("description")) +
+         ". Differences from the target: " + cell(section.field("differences")) + ".\n\n";
+  out += "Paths " + cell(section.field("paths")) + " in " + cell(section.field("batches")) +
+         " batches, " + cell(section.field("threads")) + " thread(s), seed " +
+         cell(section.field("seed")) + "; nonzero-payoff fraction " +
+         cell(section.field("nonzero_payoff_fraction")) + "; tape " +
+         cell(section.field("tape_statements_per_path")) + " statements per path.\n\n";
+  out += "Checks:";
+  for (const Check& c : section.checks) {
+    out += " " + cell(c.name) + " " + (c.passed ? "pass" : "FAIL") + " (" + cell(c.worst) +
+           " of its bound);";
+  }
+  return out + "\n\n";
+}
+
 std::expected<std::string, std::string> file_tables(const ResultsFile& file) {
   std::vector<const ResultsSection*> sections;
   for (const ResultsSection& section : file.sections) {
@@ -349,31 +417,12 @@ std::expected<std::string, std::string> file_tables(const ResultsFile& file) {
     if (!section) {
       return std::unexpected(raw->name + ": " + section.error());
     }
-    std::map<std::string, double, std::less<>> times;
-    for (const auto& [variant, name] : section->benchmarks) {
-      const auto mean = benchmark_mean_time(*json, name);
-      const auto ns = mean ? parse_number(*mean) : std::nullopt;
-      if (!ns || !(*ns > 0.0)) {
-        return std::unexpected("no benchmark entry for " + name);
-      }
-      times[variant] = *ns;
+    auto times = variant_times(*section, *json);
+    if (!times) {
+      return std::unexpected(times.error());
     }
-    const bool valid = section_valid(*section);
-    out += "\n##### " + cell(section->field("workload")) + " (" + cell(section->field("targets")) +
-           ")" + (valid ? "" : ": INVALID") + "\n\n";
-    out += cell(section->field("description")) +
-           ". Differences from the target: " + cell(section->field("differences")) + ".\n\n";
-    out += "Paths " + cell(section->field("paths")) + " in " + cell(section->field("batches")) +
-           " batches, " + cell(section->field("threads")) + " thread(s), seed " +
-           cell(section->field("seed")) + "; nonzero-payoff fraction " +
-           cell(section->field("nonzero_payoff_fraction")) + "; tape " +
-           cell(section->field("tape_statements_per_path")) + " statements per path.\n\n";
-    out += "Checks:";
-    for (const Check& c : section->checks) {
-      out += " " + cell(c.name) + " " + (c.passed ? "pass" : "FAIL") + " (" + cell(c.worst) +
-             " of its bound);";
-    }
-    out += "\n\n" + cost_table(*section, times) + "\n" + accuracy_table(*section, times);
+    out += workload_heading(*section) + cost_table(*section, *times) + "\n" +
+           accuracy_table(*section, *times);
   }
   return out;
 }

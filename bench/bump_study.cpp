@@ -1,6 +1,5 @@
 #include "bump_study.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>

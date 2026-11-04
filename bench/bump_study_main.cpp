@@ -25,13 +25,13 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "aad_workloads.hpp"
 #include "bump_study.hpp"
 #include "pricer/bump.hpp"
+#include "pricer/runner.hpp"
 
 namespace {
 
@@ -87,6 +87,12 @@ struct CsvRow {
   StudyRow row;
   bool chosen = false;
 };
+using Table = std::map<Key, std::vector<CsvRow>>;
+
+std::string_view StableField(const StudyRow& r) {
+  if (!r.has_change) return "";
+  return r.stable ? "1" : "0";
+}
 
 void WriteRows(std::ostream& out, std::string_view workload, std::string_view input,
                BumpScheme scheme, const std::vector<StudyRow>& rows,
@@ -97,9 +103,8 @@ void WriteRows(std::ostream& out, std::string_view workload, std::string_view in
         << Number(r.h) << ',' << Number(r.estimate) << ',' << Number(r.se) << ','
         << (r.has_change ? Number(r.change) : "") << ','
         << (r.has_change ? Number(r.change_se) : "") << ',' << Number(r.roundoff) << ','
-        << (r.has_change ? Number(r.limit) : "") << ','
-        << (r.has_change ? (r.stable ? "1" : "0") : "") << ',' << (choice.chosen == j ? "1" : "0")
-        << '\n';
+        << (r.has_change ? Number(r.limit) : "") << ',' << StableField(r) << ','
+        << (choice.chosen == j ? "1" : "0") << '\n';
   }
 }
 
@@ -192,13 +197,13 @@ std::vector<std::string> SplitCommas(const std::string& line) {
   return fields;
 }
 
-std::optional<std::map<Key, std::vector<CsvRow>>> ReadTable(const std::string& path) {
+std::optional<Table> ReadTable(const std::string& path) {
   std::ifstream in(path, std::ios::binary);
   if (!in) {
     std::cerr << "aadp_bump_study: cannot read " << path << "\n";
     return std::nullopt;
   }
-  std::map<Key, std::vector<CsvRow>> table;
+  Table table;
   std::string line;
   bool header = false;
   while (std::getline(in, line)) {
@@ -273,40 +278,49 @@ bool SameChoice(const aad::StepChoice& committed, double h, const aad::StudyChoi
          committed.truncation == choice.truncation;
 }
 
+Key KeyOf(std::string_view study, bool lw, std::size_t input, BumpScheme scheme) {
+  return Key{.workload = std::string(study),
+             .input = lw ? "all" : std::string(aad::InputName(input)),
+             .scheme = std::string(aad::SchemeName(scheme))};
+}
+
+// The step chosen from the committed table for one input and scheme, or why there is none.
+std::optional<std::pair<double, aad::StudyChoice>> ChosenStep(const Table& table, const Key& key,
+                                                              BumpScheme scheme) {
+  const auto found = table.find(key);
+  if (found == table.end()) {
+    std::cerr << "aadp_bump_study: no study for " << key.workload << ' ' << key.input << ' '
+              << key.scheme << "\n";
+    return std::nullopt;
+  }
+  const auto choice = ChoiceOf(found->second, scheme, key);
+  if (!choice || !choice->chosen) return std::nullopt;
+  return std::pair{found->second[*choice->chosen].row.h, *choice};
+}
+
+bool VerifyOne(const Table& table, const Workload& w, std::size_t i, BumpScheme scheme) {
+  const Key key = KeyOf(w.study, w.kind == aad::Kind::kLaxWendroff, i, scheme);
+  const auto chosen = ChosenStep(table, key, scheme);
+  if (!chosen) return false;
+  const auto& [h, choice] = *chosen;
+  const aad::StepChoice& committed = scheme == BumpScheme::kCentral ? w.central[i] : w.forward[i];
+  if (SameChoice(committed, h, choice)) return true;
+  std::cerr << "aadp_bump_study: " << w.id << ' ' << key.input << ' ' << key.scheme
+            << ": bench/aad_steps.hpp has h " << Number(committed.h) << ", bias "
+            << Number(committed.bias) << "; the table chooses h " << Number(h) << ", bias "
+            << Number(choice.bias) << "\n";
+  return false;
+}
+
 int Verify(const std::string& path) {
   const auto table = ReadTable(path);
   if (!table) return kExitUsage;
   bool ok = true;
   for (const Workload& w : aad::Workloads()) {
-    const bool lw = w.kind == aad::Kind::kLaxWendroff;
-    const std::size_t inputs = lw ? 1 : aadp::pricer::kInputCount;
+    const std::size_t inputs = w.kind == aad::Kind::kLaxWendroff ? 1 : aadp::pricer::kInputCount;
     for (std::size_t i = 0; i < inputs; ++i) {
       for (const BumpScheme scheme : {BumpScheme::kCentral, BumpScheme::kForward}) {
-        const Key key{.workload = std::string(w.study),
-                      .input = lw ? "all" : std::string(aad::InputName(i)),
-                      .scheme = std::string(aad::SchemeName(scheme))};
-        const auto found = table->find(key);
-        if (found == table->end()) {
-          std::cerr << "aadp_bump_study: no study for " << key.workload << ' ' << key.input << ' '
-                    << key.scheme << "\n";
-          ok = false;
-          continue;
-        }
-        const auto choice = ChoiceOf(found->second, scheme, key);
-        if (!choice) {
-          ok = false;
-          continue;
-        }
-        const double h = found->second[*choice->chosen].row.h;
-        const aad::StepChoice& committed =
-            scheme == BumpScheme::kCentral ? w.central[i] : w.forward[i];
-        if (!SameChoice(committed, h, *choice)) {
-          std::cerr << "aadp_bump_study: " << w.id << ' ' << key.input << ' ' << key.scheme
-                    << ": bench/aad_steps.hpp has h " << Number(committed.h) << ", bias "
-                    << Number(committed.bias) << "; the table chooses h " << Number(h) << ", bias "
-                    << Number(choice->bias) << "\n";
-          ok = false;
-        }
+        ok = VerifyOne(*table, w, i, scheme) && ok;
       }
     }
   }
@@ -316,11 +330,11 @@ int Verify(const std::string& path) {
 }
 
 std::string ConstantName(std::string_view study, BumpScheme scheme) {
-  std::string name = study == "aad1-barrier"   ? "kAad1"
-                     : study == "aad4-asian12" ? "kAsian12"
-                     : study == "mc-asian252"  ? "kAsian252"
-                                               : "kLw";
-  return name + (scheme == BumpScheme::kCentral ? "Central" : "Forward");
+  const std::string_view suffix = scheme == BumpScheme::kCentral ? "Central" : "Forward";
+  if (study == "aad1-barrier") return "kAad1" + std::string(suffix);
+  if (study == "aad4-asian12") return "kAsian12" + std::string(suffix);
+  if (study == "mc-asian252") return "kAsian252" + std::string(suffix);
+  return "kLw" + std::string(suffix);
 }
 
 int StepsHeader(const std::string& path) {
@@ -338,17 +352,13 @@ int StepsHeader(const std::string& path) {
       std::cout << "inline constexpr StepChoices " << ConstantName(w->id, scheme) << "{{\n";
       const std::size_t inputs = lw ? 1 : aadp::pricer::kInputCount;
       for (std::size_t i = 0; i < inputs; ++i) {
-        const Key key{.workload = std::string(w->id),
-                      .input = lw ? "all" : std::string(aad::InputName(i)),
-                      .scheme = std::string(aad::SchemeName(scheme))};
-        const auto found = table->find(key);
-        if (found == table->end()) return kExitFailed;
-        const auto choice = ChoiceOf(found->second, scheme, key);
-        if (!choice) return kExitFailed;
-        std::cout << "    {.h = " << Number(found->second[*choice->chosen].row.h)
-                  << ", .bias = " << Number(choice->bias)
-                  << ", .bias_se = " << Number(choice->bias_se)
-                  << ", .truncation = " << Number(choice->truncation) << "},  // " << key.input
+        const Key key = KeyOf(w->id, lw, i, scheme);
+        const auto chosen = ChosenStep(*table, key, scheme);
+        if (!chosen) return kExitFailed;
+        const auto& [h, choice] = *chosen;
+        std::cout << "    {.h = " << Number(h) << ", .bias = " << Number(choice.bias)
+                  << ", .bias_se = " << Number(choice.bias_se)
+                  << ", .truncation = " << Number(choice.truncation) << "},  // " << key.input
                   << "\n";
       }
       std::cout << "}};\n";

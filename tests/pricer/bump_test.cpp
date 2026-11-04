@@ -42,7 +42,7 @@ namespace {
 constexpr std::uint64_t kSeed = 20261104;  // Development seed, not 1729 or 271828.
 constexpr std::uint32_t kBatches = 64;
 constexpr RunConfig kConfig{
-    .seed = kSeed, .paths = kBatches * 1024, .batches = kBatches, .threads = 4};
+    .seed = kSeed, .paths = std::uint64_t{kBatches} * 1024, .batches = kBatches, .threads = 4};
 constexpr Market<double> kMarket{
     .spot = 100.0, .sigma = 0.25, .r = 0.03, .q = 0.01, .maturity = 1.0};
 constexpr BumpSteps kSteps = {0.5, 0.005, 0.005, 0.005, 0.01};
@@ -73,7 +73,7 @@ std::vector<Case> Cases() {
            .contract = Plain(Product::kAsianGeometric, OptionType::kCall, 12, true)}};
 }
 
-constexpr std::size_t kComparisons = 3 * 2 * kInputCount;
+constexpr std::size_t kComparisons = std::size_t{3} * 2 * kInputCount;
 
 double ClosedForm(const Contract& c, const Market<double>& m) {
   const MarketParams<double> p{

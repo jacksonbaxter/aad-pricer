@@ -9,7 +9,6 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -17,7 +16,6 @@
 #include "aad_steps.hpp"
 #include "ad/gradient.hpp"
 #include "ad/hand_adjoint.hpp"
-#include "ad/real.hpp"
 #include "ad/tape.hpp"
 #include "lax_wendroff.hpp"
 #include "oracle/tolerance.hpp"
@@ -314,7 +312,7 @@ Runner PricerRunner(const Workload& w, Variant variant, const RunConfig& config)
 // allocated (Hogan: "memory reuse"). The scope is per run, because several runners share a thread.
 class LwTapeRunner {
  public:
-  LwTapeRunner(Variant variant) : variant_(variant), tape_(std::make_shared<ad::Tape>()) {}
+  explicit LwTapeRunner(Variant variant) : variant_(variant), tape_(std::make_shared<ad::Tape>()) {}
 
   VariantResult operator()() const {
     ad::Tape& tape = *tape_;
@@ -460,8 +458,8 @@ pricer::BumpSteps Steps(const Workload& workload, pricer::BumpScheme scheme) {
 
 Runner MakeRunner(const Workload& workload, Variant variant, const RunConfig& config) {
   Require(HasVariant(workload, variant), "the workload has no such variant");
-  return workload.kind == Kind::kLaxWendroff ? LwRunner(workload, variant)
-                                             : PricerRunner(workload, variant, config);
+  if (workload.kind == Kind::kLaxWendroff) return LwRunner(workload, variant);
+  return PricerRunner(workload, variant, config);
 }
 
 TapeShape MeasureTape(const Workload& workload, const RunConfig& config) {

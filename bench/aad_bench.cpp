@@ -30,7 +30,6 @@
 #include "aad_workloads.hpp"
 #include "harness.hpp"
 #include "pricer/runner.hpp"
-#include "results/results_file.hpp"
 #include "rss_probe.hpp"
 
 namespace {
@@ -69,7 +68,7 @@ std::vector<std::string> SplitList(std::string_view text) {
   return out;
 }
 
-std::optional<Options> Parse(int argc, char** argv) {
+std::optional<Options> Parse(int argc, const char* const* argv) {
   Options options;
   options.rest.emplace_back(argc > 0 ? argv[0] : "aadp_bench_aad");
   for (int i = 1; i < argc; ++i) {
@@ -119,6 +118,7 @@ std::vector<const aad::Workload*> Selected(const Options& options) {
 
 // The child of an RSS probe: `idle`, or `<workload>.<variant>` run once.
 int RunProbe(const Options& options) {
+  if (!options.rss_probe) return 2;
   const std::string& what = *options.rss_probe;
   if (what == "idle") return 0;
   const auto dot = what.find('.');
@@ -139,11 +139,82 @@ std::string ScaleText(std::uint64_t scale) {
          " of the targets' path counts: iteration only, not a result";
 }
 
+// What the run hands the harness, built workload by workload.
+struct Prepared {
+  aadp::bench::RunExtras extras;
+  std::vector<aadp::bench::Workload> timed;
+  std::vector<std::string> ids;
+  std::size_t failed = 0;
+  std::string first_failure;
+};
+
+// Peak RSS of a fresh process idle and running each variant once, into the report.
+bool ProbeRss(const Options& options, const aad::Workload& w, aad::WorkloadReport& report) {
+  const std::string scale = "--aadp-scale=" + std::to_string(options.scale);
+  const std::string threads = "--aadp-threads=" + std::to_string(options.threads);
+  const auto idle = aadp::bench::ChildPeakRss(options.rest.front(), {"--aadp-rss-probe=idle"});
+  if (!idle) {
+    std::cerr << "aadp_bench_aad: RSS probe: " << idle.error() << "\n";
+    return false;
+  }
+  report.peak_rss.emplace_back("idle", *idle);
+  for (const aad::Variant variant : aad::kVariants) {
+    if (!aad::HasVariant(w, variant)) continue;
+    const std::string probe =
+        "--aadp-rss-probe=" + std::string(w.id) + "." + std::string(aad::VariantName(variant));
+    const auto rss = aadp::bench::ChildPeakRss(options.rest.front(), {probe, scale, threads});
+    if (!rss) {
+      std::cerr << "aadp_bench_aad: RSS probe " << probe << ": " << rss.error() << "\n";
+      return false;
+    }
+    report.peak_rss.emplace_back(std::string(aad::VariantName(variant)), *rss);
+  }
+  return true;
+}
+
+// Verifies one workload before anything is timed, probes its peak RSS, and registers its timed
+// variants. On failure, the exit status.
+std::optional<int> Prepare(const Options& options, const aad::Workload& w, Prepared& out) {
+  const auto config = aad::ConfigFor(w, options.scale, options.threads);
+  if (!config) {
+    std::cerr << "aadp_bench_aad: " << w.id << ": 1/" << options.scale
+              << " of its paths is not a whole number per batch\n";
+    return aadp::bench::kExitUsage;
+  }
+  std::cerr << "aadp_bench_aad: " << w.id << ": verifying " << config->paths << " paths on "
+            << config->threads << " threads\n";
+  aad::WorkloadReport report = aad::Verify(w, *config);
+  for (const aad::CheckResult& c : report.checks) {
+    std::cerr << "aadp_bench_aad: " << w.id << ": check " << c.name << " "
+              << (c.passed ? "pass" : "FAILED") << ", worst " << c.worst
+              << (c.detail.empty() ? "" : ": " + c.detail) << "\n";
+    if (!c.passed && out.failed++ == 0) out.first_failure = std::string(w.id) + " " + c.name;
+  }
+  if (!ProbeRss(options, w, report)) return aadp::bench::kExitFailure;
+  for (const aad::Variant variant : aad::kVariants) {
+    if (!aad::HasVariant(w, variant)) continue;
+    const auto runner = std::make_shared<aad::Runner>(aad::MakeRunner(w, variant, *config));
+    out.timed.push_back({.name = aad::BenchmarkName(w, variant),
+                         .run =
+                             [runner](std::uint64_t units) {
+                               for (std::uint64_t u = 0; u < units; ++u) {
+                                 aad::VariantResult result = (*runner)();
+                                 benchmark::DoNotOptimize(result.value.mean);
+                               }
+                             },
+                         .units = 1});
+  }
+  out.extras.sections.push_back(
+      {.name = "aad_" + std::string(w.id), .body = aad::RenderSection(report)});
+  out.ids.emplace_back(w.id);
+  return std::nullopt;
+}
+
 }  // namespace
 
 // NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
 int main(int argc, char** argv) try {
-  auto parsed = Parse(argc, argv);
+  const auto parsed = Parse(argc, argv);
   if (!parsed) return aadp::bench::kExitUsage;
   const Options& options = *parsed;
   if (options.rss_probe) return RunProbe(options);
@@ -152,64 +223,17 @@ int main(int argc, char** argv) try {
     return aadp::bench::kExitUsage;
   }
 
-  aadp::bench::RunExtras extras;
-  extras.claim = "result";
-  std::vector<aadp::bench::Workload> timed;
-  std::vector<std::string> ids;
-  std::size_t failed = 0;
-  std::string first_failure;
+  Prepared prepared;
+  prepared.extras.claim = "result";
   for (const aad::Workload* w : Selected(options)) {
-    const auto config = aad::ConfigFor(*w, options.scale, options.threads);
-    if (!config) {
-      std::cerr << "aadp_bench_aad: " << w->id << ": 1/" << options.scale
-                << " of its paths is not a whole number per batch\n";
-      return aadp::bench::kExitUsage;
-    }
-    std::cerr << "aadp_bench_aad: " << w->id << ": verifying " << config->paths << " paths on "
-              << config->threads << " threads\n";
-    aad::WorkloadReport report = aad::Verify(*w, *config);
-    for (const aad::CheckResult& c : report.checks) {
-      std::cerr << "aadp_bench_aad: " << w->id << ": check " << c.name << " "
-                << (c.passed ? "pass" : "FAILED") << ", worst " << c.worst
-                << (c.detail.empty() ? "" : ": " + c.detail) << "\n";
-      if (!c.passed && failed++ == 0) first_failure = std::string(w->id) + " " + c.name;
-    }
-    const std::string scale = "--aadp-scale=" + std::to_string(options.scale);
-    const std::string threads = "--aadp-threads=" + std::to_string(options.threads);
-    auto idle = aadp::bench::ChildPeakRss(options.rest.front(), {"--aadp-rss-probe=idle"});
-    if (!idle) {
-      std::cerr << "aadp_bench_aad: RSS probe: " << idle.error() << "\n";
-      return aadp::bench::kExitFailure;
-    }
-    report.peak_rss.emplace_back("idle", *idle);
-    for (const aad::Variant variant : aad::kVariants) {
-      if (!aad::HasVariant(*w, variant)) continue;
-      const std::string probe =
-          "--aadp-rss-probe=" + std::string(w->id) + "." + std::string(aad::VariantName(variant));
-      auto rss = aadp::bench::ChildPeakRss(options.rest.front(), {probe, scale, threads});
-      if (!rss) {
-        std::cerr << "aadp_bench_aad: RSS probe " << probe << ": " << rss.error() << "\n";
-        return aadp::bench::kExitFailure;
-      }
-      report.peak_rss.emplace_back(std::string(aad::VariantName(variant)), *rss);
-      auto runner = std::make_shared<aad::Runner>(aad::MakeRunner(*w, variant, *config));
-      timed.push_back({.name = aad::BenchmarkName(*w, variant),
-                       .run =
-                           [runner](std::uint64_t units) {
-                             for (std::uint64_t u = 0; u < units; ++u) {
-                               aad::VariantResult result = (*runner)();
-                               benchmark::DoNotOptimize(result.value.mean);
-                             }
-                           },
-                       .units = 1});
-    }
-    extras.sections.push_back(
-        {.name = "aad_" + std::string(w->id), .body = aad::RenderSection(report)});
-    ids.emplace_back(w->id);
+    if (const auto status = Prepare(options, *w, prepared)) return *status;
   }
+  aadp::bench::RunExtras& extras = prepared.extras;
+  const std::size_t failed = prepared.failed;
+  const std::string& first_failure = prepared.first_failure;
 
   std::string id_list;
-  for (const std::string& id : ids) id_list += (id_list.empty() ? "" : ",") + id;
+  for (const std::string& id : prepared.ids) id_list += (id_list.empty() ? "" : ",") + id;
   const auto add = [&extras](std::string key, std::string value) {
     extras.header.push_back({.key = std::move(key), .value = std::move(value)});
   };
@@ -248,7 +272,7 @@ int main(int argc, char** argv) try {
   rest.reserve(storage.size());
   for (std::string& arg : storage) rest.push_back(arg.data());
   const int status = aadp::bench::harness_main(static_cast<int>(rest.size()), rest.data(),
-                                               std::move(timed), extras);
+                                               std::move(prepared.timed), extras);
   if (status == aadp::bench::kExitOk && options.require_valid && failed != 0) {
     std::cerr << "aadp_bench_aad: gradient check failed: " << first_failure << "\n";
     return kExitInvalid;

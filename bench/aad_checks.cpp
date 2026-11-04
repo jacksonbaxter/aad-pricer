@@ -9,12 +9,12 @@
 #include <cstdio>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "aad_workloads.hpp"
 #include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
-#include "ad/real.hpp"
 #include "ad/tape.hpp"
 #include "bump_study.hpp"
 #include "lax_wendroff.hpp"
@@ -43,6 +43,14 @@ void Fail(CheckResult& check, std::string detail) {
   check.passed = false;
 }
 
+// ConfigFor makes the paths a multiple of the batches, so these divisions are exact.
+std::uint64_t PathsPerBatch(const pricer::RunConfig& config) {
+  return config.paths / config.batches;
+}
+std::uint64_t BlocksPerBatch(const pricer::RunConfig& config) {
+  return (PathsPerBatch(config) + pricer::kBlockPaths - 1) / pricer::kBlockPaths;
+}
+
 // The association bound's per-path terms for the five Greeks, summed over each batch by
 // RunBatches: the per-batch bound of tests/ad/dual_agreement_test.cpp, check 8, with W seeded on
 // every input at once.
@@ -50,9 +58,8 @@ class BoundPathFn {
  public:
   BoundPathFn(const Workload& w, const pricer::RunConfig& config)
       : path_(w.contract, w.market),
-        paths_per_batch_(static_cast<double>(config.paths / config.batches)),
-        blocks_per_batch_(static_cast<double>(
-            ((config.paths / config.batches) + pricer::kBlockPaths - 1) / pricer::kBlockPaths)) {}
+        paths_per_batch_(static_cast<double>(PathsPerBatch(config))),
+        blocks_per_batch_(static_cast<double>(BlocksPerBatch(config))) {}
 
   void operator()(const pricer::PathUniforms& u, std::array<double, ad::kInputs>& stats) {
     ad::Tape& tape = path_.tape();
@@ -234,6 +241,44 @@ std::string Escape(std::string_view text) {
   return out;
 }
 
+std::string Line(std::string_view key, const std::string& value) {
+  return std::string(key) + " " + Escape(value) + "\n";
+}
+
+std::string ResultLines(const Workload& w, const VariantResult& r) {
+  const std::string variant(VariantName(r.variant));
+  std::string out = Line("variant", variant + " " + BenchmarkName(w, r.variant));
+  if (w.kind == Kind::kLaxWendroff) {
+    return out + Line("estimate", variant + " value " + Number(r.value.mean) + " 0");
+  }
+  out += Line("estimate",
+              variant + " value " + Number(r.value.mean) + " " + Number(r.value.standard_error));
+  if (!r.has_greeks) return out;
+  for (std::size_t g = 0; g < pricer::kInputCount; ++g) {
+    out +=
+        Line("estimate", variant + " " + std::string(InputName(g)) + " " +
+                             Number(r.greeks[g].mean) + " " + Number(r.greeks[g].standard_error));
+  }
+  return out;
+}
+
+std::string StepLines(const Workload& w) {
+  const bool lw = w.kind == Kind::kLaxWendroff;
+  const std::size_t inputs = lw ? 1 : pricer::kInputCount;
+  std::string out;
+  for (const pricer::BumpScheme scheme :
+       {pricer::BumpScheme::kCentral, pricer::BumpScheme::kForward}) {
+    const StepChoices& choices = scheme == pricer::BumpScheme::kCentral ? w.central : w.forward;
+    for (std::size_t g = 0; g < inputs; ++g) {
+      out += Line("step", std::string(SchemeName(scheme)) + " " +
+                              (lw ? std::string("all") : std::string(InputName(g))) + " " +
+                              Number(choices[g].h) + " " + Number(choices[g].bias) + " " +
+                              Number(choices[g].bias_se) + " " + Number(choices[g].truncation));
+    }
+  }
+  return out;
+}
+
 }  // namespace
 
 double CheckCriticalValue() {
@@ -302,7 +347,7 @@ std::string RenderSection(const WorkloadReport& report) {
   const bool lw = w.kind == Kind::kLaxWendroff;
   std::string out;
   const auto line = [&out](std::string_view key, const std::string& value) {
-    out += std::string(key) + " " + Escape(value) + "\n";
+    out += Line(key, value);
   };
   line("workload", std::string(w.id));
   line("targets", std::string(w.targets));
@@ -334,33 +379,8 @@ std::string RenderSection(const WorkloadReport& report) {
   for (const auto& [variant, bytes] : report.peak_rss) {
     line("peak_rss", variant + " " + std::to_string(bytes));
   }
-  for (const VariantResult& r : report.results) {
-    const std::string variant(VariantName(r.variant));
-    line("variant", variant + " " + BenchmarkName(w, r.variant));
-    if (lw) {
-      line("estimate", variant + " value " + Number(r.value.mean) + " 0");
-      continue;
-    }
-    line("estimate",
-         variant + " value " + Number(r.value.mean) + " " + Number(r.value.standard_error));
-    if (!r.has_greeks) continue;
-    for (std::size_t g = 0; g < pricer::kInputCount; ++g) {
-      line("estimate", variant + " " + std::string(InputName(g)) + " " + Number(r.greeks[g].mean) +
-                           " " + Number(r.greeks[g].standard_error));
-    }
-  }
-  const std::size_t inputs = lw ? 1 : pricer::kInputCount;
-  for (const pricer::BumpScheme scheme :
-       {pricer::BumpScheme::kCentral, pricer::BumpScheme::kForward}) {
-    const StepChoices& choices = scheme == pricer::BumpScheme::kCentral ? w.central : w.forward;
-    for (std::size_t g = 0; g < inputs; ++g) {
-      line("step", std::string(SchemeName(scheme)) + " " +
-                       (lw ? std::string("all") : std::string(InputName(g))) + " " +
-                       Number(choices[g].h) + " " + Number(choices[g].bias) + " " +
-                       Number(choices[g].bias_se) + " " + Number(choices[g].truncation));
-    }
-  }
-  return out;
+  for (const VariantResult& r : report.results) out += ResultLines(w, r);
+  return out + StepLines(w);
 }
 
 }  // namespace aadp::bench::aad

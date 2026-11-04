@@ -1,6 +1,4 @@
 // The AAD tables (results/aad_table.hpp) and the iteration mode of the results table.
-#include "results/aad_table.hpp"
-
 #include <gtest/gtest.h>
 
 #include <string>
@@ -30,17 +28,15 @@ constexpr std::string_view kSection =
     "step central delta 0.0001 0.001 1e-05 0.002\n";
 
 std::string benchmark_json() {
-  std::string entries =
-      "{\"run_name\": \"harness_selftest/manual_time\", \"aggregate_name\": \"mean\", "
-      "\"real_time\": 4100.5}";
+  std::string entries = R"({"run_name": "harness_selftest/manual_time", "aggregate_name": "mean", )"
+                        R"("real_time": 4100.5})";
   for (const auto& [name, ns] :
        std::vector<std::pair<std::string_view, std::string_view>>{{"w.price", "1e6"},
                                                                   {"w.tape", "4e6"},
                                                                   {"w.tape-record", "3e6"},
                                                                   {"w.bump-central", "11e6"}}) {
-    entries += ", {\"run_name\": \"" + std::string(name) +
-               "/iterations:1/repeats:3/manual_time\", \"aggregate_name\": \"mean\", "
-               "\"real_time\": " +
+    entries += R"(, {"run_name": ")" + std::string(name) +
+               R"(/iterations:1/repeats:3/manual_time", "aggregate_name": "mean", "real_time": )" +
                std::string(ns) + "}";
   }
   return "{\n  \"context\": {\"date\": \"2026-01-02T03:04:06+00:00\"},\n  \"benchmarks\": [" +

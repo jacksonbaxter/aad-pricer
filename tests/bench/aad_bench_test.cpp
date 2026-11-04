@@ -12,12 +12,20 @@
 
 #include "aad_checks.hpp"
 #include "aad_workloads.hpp"
-#include "pricer/bump.hpp"
+#include "pricer/pricer.hpp"
+#include "pricer/runner.hpp"
 
 namespace aadp::bench::aad {
 namespace {
 
 constexpr std::uint64_t kScale = 500;
+
+// ConfigFor, where the test needs it to accept.
+pricer::RunConfig Config(const Workload& w, std::uint64_t divisor, std::uint32_t threads) {
+  const auto config = ConfigFor(w, divisor, threads);
+  if (!config) throw std::logic_error("no config");
+  return *config;
+}
 
 VariantResult& Mutable(WorkloadReport& report, Variant variant) {
   for (VariantResult& r : report.results) {
@@ -29,7 +37,7 @@ VariantResult& Mutable(WorkloadReport& report, Variant variant) {
 const WorkloadReport& AsianReport() {
   static const WorkloadReport report = [] {
     const Workload* w = FindWorkload("aad4-asian12");
-    return Verify(*w, *ConfigFor(*w, kScale, 1));
+    return Verify(*w, Config(*w, kScale, 1));
   }();
   return report;
 }
@@ -37,7 +45,7 @@ const WorkloadReport& AsianReport() {
 const WorkloadReport& LwReport() {
   static const WorkloadReport report = [] {
     const Workload* w = FindWorkload("lw-worst");
-    return Verify(*w, *ConfigFor(*w, 1, 1));
+    return Verify(*w, Config(*w, 1, 1));
   }();
   return report;
 }
@@ -58,9 +66,7 @@ void ExpectOnlyFailure(const WorkloadReport& report, std::string_view name) {
 
 TEST(AadChecks, EveryCheckPassesOnEveryWorkloadAtASmallSize) {
   for (const Workload& w : Workloads()) {
-    const auto config = ConfigFor(w, kScale, 3);
-    ASSERT_TRUE(config.has_value()) << w.id;
-    const WorkloadReport report = Verify(w, *config);
+    const WorkloadReport report = Verify(w, Config(w, kScale, 3));
     EXPECT_EQ(report.checks.size(), w.hand ? 5U : 4U) << w.id;
     for (const CheckResult& c : report.checks) {
       EXPECT_TRUE(c.passed) << w.id << " " << c.name << ": " << c.detail;
@@ -77,7 +83,7 @@ TEST(AadChecks, EveryCheckPassesOnEveryWorkloadAtASmallSize) {
 // spot and the tape, which holds it, is under 4 SEs of the difference; at 1/25 it is near 20.
 TEST(AadChecks, TheBarrierBumpsDifferenceTheFunctionTheTapeDifferentiates) {
   const Workload* w = FindWorkload("aad1-barrier");
-  const WorkloadReport report = Verify(*w, *ConfigFor(*w, 25, 4));
+  const WorkloadReport report = Verify(*w, Config(*w, 25, 4));
   for (const CheckResult& c : report.checks) {
     EXPECT_TRUE(c.passed) << c.name << ": " << c.detail;
   }
@@ -122,8 +128,9 @@ TEST(AadChecks, AValueThatIsNotPricesFails) {
 }
 
 TEST(AadChecks, TheLaxWendroffChecksPassAndCatchAWrongInput) {
-  for (const CheckResult& c : LwReport().checks)
+  for (const CheckResult& c : LwReport().checks) {
     EXPECT_TRUE(c.passed) << c.name << ": " << c.detail;
+  }
   WorkloadReport hand = LwReport();
   Mutable(hand, Variant::kHand).gradient[37] *= 1.0 + 0x1p-30;
   ExpectOnlyFailure(hand, "hand-vs-tape");
@@ -137,9 +144,9 @@ TEST(AadWorkloads, RefusesAScaleThatSplitsABatch) {
   const Workload* w = FindWorkload("aad1-barrier");
   EXPECT_FALSE(ConfigFor(*w, 7, 1).has_value());
   EXPECT_FALSE(ConfigFor(*w, 0, 1).has_value());
-  EXPECT_EQ(ConfigFor(*w, 1, 8)->paths, 500'000U);
-  EXPECT_EQ(ConfigFor(*w, 1, 8)->threads, 1U);
-  EXPECT_EQ(ConfigFor(*FindWorkload("aad3-barrier-mt"), 1, 8)->threads, 8U);
+  EXPECT_EQ(Config(*w, 1, 8).paths, 500'000U);
+  EXPECT_EQ(Config(*w, 1, 8).threads, 1U);
+  EXPECT_EQ(Config(*FindWorkload("aad3-barrier-mt"), 1, 8).threads, 8U);
 }
 
 }  // namespace
