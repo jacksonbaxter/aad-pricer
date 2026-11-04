@@ -1,0 +1,6 @@
+# actionlint 1.7.12, the newest release, predates the xcode-27 label: GitHub's hosted macOS 27
+# preview image, which the macOS jobs need (see ci.yml). Its config has one list for labels it does
+# not know, named for self-hosted runners, and this is the only label in it.
+self-hosted-runner:
+  labels:
+    - xcode-27

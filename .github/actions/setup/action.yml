@@ -45,10 +45,17 @@ runs:
         echo "CC=clang" >> "$GITHUB_ENV"
         echo "CXX=clang++" >> "$GITHUB_ENV"
 
-    - name: Select the macOS SDK
+    # The measurement Mac builds against the macOS 27.2 SDK. On the xcode-27 image that SDK comes
+    # with Xcode 27.2; the default Xcode there, 27.1, has 27.0. The macOS jobs in ci.yml say why.
+    - name: Select the macOS 27.2 SDK
       if: inputs.llvm == 'true' && runner.os == 'macOS'
       shell: bash
-      run: echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+      run: |
+        developer=/Applications/Xcode_27.2.app/Contents/Developer
+        echo "DEVELOPER_DIR=$developer" >> "$GITHUB_ENV"
+        echo "SDKROOT=$(DEVELOPER_DIR=$developer xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+        sw_vers
+        printf 'macOS SDK %s\n' "$(DEVELOPER_DIR=$developer xcrun --sdk macosx --show-sdk-version)"
 
     - name: Restore the data captures
       if: inputs.data == 'true'

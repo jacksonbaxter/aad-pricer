@@ -35,10 +35,17 @@ jobs:
           - { name: linux-avx2, os: ubuntu-24.04, compiler: clang, preset: release-avx2, test: true }
           # Build only: no host here can run AVX-512, so the preset has no test preset.
           - { name: linux-avx512-build, os: ubuntu-24.04, compiler: clang, preset: release-avx512, test: false }
-          - { name: macos-clang-debug, os: macos-15, compiler: clang, preset: debug, test: true }
-          - { name: macos-clang-release, os: macos-15, compiler: clang, preset: release, test: true }
-          - { name: macos-asan-ubsan, os: macos-15, compiler: clang, preset: asan-ubsan, test: true }
-          - { name: macos-tsan, os: macos-15, compiler: clang, preset: tsan, test: true }
+          # The measurement Mac compiles against LLVM 23.1.4's own libc++ headers and links the
+          # system /usr/lib/libc++.1.dylib, on macOS 27.2 with the 27.2 SDK. The xcode-27 image
+          # (a preview) runs macOS 27, and the setup action selects Xcode 27.2 for its 27.2 SDK.
+          # Still different: the runner's OS is 27.0.1, so the libc++ the tests run on is that
+          # build, not 27.2's; the SDK is Xcode's, not the Command Line Tools'; and a preview has
+          # no SLA and may be relabelled at GA. macos-15 linked a 15.5 SDK whose libc++ lacks
+          # symbols those headers call (std::__1::__hash_memory). Details in NOTES.md.
+          - { name: macos-clang-debug, os: xcode-27, compiler: clang, preset: debug, test: true }
+          - { name: macos-clang-release, os: xcode-27, compiler: clang, preset: release, test: true }
+          - { name: macos-asan-ubsan, os: xcode-27, compiler: clang, preset: asan-ubsan, test: true }
+          - { name: macos-tsan, os: xcode-27, compiler: clang, preset: tsan, test: true }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,6 +79,13 @@ jobs:
         env:
           PRESET: ${{ matrix.preset }}
         run: cmake --build --preset "$PRESET" --parallel "$AADP_JOBS"
+
+      # Which libc++ the binaries link, and the version of it in the SDK, for the run's record.
+      - name: Show the C++ runtime linked
+        if: runner.os == 'macOS'
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: otool -L "build/$PRESET/bin/aadp_smoke"
 
       - name: Test
         if: matrix.test

@@ -167,6 +167,13 @@ CI:
 - One named allowed skip, `PerfCounters.EachRegionReportsItsOwnTimes`. Counters depend on the runner's kernel settings, and the test skips itself without them. It passed on the Linux host.
 - `scripts/run_tests.py` is the shared test runner for `check.sh` and CI, so both judge a run the same way. ctest alone does not fail on a skip. The runner counts a test that did not run, a disabled test and a passing test that prints a `SKIP ` line as skipped, and a skip fails the run unless a regex names it. For fuzzing it finds targets through ctest, and it stops if a file in `fuzz/` has no target.
 
+CI on macOS, after the first GitHub run (at bc3e6d3, where all four macOS jobs failed to link):
+- The cause: LLVM 23.1.4's libc++ headers are built with vendor availability markup off, so they assume every symbol of their own dylib exists. `std::hash<std::string>` then calls the exported `std::__1::__hash_memory`, which Apple's libc++ has only from macOS 26.4. `macos-15` linked the macOS 15.5 SDK of Xcode 16.4, which lacks it.
+- The measurement Mac compiles against the LLVM 23.1.4 headers and links the system `/usr/lib/libc++.1.dylib`, on macOS 27.2 with the macOS 27.2 SDK. The images GitHub offers on 2026-11-04: `macos-15` (15.8.2), `macos-26` and `macos-latest` (26.6.2, SDKs to 26.5), and the `xcode-27` preview (macOS 27.0.1, Xcode 27.1 with SDK 27.0 by default, Xcode 27.2 with SDK 27.2).
+- CI now runs the macOS jobs on `xcode-27` with Xcode 27.2's SDK: the same headers, the same SDK version and the system libc++, as here. Linking LLVM's libc++ statically would also link on `macos-15`, but then CI would test a C++ runtime the measurements never use, so it stays the fallback for when the image goes.
+- What still differs: the runner's OS is 27.0.1, not 27.2, so its system libc++ is 27.0.1's build; the SDK comes with Xcode 27.2, not the Command Line Tools; the image is a preview with no SLA, and its label may change when macOS 27 reaches GA; and the hardware is a GitHub VM, not an M4 Max, which matters for no test.
+- On Linux, CI's clang uses g++ 14's libstdc++, because the LLVM release defaults to it on Ubuntu. The Linux host's toolchain defaults to libc++. clang-tidy finds different things on each, so the fixes for CI's tidy job were checked on both.
+
 Repo scan exceptions, from `scripts/scan_repo.py`. Each is counted in the output, so none is silent:
 - Home path: a path component has to follow, a path inside a URL is not a hit, and `SYNTHETIC_HOME_PATHS` lists exact file and text pairs.
 - IPv4, by value: the three RFC 5737 documentation ranges, 127.0.0.0/8 and 0.0.0.0. A dotted run of five or more parts, or an octet above 255, is not an address.
