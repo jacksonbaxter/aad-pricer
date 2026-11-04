@@ -77,17 +77,28 @@ bool TryBatchMeans(std::size_t lanes, const pricer::Contract& contract,
   }
 }
 
-// Kernel over an array: whole vectors at the widest width, then the rest one lane at a time.
-template <class Kernel>
-void Apply(std::span<const double> in, std::span<double> out, const Kernel& kernel) {
+// Kernel over an array: whole vectors of L lanes, then the rest one lane at a time.
+template <std::size_t L, class Kernel>
+void ApplyAt(std::span<const double> in, std::span<double> out, const Kernel& kernel) {
   const std::size_t n = std::min(in.size(), out.size());
-  const hn::FixedTag<double, kMaxLanes> d;
+  const hn::FixedTag<double, L> d;
   std::size_t i = 0;
-  for (; i + kMaxLanes <= n; i += kMaxLanes) {
-    hn::StoreU(kernel(d, hn::LoadU(d, in.data() + i)), d, out.data() + i);
-  }
+  for (; i + L <= n; i += L) hn::StoreU(kernel(d, hn::LoadU(d, in.data() + i)), d, out.data() + i);
   const hn::FixedTag<double, 1> d1;
   for (; i < n; ++i) hn::StoreU(kernel(d1, hn::LoadU(d1, in.data() + i)), d1, out.data() + i);
+}
+
+template <class Kernel>
+bool Apply(std::span<const double> in, std::span<double> out, std::size_t lanes,
+           const Kernel& kernel) {
+  if (lanes == 1) {
+    ApplyAt<1>(in, out, kernel);
+  } else if (lanes == kMaxLanes) {
+    ApplyAt<kMaxLanes>(in, out, kernel);
+  } else {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace
@@ -122,17 +133,17 @@ std::expected<pricer::Estimate, LanePriceError> PriceLanes(const pricer::Contrac
   return estimate;
 }
 
-void ExpArray(std::span<const double> in, std::span<double> out) {
-  Apply(in, out, [](auto d, auto v) { return vmath::Exp(d, v); });
+bool ExpArray(std::span<const double> in, std::span<double> out, std::size_t lanes) {
+  return Apply(in, out, lanes, [](auto d, auto v) { return vmath::Exp(d, v); });
 }
-void LogArray(std::span<const double> in, std::span<double> out) {
-  Apply(in, out, [](auto d, auto v) { return vmath::Log(d, v); });
+bool LogArray(std::span<const double> in, std::span<double> out, std::size_t lanes) {
+  return Apply(in, out, lanes, [](auto d, auto v) { return vmath::Log(d, v); });
 }
-void InverseNormalArray(std::span<const double> in, std::span<double> out) {
-  Apply(in, out, [](auto d, auto v) { return vmath::InverseNormal(d, v); });
+bool InverseNormalArray(std::span<const double> in, std::span<double> out, std::size_t lanes) {
+  return Apply(in, out, lanes, [](auto d, auto v) { return vmath::InverseNormal(d, v); });
 }
-void NormalCdfArray(std::span<const double> in, std::span<double> out) {
-  Apply(in, out, [](auto d, auto v) { return vmath::NormalCdf(d, v); });
+bool NormalCdfArray(std::span<const double> in, std::span<double> out, std::size_t lanes) {
+  return Apply(in, out, lanes, [](auto d, auto v) { return vmath::NormalCdf(d, v); });
 }
 
 }  // namespace aadp::simd

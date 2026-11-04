@@ -8,8 +8,8 @@
 // kernels (FixedTag<double, L>). The widest is the build's lane ceiling: 2 on NEON and SSE2, 4 on
 // AVX2, 8 on AVX-512, 1 on HWY_SCALAR.
 //
-// The *Array functions run one math kernel over an array at the widest width, as non-inline
-// symbols, so a benchmark can time them and a disassembly can show their inner loops.
+// The *Array functions run one math kernel over an array at one lane or at the widest width, as
+// non-inline symbols, so a benchmark can time them and a disassembly can show their inner loops.
 #ifndef AADP_SIMD_SIMD_PRICER_HPP_
 #define AADP_SIMD_SIMD_PRICER_HPP_
 
@@ -41,12 +41,13 @@ std::expected<pricer::Estimate, LanePriceError> PriceLanes(const pricer::Contrac
                                                            const pricer::RunConfig& config,
                                                            std::size_t lanes);
 
-// out[i] = kernel(in[i]) for i < min(in.size(), out.size()), at MaxLanes() lanes; a tail shorter
-// than a vector goes through the one-lane instantiation.
-void ExpArray(std::span<const double> in, std::span<double> out);
-void LogArray(std::span<const double> in, std::span<double> out);
-void InverseNormalArray(std::span<const double> in, std::span<double> out);
-void NormalCdfArray(std::span<const double> in, std::span<double> out);
+// out[i] = kernel(in[i]) for i < min(in.size(), out.size()), at lanes = 1 or MaxLanes(); a tail
+// shorter than a vector goes through the one-lane instantiation. False, and nothing written, for
+// any other lane count.
+bool ExpArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
+bool LogArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
+bool InverseNormalArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
+bool NormalCdfArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
 
 }  // namespace aadp::simd
 

@@ -2965,6 +2965,46 @@
       "reason": "simd mismatch: log at \\d+ lanes",
       "output_files": ["build/fuzz/fault-fuzz/fuzz-simd-kernels/*", "build/fuzz/fault-fuzz/fuzz-simd-kernels/corpus/*"],
       "timeout_s": 120
+    },
+    {
+      "id": "simd-bench-array-tail",
+      "kind": "check",
+      "covers": "in-run check of the lane math arrays against the scalar kernels, SIMD-1",
+      "bug": "The array kernels stop one value short of the end in the one-lane tail, so an array whose length is not a multiple of the lane count keeps its last output unwritten.",
+      "edits": [
+        {
+          "file": "src/simd/simd_pricer.cpp",
+          "find": "  for (; i < n; ++i) hn::StoreU(kernel(d1, hn::LoadU(d1, in.data() + i)), d1, out.data() + i);",
+          "replace": "  for (; i + 1 < n; ++i) hn::StoreU(kernel(d1, hn::LoadU(d1, in.data() + i)), d1, out.data() + i);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_simd"],
+      "command": ["{build}/bin/aadp_bench_simd", "--aadp-scale=500", "--aadp-workload=simd-math", "--aadp-require-valid", "--batches=1", "--repetitions=1", "--warmup-ms=0", "--gb-warmup-s=0.001"],
+      "detect": "test",
+      "reason": "simd-math: check exp-lanes-\\d+-bits FAILED",
+      "timeout_s": 300,
+      "mutated_exit": 9
+    },
+    {
+      "id": "simd-bench-price-bits",
+      "kind": "check",
+      "covers": "in-run check of the SIMD estimates against Price(), SIMD-2",
+      "bug": "A lane group is added to the block sum last lane first, so the timed lane pricings are not the scalar pricer's estimates.",
+      "edits": [
+        {
+          "file": "src/simd/lane_runner.hpp",
+          "find": "    for (std::size_t lane = 0; lane < count; ++lane) {\n      for (std::size_t i = 0; i < M; ++i) sum[i] += lanes[i][lane];",
+          "replace": "    for (std::size_t lane = count; lane-- > 0;) {\n      for (std::size_t i = 0; i < M; ++i) sum[i] += lanes[i][lane];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_simd"],
+      "command": ["{build}/bin/aadp_bench_simd", "--aadp-scale=500", "--aadp-workload=simd-european", "--aadp-require-valid", "--batches=1", "--repetitions=1", "--warmup-ms=0", "--gb-warmup-s=0.001"],
+      "detect": "test",
+      "reason": "simd-european: check lanes-2-bits FAILED",
+      "timeout_s": 300,
+      "mutated_exit": 9
     }
   ]
 }

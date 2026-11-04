@@ -50,3 +50,21 @@ aadp_fuzz(aadp_fuzz_simd_kernels
   LINK aadp_simd
   LABELS simd
   CORPUS fuzz/fuzz_simd_kernels_seeds)
+
+# The SIMD primal against the scalar pricer, at every width, through the harness. Every SIMD
+# estimate and kernel output is checked against the scalar's bits before anything is timed.
+if(TARGET aadp_bench_harness)
+  aadp_bench(aadp_bench_simd
+    SOURCES bench/simd_bench.cpp
+    LINK aadp_simd aadp_bench_harness
+    CUSTOM_MAIN)
+endif()
+if(AADP_BUILD_TESTS AND TARGET aadp_bench_simd)
+  # Every workload and variant at 1/500 of its size: every check must pass. Not a result.
+  add_test(NAME aadp_bench_simd_smoke_reduced_size_not_a_result
+    COMMAND aadp_bench_simd --aadp-scale=500 --aadp-require-valid --batches=1 --repetitions=1
+      --warmup-ms=0 --gb-warmup-s=0.001
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_bench_simd_smoke_reduced_size_not_a_result PROPERTIES
+    LABELS "bench;simd")
+endif()
