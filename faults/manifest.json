@@ -1815,7 +1815,7 @@
         {
           "file": "src/pricer/bump.cpp",
           "find": "  const double sign = input == Input::kMaturity ? -1.0 : 1.0;\n",
-          "replace": "  const double sign = 1.0;\n"
+          "replace": "  const double sign = input == Input::kMaturity ? 1.0 : 1.0;\n"
         }
       ],
       "preset": "release",
