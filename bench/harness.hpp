@@ -38,9 +38,21 @@ inline constexpr int kExitDirtyTree = 4;
 inline constexpr int kExitHistogramRefused = 5;
 inline constexpr int kExitPinFailed = 6;
 
+// units: 0 sizes the batch by doubling (15 timed trials per size). A workload that is already far
+// above the gate per unit, such as a whole pricing, gives its units here instead, and is timed
+// once for the gate rather than 15 times: the same gate, without 15 extra pricings.
 struct Workload {
   std::string name;
   std::function<void(std::uint64_t units)> run;
+  std::uint64_t units = 0;
+};
+
+// What a benchmark adds to the file beside the timings: its claim, header fields it owns, and
+// sections. The keys and names must not be ones the harness or the stamp writes.
+struct RunExtras {
+  std::string claim = "none";
+  std::vector<results::HeaderField> header;
+  std::vector<results::ResultsSection> sections;
 };
 
 struct HarnessOptions {
@@ -61,7 +73,8 @@ std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char*
 std::string render_histogram(std::uint64_t batch_units, const LatencyHistogram& histogram,
                              double timer_resolution_ns);
 
-int harness_main(int argc, char** argv, std::vector<Workload> workloads);
+int harness_main(int argc, char** argv, std::vector<Workload> workloads,
+                 const RunExtras& extras = {});
 
 }  // namespace aadp::bench
 

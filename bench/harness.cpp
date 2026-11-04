@@ -93,16 +93,17 @@ void run_batches(benchmark::State& state, WorkloadRun& run) {
 }
 
 std::vector<results::HeaderField> build_header(
-    const HarnessOptions& options, const platform::CpuInfo& cpu, const std::string& host_label,
-    const platform::AffinityState& affinity, const std::string& pin_method,
-    const platform::FpState& fp, const platform::TimerReport& timer,
+    const std::string& claim, const HarnessOptions& options, const platform::CpuInfo& cpu,
+    const std::string& host_label, const platform::AffinityState& affinity,
+    const std::string& pin_method, const platform::FpState& fp, const platform::TimerReport& timer,
     const results::Provenance& provenance, const std::string& started_at) {
   std::vector<results::HeaderField> header;
   const auto add = [&header](std::string_view key, std::string value) {
     header.push_back({.key = std::string(key), .value = std::move(value)});
   };
-  // This phase claims nothing. A later benchmark that does will have to say so here.
-  add("claim", "none");
+  // "none" unless the benchmark says otherwise (RunExtras). Only a benchmark of the project's
+  // own code may claim "result"; the self-test claims nothing.
+  add("claim", claim);
   add("host_label", host_label);
   add("cpu_model", cpu.cpu_model);
   add("logical_cpus", std::to_string(cpu.logical_cpus));
@@ -288,6 +289,8 @@ int size_workload(WorkloadRun& run, const HarnessOptions& options, double gate_n
 
   if (options.batch_units) {
     run.units = *options.batch_units;
+  } else if (run.workload.units != 0) {
+    run.units = run.workload.units;
   } else {
     auto sizing = size_batch(timed, target_ns);
     if (!sizing) {
@@ -296,7 +299,10 @@ int size_workload(WorkloadRun& run, const HarnessOptions& options, double gate_n
     }
     run.units = sizing->units;
   }
-  const double median = measure_batch(timed, run.units);
+  // A fixed-unit workload is timed once: it is a whole pricing, far above the gate.
+  const double median = run.workload.units != 0 && !options.batch_units
+                            ? timed(run.units)
+                            : measure_batch(timed, run.units);
   if (median < gate_ns) {
     std::cerr << "harness: " << run.workload.name << ": refusing to produce a histogram: "
               << "median batch is " << median << " ns, below the " << gate_ns
@@ -345,7 +351,7 @@ int add_histograms(const std::vector<std::unique_ptr<WorkloadRun>>& runs,
 
 }  // namespace
 
-int harness_main(int argc, char** argv, std::vector<Workload> workloads) {
+int harness_main(int argc, char** argv, std::vector<Workload> workloads, const RunExtras& extras) {
   auto parsed = parse_harness_options(argc, argv);
   if (!parsed) {
     std::cerr << "harness: " << parsed.error() << "\n";
@@ -461,10 +467,12 @@ int harness_main(int argc, char** argv, std::vector<Workload> workloads) {
   // Read last: the governor, frequency and CPU are the ones the run actually finished under.
   affinity = platform::read_affinity();
   const int report_cpu = affinity.current.value_or(0);
-  file.header = build_header(options, cpu, host_label, affinity, pin_method, *fp_after, timer,
-                             provenance, started_at);
+  file.header = build_header(extras.claim, options, cpu, host_label, affinity, pin_method,
+                             *fp_after, timer, provenance, started_at);
+  file.header.insert(file.header.end(), extras.header.begin(), extras.header.end());
   add_late_fields(file.header, platform::read_frequency_info(report_cpu), perf,
                   platform::peak_rss_bytes());
+  file.sections.insert(file.sections.end(), extras.sections.begin(), extras.sections.end());
 
   auto text = results::write_results_file(file);
   if (!text) {
