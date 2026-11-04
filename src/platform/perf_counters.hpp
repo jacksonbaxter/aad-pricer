@@ -30,6 +30,17 @@ void accumulate(PerfCounterReport& total, const PerfCounterReport& region);
 // The note for the results header.
 std::string describe_counters(const PerfCounterReport& report);
 
+// Darwin's ri_cycles and ri_instructions only count up, and a kernel that does not keep them
+// leaves them where they were: a macOS guest in a virtual machine (GitHub's macOS runners) leaves
+// them at zero. So a counter that did not move over a region is unavailable, with the reason in
+// the note, and never a count of zero. Platform-independent, so every host tests it.
+struct DarwinCounterReading {
+  std::uint64_t cycles = 0;
+  std::uint64_t instructions = 0;
+};
+void set_darwin_region(PerfCounterReport& report, DarwinCounterReading start,
+                       DarwinCounterReading stop, bool virtual_machine);
+
 class PerfCounterSession {
  public:
   PerfCounterSession();

@@ -86,6 +86,13 @@ jobs:
           PRESET: ${{ matrix.preset }}
         run: otool -L "build/$PRESET/bin/aadp_smoke"
 
+      # 1 means a virtual machine. GitHub's macOS runners are, and their kernel leaves the
+      # proc_pid_rusage counters ri_cycles and ri_instructions still, so the harness writes them as
+      # unavailable and PerfCounters.MacOsCountersAreProcessWideAndLabelled checks that it does.
+      - name: Show whether the runner is a virtual machine
+        if: runner.os == 'macOS'
+        run: sysctl kern.hv_vmm_present hw.model
+
       - name: Test
         if: matrix.test
         env:

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <limits>
 #include <string>
 #include <vector>
@@ -209,6 +210,34 @@ TEST(PerfCounters, ASumHasACounterOnlyIfEveryRegionHadIt) {
   EXPECT_NE(describe_counters(total).find("denied"), std::string::npos);
 }
 
+// What a macOS virtual machine does: both counters stay at zero.
+TEST(PerfCounters, ADarwinCounterThatDidNotMoveIsUnavailableNotZero) {
+  PerfCounterReport stuck;
+  set_darwin_region(stuck, {}, {}, true);
+  EXPECT_FALSE(stuck.cycles.has_value());
+  EXPECT_FALSE(stuck.instructions.has_value());
+  const std::string note = describe_counters(stuck);
+  EXPECT_NE(note.find("ri_cycles unavailable: it stayed at 0"), std::string::npos) << note;
+  EXPECT_NE(note.find("ri_instructions unavailable: it stayed at 0"), std::string::npos) << note;
+  EXPECT_NE(note.find("this is a virtual machine"), std::string::npos) << note;
+
+  PerfCounterReport one;
+  set_darwin_region(one, {.cycles = 5, .instructions = 7}, {.cycles = 5, .instructions = 1007},
+                    false);
+  EXPECT_FALSE(one.cycles.has_value());
+  EXPECT_EQ(one.instructions, 1000U);
+  EXPECT_NE(one.note.find("ri_cycles unavailable: it stayed at 5"), std::string::npos);
+  EXPECT_EQ(one.note.find("ri_instructions"), std::string::npos);
+  EXPECT_NE(one.note.find("not a virtual machine"), std::string::npos);
+
+  PerfCounterReport moved;
+  set_darwin_region(moved, {.cycles = 5, .instructions = 7}, {.cycles = 105, .instructions = 1007},
+                    true);
+  EXPECT_EQ(moved.cycles, 100U);
+  EXPECT_EQ(moved.instructions, 1000U);
+  EXPECT_EQ(describe_counters(moved), "none");
+}
+
 TEST(PerfCounters, SaysWhenTheGroupWasMultiplexedAndDoesNotScale) {
   PerfCounterReport report;
   report.cycles = 100;
@@ -244,6 +273,15 @@ TEST(Affinity, MacOsNeverClaimsAPin) {
   EXPECT_FALSE(pin_to_cpu(0).has_value());
 }
 
+// Read here rather than through the code under test, so that code cannot excuse itself.
+bool in_virtual_machine() {
+  int present = 0;
+  std::size_t size = sizeof(present);
+  return sysctlbyname("kern.hv_vmm_present", &present, &size, nullptr, 0) == 0 && present != 0;
+}
+
+// On real hardware the counters must count. A virtual machine may leave them still, as GitHub's
+// macOS runners do; then each that did not move must be unavailable and say why.
 TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
   PerfCounterSession session;
   session.start();
@@ -254,9 +292,24 @@ TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
   const PerfCounterReport report = session.stop();
   EXPECT_EQ(report.source, "proc_pid_rusage");
   EXPECT_NE(report.scope.find("process-wide"), std::string::npos);
-  ASSERT_TRUE(report.cycles.has_value()) << report.note;
-  if (!report.instructions) FAIL() << report.note;
-  EXPECT_GT(*report.instructions, 1'000'000U);
+  if (!in_virtual_machine()) {
+    ASSERT_TRUE(report.cycles.has_value()) << report.note;
+    if (!report.instructions) FAIL() << report.note;
+    EXPECT_GT(*report.instructions, 1'000'000U);
+    return;
+  }
+  std::printf("kern.hv_vmm_present is 1; counters: %s\n", describe_counters(report).c_str());
+  if (!report.cycles) {
+    EXPECT_NE(report.note.find("ri_cycles unavailable"), std::string::npos) << report.note;
+  }
+  if (report.instructions) {
+    EXPECT_GT(*report.instructions, 1'000'000U);
+  } else {
+    EXPECT_NE(report.note.find("ri_instructions unavailable"), std::string::npos) << report.note;
+  }
+  if (!report.cycles || !report.instructions) {
+    EXPECT_NE(report.note.find("this is a virtual machine"), std::string::npos) << report.note;
+  }
 }
 #endif
 

@@ -18,6 +18,12 @@
 #include "fixtures.hpp"
 #include "results/results_file.hpp"
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+
+#include <cstddef>
+#endif
+
 namespace aadp::testing {
 namespace {
 
@@ -152,6 +158,29 @@ TEST(HarnessSelftest, MacOsHeaderSaysNotPinned) {
   ASSERT_TRUE(file.has_value()) << file.error();
   EXPECT_EQ(file->value("pinning_state"), "not pinned");
   EXPECT_EQ(file->value("pinned_cpus"), "none");
+}
+
+// The header end of PerfCounters.MacOsCountersAreProcessWideAndLabelled: real hardware writes
+// counts, and a virtual machine whose counters stay still writes them as unavailable, never 0.
+TEST(HarnessSelftest, MacOsHeaderNeverWritesAStuckCounterAsACount) {
+  int present = 0;
+  std::size_t size = sizeof(present);
+  const bool virtual_machine =
+      sysctlbyname("kern.hv_vmm_present", &present, &size, nullptr, 0) == 0 && present != 0;
+  const fs::path dir = fresh_dir();
+  ASSERT_EQ(run(selftest(dir / "raw.txt", kFastArgs)), 0);
+  const auto file = results::parse_results_file(slurp(dir / "raw.txt"));
+  ASSERT_TRUE(file.has_value()) << file.error();
+  const std::string note(file->required("perf_counters_note"));
+  for (const char* key : {"perf_cycles", "perf_instructions"}) {
+    const auto value = file->value(key);
+    if (!value) FAIL() << "no " << key << " field";
+    EXPECT_NE(*value, "0") << key;
+    if (*value == "missing") {
+      EXPECT_TRUE(virtual_machine) << key << " missing on real hardware: " << note;
+      EXPECT_NE(note.find("unavailable"), std::string::npos) << key << ": " << note;
+    }
+  }
 }
 
 TEST(HarnessSelftest, RefusesToPretendToPinOnMacOs) {

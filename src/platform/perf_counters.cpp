@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <utility>
 
 #ifdef __linux__
 #include <linux/perf_event.h>
@@ -18,11 +19,13 @@
 #include <unistd.h>
 
 #include <array>
-#include <utility>
 #elifdef __APPLE__
 #include <libproc.h>
 #include <sys/resource.h>
+#include <sys/sysctl.h>
 #include <unistd.h>
+
+#include <cstddef>
 #endif
 
 namespace aadp::platform {
@@ -55,6 +58,42 @@ std::string describe_counters(const PerfCounterReport& report) {
                                                           : " MULTIPLEXED, raw counts not scaled");
   }
   return text.empty() ? "none" : text;
+}
+
+namespace {
+
+std::optional<std::uint64_t> darwin_delta(std::uint64_t start, std::uint64_t stop) {
+  if (stop > start) {
+    return stop - start;
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
+void set_darwin_region(PerfCounterReport& report, DarwinCounterReading start,
+                       DarwinCounterReading stop, bool virtual_machine) {
+  report.cycles = darwin_delta(start.cycles, stop.cycles);
+  report.instructions = darwin_delta(start.instructions, stop.instructions);
+  std::string note;
+  const auto stuck = [&note](const char* name, std::uint64_t value) {
+    note += note.empty() ? "" : "; ";
+    note += std::string(name) + " unavailable: it stayed at " + std::to_string(value);
+  };
+  if (!report.cycles) {
+    stuck("ri_cycles", stop.cycles);
+  }
+  if (!report.instructions) {
+    stuck("ri_instructions", stop.instructions);
+  }
+  if (!note.empty()) {
+    note += virtual_machine
+                ? "; this is a virtual machine (kern.hv_vmm_present 1), whose kernel does not "
+                  "count them"
+                : "; not a virtual machine (kern.hv_vmm_present 0), so the kernel should count "
+                  "them";
+  }
+  report.note = std::move(note);
 }
 
 #ifdef __linux__
@@ -160,6 +199,12 @@ bool read_rusage(rusage_info_v4& info) {
   return proc_pid_rusage(getpid(), RUSAGE_INFO_V4, reinterpret_cast<rusage_info_t*>(&info)) == 0;
 }
 
+bool in_virtual_machine() {
+  int present = 0;
+  std::size_t size = sizeof(present);
+  return sysctlbyname("kern.hv_vmm_present", &present, &size, nullptr, 0) == 0 && present != 0;
+}
+
 }  // namespace
 
 PerfCounterSession::PerfCounterSession() = default;
@@ -189,16 +234,9 @@ PerfCounterReport PerfCounterSession::stop() {
     report.note = std::string("proc_pid_rusage: ") + std::generic_category().message(errno);
     return report;
   }
-  // A kernel that does not fill these leaves them at zero, which is missing, not a count.
-  if (info.ri_cycles > start_cycles_) {
-    report.cycles = info.ri_cycles - start_cycles_;
-  }
-  if (info.ri_instructions > start_instructions_) {
-    report.instructions = info.ri_instructions - start_instructions_;
-  }
-  if (!report.cycles || !report.instructions) {
-    report.note = "ri_cycles or ri_instructions did not move";
-  }
+  set_darwin_region(report, {.cycles = start_cycles_, .instructions = start_instructions_},
+                    {.cycles = info.ri_cycles, .instructions = info.ri_instructions},
+                    in_virtual_machine());
   return report;
 }
 

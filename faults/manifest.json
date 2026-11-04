@@ -3005,6 +3005,25 @@
       "reason": "simd-european: check lanes-2-bits FAILED",
       "timeout_s": 300,
       "mutated_exit": 9
+    },
+    {
+      "id": "bench-darwin-stuck-counter",
+      "kind": "check",
+      "covers": "macOS counters that did not move, as on GitHub's macOS VMs",
+      "bug": "A proc_pid_rusage counter that stayed still is reported as a measured count of zero instead of unavailable.",
+      "edits": [
+        {
+          "file": "src/platform/perf_counters.cpp",
+          "find": "  if (stop > start) {\n    return stop - start;",
+          "replace": "  if (stop >= start) {\n    return stop - start;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_platform_unit"],
+      "command": ["{build}/bin/aadp_platform_unit", "--gtest_filter=PerfCounters.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] PerfCounters\\.ADarwinCounterThatDidNotMoveIsUnavailableNotZero",
+      "timeout_s": 120
     }
   ]
 }
