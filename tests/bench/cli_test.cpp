@@ -218,12 +218,14 @@ TEST(HarnessSelftest, ATwoCpuMaskIsAPinAndTheHeaderNamesBoth) {
 }
 #endif
 
-// One unit is 16 multiply-adds, far below the gate on both hosts, and also under sanitizers.
+// A batch with no work in it, so it is too short to resolve whatever the instrumentation and the
+// host. One unit of work (16 multiply-adds) was not: under Linux TSan it takes about 200 ns, at the
+// gate, and on GitHub's runner it resolved and the run went through.
 TEST(HarnessSelftest, RefusesAHistogramOfBatchesTooShortToResolve) {
   const fs::path dir = fresh_dir();
-  EXPECT_EQ(
-      run(selftest(dir / "raw.txt", kFastArgs + " --batch-units=1 2>" + quoted(dir / "err.txt"))),
-      5);
+  EXPECT_EQ(run(selftest(dir / "raw.txt",
+                         kFastArgs + " --batch-units=1 --no-work 2>" + quoted(dir / "err.txt"))),
+            5);
   EXPECT_NE(slurp(dir / "err.txt").find("refusing to produce a histogram"), std::string::npos);
   EXPECT_EQ(slurp(dir / "raw.txt").find("@section"), std::string::npos);
 }

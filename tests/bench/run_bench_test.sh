@@ -103,8 +103,10 @@ capture_of() {
   find "$(dirname "$bin_dir")/bench-runs" -path "*$1-*/stderr.txt" | sort | tail -1
 }
 
-# A failing benchmark passes its status on and stamps nothing.
-AADP_MEASURE=$scratch/measure_ok.sh "$script" "$binary" script-bad --batch-units=1 "${fast[@]}" \
+# A failing benchmark passes its status on and stamps nothing. --no-work makes the batch one the
+# timer cannot resolve on any host; one unit of work resolves under Linux TSan.
+AADP_MEASURE=$scratch/measure_ok.sh "$script" "$binary" script-bad --batch-units=1 --no-work \
+  "${fast[@]}" \
   >/dev/null 2>"$scratch/bad.err"
 check "a failed run passes its status on" test $? -eq 5
 check "a failed run says so" grep -q 'the run failed with exit 5' "$scratch/bad.err"
