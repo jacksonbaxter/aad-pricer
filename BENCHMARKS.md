@@ -85,6 +85,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 
 - Target: gamma, vanna and volga by forward-over-reverse, with their own multiple. No numeric target.
 - Class: `UNCONFIRMED`. No published forward-over-reverse timing on a Monte Carlo barrier or Asian was found. See section 12.
+- Proposed rows, not targets (fb97650): `aad8-asian12`, on `AAD-4`'s contract, and `aad8-barrier`, on `AAD-1`'s contract under one-step survival. Savine's smoothing has no unbiased second derivative, so it is not used there. Second order runs on the conditional kernels, so each row's multiples are against the first-order tape on those kernels and against their primal. Neither enters `AAD-1` or `AAD-4`. No measured run yet. Iteration figures, macOS only, are in `NOTES.md`, "Second-order Greeks".
 
 ### Theory, not targets
 
@@ -92,7 +93,9 @@ The bound is on operation counts, not wall time. Griewank gives "the complexity 
 
 ### How Phase 3 numbers are produced
 
-One binary, `aadp_bench_aad` (`bench/aad_bench.cpp`), one results file per workload. Each workload times seven variants as Google Benchmarks named `<workload>.<variant>`: `price` (the scalar primal), `tape` (value and all Greeks), `tape-skip` (the same with the zero-adjoint skip, B9), `tape-record` (record and rewind only, so reverse = tape - tape-record), `hand` (hand-written adjoint, where one exists), `bump-central` (2N + 1 pricings) and `bump-forward` (N + 1). One timed batch is one run over all the workload's paths.
+One binary, `aadp_bench_aad` (`bench/aad_bench.cpp`), one results file per workload. Each first-order workload times seven variants as Google Benchmarks named `<workload>.<variant>`: `price` (the scalar primal), `tape` (value and all Greeks), `tape-skip` (the same with the zero-adjoint skip, B9), `tape-record` (record and rewind only, so reverse = tape - tape-record), `hand` (hand-written adjoint, where one exists), `bump-central` (2N + 1 pricings) and `bump-forward` (N + 1). One timed batch is one run over all the workload's paths.
+
+The two second-order workloads (stage 4, fb97650) time `price`, `tape` and four more, so the bench has 11 variants: `cond-price` (the primal of the conditional kernels, which take the last step's expectation in closed form), `cond-tape` (value and five Greeks on them, one reverse sweep), `for-spot` (forward over reverse with one tangent lane: gamma and vanna too) and `for-spot-vol` (two lanes: volga too). Each is one record and one sweep per path.
 
 | Workload | Targets | Setup |
 |---|---|---|
@@ -102,10 +105,12 @@ One binary, `aadp_bench_aad` (`bench/aad_bench.cpp`), one results file per workl
 | `mc-asian252` | MC-1, MC-2, AAD-5, AAD-6 | the same at 252 fixings |
 | `mc3-asian252-mt` | MC-3 | `mc-asian252` on `--aadp-threads` worker threads |
 | `lw-worst` | Hogan's Lax-Wendroff (B34) | 100 points, 2000 steps, c = 0.5, 100 inputs |
+| `aad8-asian12` | AAD-8, proposed | `aad4-asian12`'s contract and paths, second order on the conditional kernels |
+| `aad8-barrier` | AAD-8, proposed | `aad1-barrier`'s contract under one-step survival, not smoothing, 500,000 paths |
 
 Each workload's section and the header state the rest: differences from the target, seed 20261103, 50 batches, threads and their setup, the instruction set (scalar until stage 5, whose SIMD primal fills the "x fastest primal" column), the tape configuration, tape bytes per path, peak RSS per variant (a fresh process running that variant alone), and the nonzero-payoff fraction.
 
-Before anything is timed, every variant runs once at the benchmark's own size and is checked (`bench/aad_checks.hpp` states each bound): value bits against `Price()`, the skip against the tape, the hand adjoint against the tape, and both bumps against the tape. A failed check writes `valid no` and `gradient_check: FAILED` into the file, the table prints the workload as INVALID with no multiples, and `--aadp-require-valid` exits 9.
+Before anything is timed, every variant runs once at the benchmark's own size and is checked (`bench/aad_checks.hpp` states each bound): value bits against `Price()`, the skip against the tape, the hand adjoint against the tape, and both bumps against the tape. The second-order workloads have four exact checks instead, and no statistical one, so the statistical family is unchanged: each variant's value against its own kernels' primal, both forward-over-reverse variants' five Greeks against `cond-tape`'s, and the two-lane spot row against the one-lane one, all bit for bit, and vanna both ways per batch within its round-off bound. A failed check writes `valid no` and `gradient_check: FAILED` into the file, the table prints the workload as INVALID with no multiples, and `--aadp-require-valid` exits 9.
 
 Bump steps come from the h study, committed as `bench/bump_size_study.csv` (every halving, its change, round-off scale and verdict) and `bench/aad_steps.hpp` (the chosen step, bias, bias SE and bias bound per Greek). The ctest `aadp_bump_study_committed` checks that one chooses the other. To redo it: `build/release/bin/aadp_bump_study --threads=8 --out=bench/bump_size_study.csv`, then `build/release/bin/aadp_bump_study --steps-header=bench/bump_size_study.csv` into `bench/aad_steps.hpp` and clang-format.
 
@@ -265,6 +270,9 @@ Decision recorded in `NOTES.md`: Philox4x32-10 is the reference stream on scalar
 - Ceiling: double-precision lanes are 2 on NEON (`mac-m4max`), 4 on AVX2, 8 on AVX-512. Zen 1 runs each 256-bit AVX2 operation as two 128-bit ones, so `linux-zen1` has 4 lanes but about 2 lanes' throughput. Neither host has AVX-512: that code path is built, and not run.
 - Target: SIMD speedup over scalar reported beside the ceiling, with the instruction set recorded. No efficiency percentage is claimed.
 - Class: `UNCONFIRMED` for any efficiency figure. No published NEON Monte Carlo speedup with a named chip and step count was found.
+- No measured run yet. Iteration only, not results: `aadp_bench_simd` (d0cbc09) at 1/10 of its workloads' sizes, one thread, seed 20261119, medians of 5 repetitions. Each figure is the scalar pricer or kernel over the widest lanes, in the same binary, and every timed SIMD result was checked bit for bit in the run.
+  - `mac-m4max`, macOS, NEON, ceiling 2 lanes, unpinned, at d0cbc09. European, one step: 0.81. Arithmetic Asian, 252 fixings: 1.32. `AAD-1`'s barrier under one-step survival: 1.98. Kernels: `exp` 2.23, `log` 1.99, inverse normal 1.20, normal CDF 1.48. The scalar `exp` is other code, and against its own one lane the lane `exp` gives 1.78.
+  - `linux-zen1`, AVX2, ceiling 4 lanes, but about 2 lanes' throughput on Zen 1, pinned to cpu6, at 065e5b6 with d0cbc09's code. European 3.20, Asian 2.76, barrier 2.83. Kernels: `exp` 1.93, `log` 2.73, inverse normal 2.82, normal CDF 1.63. Against one lane, the European gives 4.21 and the Asian 4.51, above the ceiling of 4, because the one-lane build is 1.32 and 1.63 times slower than the scalar pricer there. Five of the seven exceed 2, the throughput the ceiling line expects of Zen 1. Not yet explained.
 
 ### SIMD-2: scalar and SIMD agree
 
@@ -273,6 +281,7 @@ Decision recorded in `NOTES.md`: Philox4x32-10 is the reference stream on scalar
 - Across architectures, results are not expected to be bit-identical, because fused multiply-add status differs by target.
 - Source for the 4 ULP: `hwy/contrib/math/math-inl.h:2358`, "Max Error: ULP = 4", on the `Log` block. https://raw.githubusercontent.com/google/highway/master/hwy/contrib/math/math-inl.h
 - Class: `DERIVED`, stated before measuring. Lead check: done, line read in the subagent's copy, arithmetic redone.
+- Measured: met within each build, bit-identical, by tests rather than a results file (a486c9a). The lanes run this project's own kernels with no fused multiply-add, not Highway's `Log`, so every width gives the scalar pricer's bits: each kernel on about 3.1 million inputs (2.1 million for `sqrt`), and every product's mean, SE and batch means on 1, 2, 3 and 8 threads. Widths 1 and 2 on `mac-m4max` (NEON), 1, 2 and 4 on `linux-zen1` (AVX2), and 1 (`HWY_SCALAR`), 2 (SSE2, NEON), 4 (AVX2) and 8 (AVX-512) in CI run 41898528776. The 3e-13 bound across builds was not needed, and no SIMD result was compared across builds.
 
 ## 6. Metal GPU
 
