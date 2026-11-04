@@ -29,8 +29,15 @@ endif()
 
 aadp_test(aadp_aad_bench_unit
   SOURCES tests/bench/aad_bench_test.cpp tests/bench/bump_study_test.cpp
+    tests/bench/rss_probe_test.cpp
   LINK aadp_aad_bench_lib
   LABELS unit bench)
+# The probe's runs of the real binary need it built; without benchmarks they are left out.
+if(TARGET aadp_aad_bench_unit AND TARGET aadp_bench_aad)
+  target_compile_definitions(aadp_aad_bench_unit PRIVATE
+    AADP_BENCH_AAD_BIN="$<TARGET_FILE:aadp_bench_aad>")
+  add_dependencies(aadp_aad_bench_unit aadp_bench_aad)
+endif()
 
 if(AADP_BUILD_TESTS)
   # The committed halving evidence must choose the committed steps.

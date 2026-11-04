@@ -117,7 +117,7 @@ std::vector<const aad::Workload*> Selected(const Options& options) {
 }
 
 // The child of an RSS probe: `idle`, or `<workload>.<variant>` run once.
-int RunProbe(const Options& options) {
+int RunProbeVariant(const Options& options) {
   if (!options.rss_probe) return 2;
   const std::string& what = *options.rss_probe;
   if (what == "idle") return 0;
@@ -131,6 +131,13 @@ int RunProbe(const Options& options) {
   aad::VariantResult result = aad::MakeRunner(*w, *variant, *config)();
   benchmark::DoNotOptimize(result.value.mean);
   return 0;
+}
+
+// Then it reports its own peak, which the parent reads (rss_probe.hpp says why not wait4's).
+int RunProbe(const Options& options) {
+  const int status = RunProbeVariant(options);
+  if (status != 0) return status;
+  return aadp::bench::ReportOwnPeakRss() ? 0 : 1;
 }
 
 std::string ScaleText(std::uint64_t scale) {
@@ -262,7 +269,7 @@ int main(int argc, char** argv) try {
       "tape-skip");
   add("bench_rss_probe",
       "peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this "
-      "size; idle runs nothing");
+      "size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing");
   add("gradient_check",
       failed == 0 ? "pass"
                   : "FAILED: " + std::to_string(failed) + " checks, first " + first_failure);

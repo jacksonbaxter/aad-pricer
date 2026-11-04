@@ -2221,6 +2221,31 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] Stamp\\.RefusesAMeantIdleCpuInsideThePin",
       "timeout_s": 300
+    },
+    {
+      "id": "bench-rss-parent-peak",
+      "kind": "check",
+      "covers": "per-variant peak RSS of a fresh child process, bench/rss_probe.cpp",
+      "bug": "The probe returns the peak of the process that spawned the child, as wait4's ru_maxrss did on Linux after a vfork-style posix_spawn, so every variant and the idle child read the parent's peak.",
+      "edits": [
+        {
+          "file": "bench/rss_probe.cpp",
+          "find": "  return ParsePeakReport(output);\n",
+          "replace": "  return OwnPeakBytes();\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit",
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=RssProbe.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RssProbe\\.AnIdleChildDoesNotInheritTheParentsPeak",
+      "timeout_s": 300
     }
   ]
 }
