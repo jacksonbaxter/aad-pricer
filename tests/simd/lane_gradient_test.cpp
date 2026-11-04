@@ -28,13 +28,12 @@
 #include "ad/bounds.hpp"
 #include "ad/cases.hpp"
 #include "ad/gradient.hpp"
-#include "ad/real.hpp"
 #include "ad/tape.hpp"
+#include "diverging_kernel.hpp"
 #include "lane_widths.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
 #include "pricer/kernels.hpp"
-#include "pricer/model.hpp"
 #include "pricer/pricer.hpp"
 #include "pricer/runner.hpp"
 #include "simd/lane_kernels.hpp"
@@ -42,7 +41,6 @@
 #include "simd/lane_real.hpp"
 #include "simd/lane_runner.hpp"
 #include "simd/lane_tape.hpp"
-#include "simd/lane_tape_ops.hpp"
 #include "simd/simd_pricer.hpp"
 
 #ifndef AADP_SMOKE_SIZE
@@ -401,59 +399,10 @@ TEST(LaneGradient, RefusesWhatPriceWithGradientRefusesAndUnknownWidths) {
   EXPECT_TRUE(width.error().lanes);
 }
 
-// A kernel no pricer product has: at the end, a Select between two different active statements,
-// on the first uniform. Lanes whose first uniforms fall on both sides of one half diverge.
-struct DivergingKernel {
-  template <class Real, class Model>
-  [[nodiscard]] Real Lanes(const Contract& c, const Model& model,
-                           const LaneUniforms<Real>& u) const {
-    Real x = model.LogSpot();
-    for (std::uint32_t i = 0; i < c.steps; ++i) {
-      const pricer::StepLaw<Real> law = model.Law(i, x);
-      x = law.mean + law.sd * InverseNormal(u.normal[i]);
-    }
-    const Real a = Exp(x);
-    const Real b = a * 1.5;
-    return model.Discount() * Select(u.normal[0] < 0.5, a, b);
-  }
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static): a Kernel may carry state.
-  [[nodiscard]] ad::Real Scalar(const Contract& c, const pricer::GbmModel<ad::Real>& model,
-                                const pricer::PathUniforms& u) const {
-    ad::Real x = model.LogSpot();
-    for (std::uint32_t i = 0; i < c.steps; ++i) {
-      const pricer::StepLaw<ad::Real> law = model.Law(i, x);
-      x = law.mean + law.sd * InverseNormal(ad::Real(u.normal[i]));
-    }
-    const ad::Real a = Exp(x);
-    const ad::Real b = a * 1.5;
-    return model.Discount() * Select(u.normal[0] < 0.5, a, b);
-  }
-};
-
-// RunBatches on the scalar tape with the same kernel, as ad::GradientPathFn runs it.
-class ScalarKernelFn {
- public:
-  ScalarKernelFn(const Contract& c, const Market<double>& m) : contract_(c), path_(c, m) {}
-  void operator()(const pricer::PathUniforms& u, std::array<double, ad::kGradientStats>& stats) {
-    stats = {};
-    ad::Tape& tape = path_.tape();
-    const ad::Real payoff = DivergingKernel{}.Scalar(contract_, path_.model(), u);
-    tape.AddAdjoint(payoff, 1.0);
-    tape.SweepBack(tape.GetPosition(), path_.mark());
-    path_.Rewind();
-    stats[0] = payoff.value();
-  }
-  void EndBlock(std::array<double, ad::kGradientStats>& sum) {
-    const std::array<double, kInputs> gradient = path_.SweepSetup();
-    for (std::size_t i = 0; i < kInputs; ++i) {
-      sum[1 + i] += i == ad::kMaturityInput ? -gradient[i] : gradient[i];
-    }
-  }
-
- private:
-  Contract contract_;
-  ad::PathGradient path_;
-};
+// A kernel no pricer product has (diverging_kernel.hpp): a Select between two different active
+// statements on the first uniform, so lanes on both sides of one half diverge.
+using testing::DivergingKernel;
+using testing::ScalarKernelFn;
 
 // The groups RunLaneBatches forms, and which of them split: every lane is computed, past the
 // block's end too, so any lane can split a group; only the lanes inside the block are counted as

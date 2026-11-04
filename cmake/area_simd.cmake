@@ -111,3 +111,20 @@ if(AADP_BUILD_TESTS AND TARGET aadp_bench_simd)
   set_tests_properties(aadp_bench_simd_smoke_reduced_size_not_a_result PROPERTIES
     LABELS "bench;simd")
 endif()
+
+# Test-side, not a product benchmark: what a fallback to the scalar tape costs, through the
+# test-only diverging kernel (tests/simd/diverging_kernel.hpp). Iteration only; never --reportable.
+if(AADP_BUILD_TESTS AND TARGET aadp_bench_harness AND TARGET aadp_simd_ad)
+  aadp_bench(aadp_simd_fallback_cost
+    SOURCES tests/simd/fallback_cost_bench.cpp
+    LINK aadp_simd_ad aadp_test_support aadp_bench_harness
+    CUSTOM_MAIN)
+endif()
+if(TARGET aadp_simd_fallback_cost)
+  add_test(NAME aadp_simd_fallback_cost_smoke_not_a_result
+    COMMAND aadp_simd_fallback_cost --aadp-scale=32 --aadp-require-valid --batches=1
+      --repetitions=1 --warmup-ms=0 --gb-warmup-s=0.001
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_simd_fallback_cost_smoke_not_a_result PROPERTIES
+    LABELS "bench;simd")
+endif()
