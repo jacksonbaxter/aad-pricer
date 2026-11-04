@@ -88,6 +88,22 @@ double ClosedForm(const Contract& c, const Market<double>& m) {
 
 std::uint64_t Bits(double x) { return std::bit_cast<std::uint64_t>(x); }
 
+double InputOf(const Market<double>& m, Input input) {
+  switch (input) {
+    case Input::kSpot:
+      return m.spot;
+    case Input::kSigma:
+      return m.sigma;
+    case Input::kRate:
+      return m.r;
+    case Input::kDividend:
+      return m.q;
+    case Input::kMaturity:
+      return m.maturity;
+  }
+  return m.spot;
+}
+
 TEST(Bump, ValueIsPricesBitForBit) {
   for (const Case& c : Cases()) {
     const auto price = Price(c.contract, kMarket, kConfig);
@@ -132,9 +148,12 @@ TEST(Bump, MatchesTheClosedFormDifferenceQuotient) {
         const double cf_up = ClosedForm(c.contract, up);
         const double cf_down = ClosedForm(c.contract, down);
         const double sign = input == Input::kMaturity ? -1.0 : 1.0;
-        const double reference = sign * (cf_up - cf_down) / bumped->denominator[i];
-        const double b =
-            0x1p-40 * (std::fabs(cf_up) + std::fabs(cf_down)) / std::fabs(bumped->denominator[i]);
+        // The realised step, from the test's own markets: the estimator's denominator must be it,
+        // and the reference does not take it from the estimator.
+        const double step = InputOf(up, input) - InputOf(down, input);
+        EXPECT_EQ(bumped->denominator[i], step) << c.name << ", " << kNames[i];
+        const double reference = sign * (cf_up - cf_down) / step;
+        const double b = 0x1p-40 * (std::fabs(cf_up) + std::fabs(cf_down)) / std::fabs(step);
         const ToleranceLimits limits{.b = b,
                                      .se_ceiling = (1.5 * tape->greeks[i].standard_error) + 0x1p-40,
                                      .critical = critical};
