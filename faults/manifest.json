@@ -1168,8 +1168,8 @@
       "edits": [
         {
           "file": "src/pricer/kernels.hpp",
-          "find": "InverseNormal(Select(alive, drawn, Real(v)));",
-          "replace": "InverseNormal(Real(v));"
+          "find": "const Real drawn = Value(q) < 0x1p-1000 ? Real(Value(q)) : q;",
+          "replace": "const Real drawn = Real(v);"
         }
       ],
       "preset": "release",
