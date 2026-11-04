@@ -234,7 +234,7 @@ Fixed before any Phase 3 code exists, so git history shows it came first.
 
 ## Phase 3 findings so far
 
-Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
+Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
 
 ### Math kernels
 
@@ -313,6 +313,37 @@ For later stages:
 - Threaded rows on `linux-zen1` run on two pinned CPUs, 4 and 6, through `AADP_PIN_CPUS=4,6` in `scripts/run_bench.sh` (bc3e6d3). cpu5, the SMT sibling of cpu4, is recorded as meant to be idle, which nothing enforces. The stamp checks each pinned CPU against `measure.sh`'s list, and refuses a two-CPU run from a Debug build (0bde08f).
 - 3a's iteration runs are not results and are not quoted here.
 
+### Second-order Greeks
+
+- `src/ad/second_order.hpp` (0d682fc): forward over reverse. A path is recorded over `Dual<double, N>` values, N tangent lanes seeded on N inputs, and swept back once. So one record and one reverse sweep per path give the value, the five first-order Greeks and N rows of the Hessian. There is no second pass.
+- N = 1 on spot gives gamma and vanna. N = 2 on spot and vol adds volga, and vanna a second time, which the tests use. The cost model is Naumann et al., NAG TR 5/10, p. 2: a Hessian-vector product costs roughly twice the adjoint, per direction.
+- It is a separate tape type. `tape.hpp`, `tape.cpp` and `real.hpp` are unchanged, so the headline multiples cannot have moved. The value lanes form the first-order tape's products in its order, so the value and the five Greeks are bit-identical to the first-order tape on the same kernel. Lanes never mix, so the spot row of N = 2 is N = 1's, bit for bit.
+- A pathwise second derivative of max(S − K, 0) is zero on every path and misses the kink's mass. So the pass runs conditional kernels (`src/pricer/conditional_kernels.hpp`), which take the last step's expectation in closed form (Glasserman 2004, section 7.2.3). `Price()` and every first-order Greek still run `kernels.hpp`.
+- Barrier gamma: discrete barriers by one-step survival (arXiv 1804.03975v3), continuous ones by one-step survival with the bridge (arXiv 1906.11002v2, Algorithm 2 with σ' = 0, exact for GBM in log space). Both have Lipschitz first derivatives, and Theorem 2.6 there makes the second unbiased against the bridge. The plain bridge weight is never differentiated twice. Hard and smoothed barriers are refused: an indicator's pathwise derivatives are zero, and the smoothed barrier is another, biased contract.
+- Bias: none beyond Monte Carlo, for exact GBM steps. Two exceptions, both stated: the one-step guard, copied with its bound, and the reflection exponent, capped at 700 so it cannot overflow. Drift per step is held within 4 standard deviations, so the cap changes a path by less than 1e-300 of the forward.
+- Per-path checks (`tests/ad/second_order_test.cpp`): each Hessian row against central differences of the tape's own gradient, worst 0.978 of the bound; vanna both ways, worst 0.0066 of its round-off bound.
+- Against references (`tests/ad/second_order_oracle_test.cpp`): Black-Scholes, the geometric Asian and Reiner-Rubinstein by nested Duals over the closed forms, and quadrature for one-step survival and the arithmetic Asian. K = 19, N = 2^20, 64 batches, all pass. 15 faults, all caught (3e4975f, 4072072).
+- The bench workloads `aad8-asian12` and `aad8-barrier` (fb97650) time this apart from AAD-1 and AAD-4. See `BENCHMARKS.md`, `AAD-8`.
+- Iteration only, not results: `mac-m4max`, macOS, scalar code, 1/50 of the path counts, at 4072072. On `aad8-asian12` the first-order tape on the conditional kernels costs 2.46 times their primal, and forward over reverse 1.60 times that tape on one lane, 1.69 on two. On `aad8-barrier`: 1.60, 1.39 and 1.45.
+
+Disclosed, from the stage's own record:
+- The first run of checks 3 and 4 failed, before 0d682fc. Check 3 failed on bridge paths, 3.97e-14 against a bound of 1.25e-14. Check 4 required every partial above 2^-511 and met 1.5e-197 on an Asian path. Now the steps are spot 2^-12 S0 and vol 2^-14, products below the normal range are covered by an absolute floor of 2^-1000, and check 4 counts the paths with a lane below 2^-511.
+- The H85 row was added after H95's result was seen: H95's gamma is small against its SE, so it tests little, and H85's is not. K went from 18 to 19, which widens every bound slightly, 5.33e-5 to 5.36e-5 on the first row. The added row is the stricter test, not the family.
+- The SE ceilings are loose for the Asians. A ceiling assumes the last step's smoothing sets the whole scale, and an average smooths by 1/count of a step. So for the Asians the ceilings are 3,700 to 32,000 times the SE, against about 50 for the European.
+
+### SIMD
+
+- `src/simd/` (a486c9a): `exp`, `log`, `sqrt`, AS241 and the normal CDF lane by lane, each with its scalar twin's operations in the same order. No `MulAdd`, round to nearest, FTZ and DAZ off, NaN by sanitise then select, as stage 1a set out. Philox keyed on (path, step) per lane. Every product and treatment is branch-free from one lane to the target's.
+- So every width gives the scalar bits, and no tolerance is needed. The kernels: about 3.1 million inputs each, 2.1 million for `sqrt`, at widths 1 and 2 on NEON, and 1, 2 and 4 on AVX2 on the Linux host. Prices: mean, SE and every batch mean are `Price()`'s at every width, on 1, 2, 3 and 8 threads. Philox lanes match Random123's known answers, 10 and 7 rounds.
+- The Linux host builds AVX-512 and cannot run it: Zen 1 has no avx512f. GitHub's runner in run 41898528776 had every x86-64-v4 feature, so `simd-lanes-8-avx512` ran the 14 SIMD tests at 8 lanes there, and passed.
+- `aadp_fuzz_simd_kernels` (22e9884) ran the AVX2 lanes under ASan and UBSan on the Linux host, 900 s, 1,735,574 runs, clean. ExpArray's assembly at each width (NEON, ymm, zmm: no FMA, no calls) is in the research cache, `phase3/evidence/stage5a/`.
+- At one lane on NEON, LLVM 23 at -O3 folded the scalar's shape, `IfThenElse(m, Sqrt(IfThenElse(m, x, 1)), NaN)`, to `Sqrt(x)`. So `sqrt(-NaN)` kept its sign, as in stage 1a. The lane form takes `CopySign(Sqrt(Abs(x)), x)`: a real number for every negative x, so no fold can treat it as the NaN it replaces. On x ≥ 0 it gives the same bits.
+- A fault restoring the scalar shape changed no bits in the fault runner's build, so the fold depends on context, and that fault was dropped. `simd-sanitise-select`, a bare root, is kept and caught.
+- Highway's `Ne` on x86 is the ordered not-equal, false for NaN, while C++ `!=` is true. So x != x is `hn::IsNaN`, and `LaneReal`'s `!=` is `Not(Eq)`. On NEON the two agree, so only an x86 build would show it.
+- Two drafted faults changed no bits, so they could not fail and were replaced. Multiplying the gaps first, −2 (d0 d1) for (−2 d0) d1: scaling by −2 is exact. And dropping TwoSum's second correction term from the lane `log`. The final 18 SIMD faults are all caught.
+- For stage 5b: `LaneReal` carries values only. The lane kernels copy `kernels.hpp`, and a test holds the copy to it; templating the uniform type would remove the copy. The lane inverse normal computes the tail's `log` and `sqrt` on every lane.
+- Speedups, all iteration only, are in `BENCHMARKS.md`, `SIMD-1`.
+
 ### CI
 
 - CI first ran on GitHub as run 41770201004 at bc3e6d3 and failed 9 of 17 jobs: actionlint, clang-tidy, `linux-gcc-release`, `linux-gcc-debug`, `linux-tsan` and the four macOS jobs. The Linux clang, AVX2, AVX-512, ASan and UBSan, fuzz-smoke, format and repo-scan jobs passed.
@@ -322,11 +353,13 @@ For later stages:
 - macOS: the four jobs failed to link `std::__1::__hash_memory`. The cause and the move to `xcode-27` are above, under "CI on macOS". What still differs from the measurement Mac: the runner's OS is 27.0.1, not 27.2, the SDK comes with Xcode 27.2, the image is a preview, and the hardware is a VM.
 - clang-tidy: CI's Linux clang uses g++ 14's libstdc++, while the Linux host and the Mac use libc++. CI named findings in 8 files. On the Linux host those 8 files gave 10 findings with libstdc++ and 2 with libc++, and the Mac none. 74f0aac's own fix added 2 more, in `tests/math/inverse_normal_test.cpp`. bb7b26f clears all 12, in 9 files.
 - bb7b26f also prints every finding in the tidy log, since CI's log named only the files, and uploads the full logs when the job fails (`actions/upload-artifact` pinned to cf430e0, v7.0.2).
-- `scripts/check.sh` passes 13 of 13 at 54933ed, with 100 of 100 faults caught. The fixes are committed and not pushed, so no CI run has seen them yet.
+- `scripts/check.sh` passes 13 of 13 at 54933ed, with 100 of 100 faults caught. These fixes reached GitHub with stages 4 and 5a, in the push up to 065e5b6.
 - Run 41884006533 at 065e5b6 passed 16 of 21 jobs. The four macOS jobs failed `PerfCounters.MacOsCountersAreProcessWideAndLabelled`: GitHub's macOS runners are virtual machines (the runner-images repo builds them as VM images; the jobs now print `kern.hv_vmm_present`), and there `proc_pid_rusage` leaves `ri_cycles` and `ri_instructions` still. Cycle and instruction counts cannot come from a GitHub macOS runner. The harness already wrote such a counter as `missing`; its note now says `unavailable`, which counter, the value it stayed at and whether the host is a VM. The test reads `kern.hv_vmm_present` itself: where it is 0, as on the measurement Mac, both counters must count; on a VM, each counter must count or be labelled unavailable with that reason. `HarnessSelftest.MacOsHeaderNeverWritesAStuckCounterAsACount` checks the same in the header, and the fault `bench-darwin-stuck-counter`, a counter that stayed still reported as a count of 0, is caught on every host. No test is skipped for this.
 - Run 41884006533 also failed `linux-tsan`: `HarnessSelftest.RefusesAHistogramOfBatchesTooShortToResolve` and run_bench.sh's failed-run check relied on one unit of work (16 multiply-adds) being below the gate. Under Linux TSan it takes about 200 ns, at the gate of 100 to 200 ns: on debian the test failed too and the script check passed only because its median, 190 ns, fell under that run's 200 ns gate. Both now use the selftest's `--no-work`, a batch of two timer reads, 60 ns there.
 - The macOS runners start a job at nice -10, which the stamp tool refuses, so `aadp_run_bench_script` failed there. The test steps raise niceness by the measured offset to 0, and print both levels.
 - CI's Linux clang jobs (debug, release, asan-ubsan, tsan, avx2, the lane jobs, fuzz-smoke and `clang-tidy`) now use libc++ from the pinned LLVM 23.1.4 release, as the Linux host does: the setup action writes the host's `clang++.cfg` (`-stdlib=libc++` and a link-time rpath to `lib/x86_64-unknown-linux-gnu`), checks that the release ships libc++ there, and probes which library a program gets. The GCC jobs stay on libstdc++, and `clang-tidy-libstdcxx` keeps tidy on it, since its findings differ by library.
+- The `check-actionlint` fault matched twice once 065e5b6 added the lane matrix's second `runs-on` line, so it silently stopped applying. dca8324 makes its find unique again.
+- Run 41898528776 at 48d30a7 passed 22 of 22 jobs. Each Linux test job had the one named allowed skip, above; the macOS jobs had none. Both tidy jobs report 126 units clean, on libc++ and on libstdc++.
 - Owed: `scripts/verify_commits.sh` needs rsync, which the Linux host lacks; the GCC pre-commit check there copies files without it.
 
 ### Rule slips
@@ -337,6 +370,8 @@ None affected a number.
 - Stage 2a: two `python3 - <<'EOF'` heredocs.
 - Stage 3a edited files outside its brief where its work needed them: `src/ad/tape.*`, `src/results/table.*` and `aad_table.*`, the table tool, the results fuzzer and `cmake/area_bench.cmake`.
 - Stage 3b: one here-string. A rebuild on the Mac during a measurement, which was later discarded. One build on the Linux host run over an attached SSH session, which timed out.
+- Stage 4: one empty heredoc. 0d682fc fails the format check, in `src/ad/dual.hpp` and `src/pricer/conditional_kernels.hpp`; 09ad30a formats them. It also edited `cmake/area_pricer.cmake` and `src/results/aad_table.cpp`, outside its brief, where its work needed them.
+- Second CI round: one `python3 - <<'EOF'` heredoc.
 
 ## Option chain
 
