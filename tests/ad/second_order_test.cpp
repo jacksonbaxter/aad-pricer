@@ -44,6 +44,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <expected>
 #include <string>
 #include <vector>
 
@@ -250,21 +251,28 @@ TEST(SecondOrder, ThreadCountChangesNoBit) {
   }
 }
 
+// kNone where the run was admitted, so a missing refusal fails rather than reads error().
+template <std::size_t N>
+pricer::ConditionalError RefusalOf(
+    const std::expected<HessianEstimate<N>, SecondOrderError>& result) {
+  return result ? pricer::ConditionalError::kNone : result.error().conditional;
+}
+
 TEST(SecondOrder, RefusesTreatmentsWithNoSecondOrderForm) {
   using enum pricer::Treatment;
   const pricer::RunConfig config{.seed = kSeed, .paths = 64, .batches = 2, .threads = 1};
   pricer::Contract c = Barrier(pricer::OptionType::kCall, 100, 12, pricer::Direction::kDown,
                                pricer::Knock::kOut, pricer::Monitoring::kDiscrete, 90);
   c.barrier.treatment = kHard;
-  EXPECT_EQ(PriceWithHessian<1>(c, kMarket, config, kSpotOnly).error().conditional,
+  EXPECT_EQ(RefusalOf(PriceWithHessian<1>(c, kMarket, config, kSpotOnly)),
             pricer::ConditionalError::kIndicator);
   c.barrier.treatment = kSmoothed;
   c.barrier.smoothing_width = 0.01;
-  EXPECT_EQ(PriceWithHessian<1>(c, kMarket, config, kSpotOnly).error().conditional,
+  EXPECT_EQ(RefusalOf(PriceWithHessian<1>(c, kMarket, config, kSpotOnly)),
             pricer::ConditionalError::kSmoothed);
   c.barrier.monitoring = pricer::Monitoring::kContinuous;
   c.barrier.treatment = kHard;
-  EXPECT_EQ(PriceWithHessian<1>(c, kMarket, config, kSpotOnly).error().conditional,
+  EXPECT_EQ(RefusalOf(PriceWithHessian<1>(c, kMarket, config, kSpotOnly)),
             pricer::ConditionalError::kIndicator);
   // A drift of 5 standard deviations per step on a continuous barrier.
   c.barrier.treatment = kBridge;
@@ -272,7 +280,7 @@ TEST(SecondOrder, RefusesTreatmentsWithNoSecondOrderForm) {
       .spot = 100.0, .sigma = 0.01, .r = 0.6, .q = 0.0, .maturity = 1.0};
   c.steps = 1;
   ASSERT_EQ(pricer::Validate(c, steep), pricer::ContractError::kNone);
-  EXPECT_EQ(PriceWithHessian<1>(c, steep, config, kSpotOnly).error().conditional,
+  EXPECT_EQ(RefusalOf(PriceWithHessian<1>(c, steep, config, kSpotOnly)),
             pricer::ConditionalError::kDriftPerStep);
 }
 

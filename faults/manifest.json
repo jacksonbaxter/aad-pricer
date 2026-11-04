@@ -2277,6 +2277,265 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] RssProbe\\.AnIdleChildDoesNotInheritTheParentsPeak",
       "timeout_s": 300
+    },
+    {
+      "id": "ad-second-quotient-order",
+      "kind": "check",
+      "covers": "forward over reverse bit-exact against the first-order tape",
+      "bug": "The quotient's partial in the divisor is taken as -(a / b) / b instead of the first-order tape's -a / (b b), the same derivative rounded differently.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.hpp",
+          "find": "-a.dual() / (b.dual() * b.dual()));",
+          "replace": "-(a.dual() / b.dual()) / b.dual());"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.ValueGradientAndLanesAreExact"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.ValueGradientAndLanesAreExact",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-setup-not-cleared",
+      "kind": "check",
+      "covers": "second-order thread invariance",
+      "bug": "The set-up's adjoints are not cleared after each block's sweep, so every block adds the earlier blocks of its worker again and the result depends on how blocks fall to workers.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.cpp",
+          "find": "  tape_.ClearAdjoints(mark_, SecondPosition{});\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.ThreadCountChangesNoBit"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.ThreadCountChangesNoBit",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-drift-unchecked",
+      "kind": "check",
+      "covers": "refusal of runs the second-order kernels cannot price",
+      "bug": "The drift-per-step limit is applied to discrete barriers instead of continuous ones, so a continuous barrier with a drift of 5 standard deviations per step is priced.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional.cpp",
+          "find": "  if (c.barrier.monitoring == Monitoring::kContinuous) {",
+          "replace": "  if (c.barrier.monitoring == Monitoring::kDiscrete) {"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.RefusesTreatmentsWithNoSecondOrderForm"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.RefusesTreatmentsWithNoSecondOrderForm",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-dropped-tangent-term",
+      "kind": "check",
+      "covers": "per-path central differences of the tape's gradient, check 3",
+      "bug": "The reverse sweep's tangent update drops adjoint.value times the partial's tangent, the term that carries the second derivative of each operation.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.hpp",
+          "find": "(adjoint.tangent[k] * partial.value) + (adjoint.value * partial.tangent[k]);",
+          "replace": "(adjoint.tangent[k] * partial.value);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.CentralDifferencesOfTheTapesGradientAgreeWithinTheirBound"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.CentralDifferencesOfTheTapesGradientAgreeWithinTheirBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-seed-direction",
+      "kind": "check",
+      "covers": "per-path vanna symmetry, check 4",
+      "bug": "Each tangent lane is seeded on the input after its direction, so the spot lane reads the maturity row and the vol lane the spot row.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.cpp",
+          "find": "value.tangent[k] = dirs[k] == i ? 1.0 : 0.0;",
+          "replace": "value.tangent[k] = dirs[k] == (i + 1) % kInputs ? 1.0 : 0.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.VannaIsSymmetricPerPathToRoundOff"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.VannaIsSymmetricPerPathToRoundOff",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-bound-without-gamma",
+      "kind": "check",
+      "covers": "the round-off bound of checks 3 and 4",
+      "bug": "The round-off bound returns the absolute pass's entry without the gamma_n factor, a bound so wide that checks 3 and 4 could not fail.",
+      "edits": [
+        {
+          "file": "src/ad/second_order.cpp",
+          "find": "  return gamma * absolute * (1.0 + (2.0 * gamma));",
+          "replace": "  return absolute * (1.0 + (2.0 * gamma));"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_test",
+        "--gtest_filter=SecondOrder.RoundoffBoundIsFarBelowAMissingTerm"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SecondOrder\\.RoundoffBoundIsFarBelowAMissingTerm",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-european-extra-step",
+      "kind": "check",
+      "covers": "European gamma, vanna and volga against Black-Scholes, check 1",
+      "bug": "The European's loop advances all m steps before taking the expectation over the last one, so the terminal variance is (m + 1) / m of sigma^2 T.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "  for (std::uint32_t i = 0; i + 1 < c.steps; ++i) x = kernel_detail::Advance(model, i, x, u[i]);",
+          "replace": "  for (std::uint32_t i = 0; i < c.steps; ++i) x = kernel_detail::Advance(model, i, x, u[i]);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_oracle_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_oracle_test"
+      ],
+      "detect": "test",
+      "reason": "european (call K130|put K80), (gamma|vanna|volga): [^\\n]*: (distance|both)",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-geometric-sd",
+      "kind": "check",
+      "covers": "geometric Asian second-order Greeks against nested Duals, check 2",
+      "bug": "The geometric Asian's last-step standard deviation is not divided by the number of fixings, so the average gets the whole step's variance.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "Real(law.sd / count));",
+          "replace": "Real(law.sd));"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_oracle_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_oracle_test"
+      ],
+      "detect": "test",
+      "reason": "geometric Asian [^,]*, (gamma|vanna|volga): [^\\n]*: (distance|both)",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-unconditioned-draw",
+      "kind": "check",
+      "covers": "one-step survival gamma against quadrature, check 5",
+      "bug": "One-step survival weights the path by the survival probability but draws the step from the unconditional law, so paths that would have crossed are kept at full weight.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "InverseNormal(Select(alive, drawn, Real(v)));",
+          "replace": "InverseNormal(Real(v));"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_oracle_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_oracle_test"
+      ],
+      "detect": "test",
+      "reason": "one-step down-out call H85 m50, gamma: [^\\n]*: (distance|both)",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-reflection-sign",
+      "kind": "check",
+      "covers": "OSS-BB gamma, vanna and volga against Reiner-Rubinstein, check 5",
+      "bug": "The last step's reflection is taken on the wrong side of the barrier: the sign is +1 for a down barrier and -1 for an up one.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "const double sign = direction == Direction::kUp ? 1.0 : -1.0;",
+          "replace": "const double sign = direction == Direction::kUp ? -1.0 : 1.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_oracle_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_oracle_test"
+      ],
+      "detect": "test",
+      "reason": "bridge (down-out call H95|up-out put H115), (gamma|vanna|volga): [^\\n]*: (distance|both)",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-second-asian-count",
+      "kind": "check",
+      "covers": "arithmetic Asian gamma against quadrature, check 5",
+      "bug": "The arithmetic average divides by the number of steps, not the number of fixings, when the spot is one of them.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "  return model.Discount() * inner / count;",
+          "replace": "  return model.Discount() * inner / static_cast<double>(c.steps);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_second_order_oracle_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_second_order_oracle_test"
+      ],
+      "detect": "test",
+      "reason": "arithmetic Asian AA12K100, gamma: [^\\n]*: (distance|both)",
+      "timeout_s": 300
     }
   ]
 }
