@@ -1805,6 +1805,326 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] HandAdjoint\\.RefusesWhatItDoesNotPrice",
       "timeout_s": 300
+    },
+    {
+      "id": "bump-theta-sign",
+      "kind": "check",
+      "covers": "bump and revalue against closed-form difference quotients, theta's sign",
+      "bug": "The bump's theta is +dV/dT, not -dV/dT as the tape's.",
+      "edits": [
+        {
+          "file": "src/pricer/bump.cpp",
+          "find": "  const double sign = input == Input::kMaturity ? -1.0 : 1.0;\n",
+          "replace": "  const double sign = 1.0;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_pricer_bump_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_pricer_bump_test",
+        "--gtest_filter=Bump.MatchesTheClosedFormDifferenceQuotient"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Bump\\.MatchesTheClosedFormDifferenceQuotient",
+      "timeout_s": 300
+    },
+    {
+      "id": "bump-forward-denominator",
+      "kind": "check",
+      "covers": "bump and revalue against closed-form difference quotients, the forward step",
+      "bug": "The forward quotient divides by 2 h, the central denominator, so every forward Greek is halved.",
+      "edits": [
+        {
+          "file": "src/pricer/bump.cpp",
+          "find": "      out.denominator[i] = FieldOf(up_market, input) - FieldOf(market, input);\n",
+          "replace": "      out.denominator[i] = 2.0 * steps[i];\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_pricer_bump_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_pricer_bump_test",
+        "--gtest_filter=Bump.MatchesTheClosedFormDifferenceQuotient"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Bump\\.MatchesTheClosedFormDifferenceQuotient",
+      "timeout_s": 300
+    },
+    {
+      "id": "bump-smoothing-in-currency",
+      "kind": "check",
+      "covers": "in-run check of the barrier's bumps against its tape, AAD-1",
+      "bug": "A spot bump leaves the smoothing width a fraction of the bumped spot, so the bump differences a function whose ramp moves with the spot and its delta is not the tape's.",
+      "edits": [
+        {
+          "file": "src/pricer/bump.cpp",
+          "find": "    out.barrier.smoothing_width = contract.barrier.smoothing_width * (base.spot / bumped.spot);\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=AadChecks.TheBarrierBumpsDifferenceTheFunctionTheTapeDifferentiates"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadChecks\\.TheBarrierBumpsDifferenceTheFunctionTheTapeDifferentiates",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-in-run-check",
+      "kind": "check",
+      "covers": "in-run verification before timing counts, aadp_bench_aad (B33)",
+      "bug": "The benchmark's bumps price on the next seed, off the tape's random numbers, so their value is not Price()'s and their Greeks differ from the tape's by noise.",
+      "edits": [
+        {
+          "file": "bench/aad_workloads.cpp",
+          "find": "        auto run = pricer::PriceWithBumps(c, m, config, scheme, steps);\n",
+          "replace": "        auto run = pricer::PriceWithBumps(\n            c, m,\n            pricer::RunConfig{.seed = config.seed + 1, .paths = config.paths,\n                              .batches = config.batches, .threads = config.threads},\n            scheme, steps);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bench_aad"
+      ],
+      "command": [
+        "{build}/bin/aadp_bench_aad",
+        "--aadp-scale=500",
+        "--aadp-threads=3",
+        "--aadp-require-valid",
+        "--batches=1",
+        "--repetitions=1",
+        "--warmup-ms=0",
+        "--gb-warmup-s=0.001"
+      ],
+      "detect": "test",
+      "reason": "aadp_bench_aad: gradient check failed: ",
+      "timeout_s": 600,
+      "mutated_exit": 9
+    },
+    {
+      "id": "bench-tape-skip",
+      "kind": "check",
+      "covers": "in-run check that the zero-adjoint skip equals the tape (B9)",
+      "bug": "The skip also drops statements with a negative adjoint.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "      if (adjoint == 0.0) continue;\n",
+          "replace": "      if (adjoint <= 0.0) continue;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=AadChecks.EveryCheckPassesOnEveryWorkloadAtASmallSize"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadChecks\\.EveryCheckPassesOnEveryWorkloadAtASmallSize",
+      "timeout_s": 600
+    },
+    {
+      "id": "bench-hand-bound",
+      "kind": "check",
+      "covers": "in-run check of the hand adjoint against the tape, pricer workloads",
+      "bug": "The association bound is scaled by 1e12, so it passes a hand adjoint off by a million units in the last place.",
+      "edits": [
+        {
+          "file": "bench/aad_checks.cpp",
+          "find": "(bounds[b][g] * (1.0 + 0x1p-50))",
+          "replace": "(bounds[b][g] * 1e12)"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=AadChecks.AHandAdjointOffByAMillionUlpsFails"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadChecks\\.AHandAdjointOffByAMillionUlpsFails",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-hand-lw-scale",
+      "kind": "check",
+      "covers": "in-run check of the hand adjoint against the tape, Lax-Wendroff",
+      "bug": "The stability scale counts 2e12 passes, so it passes any hand gradient.",
+      "edits": [
+        {
+          "file": "bench/lax_wendroff.hpp",
+          "find": "inline constexpr double kHandTapePasses = 2.0;",
+          "replace": "inline constexpr double kHandTapePasses = 2.0e12;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=AadChecks.TheLaxWendroffChecksPassAndCatchAWrongInput"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadChecks\\.TheLaxWendroffChecksPassAndCatchAWrongInput",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-bump-allowance",
+      "kind": "check",
+      "covers": "in-run check of the bumps against the tape, its allowance b",
+      "bug": "The allowance adds 1 in the Greek's units, so a bump off by 1e-3 passes.",
+      "edits": [
+        {
+          "file": "bench/bump_study.cpp",
+          "find": "  return step.truncation + (critical * step.bias_se) + roundoff;\n",
+          "replace": "  return step.truncation + (critical * step.bias_se) + roundoff + 1.0;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=AadChecks.AForwardBumpOffByItsTruncationFails"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadChecks\\.AForwardBumpOffByItsTruncationFails",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-study-rule",
+      "kind": "check",
+      "covers": "the h study's stability rule",
+      "bug": "Every row of the study is called stable, so the first step is always chosen.",
+      "edits": [
+        {
+          "file": "bench/bump_study.cpp",
+          "find": "    row.stable = std::fabs(row.change) <= row.limit;  // false on NaN\n",
+          "replace": "    row.stable = true;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=BumpStudy.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BumpStudy\\.OneStablePairAloneIsNotEnough",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-roundoff-scale",
+      "kind": "check",
+      "covers": "the h study's round-off scale, checked by halving deep into round-off",
+      "bug": "gamma_n is a millionth of n u, so the round-off scale is far below the round-off.",
+      "edits": [
+        {
+          "file": "bench/bump_study.cpp",
+          "find": "  return nu / (1.0 - nu);\n",
+          "replace": "  return 1e-6 * nu / (1.0 - nu);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=BumpStudy.ALiveStudyStabilisesAndItsRoundOffScaleHolds"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BumpStudy\\.ALiveStudyStabilisesAndItsRoundOffScaleHolds",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-steps-committed",
+      "kind": "check",
+      "covers": "the committed bump steps against the committed h study",
+      "bug": "One committed central step is twice what the study chose.",
+      "edits": [
+        {
+          "file": "bench/aad_steps.hpp",
+          "find": "inline constexpr StepChoices kAsian12Central{{\n    {.h = ",
+          "replace": "inline constexpr StepChoices kAsian12Central{{\n    {.h = 2.0 * "
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_bump_study"
+      ],
+      "command": [
+        "{build}/bin/aadp_bump_study",
+        "--verify=bench/bump_size_study.csv"
+      ],
+      "detect": "test",
+      "reason": "FAILED: the committed table and steps disagree",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "table-aad-invalid",
+      "kind": "check",
+      "covers": "the AAD table marks a workload whose check failed",
+      "bug": "The table calls every workload with a check valid, whatever its checks say.",
+      "edits": [
+        {
+          "file": "src/results/aad_table.cpp",
+          "find": "  return section.field(\"valid\") == \"yes\" && !section.checks.empty() &&\n         std::ranges::all_of(section.checks, [](const Check& c) { return c.passed; });\n",
+          "replace": "  return !section.checks.empty();\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=AadTable.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] AadTable\\.MarksAWorkloadWhoseCheckFailedInvalid",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-iteration-banner",
+      "kind": "check",
+      "covers": "the iteration table's banner",
+      "bug": "The table admits a file that is not reportable without saying so.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "    out += \"**ITERATION ONLY: not results.** Not reportable: \" + cell(not_reportable) +\n           \". Nothing here may be quoted.\\n\\n\";\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_results_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_results_unit",
+        "--gtest_filter=IterationTable.*"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] IterationTable\\.AdmitsAFileThatIsNotReportableUnderABanner",
+      "timeout_s": 300
     }
   ]
 }
