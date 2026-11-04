@@ -1168,7 +1168,7 @@
       "edits": [
         {
           "file": "src/pricer/kernels.hpp",
-          "find": "InverseNormal(Select(alive, q, Real(v)));",
+          "find": "InverseNormal(Select(alive, drawn, Real(v)));",
           "replace": "InverseNormal(Real(v));"
         }
       ],
