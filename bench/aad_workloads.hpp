@@ -10,6 +10,14 @@
 //   hand          the hand-written pathwise adjoint, where one exists (src/ad/hand_adjoint.hpp).
 //   bump-central  2 N + 1 revaluations, N = 5 (src/pricer/bump.hpp), at the studied steps.
 //   bump-forward  N + 1 revaluations.
+//   price-lanes   simd::PriceLanes() at the build's widest lanes (src/simd): value only, Price()'s
+//                 bits. The lane primal; the faster of price and price-lanes is the fastest primal.
+//   tape-lanes    simd::PriceWithGradientLanes() at the same lanes: value and five Greeks on the
+//                 vector tape, the tape's bits, with any group that fell back to the scalar tape
+//                 counted (never in a pricer kernel).
+// The lane variants run on the first-order pricer workloads, whose kernels are all branch-free on
+// lanes (NOTES.md, "Vector tape"). The second-order workloads and Lax-Wendroff have none: no lane
+// form exists of the conditional kernels, forward over reverse, or the advection.
 // The Lax-Wendroff worst case (lax_wendroff.hpp) has the same variants on its 100 inputs, so its
 // bumps cost 201 and 101 primal runs.
 //
@@ -68,11 +76,14 @@ enum class Variant : std::uint8_t {
   kCondTape,
   kForSpot,
   kForSpotVol,
+  kPriceLanes,
+  kTapeLanes,
 };
-inline constexpr std::array<Variant, 11> kVariants = {
+inline constexpr std::array<Variant, 13> kVariants = {
     Variant::kPrice,    Variant::kTape,        Variant::kTapeSkip,    Variant::kTapeRecord,
     Variant::kHand,     Variant::kBumpCentral, Variant::kBumpForward, Variant::kCondPrice,
-    Variant::kCondTape, Variant::kForSpot,     Variant::kForSpotVol};
+    Variant::kCondTape, Variant::kForSpot,     Variant::kForSpotVol,  Variant::kPriceLanes,
+    Variant::kTapeLanes};
 std::string_view VariantName(Variant variant);
 std::optional<Variant> ParseVariant(std::string_view name);
 
@@ -131,6 +142,9 @@ struct VariantResult {
   std::vector<double> denominator;
   std::vector<double> absolute_up;
   std::vector<double> absolute_down;
+  // tape-lanes only: groups, and paths in them, that fell back to the scalar tape.
+  std::uint64_t fallback_groups = 0;
+  std::uint64_t fallback_paths = 0;
 };
 
 // One run of a variant, as the timed loop runs it. Stateful (a Lax-Wendroff tape is kept and
@@ -150,6 +164,28 @@ struct TapeShape {
   std::size_t paths_sampled = 0;
 };
 TapeShape MeasureTape(const Workload& workload, const pricer::RunConfig& config);
+
+// The vector tape's report at the lanes tape-lanes runs, in TapeShape's terms per path: a group's
+// statement and operand bytes over its lanes (5 + 8 N per operand), for the largest group of the
+// first block (tests/simd/lane_tape_memory_test.cpp counts the same).
+struct LaneTapeShape {
+  std::size_t lanes = 0;
+  std::size_t statements_per_group = 0;  // Largest over the groups sampled
+  std::size_t operands_per_group = 0;
+  std::size_t operand_bytes = 0;  // Per operand
+  double bytes_per_path = 0.0;    // Of the largest group, over its lanes
+  std::size_t allocated_bytes = 0;
+  std::size_t groups_sampled = 0;
+};
+// Precondition: HasVariant(workload, Variant::kTapeLanes).
+LaneTapeShape MeasureLaneTape(const Workload& workload, const pricer::RunConfig& config);
+
+// The lanes the lane variants run at: the build's widest (simd::MaxLanes), its Highway target, and
+// the lane ceiling every lane speedup is read against, with the host's FP datapath where it halves
+// the throughput of a 256-bit operation (platform::FpDatapathNote).
+std::size_t LaneCount();
+std::string LaneTarget();
+std::string LaneCeiling();
 
 // The fraction of paths whose discounted payoff is not zero: in the money and, for a barrier, not
 // knocked out. The hand adjoint's reverse pass runs on these alone.

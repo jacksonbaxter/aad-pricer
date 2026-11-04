@@ -46,7 +46,7 @@ include(AadpSmoke)
 
 # Each area file adds its own targets. Nothing else in the build system changes
 # when an area grows.
-foreach(_aadp_area IN ITEMS bench oracle data pricer aad_bench simd)
+foreach(_aadp_area IN ITEMS bench oracle data pricer simd aad_bench)
   string(TOUPPER "${_aadp_area}" _aadp_area_upper)
   option(AADP_AREA_${_aadp_area_upper} "Build the ${_aadp_area} area" ON)
   if(AADP_AREA_${_aadp_area_upper})

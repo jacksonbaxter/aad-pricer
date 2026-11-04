@@ -15,6 +15,9 @@
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #endif
+#if defined(__x86_64__) || defined(__i386__)
+#include <cpuid.h>
+#endif
 #ifdef __linux__
 #include <sched.h>
 
@@ -93,6 +96,37 @@ std::string read_file(const std::string& path) {
 #endif
 
 }  // namespace
+
+std::optional<X86Model> read_x86_model() {
+#if defined(__x86_64__) || defined(__i386__)
+  unsigned eax = 0;
+  unsigned ebx = 0;
+  unsigned ecx = 0;
+  unsigned edx = 0;
+  if (__get_cpuid(1, &eax, &ebx, &ecx, &edx) == 0) {
+    return std::nullopt;
+  }
+  const unsigned base_family = (eax >> 8U) & 0xFU;
+  const unsigned base_model = (eax >> 4U) & 0xFU;
+  X86Model out;
+  out.family = base_family == 0xFU ? base_family + ((eax >> 20U) & 0xFFU) : base_family;
+  out.model = base_family == 0xFU || base_family == 0x6U
+                  ? (((eax >> 16U) & 0xFU) << 4U) | base_model
+                  : base_model;
+  return out;
+#else
+  return std::nullopt;
+#endif
+}
+
+std::string_view fp_datapath_note(std::optional<X86Model> cpu) {
+  constexpr unsigned kZenFamily = 0x17;
+  constexpr unsigned kZen2FirstModel = 0x30;
+  if (cpu && cpu->family == kZenFamily && cpu->model < kZen2FirstModel) {
+    return "Zen 1: 128-bit FP datapath";
+  }
+  return {};
+}
 
 std::string short_hostname() {
   std::array<char, 256> name{};

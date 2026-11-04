@@ -1,7 +1,8 @@
-# The AAD benchmark (Phase 3, stage 3): bump and revalue, the tape and the hand adjoint against
-# the scalar primal. See cmake/AadpTargets.cmake for the helpers. It needs the pricer area's tape
-# and the bench area's harness, so it comes after both.
-if(NOT TARGET aadp_ad)
+# The AAD benchmark (Phase 3, stages 3 and 5c): bump and revalue, the tape, the hand adjoint and
+# the lane primal and vector tape against the scalar primal. See cmake/AadpTargets.cmake for the
+# helpers. It needs the pricer area's tape, the simd area's lanes and the bench area's harness, so
+# it comes after all three.
+if(NOT TARGET aadp_ad OR NOT TARGET aadp_simd_ad)
   return()
 endif()
 
@@ -13,7 +14,7 @@ aadp_library(aadp_aad_bench_lib
     bench/aad_checks.cpp
     bench/bump_study.cpp
     bench/rss_probe.cpp
-  LINK aadp_ad)
+  LINK aadp_ad aadp_simd_ad aadp_platform)
 target_include_directories(aadp_aad_bench_lib PUBLIC "${PROJECT_SOURCE_DIR}/bench")
 
 aadp_tool(aadp_bump_study

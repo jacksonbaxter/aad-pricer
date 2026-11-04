@@ -22,9 +22,9 @@
 namespace aadp::results {
 namespace {
 
-constexpr std::array<std::string_view, 11> kVariantOrder = {
-    "price",        "tape",       "tape-skip", "tape-record", "hand",        "bump-central",
-    "bump-forward", "cond-price", "cond-tape", "for-spot",    "for-spot-vol"};
+constexpr std::array<std::string_view, 13> kVariantOrder = {
+    "price",        "price-lanes",  "tape",       "tape-lanes", "tape-skip", "tape-record", "hand",
+    "bump-central", "bump-forward", "cond-price", "cond-tape",  "for-spot",  "for-spot-vol"};
 constexpr double kNanosecondsPerSecond = 1e9;
 constexpr double kNanosecondsPerMillisecond = 1e6;
 constexpr double kBytesPerMebibyte = 1024.0 * 1024.0;
@@ -255,6 +255,21 @@ std::string variant_note(const Section& section, std::string_view variant,
            format("%.4g", reverse / kNanosecondsPerMillisecond) + " ms, " +
            format("%.3g", reverse / times.at("price")) + " x primal";
   }
+  if (variant == "price-lanes") {
+    return "value only, the lane primal at " + cell(section.field("lane_count")) + " lanes; " +
+           "price / price-lanes " + format("%.3g", times.at("price") / times.at("price-lanes")) +
+           " x, lane ceiling: " + cell(section.field("lane_ceiling"));
+  }
+  if (variant == "tape-lanes") {
+    std::string out = "value and every Greek on the vector tape at " +
+                      cell(section.field("lane_count")) + " lanes";
+    if (const auto tape = times.find("tape"); tape != times.end()) {
+      out += "; tape / tape-lanes " + format("%.3g", tape->second / times.at("tape-lanes")) + " x";
+    }
+    return out + ", lane ceiling: " + cell(section.field("lane_ceiling")) +
+           "; fallbacks to the scalar tape: " + cell(section.field("lane_fallback_groups")) +
+           " groups, " + cell(section.field("lane_fallback_paths")) + " paths";
+  }
   if (variant == "tape-skip") {
     return "the tape with the zero-adjoint skip (B9)";
   }
@@ -304,6 +319,11 @@ std::string cost_table(const Section& section,
   const bool valid = section_valid(section);
   const double paths = parse_number(section.field("paths")).value_or(0.0);
   const double primal = times.at("price");
+  // The fastest primal: the faster of the scalar and the lane primal, where the file has lanes.
+  const auto lane_primal = times.find("price-lanes");
+  const std::optional<double> fastest = lane_primal == times.end()
+                                            ? std::nullopt
+                                            : std::optional(std::min(primal, lane_primal->second));
   const auto primal_rss = section.rss.find("price");
   std::string out =
       "| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | "
@@ -316,18 +336,26 @@ std::string cost_table(const Section& section,
     }
     const auto rss = section.rss.find(variant);
     const bool taped = variant.starts_with("tape");
+    const std::string tape_bytes = variant == "tape-lanes"
+                                       ? cell(section.field("lane_tape_bytes_per_path"))
+                                       : cell(section.field("tape_bytes_per_path"));
+    std::string against_fastest = "INVALID";
+    if (valid) {
+      against_fastest =
+          fastest ? format("%.3g", time->second / *fastest) : std::string("no lane primal");
+    }
     out += "| " + std::string(variant) + " | " +
            format("%.4g", time->second / kNanosecondsPerMillisecond) + " | " +
            format("%.4g", paths * kNanosecondsPerSecond / time->second) + " | " +
            (valid ? format("%.3g", time->second / primal) : std::string("INVALID")) + " | " +
-           (valid ? "pending stage 5" : "INVALID") + " | " +
+           against_fastest + " | " +
            (rss == section.rss.end() ? std::string("absent")
                                      : format("%.1f", rss->second / kBytesPerMebibyte)) +
            " | " +
            (rss == section.rss.end() || primal_rss == section.rss.end()
                 ? std::string("absent")
                 : format("%.2f", rss->second / primal_rss->second)) +
-           " | " + (taped ? cell(section.field("tape_bytes_per_path")) : std::string("-")) + " | " +
+           " | " + (taped ? tape_bytes : std::string("-")) + " | " +
            variant_note(section, variant, times) + " |\n";
   }
   return out;
@@ -437,7 +465,8 @@ std::expected<std::string, std::string> file_tables(const ResultsFile& file) {
   out += "\n\n";
   for (const std::string_view key :
        {"bench_scale", "bench_threads", "bench_thread_setup", "bench_instruction_set",
-        "bench_fastest_primal", "tape_config", "bench_rss_probe", "gradient_check"}) {
+        "bench_lane_ceiling", "bench_fastest_primal", "tape_config", "bench_rss_probe",
+        "gradient_check"}) {
     out += "- " + std::string(key) + ": " + header_value(file, key) + "\n";
   }
   out += "- commit: " + header_value(file, "commit") + "\n";

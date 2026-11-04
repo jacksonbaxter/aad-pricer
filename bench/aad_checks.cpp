@@ -211,6 +211,37 @@ void CheckVannaSymmetry(const WorkloadReport& report, CheckResult& check) {
   }
 }
 
+void CheckLaneGradient(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* tape = report.Result(Variant::kTape);
+  const VariantResult* lanes = report.Result(Variant::kTapeLanes);
+  const auto same = [&](std::string_view what, const pricer::Estimate& a,
+                        const pricer::Estimate& b) {
+    std::string where;
+    if (!SameBits(a.mean, b.mean) || !SameBits(a.standard_error, b.standard_error)) {
+      Fail(check, std::string(what) + ": tape-lanes " + Number(a.mean) + " (SE " +
+                      Number(a.standard_error) + "), tape " + Number(b.mean) + " (SE " +
+                      Number(b.standard_error) + ")");
+    } else if (!SameBatchBits(a, b, where)) {
+      Fail(check, std::string(what) + " " + where);
+    }
+  };
+  same("value", lanes->value, tape->value);
+  for (std::size_t g = 0; g < pricer::kInputCount; ++g) {
+    same(InputName(g), lanes->greeks[g], tape->greeks[g]);
+  }
+}
+
+void CheckFallback(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* lanes = report.Result(Variant::kTapeLanes);
+  check.worst = static_cast<double>(lanes->fallback_groups);
+  if (lanes->fallback_groups != 0 || lanes->fallback_paths != 0) {
+    Fail(check, std::to_string(lanes->fallback_groups) + " groups, " +
+                    std::to_string(lanes->fallback_paths) +
+                    " paths fell back to the scalar tape at " + std::to_string(LaneCount()) +
+                    " lanes");
+  }
+}
+
 void CheckSkip(const WorkloadReport& report, CheckResult& check) {
   const VariantResult* tape = report.Result(Variant::kTape);
   const VariantResult* skip = report.Result(Variant::kTapeSkip);
@@ -426,6 +457,10 @@ std::vector<CheckResult> CheckResults(const WorkloadReport& report) {
   }
   CheckBump(report, Variant::kBumpCentral, add("central-vs-tape"));
   CheckBump(report, Variant::kBumpForward, add("forward-vs-tape"));
+  if (HasVariant(*report.workload, Variant::kTapeLanes)) {
+    CheckLaneGradient(report, add("lanes-gradient-bits"));
+    CheckFallback(report, add("lanes-fallback-zero"));
+  }
   return checks;
 }
 
@@ -434,6 +469,9 @@ WorkloadReport Verify(const Workload& workload, const pricer::RunConfig& config)
   report.workload = &workload;
   report.config = config;
   report.tape = MeasureTape(workload, config);
+  if (HasVariant(workload, Variant::kTapeLanes)) {
+    report.lane_tape = MeasureLaneTape(workload, config);
+  }
   report.nonzero_fraction = NonzeroPayoffFraction(workload, config);
   const auto statements = static_cast<double>(report.tape.statements_per_path);
   report.rounding_count =
@@ -486,6 +524,20 @@ std::string RenderSection(const WorkloadReport& report) {
   for (const CheckResult& c : report.checks) {
     line("check", c.name + " " + (c.passed ? "pass" : "fail") + " " + Number(c.worst, "%.4g") +
                       (c.detail.empty() ? "" : " " + c.detail));
+  }
+  if (const VariantResult* lanes = report.Result(Variant::kTapeLanes)) {
+    const LaneTapeShape& t = report.lane_tape;
+    line("lane_count", std::to_string(t.lanes));
+    line("lane_target", LaneTarget());
+    line("lane_ceiling", LaneCeiling());
+    line("lane_tape_statements_per_group", std::to_string(t.statements_per_group));
+    line("lane_tape_operands_per_group", std::to_string(t.operands_per_group));
+    line("lane_tape_operand_bytes", std::to_string(t.operand_bytes));
+    line("lane_tape_bytes_per_path", Number(t.bytes_per_path, "%.1f"));
+    line("lane_tape_allocated_bytes", std::to_string(t.allocated_bytes));
+    line("lane_tape_groups_sampled", std::to_string(t.groups_sampled));
+    line("lane_fallback_groups", std::to_string(lanes->fallback_groups));
+    line("lane_fallback_paths", std::to_string(lanes->fallback_paths));
   }
   for (const auto& [variant, bytes] : report.peak_rss) {
     line("peak_rss", variant + " " + std::to_string(bytes));

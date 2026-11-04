@@ -66,7 +66,14 @@ void ExpectOnlyFailure(const WorkloadReport& report, std::string_view name) {
 TEST(AadChecks, EveryCheckPassesOnEveryWorkloadAtASmallSize) {
   for (const Workload& w : Workloads()) {
     const WorkloadReport report = Verify(w, Config(w, kScale, 3));
-    EXPECT_EQ(report.checks.size(), w.hand ? 5U : 4U) << w.id;
+    const bool lanes = HasVariant(w, Variant::kTapeLanes);
+    EXPECT_EQ(report.checks.size(), (w.hand ? 5U : 4U) + (lanes ? 2U : 0U)) << w.id;
+    EXPECT_EQ(lanes, w.kind == Kind::kPricer && !w.second_order) << w.id;
+    if (lanes) {
+      EXPECT_EQ(report.lane_tape.lanes, LaneCount()) << w.id;
+      EXPECT_GT(report.lane_tape.bytes_per_path, 0.0) << w.id;
+      EXPECT_EQ(report.Result(Variant::kTapeLanes)->fallback_groups, 0U) << w.id;
+    }
     for (const CheckResult& c : report.checks) {
       EXPECT_TRUE(c.passed) << w.id << " " << c.name << ": " << c.detail;
     }
@@ -122,6 +129,42 @@ TEST(AadChecks, ASkipThatDropsAStatementFails) {
 TEST(AadChecks, AValueThatIsNotPricesFails) {
   WorkloadReport report = AsianReport();
   double& value = Mutable(report, Variant::kTapeRecord).value.batch_means[0];
+  value = std::nextafter(value, 0.0);
+  ExpectOnlyFailure(report, "value-bits");
+}
+
+TEST(AadChecks, AVectorTapeGreekOneUlpOffFails) {
+  WorkloadReport report = AsianReport();
+  double& vega = Mutable(report, Variant::kTapeLanes).greeks[1].batch_means[5];
+  vega = std::nextafter(vega, 0.0);
+  ExpectOnlyFailure(report, "lanes-gradient-bits");
+}
+
+TEST(AadChecks, AVectorTapeSeOneUlpOffFails) {
+  WorkloadReport report = AsianReport();
+  double& se = Mutable(report, Variant::kTapeLanes).greeks[4].standard_error;
+  se = std::nextafter(se, 0.0);
+  ExpectOnlyFailure(report, "lanes-gradient-bits");
+}
+
+// A fallback keeps the scalar tape's bits, so only the count can show it.
+TEST(AadChecks, AFallbackInAPricerKernelFailsAndIsReported) {
+  WorkloadReport report = AsianReport();
+  VariantResult& lanes = Mutable(report, Variant::kTapeLanes);
+  lanes.fallback_groups = 3;
+  lanes.fallback_paths = 9;
+  ExpectOnlyFailure(report, "lanes-fallback-zero");
+  WorkloadReport marked = report;
+  marked.checks = CheckResults(report);
+  const std::string section = RenderSection(marked);
+  EXPECT_NE(section.find("\nlane_fallback_groups 3\n"), std::string::npos) << section;
+  EXPECT_NE(section.find("\nlane_fallback_paths 9\n"), std::string::npos);
+  EXPECT_NE(section.find("3 groups, 9 paths fell back to the scalar tape"), std::string::npos);
+}
+
+TEST(AadChecks, ALanePrimalValueThatIsNotPricesFails) {
+  WorkloadReport report = AsianReport();
+  double& value = Mutable(report, Variant::kPriceLanes).value.batch_means[2];
   value = std::nextafter(value, 0.0);
   ExpectOnlyFailure(report, "value-bits");
 }

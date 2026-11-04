@@ -33,6 +33,21 @@ struct FrequencyInfo {
 
 FrequencyInfo read_frequency_info(int cpu);
 
+// x86 CPUID family and model, extended fields included (AMD and Intel: the extended family is
+// added when the base family is 0xF, the extended model is the high nibble). nullopt off x86.
+struct X86Model {
+  unsigned family = 0;
+  unsigned model = 0;
+};
+std::optional<X86Model> read_x86_model();
+
+// What every lane ceiling on this CPU must carry beside it. AMD family 17h below model 30h (Zen
+// and Zen+, such as the Raven Ridge V1605B, 17h model 11h) executes each 256-bit AVX operation as
+// two 128-bit halves on a 128-bit FP datapath, so 4 lanes of double give about 2 lanes'
+// throughput there: "Zen 1: 128-bit FP datapath". Zen 2 (17h, 30h on) widened it to 256 bits.
+// Empty for every other CPU, and off x86.
+std::string_view fp_datapath_note(std::optional<X86Model> cpu);
+
 // Node name without its domain, as `hostname -s` prints it.
 std::string short_hostname();
 

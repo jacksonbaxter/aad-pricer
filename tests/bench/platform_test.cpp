@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -94,6 +95,35 @@ TEST(CpuInfo, ReadsThisMachine) {
   EXPECT_FALSE(info.arch.empty());
   EXPECT_NE(info.cpu_model, "unknown");
   EXPECT_GT(info.logical_cpus, 0);
+}
+
+// Zen and Zen+ (family 17h below model 30h) split 256-bit operations; Zen 2 on and Intel do not.
+TEST(FpDatapath, NamesZen1AndNothingElse) {
+  const std::string zen1 = "Zen 1: 128-bit FP datapath";
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x11}), zen1);  // V1605B
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x01}), zen1);
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x08}), zen1);  // Zen+
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x2F}), zen1);
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x30}), "");  // Zen 2
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x17, .model = 0x71}), "");
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x19, .model = 0x21}), "");  // Zen 3
+  EXPECT_EQ(fp_datapath_note(X86Model{.family = 0x06, .model = 0x9E}), "");  // Intel
+  EXPECT_EQ(fp_datapath_note(std::nullopt), "");
+}
+
+TEST(FpDatapath, ReadsTheFamilyOnX86AndNothingElsewhere) {
+  const auto cpu = read_x86_model();
+#if defined(__x86_64__) || defined(__i386__)
+  ASSERT_TRUE(cpu.has_value());
+  EXPECT_GE(cpu->family, 6U);
+  // The Linux host is the Zen 1 this note exists for.
+  if (read_cpu_info().cpu_model.find("V1605B") != std::string::npos) {
+    EXPECT_EQ(cpu->family, 0x17U);
+    EXPECT_EQ(cpu->model, 0x11U);
+  }
+#else
+  EXPECT_FALSE(cpu.has_value());
+#endif
 }
 
 TEST(CpuInfo, KernelFieldNeverHoldsTheNodeName) {

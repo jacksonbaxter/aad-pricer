@@ -27,14 +27,15 @@ constexpr std::string_view kSection =
     "estimate bump-central delta 0.5 0.01\n"
     "step central delta 0.0001 0.001 1e-05 0.002\n";
 
-std::string benchmark_json() {
+using Times = std::vector<std::pair<std::string_view, std::string_view>>;
+
+std::string benchmark_json(const Times& extra = {}) {
   std::string entries = R"({"run_name": "harness_selftest/manual_time", "aggregate_name": "mean", )"
                         R"("real_time": 4100.5})";
-  for (const auto& [name, ns] :
-       std::vector<std::pair<std::string_view, std::string_view>>{{"w.price", "1e6"},
-                                                                  {"w.tape", "4e6"},
-                                                                  {"w.tape-record", "3e6"},
-                                                                  {"w.bump-central", "11e6"}}) {
+  Times times = {
+      {"w.price", "1e6"}, {"w.tape", "4e6"}, {"w.tape-record", "3e6"}, {"w.bump-central", "11e6"}};
+  times.insert(times.end(), extra.begin(), extra.end());
+  for (const auto& [name, ns] : times) {
     entries += R"(, {"run_name": ")" + std::string(name) +
                R"(/iterations:1/repeats:3/manual_time", "aggregate_name": "mean", "real_time": )" +
                std::string(ns) + "}";
@@ -43,12 +44,12 @@ std::string benchmark_json() {
          entries + "]\n}\n";
 }
 
-ResultsFile aad_file(std::string_view section, bool reportable = true,
-                     bool through_measure = true) {
+ResultsFile aad_file(std::string_view section, bool reportable = true, bool through_measure = true,
+                     const Times& extra = {}) {
   ResultsFile raw = testing::raw_file();
   testing::set_field(raw, "claim", "result");
   for (ResultsSection& s : raw.sections) {
-    if (s.name == kBenchmarkSection) s.body = benchmark_json();
+    if (s.name == kBenchmarkSection) s.body = benchmark_json(extra);
   }
   raw.sections.push_back({.name = "aad_w", .body = std::string(section)});
   testing::StampCase test_case;
@@ -66,7 +67,7 @@ TEST(AadTable, RendersEachVariantAgainstTheScalarPrimal) {
   const auto table = render_host_table(files);
   ASSERT_TRUE(table.has_value()) << table.error();
   // time 4 ms, 1000 paths in 4 ms, 4 times the primal, the SIMD slot, 4 MiB, twice the primal's.
-  EXPECT_NE(table->find("| tape | 4 | 2.5e+05 | 4 | pending stage 5 | 4.0 | 2.00 | 1239 |"),
+  EXPECT_NE(table->find("| tape | 4 | 2.5e+05 | 4 | no lane primal | 4.0 | 2.00 | 1239 |"),
             std::string::npos)
       << *table;
   EXPECT_NE(table->find("reverse sweep (tape - tape-record) 1 ms, 1 x primal"), std::string::npos);
@@ -74,6 +75,31 @@ TEST(AadTable, RendersEachVariantAgainstTheScalarPrimal) {
   EXPECT_NE(table->find("11 pricings expected (2N + 1)"), std::string::npos);
   EXPECT_NE(table->find("nonzero-payoff fraction 0.5"), std::string::npos);
   EXPECT_EQ(table->find("ITERATION ONLY"), std::string::npos);
+}
+
+// The lane primal at 0.5 ms is the fastest, so the tape's 4 ms is 8 times it; the vector tape's
+// row carries its own bytes per path, the ceiling and the fallback count.
+TEST(AadTable, RendersTheLaneVariantsAgainstTheFastestPrimal) {
+  std::string section(kSection);
+  section +=
+      "lane_count 4\nlane_target AVX2\nlane_ceiling 4 double lanes on AVX2; Zen 1: 128-bit FP "
+      "datapath\nlane_tape_bytes_per_path 950.5\nlane_fallback_groups 0\nlane_fallback_paths 0\n"
+      "variant price-lanes w.price-lanes\nvariant tape-lanes w.tape-lanes\n";
+  const std::vector<ResultsFile> files = {
+      aad_file(section, true, true, {{"w.price-lanes", "5e5"}, {"w.tape-lanes", "2e6"}})};
+  const auto table = render_host_table(files);
+  ASSERT_TRUE(table.has_value()) << table.error();
+  EXPECT_NE(table->find("| tape | 4 | 2.5e+05 | 4 | 8 | 4.0 | 2.00 | 1239 |"), std::string::npos)
+      << *table;
+  EXPECT_NE(table->find("| price-lanes | 0.5 | 2e+06 | 0.5 | 1 |"), std::string::npos);
+  EXPECT_NE(table->find("price / price-lanes 2 x, lane ceiling: 4 double lanes on AVX2; Zen 1: "
+                        "128-bit FP datapath"),
+            std::string::npos);
+  EXPECT_NE(table->find("| tape-lanes | 2 | 5e+05 | 2 | 4 | absent | absent | 950.5 |"),
+            std::string::npos);
+  EXPECT_NE(table->find("tape / tape-lanes 2 x, lane ceiling: 4 double lanes on AVX2; Zen 1: "
+                        "128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths"),
+            std::string::npos);
 }
 
 TEST(AadTable, PutsTheStudyBiasAndRmseTimesTimeBesideEachGreek) {

@@ -1,5 +1,6 @@
-// The AAD benchmark: bump and revalue, the tape and the hand adjoint against the scalar primal,
-// one Google Benchmark per workload and variant, through the harness (harness.hpp). See
+// The AAD benchmark: bump and revalue, the tape, the hand adjoint, and the lane primal and vector
+// tape (src/simd) against the scalar primal and the fastest primal, one Google Benchmark per
+// workload and variant, through the harness (harness.hpp). See
 // aad_workloads.hpp for the workloads and variants, aad_checks.hpp for what is verified before
 // timing, and BENCHMARKS.md, "How Phase 3 numbers are produced", for the commands.
 //
@@ -260,17 +261,25 @@ int main(int argc, char** argv) try {
       "pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks "
       "of 1024 paths in turn, one tape per worker, block sums merged in block order, so every "
       "estimate is the same bits for any thread count; no pinning of its own, see pinning_state");
+  const std::string lanes = std::to_string(aad::LaneCount());
   add("bench_instruction_set",
-      "scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists "
-      "until stage 5; simd_target is the build's Highway target only");
+      "price-lanes and tape-lanes: Highway " + aad::LaneTarget() + ", " + lanes +
+          " double lanes, static dispatch (simd_target); every other variant is scalar C++ in "
+          "the same binary, at the same flags (cxx_flags)");
+  add("bench_lane_ceiling", aad::LaneCeiling());
   add("bench_fastest_primal",
-      "pending stage 5 (SIMD kernels); multiples here are against the "
-      "scalar primal");
+      "per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at " + lanes +
+          " lanes, the build's widest); both give Price()'s bits. Workloads without lanes "
+          "(aad8-*, lw-worst) have no fastest-primal multiple");
   add("tape_config",
       "tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of "
       "arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and "
       "rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in "
-      "tape-skip");
+      "tape-skip. tape-lanes: the vector tape at " +
+          lanes +
+          " lanes, one statement per operation per group of lanes, statement 1 B, operand "
+          "4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any "
+          "group whose Selects diverge priced on the scalar tape and counted");
   add("bench_rss_probe",
       "peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this "
       "size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing");

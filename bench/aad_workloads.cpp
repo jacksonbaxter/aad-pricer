@@ -9,6 +9,7 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -20,6 +21,7 @@
 #include "ad/tape.hpp"
 #include "lax_wendroff.hpp"
 #include "oracle/tolerance.hpp"
+#include "platform/cpu_info.hpp"
 #include "pricer/bump.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
@@ -27,6 +29,8 @@
 #include "pricer/model.hpp"
 #include "pricer/pricer.hpp"
 #include "pricer/runner.hpp"
+#include "simd/lane_gradient.hpp"
+#include "simd/simd_pricer.hpp"
 
 namespace aadp::bench::aad {
 
@@ -37,8 +41,9 @@ using pricer::Market;
 using pricer::RunConfig;
 
 constexpr std::array<std::string_view, kVariants.size()> kVariantNames = {
-    "price",        "tape",       "tape-skip", "tape-record", "hand",        "bump-central",
-    "bump-forward", "cond-price", "cond-tape", "for-spot",    "for-spot-vol"};
+    "price",        "tape",         "tape-skip",  "tape-record", "hand",
+    "bump-central", "bump-forward", "cond-price", "cond-tape",   "for-spot",
+    "for-spot-vol", "price-lanes",  "tape-lanes"};
 
 Contract Barrier() {
   Contract c;
@@ -391,6 +396,24 @@ Runner PricerRunner(const Workload& w, Variant variant, const RunConfig& config)
         Require(run.has_value(), "forward over reverse refused");
         return FromHessian(Variant::kForSpotVol, std::move(*run));
       };
+    case Variant::kPriceLanes:
+      return [c, m, config, lanes = LaneCount()] {
+        auto run = simd::PriceLanes(c, m, config, lanes);
+        Require(run.has_value(), "lane primal refused");
+        VariantResult out;
+        out.variant = Variant::kPriceLanes;
+        out.value = std::move(*run);
+        return out;
+      };
+    case Variant::kTapeLanes:
+      return [c, m, config, lanes = LaneCount()] {
+        auto run = simd::PriceWithGradientLanes(c, m, config, lanes);
+        Require(run.has_value(), "vector tape refused");
+        VariantResult out = FromGradient(Variant::kTapeLanes, std::move(run->estimate));
+        out.fallback_groups = run->fallback_groups;
+        out.fallback_paths = run->fallback_paths;
+        return out;
+      };
   }
   throw std::runtime_error("unknown variant");
 }
@@ -494,6 +517,8 @@ Runner LwRunner(const Workload& w, Variant variant) {
     case Variant::kCondTape:
     case Variant::kForSpot:
     case Variant::kForSpotVol:
+    case Variant::kPriceLanes:
+    case Variant::kTapeLanes:
       break;
   }
   throw std::runtime_error("unknown variant");
@@ -529,6 +554,9 @@ bool HasVariant(const Workload& workload, Variant variant) {
                       variant == Variant::kForSpot || variant == Variant::kForSpotVol;
   if (workload.second_order) {
     return second || variant == Variant::kPrice || variant == Variant::kTape;
+  }
+  if (variant == Variant::kPriceLanes || variant == Variant::kTapeLanes) {
+    return workload.kind == Kind::kPricer;
   }
   return !second && (variant != Variant::kHand || workload.hand);
 }
@@ -608,6 +636,43 @@ TapeShape MeasureTape(const Workload& workload, const RunConfig& config) {
   shape.allocated_bytes = path.tape().Memory().allocated_bytes;
   shape.paths_sampled = static_cast<std::size_t>(sampled);
   return shape;
+}
+
+LaneTapeShape MeasureLaneTape(const Workload& workload, const RunConfig& config) {
+  Require(HasVariant(workload, Variant::kTapeLanes), "the workload has no vector tape");
+  const auto memory =
+      simd::MeasureLaneTape(workload.contract, workload.market, config, LaneCount());
+  Require(memory.has_value(), "the vector tape refused the workload");
+  LaneTapeShape shape;
+  shape.lanes = memory->lanes;
+  shape.statements_per_group = memory->statements;
+  shape.operands_per_group = memory->operands;
+  shape.operand_bytes = memory->operand_bytes;
+  const std::size_t group_bytes =
+      (memory->statements * memory->statement_bytes) + (memory->operands * memory->operand_bytes);
+  shape.bytes_per_path = static_cast<double>(group_bytes) / static_cast<double>(memory->lanes);
+  shape.allocated_bytes = memory->allocated_bytes;
+  shape.groups_sampled = memory->groups;
+  return shape;
+}
+
+std::size_t LaneCount() { return simd::MaxLanes(); }
+
+std::string LaneTarget() { return simd::TargetName(); }
+
+std::string LaneCeiling() {
+  const std::string lanes = std::to_string(LaneCount());
+  // A ceiling on the double arithmetic per instruction. Work the lanes share (a group's indices,
+  // operand counts and tape lookups) is done once per group, so a tape speedup can pass it.
+  std::string out = lanes + " double lanes on " + LaneTarget() + ", at most " + lanes +
+                    " doubles of arithmetic per instruction";
+  const std::string datapath(platform::fp_datapath_note(platform::read_x86_model()));
+  if (!datapath.empty()) {
+    out += "; " + datapath;
+    // 128 bits hold 2 doubles: a wider vector runs as 128-bit halves there.
+    if (LaneCount() > 2) out += ", which runs each 256-bit operation as two 128-bit halves";
+  }
+  return out;
 }
 
 double NonzeroPayoffFraction(const Workload& workload, const RunConfig& config) {

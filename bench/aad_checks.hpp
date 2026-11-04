@@ -31,6 +31,18 @@
 //                    comparison of the suite, so the family is the same however many workloads
 //                    one run selects. Lax-Wendroff is deterministic: |d| <= b, input by input.
 //
+//   lanes-gradient-bits
+//                    tape-lanes's value and five Greeks (mean, SE and every batch mean) are the
+//                    tape's, bit for bit: the vector tape forms each lane's partials and sweep in
+//                    the scalar tape's order and adds the set-up contributions in path order
+//                    (NOTES.md, "Vector tape: design and oracle"). price-lanes's and tape-lanes's
+//                    values are in value-bits.
+//   lanes-fallback-zero
+//                    no group of tape-lanes fell back to the scalar tape: every Select in the
+//                    pricer's kernels picks between an active Real and a constant. A fallback
+//                    keeps the bits, so lanes-gradient-bits cannot see it; this check reports the
+//                    count, and a count above zero fails the workload.
+//
 // The second-order workloads (aad8-*) have these four, and no statistical check, so the family
 // above is unchanged:
 //   value-bits       tape's value batch means are Price()'s, and cond-tape's, for-spot's and
@@ -73,6 +85,7 @@ struct WorkloadReport {
   const Workload* workload = nullptr;
   pricer::RunConfig config{};
   TapeShape tape;
+  LaneTapeShape lane_tape;  // Lanes 0 where the workload has no tape-lanes
   double nonzero_fraction = 0.0;
   double rounding_count = 0.0;
   double critical = 0.0;
