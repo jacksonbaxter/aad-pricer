@@ -2945,6 +2945,26 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] SimdPrices\\.RefusesWhatPriceRefusesAndUnknownWidths \\(",
       "timeout_s": 300
+    },
+    {
+      "id": "fuzz-simd-kernels",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_simd_kernels, lane kernels against scalar",
+      "bug": "The lane log drops its final NaN select, so a negative, -inf or NaN argument gives the main path's dummy result, 0, where math::log gives the canonical NaN.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "  return hn::IfThenElse(hn::Or(hn::Lt(x, zero), hn::IsNaN(x)), set(math::detail::kNaN), result);",
+          "replace": "  return result;"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_simd_kernels"],
+      "command": ["{build}/bin/aadp_fuzz_simd_kernels", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-simd-kernels/", "{build}/fault-fuzz/fuzz-simd-kernels/corpus"],
+      "detect": "test",
+      "reason": "simd mismatch: log at \\d+ lanes",
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-simd-kernels/*", "build/fuzz/fault-fuzz/fuzz-simd-kernels/corpus/*"],
+      "timeout_s": 120
     }
   ]
 }

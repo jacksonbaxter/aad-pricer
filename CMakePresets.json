@@ -79,6 +79,13 @@
       }
     },
     {
+      "name": "fuzz-avx2",
+      "displayName": "libFuzzer with ASan and UBSan, AVX2 with FMA (x86-64)",
+      "description": "The AVX2 lanes under the sanitizers, which only an AVX2 host can run.",
+      "inherits": "fuzz",
+      "cacheVariables": { "AADP_SIMD_TARGET": "avx2" }
+    },
+    {
       "name": "release-gcc",
       "displayName": "Release with g++ (Linux)",
       "inherits": "optimised",
@@ -108,6 +115,7 @@
     { "name": "asan-ubsan", "configurePreset": "asan-ubsan" },
     { "name": "tsan", "configurePreset": "tsan" },
     { "name": "fuzz", "configurePreset": "fuzz" },
+    { "name": "fuzz-avx2", "configurePreset": "fuzz-avx2" },
     { "name": "release-gcc", "configurePreset": "release-gcc" },
     { "name": "release-avx2", "configurePreset": "release-avx2" },
     { "name": "release-avx512", "configurePreset": "release-avx512" }
@@ -124,6 +132,7 @@
     { "name": "asan-ubsan", "inherits": "test-base", "configurePreset": "asan-ubsan" },
     { "name": "tsan", "inherits": "test-base", "configurePreset": "tsan" },
     { "name": "fuzz", "inherits": "test-base", "configurePreset": "fuzz" },
+    { "name": "fuzz-avx2", "inherits": "test-base", "configurePreset": "fuzz-avx2" },
     { "name": "release-gcc", "inherits": "test-base", "configurePreset": "release-gcc" },
     { "name": "release-avx2", "inherits": "test-base", "configurePreset": "release-avx2" }
   ]

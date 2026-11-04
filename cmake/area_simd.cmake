@@ -42,3 +42,11 @@ foreach(_aadp_sized IN ITEMS aadp_simd_math_agreement_test aadp_simd_path_agreem
       AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
   endif()
 endforeach()
+
+# Check 4: the SIMD kernels against the scalar ones on arbitrary inputs, under libFuzzer, ASan and
+# UBSan. The fuzz-avx2 preset builds it for AVX2, for the Linux host.
+aadp_fuzz(aadp_fuzz_simd_kernels
+  SOURCES fuzz/fuzz_simd_kernels.cpp
+  LINK aadp_simd
+  LABELS simd
+  CORPUS fuzz/fuzz_simd_kernels_seeds)
