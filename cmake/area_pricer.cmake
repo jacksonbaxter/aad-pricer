@@ -150,10 +150,17 @@ if(TARGET aadp_rng)
       SOURCES tests/ad/oracle_equivalence_test.cpp
       LINK aadp_ad aadp_oracle_lib aadp_test_support
       LABELS ad)
-    if(TARGET aadp_ad_oracle_equivalence_test)
-      target_compile_definitions(aadp_ad_oracle_equivalence_test PRIVATE
-        AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
-    endif()
+    # Second-order Greeks against closed forms and quadrature (checks 1, 2 and 5).
+    aadp_test(aadp_ad_second_order_oracle_test
+      SOURCES tests/ad/second_order_oracle_test.cpp
+      LINK aadp_ad aadp_oracle_lib aadp_quadrature_lib
+      LABELS ad)
+    foreach(_aadp_sized IN ITEMS aadp_ad_oracle_equivalence_test aadp_ad_second_order_oracle_test)
+      if(TARGET ${_aadp_sized})
+        target_compile_definitions(${_aadp_sized} PRIVATE
+          AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+      endif()
+    endforeach()
   endif()
   # MEM-6: no heap allocation after warm-up, by a counting operator new. Its own binary, since
   # it replaces the global allocation functions.

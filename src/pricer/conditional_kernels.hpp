@@ -25,8 +25,8 @@
 //                          d0, d1 > 0 the gaps at its two ends. The paper proves it unbiased
 //                          against the bridge (Theorem 2.6) and its first derivatives Lipschitz.
 //                          The last step's bridge factor is inside the closed form: on the live
-//                          side, E[g(X) exp(-2 d0 d1(X) / s^2)] = R E[g(Y)], Y ~ N(mu +- 2 d0, s^2),
-//                          R = exp(+-2 d0 (mu - x) / s^2), + for an up barrier, - for a down
+//                          side, E[g(X) exp(-2 d0 d1(X) / s^2)] = R E[g(Y)], Y ~ N(mu +- 2 d0,
+//                          s^2), R = exp(+-2 d0 (mu - x) / s^2), + for an up barrier, - for a down
 //                          (completing the square).
 //   kHard, kSmoothed       refused (ValidateConditional): an indicator's pathwise derivatives are
 //                          zero, and the smoothed barrier is a different, biased contract.
@@ -151,8 +151,8 @@ Real AsianGeometric(const Contract& c, const Model& model, std::span<const doubl
   }
   const StepLaw<Real> law = model.Law(c.steps - 1, x);
   const double count = static_cast<double>(c.steps) + (c.include_spot ? 1.0 : 0.0);
-  return model.Discount() *
-         Corridor(c.type, c.strike, Vanilla(c), Real((sum + law.mean) / count), Real(law.sd / count));
+  return model.Discount() * Corridor(c.type, c.strike, Vanilla(c), Real((sum + law.mean) / count),
+                                     Real(law.sd / count));
 }
 
 // (sum + S_m) / count - K = (S_m - K') / count with K' = count K - sum, the strike left for the

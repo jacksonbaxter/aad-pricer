@@ -154,8 +154,7 @@ Dual<T, N, A> operator/(const Dual<T, N, A>& a, const Dual<T, N, A>& b) {
   out.value = a.value / b.value;
   for (std::size_t k = 0; k < N; ++k) {
     if constexpr (A) {
-      out.tangent[k] =
-          (a.tangent[k] + (Magnitude(out.value) * b.tangent[k])) / Magnitude(b.value);
+      out.tangent[k] = (a.tangent[k] + (Magnitude(out.value) * b.tangent[k])) / Magnitude(b.value);
     } else {
       out.tangent[k] = (a.tangent[k] - (out.value * b.tangent[k])) / b.value;
     }
