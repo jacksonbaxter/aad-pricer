@@ -2,7 +2,7 @@
 
 Plan through to the Done criteria. Tick items when done, and add anything new. Targets are in `BENCHMARKS.md`; findings and decisions are in `NOTES.md`.
 
-Each phase ends with a phase report and waits for a go-ahead. Every commit builds and passes tests. Work is on `jb-build`, with no remote.
+Each phase ends with a phase report and waits for a go-ahead. Every commit builds and passes tests. Work is on `jb-build`, which is published to the public GitHub repository.
 
 ## Phase 1: Research
 
@@ -45,7 +45,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
 - [x] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
 - [ ] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build
-- [x] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON: `linux-avx2`, `linux-avx512-build` and the `macos-15` jobs. AVX-512 is build-only. See `NOTES.md`: the workflow has never executed on GitHub
+- [x] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON: `linux-avx2`, `linux-avx512-build` and the macOS jobs, now on `xcode-27` (54933ed). AVX-512 is build-only. The workflow first ran on GitHub in Phase 3: see the Phase 3 CI items and `NOTES.md`
 - [ ] Lane-width test matrix in CI, one job for each lane width that can run. It needs the SIMD kernels, so it waits on Phase 3
 - [x] Any code that depends on lane count takes it from the type, never a constant
 - [x] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
@@ -96,7 +96,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] `.clang-tidy` checked in, clang-format pinned. `scripts/run_clang_tidy.sh release fuzz` reports 78 units clean on the Mac and on Linux
 - [x] `.github/workflows/ci.yml`: two compilers, Linux and macOS, Debug and Release, QuantLib optional
 - [ ] CI compile options for tape layout, and Metal off on non-Apple. Neither is in `ci.yml`. Both depend on that work, so they belong in Phase 3, with the tape and Metal items
-- [x] Validate CI locally with actionlint from repo tooling, and by running its commands on the Mac and Linux. The Linux sanitizer and fuzz-smoke jobs have not run anywhere. Recorded plainly in `NOTES.md` that it has never executed on GitHub
+- [x] Validate CI locally with actionlint from repo tooling, and by running its commands on the Mac and Linux. In Phase 2 the Linux sanitizer and fuzz-smoke jobs had not run anywhere, and the workflow had never executed on GitHub. It first ran in Phase 3, at bc3e6d3, and failed 9 of 17 jobs (`NOTES.md`, "Phase 3 findings so far")
 - [x] `scripts/compare_measured.py` compares the measured plan with `references/measured_results.csv`. All 90 rows match on the Mac, Linux clang, g++ 14.2 and AVX2
 - [x] The two tests that depended on the caller's nice value are fixed (9b746bb)
 - [x] Linux run at 89dbee8: clang release and debug, g++ 14.2 release and debug, AVX2 release, 364 of 364 each, 0 skipped. AVX-512 built, not run. Linux clang-tidy clean
@@ -117,45 +117,52 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ## Phase 3: Implementation
 
+Stages 1a to 3b are done, with the CI fixes after them. Findings are in `NOTES.md`, "Phase 3 findings so far", and measured numbers under each target in `BENCHMARKS.md`.
+
 ### Tape
 
-- [ ] Tape bytes per path recorded by the harness, beside peak RSS
-- [ ] Each benchmark verifies its gradient inside the run (B33)
-- [ ] Tangent-adjoint dot-product test (B20)
-- [ ] Pricer entry-point fuzzer under sanitizers (B23)
-- [ ] Tape operation-sequence fuzzer against finite differences (B23, exceeds)
-- [ ] Struct-of-arrays tape: statement and operand arrays, chunked, 16-byte active type, sizes asserted
-- [ ] Thread-local tape with RAII scope, mark and rewind per path, no allocation after warm-up
-- [ ] Surface and other set-up stay outside the per-path tape, swept once from a mark to the start. Per-path adjoint of shared set-up breaks the constant multiple
-- [ ] Hand-coded pathwise adjoint for the GBM Asian, as the `AAD-5` baseline
-- [ ] One-node-per-operation tape first. Then evaluate expression templates against `AAD-2`
+- [x] Tape bytes per path recorded by the harness, beside peak RSS (e4a9a98). Linux RSS probe fixed in c1c1a62 and d1596e0
+- [x] Each benchmark verifies its gradient inside the run (B33) (e4a9a98). It caught a real bug in the barrier bump, fixed in 1172aaa
+- [x] Tangent-adjoint dot-product test (B20) (96644e1)
+- [x] Pricer entry-point fuzzer under sanitizers (B23): `fuzz_pricer` (5036729) and `fuzz_pricer_gradient` (96644e1)
+- [x] Tape operation-sequence fuzzer against finite differences (B23, exceeds): `fuzz_tape_operations` (96644e1, round-off at every stencil point since 6932c4e)
+- [x] Struct-of-arrays tape: statement and operand arrays, chunked, 16-byte active type, sizes asserted (19d7789)
+- [x] Thread-local tape with RAII scope, mark and rewind per path, no allocation after warm-up (19d7789; allocation test a7a2591)
+- [x] Surface and other set-up stay outside the per-path tape, swept once from a mark to the start. Per-path adjoint of shared set-up breaks the constant multiple (19d7789). Swept once per block of 1024 paths, counted in 653ea07
+- [x] Hand-coded pathwise adjoint for the GBM Asian, as the `AAD-5` baseline (16a5211)
+- [ ] One-node-per-operation tape first. Then evaluate expression templates against `AAD-2`. The one-node tape is done (19d7789). Expression templates remain, at stage 11
 - [ ] Vector values: one tape structure shared across lanes, with per-lane partials and a vector adjoint. Requires branch-free kernels, which the smoothed and bridge treatments give. Fall back to the scalar tape where lanes diverge. Measure both, and show assembly for any claim (B15)
-- [ ] Multi-threaded: one tape per worker, gradient accumulators merged in fixed block order. TSan clean
+- [x] Multi-threaded: one tape per worker, gradient accumulators merged in fixed block order. TSan clean (653ea07)
+- [ ] B4: justify the chunk size, 2^13 entries, by a sweep. Not swept yet
+- [ ] B9: keep the zero-adjoint skip only if the measurement supports it. Measured as `tape-skip` (c90e7ca): faster than the plain sweep on every pricer workload on both hosts, slower on Lax-Wendroff. Whether the default sweep uses it is not decided
+- [ ] B13: time the thread-local slot with and without `thread_local`. Every recorded operation reads it once, and on macOS that read is a thread-local lookup. Needs a CMake option to build the other way
+- [x] B14: merge documented and order-independent. Block sums go to per-block slots, merged in block order after the workers join (653ea07; `src/ad/gradient.hpp`)
+- [ ] Draw the one-step survival step in the complement form 1 − q = Φ(−a) + p u. At a = 8, u = 2^-53 the tape's delta is 0.0351 against the true 0.0266: the primal's conditioning, not the adjoint (`tests/ad/one_step_corner_test.cpp`)
 
 ### Pricer
 
-- [ ] Own `exp`, `log` and inverse-normal kernels, so libm differences do not reach results
-- [ ] Arithmetic Asian, geometric Asian
-- [ ] Continuous barrier: log-space Brownian-bridge survival weight
-- [ ] Discrete barrier: one-step survival. Never apply the bridge to a discretely monitored contract: at H=97, 3.060 continuous against 3.834 discrete
-- [ ] Hard-indicator mode, for naive failure and for QuantLib rows R5 and R7
-- [ ] Knock-ins through parity. Digitals through last-step conditional expectation
-- [ ] Documented smoothing mode, for comparison with `AAD-1`, with its bias measured
-- [ ] State and measure the bias of each treatment. Bridge under Euler is first order, with payoff conditions
+- [x] Own `exp`, `log` and inverse-normal kernels, so libm differences do not reach results (f23dcd2, a43f40c)
+- [x] Arithmetic Asian, geometric Asian (5fa6df6)
+- [x] Continuous barrier: log-space Brownian-bridge survival weight (5fa6df6)
+- [x] Discrete barrier: one-step survival. Never apply the bridge to a discretely monitored contract: at H=97, 3.060 continuous against 3.834 discrete (5fa6df6; the pricer refuses the bridge on a discrete barrier)
+- [x] Hard-indicator mode, for naive failure and for QuantLib rows R5 and R7 (5fa6df6)
+- [x] Knock-ins through parity. Digitals through last-step conditional expectation (5fa6df6)
+- [x] Documented smoothing mode, for comparison with `AAD-1`, with its bias measured (5fa6df6; bias table 5036729)
+- [ ] State and measure the bias of each treatment. Bridge under Euler is first order, with payoff conditions. Done for exact GBM steps (5036729, table in `NOTES.md`). The Euler and local-vol part remains, at stage 7
 - [ ] Barrier gamma through one-step survival, because bridge first derivatives are not Lipschitz
-- [ ] SIMD paths, kernels instantiated from 1 to N lanes. Fixed block order for reduction
-- [ ] Philox4x32-10 stream keyed on (path, step). Evaluate xoshiro256++ as CPU-only option with fixed block-to-stream assignment
-- [ ] Inverse normal: AS241 with masked tails, Giles as fallback if vector divergence dominates
+- [ ] SIMD paths, kernels instantiated from 1 to N lanes. Fixed block order for reduction. Fixed block order is done for the scalar pricer (5fa6df6). SIMD remains, at stage 5
+- [ ] Philox4x32-10 stream keyed on (path, step). Evaluate xoshiro256++ as CPU-only option with fixed block-to-stream assignment. Philox keyed on (seed, path, step) is done (5fa6df6). xoshiro256++ remains, at stage 11
+- [ ] Inverse normal: AS241 with masked tails, Giles as fallback if vector divergence dominates. The scalar masked AS241 is done (a43f40c). The SIMD form remains, at stage 5
 - [ ] Scalar and SIMD agreement test, on every lane width that can run. Moved from Phase 2: it needs real SIMD kernels
 - [ ] Philox4x32-10 known-answer test on SIMD lanes and Metal. Moved from Phase 2 for the same reason
 - [ ] Sobol with Joe-Kuo directions and Brownian-bridge construction, as an evaluated option. SE is meaningless on Sobol, so oracles stay on pseudo-random
 
 ### Bump and revalue
 
-- [ ] Common random numbers, same path count, same optimisation level
-- [ ] Bump size chosen by experiment, stated in results. With treatments, h is limited by round-off, so check by halving. The n^(−1/5) rule applies only to naive differences
-- [ ] Report the AAD multiple beside tape bytes per path and peak RSS
-- [ ] Report accuracy beside wall time: AAD without QMC is not guaranteed faster than differences at fixed accuracy for few Greeks
+- [x] Common random numbers, same path count, same optimisation level (6bfdc62, e4a9a98)
+- [x] Bump size chosen by experiment, stated in results. With treatments, h is limited by round-off, so check by halving. The n^(−1/5) rule applies only to naive differences (e4a9a98, rerun in 1172aaa: `bench/bump_size_study.csv`, `bench/aad_steps.hpp`)
+- [x] Report the AAD multiple beside tape bytes per path and peak RSS (c3831fa; results 2fc28be on `mac-m4max`, e495a37 on `linux-zen1`)
+- [x] Report accuracy beside wall time: AAD without QMC is not guaranteed faster than differences at fixed accuracy for few Greeks (c3831fa: SE, bias and RMSE² × time per Greek)
 
 ### Second-order Greeks
 
@@ -207,8 +214,16 @@ Build only behind an option, because 985 source files make it a long build.
 
 - [ ] `perf record -g --user-callchains -e cycles:u` on `debian`. Perf cycles and TSC ticks are different units. Zen 1 `cache-misses` appears to count L2 misses: confirm in AMD's documentation and cite it before quoting the number
 - [ ] Iterate against the harness. Record what was tried in `NOTES.md`, including what did not help
+- [ ] Find out why the tape costs 166 times the primal on Lax-Wendroff on `mac-m4max`, and 106 on `linux-zen1`, against Hogan's 32 to 33 for Adept (B34). The hand adjoint costs 3.37 and 3.24 times, against Hogan's 2.1
 - [ ] Reported numbers through `measure.sh` only
-- [ ] Run all benchmarks on `linux-zen1` once it is ready
+- [ ] Run all benchmarks on `linux-zen1` once it is ready. The six AAD workloads ran there at d1596e0 (e495a37), the threaded ones on two pinned CPUs. Later stages' benchmarks remain
+
+### CI
+
+- [x] Fix the failures of the first GitHub run, 41770201004 at bc3e6d3, which failed 9 of 17 jobs: d8e39d8, 74f0aac, 0bde08f, 8d00d85, bb7b26f, 54933ed. `scripts/check.sh` passes 13 of 13 at 54933ed
+- [ ] Confirm every CI job is green once a push works. The fixes are committed and not pushed
+- [ ] CI's Linux clang jobs use libc++, like the Linux measurement host. The GCC jobs keep libstdc++
+- [ ] `scripts/verify_commits.sh` needs rsync, which the Linux host lacks. Fix before stage 12
 
 ## Phase 4: Final review and Done
 
