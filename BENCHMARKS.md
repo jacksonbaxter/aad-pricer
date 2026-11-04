@@ -1,6 +1,6 @@
 # BENCHMARKS
 
-Targets for aad-pricer, and the evidence behind each one. Nothing here has been measured on this project yet. Every number below is a published figure, or arithmetic on one, and is a target until a results file says otherwise.
+Targets for aad-pricer, and the evidence behind each one. Every target below is a published figure, or arithmetic on one. A line starting "Measured" under a target gives this project's number from the files in `results/`, added in Phase 3. It never changes the target.
 
 Research date: 2026-10-30. Raw evidence, with verbatim quotes and local copies, is outside the repo under `.orchestrator/research-cache/aad-pricer/` (see `NOTES.md`, "Evidence index").
 
@@ -32,6 +32,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "Our AAD implementation produces the entire risk in around 8 seconds (8,250 ms), less than three times a single valuation."
 - Source measured: iMac Pro, Xeon W-2140B, 3.20 GHz, Windows 10, VS2017 release | 3y European call K=120 with 150 barrier, Dupire local vol on 60 times and 30 spots, 500,000 paths, 156 weekly steps, Sobol, 1,801 sensitivities (1,081 active), barrier smoothing of 5 | single thread | wall time, general operator-overloading tape wiped per path. "a pricing took around 3 seconds", so the implied multiple is about 2.75 (derived, 8,250 / 3,000, approximate).
 - Class: `DIRECT`. Closest match found in every dimension, on different hardware, and on a smoothed barrier whose bias the source does not state. Lead check: done.
+- Measured at d1596e0, against the scalar primal: `linux-zen1` 1.89, `mac-m4max` 2.74. Met, by 1.11 and 0.26. Not like-for-like: other hardware, and GBM at a flat vol with Philox draws and 5 inputs, not Dupire local vol with Sobol and 1,801 sensitivities. The multiple against the fastest primal waits for stage 5. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`.
 
 ### AAD-2: barrier, stretch with expression templates: multiple 1.5
 
@@ -46,6 +47,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "With the parallel implementation, we get the exact same results in exactly one second, with perfect parallel efficiency." and "a parallel price with Sobol takes 350 ms in our example"
 - Source measured: as `AAD-1` | 8 cores, thread-local tapes. Multiple derived: 1,000 / 350 = 2.86; with Chapter 15, 575 / 350 = 1.64.
 - Class: `DERIVED` from `DIRECT`. `linux-zen1` has only two pinned threads (`cpu4`, `cpu6`), so eight threads can only be run on `mac-m4max`, unpinned. Lead check: done.
+- Measured at d1596e0: `linux-zen1` 1.89 on 2 threads pinned to CPUs 4 and 6, `mac-m4max` 2.68 on 8 threads, unpinned. Both meet 2.86, by 0.97 and 0.18. Both miss the stretch 1.64, by 0.25 and 1.04. Not like-for-like: the source ran 8 cores on other hardware, and the workload differs as in `AAD-1`. Files: `results/linux-zen1/aad3-barrier-mt-20261104T080704Z.txt`, `results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt`.
 
 ### AAD-4: arithmetic Asian: multiple 2.8
 
@@ -53,6 +55,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "even for this more complicated example the extra overhead associated with the calculation of the risk is limited to approximately 180% of the cost of calculating the option value."
 - Source measured: hardware not stated | "best of" Asian, 12 observation dates, up to 20 assets, local vol, Euler; paths not stated | threads not stated | CPU ratio, delta and vega. This is a pathwise method with an adjoint payout, source-transformed by Tapenade. It is not a full adjoint of the path.
 - Class: `UNCONFIRMED` as a target for a full tape. It is the only published multiple found for an Asian on a local-vol path, and it is a partial adjoint, so holding a full tape to it is deliberately hard. The one published full-tape run on our workload gives 5.3 (`MC-2`, derived). Lead check: done, quote and figure read from the page images.
+- Measured at d1596e0, 12 fixings: `linux-zen1` 1.91, `mac-m4max` 2.67. Met, by 0.89 and 0.13. At 252 fixings, `mc-asian252`: 1.83 and 2.74. Not like-for-like: our full tape of a one-asset GBM path, against Capriotti's partial adjoint of a best-of in local vol on unstated hardware. Files: `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### AAD-5: within 1.25 times a hand-written adjoint
 
@@ -60,6 +63,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "Adept is 3.7–3.9 times the computational expense of the original algorithm, and 10–25% more computationally expensive than the hand-written adjoint codes."
 - Source measured: 2.5 GHz Intel E5200 Pentium, g++ 4.3.2 -O3 -DNDEBUG | advection and radiative-transfer kernels, repeated with memory reuse | single thread by implication | adjoint time including the forward pass, over the primal.
 - Class: `CONTEXT`. Not Monte Carlo, but the same-code comparison of tape and hand-written adjoint is exactly the question. We write a hand-coded pathwise adjoint for the GBM Asian as the baseline. Lead check: done.
+- Measured at d1596e0, tape time over hand-adjoint time: `linux-zen1` 1.87 at 12 fixings and 1.82 at 252, `mac-m4max` 2.57 and 2.68. Missed, by 0.57 to 0.62 and 1.32 to 1.43. The hand adjoint skips the reverse pass on the paths out of the money, about 48%, and the tape does not; `tape-skip` over hand is still 1.77 to 1.80 and 2.30 to 2.38. Not like-for-like: Hogan's kernels are not Monte Carlo, on other hardware. Files: `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### AAD-6: hand-written baseline: multiple below 2.0
 
@@ -67,6 +71,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "the most efficient code is the hand-coded reverse mode; the timings are similar to those reported in [12] with the valuation plus 80 sensitivities being obtained at a cost which is less than twice the cost of calculating the valuation on its own."
 - Source measured: single Pentium 4, g++ and icc at highest optimisation | LMM, 40 time steps, 80 forward rates | one CPU | ms per path. Hand 0.47/0.37 = 1.27 on g++, 0.19/0.10 = 1.90 on icc (derived). FADBAD++ tape 16.8 and 48.6 (derived).
 - Class: `CONTEXT`. Applies to our hand-coded baseline, not to the tape. Lead check: done.
+- Measured at d1596e0, hand adjoint over the scalar primal: `linux-zen1` 1.02 at 12 fixings and 1.00 at 252, `mac-m4max` 1.04 and 1.02. Met, by 0.96 to 1.00. Not like-for-like: Giles's LMM with 80 sensitivities on a Pentium 4; ours has 5 inputs and skips the reverse pass out of the money. Files: `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### AAD-7: bump and revalue cost
 
@@ -74,6 +79,7 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 - Quote: "the cost of bumping, for one-sided finite-difference estimators, is in general (1 + N) times the cost of as single valuation, where N is the number of model parameters"
 - Target: the measured bump time matches (1 + N), or 2N + 1 for central differences (derived), within measurement noise, and AAD's speedup is reported as bump time over AAD time at equal path count, common random numbers and the same optimisation level. Bump size is stated and chosen by experiment.
 - Class: `STRUCTURAL` formula. Lead check: done.
+- Measured at d1596e0 on `aad1-barrier`, N = 5: central bumps cost 10.96 pricings and forward 5.99 on `linux-zen1`, 11.01 and 6.02 on `mac-m4max`, against 11 and 6. Met. Across the five pricer workloads the range is 10.75 to 11.06 and 5.84 to 6.17. AAD's speedup, bump time over tape time at equal paths on common random numbers, is 5.81 over central and 3.18 over forward on `linux-zen1`, 4.01 and 2.20 on `mac-m4max`. Each file states the step and its bias per Greek. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`.
 
 ### AAD-8: second-order Greeks: cost reported separately
 
@@ -131,10 +137,12 @@ scripts/run_bench.sh $B aad1-barrier --aadp-workload=aad1-barrier --aadp-require
 scripts/run_bench.sh $B aad4-asian12 --aadp-workload=aad4-asian12 --aadp-require-valid --batches=20 --repetitions=3
 scripts/run_bench.sh $B mc-asian252 --aadp-workload=mc-asian252 --aadp-require-valid --batches=5 --repetitions=3
 scripts/run_bench.sh $B lw-worst --aadp-workload=lw-worst --aadp-require-valid --batches=200 --repetitions=3
+AADP_PIN_CPUS=4,6 scripts/run_bench.sh $B aad3-barrier-mt --aadp-workload=aad3-barrier-mt --aadp-threads=2 --aadp-require-valid --batches=10 --repetitions=3
+AADP_PIN_CPUS=4,6 scripts/run_bench.sh $B mc3-asian252-mt --aadp-workload=mc3-asian252-mt --aadp-threads=2 --aadp-require-valid --batches=10 --repetitions=3
 build/release/bin/aadp_results_table build/release/results/linux-zen1
 ```
 
-There `run_bench.sh` adds `taskset -c 4`. The threaded workloads need two threads on CPUs 4 and 6, which `run_bench.sh` (one CPU) and the stamp (which refuses a pin to more than one CPU) do not support yet. Until they do, `aad3-barrier-mt` and `mc3-asian252-mt` have `mac-m4max` numbers only.
+There `run_bench.sh` adds `taskset -c 4`, or `taskset -c 4,6` with `AADP_PIN_CPUS=4,6` for the two threaded workloads (bc3e6d3). cpu5 is recorded as meant to be idle, which nothing enforces. The stamp checks each pinned CPU against `measure.sh`'s list.
 
 An iteration run, which is never a result: `AADP_NOT_REPORTABLE="iteration" scripts/run_bench.sh $B aad-iteration --aadp-scale=50 --batches=1 --repetitions=3`, rendered with `aadp_results_table --iteration <file>`, which prints it under an ITERATION ONLY banner.
 
@@ -146,12 +154,14 @@ Tape memory is the main practical limit of AAD, so every AAD multiple is reporte
 
 - Source: Adept at commit d0a7751, `Statement.h:28-29`, `Active.h:559-560`; CoDiPack at c25d5c1, `jacobianBaseTape.hpp:105-110`. https://github.com/rjhogan/Adept
 - Class: `STRUCTURAL`, read from source, not measured. The 16 and 8 bytes assume Adept's default 8-byte `double`, 4-byte index and alignment padding. Asserted with `static_assert`. Lead check: done, lines read at those commits.
+- Measured: met on both hosts. `Real` 16 B, statement 1 B, operand 12 B, by `static_assert` in `src/ad/tape.hpp`. Every results file at d1596e0 records it in `tape_config`. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`.
 
 ### MEM-2: 12k + 1 bytes per statement with linear indexing
 
 - Source: Sagebaum, Albring, Gauger, arXiv 1709.07229, p.7. https://arxiv.org/pdf/1709.07229
 - Quote: "k ∗ 8 + k ∗ 4 + 1 = 12 ∗ k + 1 for each statement."
 - Class: `STRUCTURAL`. Preprint; the ACM TOMS 2019 version was not opened. Lead check: done.
+- Measured at d1596e0: met exactly, on every workload and both hosts. Tape bytes per path are statements plus 12 times operands: 1,078 + 12 × 1,393 = 17,794 B on `aad1-barrier`, 63 + 12 × 98 = 1,239 B on `aad4-asian12`, 1,263 + 12 × 2,018 = 25,479 B on `mc-asian252`. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`, `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### MEM-3: peak memory at most 1.9 MB with a per-path tape, n = 10, and 7.1 MB at n = 222
 
@@ -159,12 +169,14 @@ Tape memory is the main practical limit of AAD, so every AAD multiple is reporte
 - Quote: "The naive approach (mc/a1s) without checkpointing yields infeasible memory requirements for gradient sizes n ≥ 22."
 - Source measured: reference computer with 3 GB, CPU not stated | European call, local vol, 10,000 paths, 360 steps | single thread by implication | peak memory, table rows `10 ... 1.8s (2GB) 1.3s (1.9MB)` and `222 ... - (> 3GB) 24.4s (7.1MB)`, whole-simulation tape against per-path ensemble. The peak is for the run, not one tape, and it grows with gradient size n.
 - Class: `DIRECT`, vendor-affiliated. Compared at the same steps and a stated n. Lead check: done.
+- Measured at d1596e0: missed. Peak RSS of the whole process running the tape on one thread is 3,678,208 to 3,899,392 B on `linux-zen1` and 2,392,064 to 2,408,448 B on `mac-m4max`, over 1.9 MB by 1.78 to 2.00 MB and 0.49 to 0.51 MB. An idle process alone peaks at 3,416,064 to 3,596,288 B and 2,080,768 B. The tape's own chunks are 172,032 B. Not like-for-like: the whole process, 5 inputs not n = 10, 12 to 252 steps not 360, GBM not local vol. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`, `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### MEM-4: per-path tape below 50 MB in the worst case
 
 - Source: Savine, section 11.4, printed p.404, PDF p.432 (URL as `AAD-1`).
 - Quote: "The size of the tape is related to the processing time of one single path, hence, always below 50 MB and generally substantially less than that."
 - Class: `CONTEXT`, a design rule rather than a measurement. Lead check: done.
+- Measured at d1596e0: met on both hosts. The largest pricer path, on `mc-asian252`, records 25,479 B of tape and 10,104 B of adjoints. The Lax-Wendroff run, one sweep over 2000 steps, records 29,801,875 B and 11,058,392 B of adjoints in 46,669,824 B of chunks, 3.3 MB under the limit. Files: `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`, `results/linux-zen1/lw-worst-20261104T103623Z.txt`, `results/mac-m4max/lw-worst-20261104T081214Z.txt`.
 
 ### MEM-5: peak RSS at most 1.09 times the primal
 
@@ -172,11 +184,13 @@ Tape memory is the main practical limit of AAD, so every AAD multiple is reporte
 - Quote: "pathwise AAD by dco/c++ 1.9 86 1.6", against "Primal 1.2 79 1".
 - Source measured: hardware not stated | scalar SDE, Euler, 10^4 paths, 10^3 steps, precomputed random numbers, no payoff | threads not stated | MB. Derived: 86 / 79 = 1.09. Whole-simulation tape: 728 MB.
 - Class: `DERIVED`, `CONTEXT`. Toy SDE. Lead check: done.
+- Measured at d1596e0, peak RSS of the tape over the primal, each in a fresh process. `linux-zen1`: 1.03, 1.02 and 1.04 on one thread (`aad1-barrier`, `aad4-asian12`, `mc-asian252`), met; 1.05 and 1.09 on two threads, where `mc3-asian252-mt` is 1.092, 0.002 over. `mac-m4max`: 1.10, 1.11 and 1.11 on one thread, missed by 0.01 to 0.02; 1.61 and 1.63 on 8 threads, missed. On `linux-zen1` this is near the noise: the idle process peaks between 3,366,912 and 3,596,288 B across the runs, a spread of 229,376 B, and the tape adds 86,016 to 356,352 B, inside that spread except on `mc3-asian252-mt`. Not like-for-like: Naumann's toy SDE with precomputed draws. Files: `results/linux-zen1/aad1-barrier-20261104T071749Z.txt`, `results/mac-m4max/aad1-barrier-20261104T071059Z.txt`, `results/linux-zen1/aad3-barrier-mt-20261104T080704Z.txt`, `results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt`, `results/linux-zen1/aad4-asian12-20261104T085349Z.txt`, `results/mac-m4max/aad4-asian12-20261104T074006Z.txt`, `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`, `results/linux-zen1/mc3-asian252-mt-20261104T095003Z.txt`, `results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt`.
 
 ### MEM-6: no heap allocation after warm-up
 
 - Target: proved by a counting-allocator test. Hogan and Savine reuse memory; asserting it exceeds them.
 - Class: `STRUCTURAL`. Bar item B5.
+- Measured: met on both hosts, by a test rather than a results file. `TapeAllocation.NoHeapAllocationAfterWarmUp` (`tests/ad/allocation_test.cpp`, a7a2591) counts 0 allocations after warm-up, on every product and treatment at 50 and 252 steps, 4096 paths each. Linux TSan builds leave it out, because TSan's runtime there defines `operator new` (8d00d85).
 
 Sizing context, not a target: "tapes consume around 5 GB of RAM per second per core in the non-instrumented calculation" (Savine, printed p.403).
 
@@ -191,16 +205,19 @@ No source publishes paths/s for a path-dependent, CPU-only workload on Apple Sil
 - Source measured: CPU and compiler unnamed in the post | arithmetic Asian, 252 fixings, K=100, vol 20%, r 3%, T=1, seven spots, 300,000 paths, double | single thread | million paths/s, median of warm calls. Derived: 1.044e6 × 252 = 263 million path-steps/s.
 - Build details are not in the post. They come from the author's harness, https://github.com/nablatensor-dev/nablatensor/tree/bench/the-same-ladder-in-cpp: `xad_CMakeLists.txt:11` has `-O3 -DNDEBUG -mavx2 -mfma` and `xad_xad_ladder.cpp:90` has `std::mt19937_64`. x86-64 is inferred from those flags.
 - Class: `CONTEXT`. Single-author blog with an interest in the result. The post's table is labelled "cached draws", but it does not say how the price-only figure got its draws. We run cached-draw and inline generation modes, so either reading can be compared. Lead check: done, post re-downloaded and the harness lines read in the subagent's copy.
+- Measured at d1596e0, price only, one thread: `linux-zen1` 6.145e4 paths/s, `mac-m4max` 1.488e5. Missed, by 17.0 and 7.0 times. Not like-for-like: the source's CPU is unnamed, x86-64 with AVX2 by its flags, while our primal is scalar until stage 5, with Philox draws generated inline. Files: `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread
 
 - Source and quote: as `MC-1`. The five Greeks are "delta, strike sensitivity, vega, rho, and maturity sensitivity", one tape per path, cached draws. Derived multiple: 1.044 / 0.197 = 5.3, single thread. The post gives 0.127 million with fresh draws.
 - Class: `CONTEXT`. Lead check: done.
+- Measured at d1596e0, value and five Greeks by tape, one thread: `linux-zen1` 3.36e4 paths/s, `mac-m4max` 5.43e4. Missed, by 5.9 and 3.6 times. Our draws are generated inline, and the source's figure with fresh draws, 0.127 million, is still 3.8 and 2.3 times ours. Not like-for-like: hardware as `MC-1`, and our five Greeks are delta, vega, rho, dividend rho and theta. Files: `results/linux-zen1/mc-asian252-20261104T090220Z.txt`, `results/mac-m4max/mc-asian252-20261104T074520Z.txt`.
 
 ### MC-3: value and five Greeks, eight threads: 1.245 million paths/s, stretch 5.41
 
 - Source: same post, results table, "million paths per second for value and Greeks", cached draws. Quote: "XAD C++ tape, harness pool | 8 | 39.43 | 1.245" and "MatLogica AADC | 8 | 130.76 | 5.41" (HTML table cells, separators ours)
 - Class: `CONTEXT`. 5.41 is a recorded-graph JIT, not a tape, runs through Python bindings, and falls to 0.487 without the draw cache. `mac-m4max` only, unpinned. Lead check: done.
+- Measured at d1596e0, value and five Greeks: `linux-zen1` 6.345e4 paths/s on 2 threads pinned to CPUs 4 and 6, `mac-m4max` 3.914e5 on 8 threads, unpinned. Missed, by 19.6 and 3.2 times, and the stretch 5.41 by more. Not like-for-like: `linux-zen1` has 2 threads, not 8, and the hardware differs as in `MC-1`. Files: `results/linux-zen1/mc3-asian252-mt-20261104T095003Z.txt`, `results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt`.
 
 ### MC-4: NEON European: 18.2 million paths/s, serial
 
@@ -232,6 +249,7 @@ Decision recorded in `NOTES.md`: Philox4x32-10 is the reference stream on scalar
 - Source: Wichura, Algorithm AS 241, Table 3, printed p.479, PDF p.4. https://csg.sph.umich.edu/abecasis/gas_power_calculator/algorithm-as-241-the-percentage-points-of-the-normal-distribution.pdf
 - Source measured: PPND16 on IBM 3081, base 16, 14 digits | 50,000 values uniform on a logit scale, p constrained to (1e-70, 1 − 1e-15) | relative error, maximum 6.0e-16 for |p − 0.5| ≤ 0.425, 5.8e-16 beyond.
 - Class: `DIRECT` for accuracy, on non-IEEE arithmetic. We measure relative error on IEEE double against a high-precision reference, because the same polynomials can land differently there. Scanned, so there is no quotable text. Lead check: done, read from the page image.
+- Measured: missed. Maximum relative error 8.39e-16 at p = 0x1.4f72c68e4f73ep-619, 1.4 times the target. That is AS241 itself on IEEE double: the exact table in `tests/math/` removes the reference's own error (`NOTES.md`, "Phase 3 findings so far"). The same bits on both hosts, by the host-independence hash. An accuracy test, `MathInverseNormal.ProductionMatchesTheTable`, not a stamped results file. Not like-for-like: Wichura's 6.0e-16 is on base-16 arithmetic.
 
 ### RNG-4: inverse normal speed: 47 cycles scalar, stretch 9 cycles vector
 

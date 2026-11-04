@@ -4,18 +4,21 @@ A C++23 Monte Carlo pricer for path-dependent options, with its own tape-based a
 
 ## Status
 
-Harness only. There is no performance claim yet, and nothing in this repository should be read as one.
+Phase 3, the implementation, is under way. Stages 1a to 3b of twelve are done.
 
-The test and measurement harness was built first, so that the oracles are proved before the code they judge exists. What is here today:
+The test and measurement harness was built first, in Phase 2, so that the oracles were proved before the code they judge existed. What is here today:
 
 - A platform layer for arm64 and x86-64: CPU information, timers, pinning, performance counters, floating-point state.
 - Google Benchmark and HdrHistogram harness code, and a results-file writer that stamps each run with its host, compiler and flags.
-- Philox random numbers, an inverse normal, and minimal path kernels for GBM with exact steps: European, arithmetic and geometric Asian, and down-and-out barriers.
-- Closed-form and finite-difference oracles, with the tolerance rule implemented once and every comparison fixed in `references/comparison_plan.csv`. K is 147: 90 rows run now and 57 wait for Phase 3.
-- cp950 and TAIFEX file readers, with libFuzzer targets on every parser and decoder.
+- Own `exp`, `log` and AS241 inverse normal in `src/math/`, so libm differences do not reach results.
+- The production scalar pricer in `src/pricer/`: arithmetic and geometric Asian, European, digitals, and barriers with a Brownian-bridge weight, one-step survival, a hard indicator or smoothing, on Philox draws keyed on path and step, multi-threaded with a fixed block order.
+- The tape in `src/ad/`: struct of arrays, one statement per operation, one tape per worker thread, with no allocation after warm-up. A hand-written adjoint of the GBM Asian is the baseline it is measured against.
+- Bump and revalue on common random numbers, with step sizes from a committed h study, and an AAD benchmark that checks every gradient inside the run before timing it.
+- Closed-form and finite-difference oracles, with the tolerance rule implemented once and every comparison fixed in `references/comparison_plan.csv`. K is 147: 90 rows ran in Phase 2, and all 147 run on the production pricer and tape at stage 8.
+- cp950 and TAIFEX file readers, and libFuzzer targets on every parser, decoder and pricer entry point, plus a tape fuzzer against finite differences.
 - A fault-injection runner that plants one bug at a time in a copy of the code, to show each oracle and check can fail.
 
-The tape does not exist yet. Greeks in this phase come from a forward-mode `Dual` in `tests/support/`, which is a stand-in and not AAD. The SVI fit, the bump-and-revalue benchmark, the GPU pricer and the QuantLib comparison are also still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets, none of which has been measured here, and `NOTES.md` the findings and decisions.
+The first AAD and bump-and-revalue results are in `results/mac-m4max/` and `results/linux-zen1/`. They are scalar: SIMD comes at stage 5. Second-order Greeks, SIMD, the SVI fit, the GPU pricer and the QuantLib comparison are still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets with what has been measured against them, and `NOTES.md` the findings and decisions.
 
 ## Build and run
 
@@ -61,7 +64,7 @@ Other scripts:
 
 ## Fault injection
 
-A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 41 faults: 13 against the oracles, 19 against the checks and 9 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
+A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 100 faults: 23 against the oracles, 64 against the checks and 13 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
 
 ```sh
 python3 -I scripts/fault_injection.py --list                 # print the faults
@@ -71,7 +74,7 @@ python3 -I scripts/fault_injection.py --jobs 6 --output <file>   # run all of th
 
 It needs the toolchain in the environment, as the build does. `--kind` runs one kind, and `--source <dir>` mutates an export with no `.git`. The schema and the verdicts are described at the top of the script, and the runner's own tests are in `faults/test_fault_injection.py`. `scripts/check.sh` runs every fault as its last step.
 
-Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. On the Mac all 41 are caught. On the Linux host 29 run and all 29 are caught. The 9 fuzz faults and 3 sanitizer faults are left out there, because sanitizer and fuzz runs stay on the Mac. What the faults found is in `NOTES.md`, under "Fault injection results".
+Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. Those committed reports are from Phase 2, when there were 41 faults. On the Mac all 41 were caught. On the Linux host 29 ran and all 29 were caught. The 9 fuzz faults and 3 sanitizer faults were left out there, because sanitizer and fuzz runs stay on the Mac. The latest full `scripts/check.sh` run, at 54933ed on the Mac, caught all 100. What the faults found is in `NOTES.md`, under "Fault injection results".
 
 ## Results
 
@@ -81,7 +84,7 @@ Results tables come only from `aadp_results_table`, which reads the raw results 
 build/release/bin/aadp_results_table results/
 ```
 
-No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. It leaves out a fault-injection report in a host directory, judged by the report's first line. The files in `results/` so far are harness self-tests and fault-injection reports, not performance results, so this README has no table yet.
+No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. It leaves out a fault-injection report in a host directory, judged by the report's first line. `results/` now holds the stage 3b AAD and bump-and-revalue runs at d1596e0, beside harness self-tests and fault-injection reports. This README has no results table yet. It will be generated by `aadp_results_table` once the benchmarks are complete, never typed.
 
 ## Data
 
@@ -104,4 +107,4 @@ The raw files are never committed. `scripts/fetch_data.sh` downloads the Interne
 
 ## CI
 
-`.github/workflows/ci.yml` has never executed on GitHub, so treat the workflow itself as untested. It passes actionlint. Its Linux commands, apart from the sanitizer and fuzz jobs, were run by hand on the Linux host, and the macOS commands on the Mac. The Linux sanitizer and fuzz-smoke jobs have not run anywhere. It covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy, format, a fuzz smoke, the repo scan, and AVX2 and AVX-512 builds. AVX-512 is build-only.
+`.github/workflows/ci.yml` has run on GitHub. Its first run, at bc3e6d3, failed 9 of 17 jobs: actionlint, clang-tidy, the two GCC jobs, Linux TSan and the four macOS jobs. The fixes are committed but not yet pushed, so no CI run has confirmed them. Locally, `scripts/check.sh` passes all 13 steps on the fixed tree. `NOTES.md` has the causes. The workflow covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy, format, a fuzz smoke, the repo scan, and AVX2 and AVX-512 builds. AVX-512 is build-only.
