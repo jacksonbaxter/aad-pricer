@@ -145,10 +145,23 @@ if [[ $("$bin_dir/aadp_results_stamp" --print-host-label) == linux-zen1 ]]; then
     "${fast[@]}"
   AADP_PIN_CPUS=4,6 AADP_MEASURE=$scratch/measure_ok.sh "$script" "$binary" script-two \
     "${fast[@]}" >/dev/null 2>"$scratch/two.err"
-  check "a two-CPU run is stamped" test $? -eq 0
-  check "the header names both CPUs" grep -q '^pinned_cpus: 4,6$' "$(latest)"
-  check "the header says cpu5 is meant to be idle" \
-    grep -q '^meant_idle_cpus: 5 (not enforced)$' "$(latest)"
+  two_status=$?
+  two_raw=$(find "$(dirname "$bin_dir")/bench-runs" -path '*script-two-*/output.txt' | sort |
+    tail -1)
+  check "the raw output names both CPUs" grep -q '^pinned_cpus: 4,6$' "$two_raw"
+  check "the raw output says cpu5 is meant to be idle" \
+    grep -q '^meant_idle_cpus: 5 (not enforced)$' "$two_raw"
+  # As for the full run above: only a Release build may be stamped.
+  if grep -q '^build_type: Release$' "$two_raw"; then
+    check "a two-CPU run is stamped" test "$two_status" -eq 0
+    check "the header names both CPUs" grep -q '^pinned_cpus: 4,6$' "$(latest)"
+    check "the header says cpu5 is meant to be idle" \
+      grep -q '^meant_idle_cpus: 5 (not enforced)$' "$(latest)"
+  else
+    check "the stamp refuses a two-CPU run that is not Release" test "$two_status" -eq 1
+    check "the two-CPU refusal says why" grep -q 'build type' "$scratch/two.err"
+    check "a refused two-CPU run stamps nothing" test -z "$(latest)"
+  fi
   clear_results
 else
   check "a host that cannot pin refuses a pin" fails_with 64 'AADP_PIN_CPUS is for linux-zen1' \
