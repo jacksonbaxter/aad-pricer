@@ -9,7 +9,7 @@
 //   skip-equals-tape tape-skip's Greeks equal the tape's in value (==, so +0 and -0 match): a
 //                    skipped statement has a zero adjoint, so it would only have added zeros.
 //   hand-vs-tape     the hand adjoint against the tape. Pricer: batch by batch, within the
-//                    association bound of tests/ad/bounds.hpp: both form the same partial
+//                    association bound of src/ad/bounds.hpp: both form the same partial
 //                    products and differ only in how they add them (src/ad/hand_adjoint.hpp;
 //                    tests/ad/dual_agreement_test.cpp, check 8). Per path,
 //                    2 gamma_m A (1 + 2 gamma_m) + 2^-1074 W (1 + 2 gamma_m), with A the absolute

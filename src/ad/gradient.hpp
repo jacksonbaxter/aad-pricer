@@ -104,7 +104,7 @@ class PathGradient {
     std::array<double, kInputs> absolute{};
     // Per input, over every operand on the tape, the statement's absolute adjoint plus the
     // operand's absolute tangent seeded on that input: the weight of the underflow term in
-    // tests/ad/bounds.hpp.
+    // src/ad/bounds.hpp.
     std::array<double, kInputs> operand_sums{};
     std::size_t statements = 0;  // Set-up and path.
     std::size_t operands = 0;

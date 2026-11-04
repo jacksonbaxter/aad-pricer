@@ -79,8 +79,8 @@ class BoundPathFn {
     const double m = (2.0 * static_cast<double>(memory.statements)) +
                      ((p + 2.0) * static_cast<double>(memory.operands)) + paths_per_batch_ +
                      (2.0 * blocks_per_batch_) + 4.0;
-    const double gamma = ad::testing::Gamma(m);
-    const double underflow = 2.0 * ad::testing::UnderflowTerm(sums.adjoints + sums.tangents);
+    const double gamma = ad::bounds::Gamma(m);
+    const double underflow = 2.0 * ad::bounds::UnderflowTerm(sums.adjoints + sums.tangents);
     for (std::size_t i = 0; i < ad::kInputs; ++i) {
       stats[i] = ((2.0 * gamma * absolute[i]) + underflow) * (1.0 + (2.0 * gamma));
     }
@@ -156,7 +156,7 @@ void CheckHandPricer(const WorkloadReport& report, CheckResult& check) {
     for (std::size_t g = 0; g < pricer::kInputCount; ++g) {
       const double h = hand->greeks[g].batch_means[b];
       const double t = tape->greeks[g].batch_means[b];
-      const double limit = (bounds[b][g] * (1.0 + 0x1p-50)) + ad::testing::kBoundRounding +
+      const double limit = (bounds[b][g] * (1.0 + 0x1p-50)) + ad::bounds::kBoundRounding +
                            (0x1p-52 * (std::fabs(h) + std::fabs(t)));
       const double distance = std::fabs(h - t);
       if (!(distance <= limit)) {

@@ -33,9 +33,9 @@
 #include <string>
 #include <vector>
 
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
 #include "ad/hand_adjoint.hpp"
-#include "bounds.hpp"
 #include "cases.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
@@ -81,8 +81,8 @@ void CompareCase(const Case& c, Worst& worst) {
     EXPECT_EQ(Bits(dual.value), Bits(value)) << c.name << ", path " << path;
     worst.statements = std::max(worst.statements, result.statements);
     for (std::size_t i = 0; i < kInputs; ++i) {
-      const double bound = testing::AgreementBound(result.absolute[i], result.operand_sums[i],
-                                                   result.statements, result.operands);
+      const double bound = bounds::AgreementBound(result.absolute[i], result.operand_sums[i],
+                                                  result.statements, result.operands);
       const double diff = std::fabs(result.gradient[i] - dual.tangent[i]);
       ASSERT_TRUE(std::isfinite(result.gradient[i])) << c.name << ", path " << path;
       ASSERT_LE(diff, bound) << c.name << ", path " << path << ", input " << i << ": tape "
@@ -113,7 +113,7 @@ TEST(TapeVsDual, EveryProductAndTreatmentAgreesPerPathWithinTheAssociationBound)
 // The bound is not vacuous: one ULP of a Greek's own size in the wrong place is far outside it
 // on a long path, so it sees an error of the size a wrong partial makes.
 TEST(TapeVsDual, BoundIsFarBelowAWrongPartial) {
-  const double bound = testing::AgreementBound(1.0, 1e4, 5000, 8000);
+  const double bound = bounds::AgreementBound(1.0, 1e4, 5000, 8000);
   EXPECT_LT(bound, 1e-11);
   EXPECT_GT(bound, 0.0);
 }
@@ -173,7 +173,7 @@ void CompareHandCase(const HandCase& c, const pricer::Market<double>& market, Ha
     tally.paths += 1;
     for (std::size_t i = 0; i < kInputs; ++i) {
       const double bound =
-          testing::AgreementBound(r.absolute[i], r.operand_sums[i], r.statements, r.operands);
+          bounds::AgreementBound(r.absolute[i], r.operand_sums[i], r.statements, r.operands);
       const double diff = std::fabs(gradient[i] - r.gradient[i]);
       ASSERT_LE(diff, bound) << c.name << ", " << steps << " steps, S0 " << market.spot << ", path "
                              << path << ", " << kGreekNames[i] << ": hand " << gradient[i]
@@ -243,17 +243,17 @@ TEST(HandAdjoint, RunMatchesPriceBitForBitAndTheTapeBatchByBatch) {
         const double m = (2.0 * static_cast<double>(r.statements)) +
                          ((p + 2.0) * static_cast<double>(r.operands)) + n +
                          (2.0 * static_cast<double>(kBlocksPerBatch)) + 4.0;
-        const double gamma = testing::Gamma(m);
+        const double gamma = bounds::Gamma(m);
         for (std::size_t g = 0; g < kInputs; ++g) {
           bound[g] +=
-              ((2.0 * gamma * r.absolute[g]) + (2.0 * testing::UnderflowTerm(r.operand_sums[g]))) *
+              ((2.0 * gamma * r.absolute[g]) + (2.0 * bounds::UnderflowTerm(r.operand_sums[g]))) *
               (1.0 + (2.0 * gamma));
         }
       }
       for (std::size_t g = 0; g < kInputs; ++g) {
         const double h = hand_run->greeks[g].batch_means[b];
         const double t = tape_run->greeks[g].batch_means[b];
-        const double limit = ((bound[g] / n) * (1.0 + 0x1p-50)) + testing::kBoundRounding +
+        const double limit = ((bound[g] / n) * (1.0 + 0x1p-50)) + bounds::kBoundRounding +
                              (0x1p-52 * (std::fabs(h) + std::fabs(t)));
         ASSERT_LE(std::fabs(h - t), limit) << c.name << ", batch " << b << ", " << kGreekNames[g]
                                            << ": hand " << h << ", tape " << t;

@@ -45,7 +45,7 @@
 #include <span>
 #include <vector>
 
-#include "ad/bounds.hpp"  // tests/ad/, through the test support include path
+#include "ad/bounds.hpp"
 #include "ad/random_program.hpp"
 #include "ad/real.hpp"  // IWYU pragma: keep (the Real operations random_program.hpp calls)
 #include "ad/tape.hpp"
@@ -65,6 +65,7 @@ using aadp::ad::Position;
 using aadp::ad::Real;
 using aadp::ad::Tape;
 using aadp::ad::TapeScope;
+namespace b = aadp::ad::bounds;
 namespace t = aadp::ad::testing;
 
 constexpr double kConditioning = 1e-6;
@@ -109,7 +110,7 @@ double OutputError(const t::Program& p, const std::vector<double>& values) {
     error += std::fabs(weight) * model.error[index];
     weighted += std::fabs(weight * values[index]);
   }
-  return error + (4.0 * t::kUnitRoundoff * weighted);
+  return error + (4.0 * b::kUnitRoundoff * weighted);
 }
 
 // f at x with input k moved by delta, or the reason the point is unusable.
@@ -174,7 +175,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
       absolute[k] += std::fabs(weight) * model.derivative[index][k];
     }
   }
-  error += 4.0 * t::kUnitRoundoff * weighted;
+  error += 4.0 * b::kUnitRoundoff * weighted;
 
   Tape tape;
   const TapeScope scope(tape);
@@ -190,8 +191,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   const Position end = tape.GetPosition();
   const aadp::ad::MemoryReport memory = tape.Memory();
-  const double terms = t::RoundoffTerms(memory.statements, memory.operands);
-  const double gamma = t::Gamma(terms + 8.0);
+  const double terms = b::RoundoffTerms(memory.statements, memory.operands);
+  const double gamma = b::Gamma(terms + 8.0);
 
   for (const auto& [index, weight] : program.outputs) tape.AddAdjoint(trace.values[index], weight);
   tape.SweepBack(end, Position{});
@@ -229,12 +230,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     tape.SetTangent(x[k], 1.0);
     tape.SweepForwardAbsolute(Position{});
     underflow[k] =
-        t::UnderflowTerm(tape.SumOverOperands(end, Position{}).tangents) * (1.0 + (2.0 * gamma));
+        b::UnderflowTerm(tape.SumOverOperands(end, Position{}).tangents) * (1.0 + (2.0 * gamma));
   }
   const double dot_bound =
-      (((2.0 * gamma * s) + t::UnderflowTerm(dot_sums.adjoints + dot_sums.tangents + 8.0)) *
+      (((2.0 * gamma * s) + b::UnderflowTerm(dot_sums.adjoints + dot_sums.tangents + 8.0)) *
        (1.0 + (4.0 * gamma))) +
-      t::kBoundRounding;
+      b::kBoundRounding;
   AADP_FUZZ_REQUIRE(std::fabs(lhs - rhs) <= dot_bound, "dot-product identity");
 
   std::array<Differences, t::kMaxInputs> differences{};

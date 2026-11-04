@@ -6,14 +6,14 @@ if(NOT TARGET aadp_ad)
 endif()
 
 # The workloads, the h study and the in-run checks. The checks state the association bound of
-# tests/ad/bounds.hpp, so the library reads the test support headers, as tools/pricer_bias does.
+# src/ad/bounds.hpp. Nothing here reads test code.
 aadp_library(aadp_aad_bench_lib
   SOURCES
     bench/aad_workloads.cpp
     bench/aad_checks.cpp
     bench/bump_study.cpp
     bench/rss_probe.cpp
-  LINK aadp_ad aadp_test_support)
+  LINK aadp_ad)
 target_include_directories(aadp_aad_bench_lib PUBLIC "${PROJECT_SOURCE_DIR}/bench")
 
 aadp_tool(aadp_bump_study

@@ -12,7 +12,7 @@
 //         (each set-up node takes at most O_i contributions per path), and the blocks additions;
 // so m_i = 2 T_i + (P + 1) O_i + P + 2 blocks + 4 covers both, and
 //   |tape - dual| <= (1 / n) sum_i [2 gamma(m_i) A_i + 2 U_i] (1 + 2 gamma(m_i)) + 2^-1072,
-// A_i the path's absolute gradient and U_i its underflow term (tests/ad/bounds.hpp): once for
+// A_i the path's absolute gradient and U_i its underflow term (src/ad/bounds.hpp): once for
 // the path as in check 1, once more for the block's set-up sweep, whose products are a subset
 // of the path's. (That term was first n 2^-1070; bounds.hpp says why it changed.) The value column
 // must be Price()'s, bit for bit. Per path, on the same paths, check 1's bound must also hold.
@@ -35,8 +35,8 @@
 #include <tuple>
 #include <vector>
 
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
-#include "bounds.hpp"
 #include "cases.hpp"
 #include "oracle/finite_difference.hpp"
 #include "oracle/plan.hpp"
@@ -88,15 +88,15 @@ class DualPathFn {
     const double m = (2.0 * static_cast<double>(tape.statements)) +
                      ((block_ + 1.0) * static_cast<double>(tape.operands)) + block_ +
                      (2.0 * blocks_) + 4.0;
-    const double gamma = testing::Gamma(m);
+    const double gamma = bounds::Gamma(m);
     for (std::size_t i = 0; i < kInputs; ++i) {
       const double sign = i == kMaturityInput ? -1.0 : 1.0;
       stats[kDualOffset + i] = sign * dual.tangent[i];
-      stats[kBoundOffset + i] = ((2.0 * gamma * tape.absolute[i]) +
-                                 (2.0 * testing::UnderflowTerm(tape.operand_sums[i]))) *
-                                (1.0 + (2.0 * gamma));
-      const double path_bound = testing::AgreementBound(tape.absolute[i], tape.operand_sums[i],
-                                                        tape.statements, tape.operands);
+      stats[kBoundOffset + i] =
+          ((2.0 * gamma * tape.absolute[i]) + (2.0 * bounds::UnderflowTerm(tape.operand_sums[i]))) *
+          (1.0 + (2.0 * gamma));
+      const double path_bound = bounds::AgreementBound(tape.absolute[i], tape.operand_sums[i],
+                                                       tape.statements, tape.operands);
       if (!(std::fabs(tape.gradient[i] - dual.tangent[i]) <= path_bound)) stats[kFailures] += 1;
     }
   }
@@ -170,7 +170,7 @@ TEST(OracleEquivalence, TapeEstimatesEqualTheDualOnEveryRunRow) {
         const double t = tape->greeks[i].batch_means[b];
         const double d = dual[b][kDualOffset + i];
         const double bound = (dual[b][kBoundOffset + i] * (1.0 + 0x1p-50)) +
-                             testing::kBoundRounding + (0x1p-52 * (std::fabs(t) + std::fabs(d)));
+                             bounds::kBoundRounding + (0x1p-52 * (std::fabs(t) + std::fabs(d)));
         ASSERT_LE(std::fabs(t - d), bound) << row->id << ", batch " << b;
         if (t != d) row_worst = std::max(row_worst, std::fabs(t - d) / bound);
       }

@@ -25,10 +25,10 @@
 #include <thread>
 #include <vector>
 
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
 #include "ad/hand_adjoint.hpp"
 #include "ad/tape.hpp"
-#include "bounds.hpp"
 #include "cases.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
@@ -261,18 +261,18 @@ TEST(TapeThreads, ManyShortPathsReuseEachTapeAcrossBlocks) {
         const double m = (2.0 * static_cast<double>(r.statements)) +
                          ((p + 2.0) * static_cast<double>(r.operands)) + n +
                          (2.0 * static_cast<double>(kBlocksPerBatch)) + 4.0;
-        const double gamma = testing::Gamma(m);
+        const double gamma = bounds::Gamma(m);
         for (std::size_t g = 0; g < kInputs; ++g) {
           sum[g] += g == kMaturityInput ? -r.gradient[g] : r.gradient[g];
           bound[g] +=
-              ((2.0 * gamma * r.absolute[g]) + (2.0 * testing::UnderflowTerm(r.operand_sums[g]))) *
+              ((2.0 * gamma * r.absolute[g]) + (2.0 * bounds::UnderflowTerm(r.operand_sums[g]))) *
               (1.0 + (2.0 * gamma));
         }
       }
       for (std::size_t g = 0; g < kInputs; ++g) {
         const double one = sum[g] / n;
         const double t = run.greeks[g].batch_means[b];
-        const double limit = ((bound[g] / n) * (1.0 + 0x1p-50)) + testing::kBoundRounding +
+        const double limit = ((bound[g] / n) * (1.0 + 0x1p-50)) + bounds::kBoundRounding +
                              (0x1p-52 * (std::fabs(t) + std::fabs(one)));
         ASSERT_LE(std::fabs(t - one), limit) << c.name << ", batch " << b << ", greek " << g
                                              << ": run " << t << ", one at a time " << one;

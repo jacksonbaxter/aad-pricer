@@ -10,12 +10,12 @@
 //   theta's sign are all judged on every input;
 // - per path, on a few paths: the tape's value is the double kernel's bit for bit; its gradient
 //   is finite; it agrees with the forward-mode Dual within check 1's association bound
-//   (tests/ad/bounds.hpp), which covers vega of a European and every other Greek;
+//   (src/ad/bounds.hpp), which covers vega of a European and every other Greek;
 // - per path, on a barrier: knock-in plus knock-out equals the vanilla, Greek by Greek, within
 //   the sum of the three paths' bounds and the rounding of the sum;
 // - per path, on a European: delta of the call minus delta of the put is d S_T / S0, which by
 //   put-call parity on the path is (C - P + d K) / S0, within both bounds and its own rounding.
-// Every bound carries the underflow term of tests/ad/bounds.hpp, so it holds on paths whose
+// Every bound carries the underflow term of src/ad/bounds.hpp, so it holds on paths whose
 // values are subnormal too.
 #include <array>
 #include <bit>
@@ -27,7 +27,7 @@
 #include <cstring>
 #include <vector>
 
-#include "ad/bounds.hpp"  // tests/ad/, through the test support include path
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
 #include "pricer/contract.hpp"
 #include "pricer/draws.hpp"
@@ -139,19 +139,19 @@ void CheckEstimates(const Input& in) {
       const PathGradient::PathResult r = path.Evaluate(u);
       const double m = (2.0 * static_cast<double>(r.statements)) +
                        ((p + 1.0) * static_cast<double>(r.operands)) + p + 6.0;
-      const double gamma = aadp::ad::testing::Gamma(m);
+      const double gamma = aadp::ad::bounds::Gamma(m);
       for (std::size_t k = 0; k < kInputs; ++k) {
         sum[k] += k == aadp::ad::kMaturityInput ? -r.gradient[k] : r.gradient[k];
         // The path's underflow term, and once more for the block's set-up sweep.
         bound[k] += ((2.0 * gamma * r.absolute[k]) +
-                     (2.0 * aadp::ad::testing::UnderflowTerm(r.operand_sums[k]))) *
+                     (2.0 * aadp::ad::bounds::UnderflowTerm(r.operand_sums[k]))) *
                     (1.0 + (2.0 * gamma));
       }
     }
     for (std::size_t k = 0; k < kInputs; ++k) {
       const double one_at_a_time = sum[k] / p;
       const double blocked = gradient->greeks[k].batch_means[b];
-      const double allowed = (bound[k] / p) + aadp::ad::testing::kBoundRounding +
+      const double allowed = (bound[k] / p) + aadp::ad::bounds::kBoundRounding +
                              (0x1p-52 * (std::fabs(one_at_a_time) + std::fabs(blocked)));
       AADP_FUZZ_REQUIRE(std::fabs(blocked - one_at_a_time) <= allowed,
                         "greek batch mean differs from the paths taken one at a time");
@@ -183,8 +183,8 @@ Checked CheckPath(const Contract& c, const Market<double>& m, const PathUniforms
   AADP_FUZZ_REQUIRE(SameBits(out.tape.value, value), "tape path value differs from double");
   for (std::size_t i = 0; i < kInputs; ++i) {
     AADP_FUZZ_REQUIRE(std::isfinite(out.tape.gradient[i]), "path gradient not finite");
-    out.bound[i] = aadp::ad::testing::AgreementBound(out.tape.absolute[i], out.tape.operand_sums[i],
-                                                     out.tape.statements, out.tape.operands);
+    out.bound[i] = aadp::ad::bounds::AgreementBound(out.tape.absolute[i], out.tape.operand_sums[i],
+                                                    out.tape.statements, out.tape.operands);
     AADP_FUZZ_REQUIRE(std::fabs(out.tape.gradient[i] - dual.tangent[i]) <= out.bound[i],
                       "tape gradient differs from the Dual");
   }
@@ -212,7 +212,7 @@ void CheckPaths(const Input& in) {
       for (std::size_t i = 0; i < kInputs; ++i) {
         const double sum = k.tape.gradient[i] + o.tape.gradient[i];
         const double allowed = k.bound[i] + o.bound[i] + v.bound[i] +
-                               (4.0 * aadp::ad::testing::kUnitRoundoff *
+                               (4.0 * aadp::ad::bounds::kUnitRoundoff *
                                 (std::fabs(k.tape.gradient[i]) + std::fabs(o.tape.gradient[i]) +
                                  std::fabs(v.tape.gradient[i])));
         AADP_FUZZ_REQUIRE(std::fabs(sum - v.tape.gradient[i]) <= allowed,
@@ -230,13 +230,13 @@ void CheckPaths(const Input& in) {
       const double discount = GbmModel<double>(in.market, c.steps).Discount();
       const double dk = discount * c.strike;
       const double expected = (cp.tape.value - pp.tape.value + dk) / in.market.spot;
-      const double rounding = 8.0 * aadp::ad::testing::kUnitRoundoff *
+      const double rounding = 8.0 * aadp::ad::bounds::kUnitRoundoff *
                               (cp.tape.value + pp.tape.value + dk) / in.market.spot;
       const double delta = cp.tape.gradient[0] - pp.tape.gradient[0];
       if (cp.tape.value == 0.0 && pp.tape.value == 0.0) continue;
       AADP_FUZZ_REQUIRE(std::fabs(delta - expected) <=
                             cp.bound[0] + pp.bound[0] + rounding +
-                                (4.0 * aadp::ad::testing::kUnitRoundoff *
+                                (4.0 * aadp::ad::bounds::kUnitRoundoff *
                                  (std::fabs(cp.tape.gradient[0]) + std::fabs(pp.tape.gradient[0]))),
                         "call delta minus put delta is not d S_T / S0");
     }

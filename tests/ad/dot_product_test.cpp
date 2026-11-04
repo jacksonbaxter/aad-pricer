@@ -28,10 +28,10 @@
 #include <span>
 #include <vector>
 
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
 #include "ad/real.hpp"  // IWYU pragma: keep (the Real operations random_program.hpp calls)
 #include "ad/tape.hpp"
-#include "bounds.hpp"
 #include "cases.hpp"
 #include "pricer/draws.hpp"
 #include "random_program.hpp"
@@ -46,10 +46,10 @@ constexpr int kPrograms = 20000;
 constexpr std::uint64_t kPathsPerCase = 64;
 
 double DotBound(double s, double w, std::size_t statements, std::size_t operands) {
-  const double n = testing::RoundoffTerms(statements, operands) + 8.0;
-  const double gamma = testing::Gamma(n);
-  return (((2.0 * gamma * s) + testing::UnderflowTerm(w + 8.0)) * (1.0 + (2.0 * gamma))) +
-         testing::kBoundRounding;
+  const double n = bounds::RoundoffTerms(statements, operands) + 8.0;
+  const double gamma = bounds::Gamma(n);
+  return (((2.0 * gamma * s) + bounds::UnderflowTerm(w + 8.0)) * (1.0 + (2.0 * gamma))) +
+         bounds::kBoundRounding;
 }
 
 // After SweepBackAbsolute seeded with |y-bar|: the absolute tangents seeded with |x'|, and W.

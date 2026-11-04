@@ -29,10 +29,10 @@
 #include <span>
 #include <vector>
 
+#include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
 #include "ad/real.hpp"
 #include "ad/tape.hpp"
-#include "bounds.hpp"
 #include "cases.hpp"
 #include "math/exp.hpp"
 #include "math/inverse_normal.hpp"
@@ -127,8 +127,8 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
       }
       for (std::size_t i = 0; i < kInputs; ++i) {
         ASSERT_TRUE(std::isfinite(tape.gradient[i])) << "E2: a " << a << ", u " << u;
-        const double bound = testing::AgreementBound(tape.absolute[i], tape.operand_sums[i],
-                                                     tape.statements, tape.operands);
+        const double bound = bounds::AgreementBound(tape.absolute[i], tape.operand_sums[i],
+                                                    tape.statements, tape.operands);
         const double diff = std::fabs(tape.gradient[i] - dual.tangent[i]);
         EXPECT_LE(diff, bound) << "E1: a " << a << ", u " << u << ", input " << i;
         if (diff > 0.0) worst_e1 = std::max(worst_e1, diff / bound);
@@ -184,7 +184,7 @@ TEST(OneStepCorner, AdjointAtPNearOneMeetsItsFourExpectations) {
 // E6 first used check 1's bound with an underflow term of n 2^-1070, and failed at 4 of 72
 // points, by up to 10.8 times, all on vega with p subnormal (a = -38 and below), Greeks near
 // 1e-320. That term was the wrong model. The bound now carries the absolute error of gradual
-// underflow, propagated (tests/ad/bounds.hpp, after Higham, section 2.2), and E6 holds at every
+// underflow, propagated (src/ad/bounds.hpp, after Higham, section 2.2), and E6 holds at every
 // point, subnormal ones included.
 struct NearZeroTally {
   std::size_t dead = 0;
@@ -218,8 +218,8 @@ void CheckNearZero(const pricer::Contract& c, const pricer::Market<double>& mark
   }
   for (std::size_t i = 0; i < kInputs; ++i) {
     EXPECT_TRUE(std::isfinite(tape.gradient[i])) << "E5: u " << u << ", q " << q << ", input " << i;
-    const double bound = testing::AgreementBound(tape.absolute[i], tape.operand_sums[i],
-                                                 tape.statements, tape.operands);
+    const double bound = bounds::AgreementBound(tape.absolute[i], tape.operand_sums[i],
+                                                tape.statements, tape.operands);
     const double ratio = std::fabs(tape.gradient[i] - dual.tangent[i]) / bound;
     EXPECT_LE(ratio, 1.0) << "E6: p " << p << ", u " << u << ", input " << i;
     tally.worst_e6 = std::max(tally.worst_e6, ratio);

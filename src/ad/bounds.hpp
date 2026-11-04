@@ -1,4 +1,5 @@
-// The round-off bound every tape check states before it measures.
+// The round-off bound every tape check states before it measures: the tests, the fuzzers
+// and the benchmark's in-run checks (bench/aad_checks.cpp) all use it.
 //
 // Tape and Dual compute the same pathwise derivative, sum over paths p from an input to the
 // output of the product of the partials along p, from the same partials: real.hpp writes each
@@ -31,12 +32,12 @@
 // the bound's own operations. This replaces n 2^-1070, which counted each loss once and not its
 // amplification, and failed below the normal range (10.8 times, OneStepCorner, p near 1e-316;
 // 45.8 times, a digital path worth 6e-319 in the pricer-gradient fuzzer).
-#ifndef AADP_TESTS_AD_BOUNDS_HPP_
-#define AADP_TESTS_AD_BOUNDS_HPP_
+#ifndef AADP_AD_BOUNDS_HPP_
+#define AADP_AD_BOUNDS_HPP_
 
 #include <cstddef>
 
-namespace aadp::ad::testing {
+namespace aadp::ad::bounds {
 
 inline constexpr double kUnitRoundoff = 0x1p-53;
 
@@ -62,6 +63,6 @@ inline double AgreementBound(double absolute, double operand_sums, std::size_t s
          (UnderflowTerm(operand_sums) * (1.0 + (2.0 * gamma))) + kBoundRounding;
 }
 
-}  // namespace aadp::ad::testing
+}  // namespace aadp::ad::bounds
 
-#endif  // AADP_TESTS_AD_BOUNDS_HPP_
+#endif  // AADP_AD_BOUNDS_HPP_

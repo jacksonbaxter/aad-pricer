@@ -23,7 +23,7 @@
 // only in association.
 //
 // How far apart that leaves them. The association bound the pricer workloads use
-// (tests/ad/bounds.hpp) scales with the tape's absolute sweep, which here grows by a step's
+// (src/ad/bounds.hpp) scales with the tape's absolute sweep, which here grows by a step's
 // absolute row sum at every one of 2000 steps: it overflows to infinity and bounds nothing. So a
 // stability scale instead, first order in u like the bumps' R (bench/bump_study.hpp). With
 // c = 0.5 every partial is a power of two, so only additions round. One reverse step forms each

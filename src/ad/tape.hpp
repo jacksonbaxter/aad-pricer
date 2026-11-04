@@ -154,7 +154,7 @@ class Tape {
   [[nodiscard]] double Tangent(const Real& x) const;
   void ClearTangents();
 
-  // For error bounds (tests/ad/bounds.hpp): over every operand of the statements in
+  // For error bounds (src/ad/bounds.hpp): over every operand of the statements in
   // [stop, from), the sum of the statement's |adjoint| and the sum of the operand's |tangent|,
   // as the sweeps last left them. Each operand is one product in either sweep.
   struct OperandSums {
