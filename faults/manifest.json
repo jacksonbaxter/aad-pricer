@@ -2660,6 +2660,291 @@
       "reason": "aad8-asian12: check vanna-symmetry FAILED",
       "timeout_s": 600,
       "mutated_exit": 9
+    },
+    {
+      "id": "simd-sanitise-select",
+      "kind": "oracle",
+      "covers": "SIMD lane sqrt against math::sqrt, NaN bits",
+      "bug": "A lane skips the sanitise-then-select: the lane sqrt returns the raw root, so a negative or NaN argument gives the hardware's NaN with its sign and payload, not the canonical one.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "  const hn::Vec<D> root = hn::CopySign(hn::Sqrt(hn::Abs(x)), x);\n  return hn::IfThenElse(in_domain, root, hn::Set(d, math::detail::kNaN));",
+          "replace": "  static_cast<void>(in_domain);\n  static_cast<void>(d);\n  return hn::Sqrt(x);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.SqrtIsBitIdenticalOnEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.SqrtIsBitIdenticalOnEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-math-fma",
+      "kind": "oracle",
+      "covers": "SIMD lane exp against math::exp",
+      "bug": "The lane Horner step fuses its multiply and add (MulAdd), which rounds once where the scalar rounds twice.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "sum = hn::Add(hn::Mul(sum, t), hn::Set(d, c[i]));",
+          "replace": "sum = hn::MulAdd(sum, t, hn::Set(d, c[i]));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.ExpIsBitIdenticalOnEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.ExpIsBitIdenticalOnEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-log-correction",
+      "kind": "oracle",
+      "covers": "SIMD lane log against math::log",
+      "bug": "The lane log distributes s over the correction, s (f^2/2) + s (z P(z)) for the scalar's s (f^2/2 + z P(z)), which rounds differently.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "hn::Sub(hn::Mul(s, hn::Add(half_f_squared, hn::Mul(z, detail::Horner(d, kLogPoly, z)))),",
+          "replace": "hn::Sub(hn::Add(hn::Mul(s, half_f_squared), hn::Mul(s, hn::Mul(z, detail::Horner(d, kLogPoly, z)))),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.LogIsBitIdenticalOnEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.LogIsBitIdenticalOnEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-inverse-normal-order",
+      "kind": "oracle",
+      "covers": "SIMD lane AS241 against math::inverse_normal",
+      "bug": "The lane AS241 divides before it multiplies by q in the central region, q (N / D) for the scalar's (q N) / D.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "const V ratio = hn::Div(hn::IfThenElse(central, hn::Mul(q, num), num), den);",
+          "replace": "const V ratio = hn::IfThenElse(central, hn::Mul(q, hn::Div(num, den)), hn::Div(num, den));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.InverseNormalIsBitIdenticalOnEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.InverseNormalIsBitIdenticalOnEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-normal-cdf-split",
+      "kind": "oracle",
+      "covers": "SIMD lane normal CDF against pricer::NormalCdf",
+      "bug": "The lane normal CDF splits y at round(16 y) / 16 instead of Cody's trunc(16 y) / 16.",
+      "edits": [
+        {
+          "file": "src/simd/lane_math.hpp",
+          "find": "const V head = hn::Div(hn::Trunc(hn::Mul(ay, sixteen)), sixteen);",
+          "replace": "const V head = hn::Div(hn::Round(hn::Mul(ay, sixteen)), sixteen);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.NormalCdfIsBitIdenticalOnEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.NormalCdfIsBitIdenticalOnEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-compare-predicate",
+      "kind": "oracle",
+      "covers": "LaneReal comparisons keep the C++ predicates",
+      "bug": "LaneReal's <= is the strict less-than, so a Select on equal values takes the other side.",
+      "edits": [
+        {
+          "file": "src/simd/lane_real.hpp",
+          "find": "  return hn::Le(AsVec<D>(a), AsVec<D>(b));",
+          "replace": "  return hn::Lt(AsVec<D>(a), AsVec<D>(b));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_math_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_math_agreement_test", "--gtest_filter=SimdMath.ComparisonsAreTheCppPredicates"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdMath\\.ComparisonsAreTheCppPredicates \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-philox-lane-key",
+      "kind": "oracle",
+      "covers": "SIMD Philox lanes keyed as the scalar draws",
+      "bug": "The lane Philox key is off by one, seed + 1, so every lane draws another stream.",
+      "edits": [
+        {
+          "file": "src/simd/philox_lanes.hpp",
+          "find": "hn::Set(du, seed & 0xffffffffU)",
+          "replace": "hn::Set(du, (seed + 1) & 0xffffffffU)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_philox_lanes_test"],
+      "command": ["{build}/bin/aadp_simd_philox_lanes_test", "--gtest_filter=SimdPhilox.LaneIDrawsWhatScalarPathFirstPlusIDraws"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPhilox\\.LaneIDrawsWhatScalarPathFirstPlusIDraws \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-philox-lane-path",
+      "kind": "oracle",
+      "covers": "SIMD Philox lane i draws path first + i",
+      "bug": "The lane counter starts one path late, so lane i draws path first + i + 1.",
+      "edits": [
+        {
+          "file": "src/simd/philox_lanes.hpp",
+          "find": "const auto path = hn::Iota(du, first);",
+          "replace": "const auto path = hn::Iota(du, first + 1);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_philox_lanes_test"],
+      "command": ["{build}/bin/aadp_simd_philox_lanes_test", "--gtest_filter=SimdPhilox.LaneIDrawsWhatScalarPathFirstPlusIDraws"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPhilox\\.LaneIDrawsWhatScalarPathFirstPlusIDraws \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-philox-kat",
+      "kind": "oracle",
+      "covers": "SIMD Philox known answers on every lane",
+      "bug": "The second key word's Weyl constant is off by one, so every round after the first uses the wrong key.",
+      "edits": [
+        {
+          "file": "src/simd/philox_lanes.hpp",
+          "find": "key[1] = hn::And(hn::Add(key[1], weyl1), low);",
+          "replace": "key[1] = hn::And(hn::Add(key[1], hn::Add(weyl1, hn::Set(du, std::uint64_t{1}))), low);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_philox_lanes_test"],
+      "command": ["{build}/bin/aadp_simd_philox_lanes_test", "--gtest_filter=SimdPhilox.KnownAnswersOnEveryLane"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPhilox\\.KnownAnswersOnEveryLane \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-kernel-bridge",
+      "kind": "oracle",
+      "covers": "SIMD path kernels against EvaluatePath, per path",
+      "bug": "The lane bridge divides the second gap by the variance first, (-2 d0) (d1 / v) for the scalar's ((-2 d0) d1) / v.",
+      "edits": [
+        {
+          "file": "src/simd/lane_kernels.hpp",
+          "find": "    weight = weight * (1.0 - Exp(-2.0 * d0 * d1 / variance));",
+          "replace": "    weight = weight * (1.0 - Exp(-2.0 * d0 * (d1 / variance)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_path_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_path_agreement_test", "--gtest_filter=SimdPaths.EveryProductIsBitIdenticalOnEveryLane"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPaths\\.EveryProductIsBitIdenticalOnEveryLane \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-kernel-copy-drift",
+      "kind": "oracle",
+      "covers": "the lane kernels on double are kernels.hpp",
+      "bug": "The lane geometric Asian multiplies by 1 / count where the scalar divides by count.",
+      "edits": [
+        {
+          "file": "src/simd/lane_kernels.hpp",
+          "find": "Real(Exp(sum / count))",
+          "replace": "Real(Exp(sum * (1.0 / count)))"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_path_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_path_agreement_test", "--gtest_filter=SimdPaths.LaneKernelsOnDoubleAreTheScalarKernels"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPaths\\.LaneKernelsOnDoubleAreTheScalarKernels \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-reduction-block-order",
+      "kind": "oracle",
+      "covers": "SIMD prices against Price(), block merge order",
+      "bug": "The batch sum merges its blocks last to first, a reduction out of block order.",
+      "edits": [
+        {
+          "file": "src/simd/lane_runner.hpp",
+          "find": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + i)];",
+          "replace": "block_sums[static_cast<std::size_t>(batch * blocks_per_batch + (blocks_per_batch - 1 - i))];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_price_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_price_agreement_test", "--gtest_filter=SimdPrices.EveryProductIsBitIdenticalForEveryWidthAndThreadCount"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPrices\\.EveryProductIsBitIdenticalForEveryWidthAndThreadCount \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-reduction-lane-order",
+      "kind": "oracle",
+      "covers": "SIMD prices against Price(), path order within a block",
+      "bug": "A lane group is added to the block sum last lane first, so paths are summed out of path order at every width above one.",
+      "edits": [
+        {
+          "file": "src/simd/lane_runner.hpp",
+          "find": "    for (std::size_t lane = 0; lane < count; ++lane) {\n      for (std::size_t i = 0; i < M; ++i) sum[i] += lanes[i][lane];",
+          "replace": "    for (std::size_t lane = count; lane-- > 0;) {\n      for (std::size_t i = 0; i < M; ++i) sum[i] += lanes[i][lane];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_price_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_price_agreement_test", "--gtest_filter=SimdPrices.EveryProductIsBitIdenticalForEveryWidthAndThreadCount"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPrices\\.EveryProductIsBitIdenticalForEveryWidthAndThreadCount \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-widths-short",
+      "kind": "oracle",
+      "covers": "the SIMD widths reach the target's lanes",
+      "bug": "The width list stops below the target's lanes, so the widest instantiation is never run or tested.",
+      "edits": [
+        {
+          "file": "src/simd/simd_pricer.cpp",
+          "find": "for (std::size_t lanes = 1; lanes <= kMaxLanes; lanes *= 2) ++count;",
+          "replace": "for (std::size_t lanes = 1; lanes < kMaxLanes; lanes *= 2) ++count;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_price_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_price_agreement_test", "--gtest_filter=SimdPrices.LaneWidthsCoverTheTarget"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPrices\\.LaneWidthsCoverTheTarget \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "simd-price-validate",
+      "kind": "oracle",
+      "covers": "PriceLanes refuses what Price refuses",
+      "bug": "PriceLanes skips contract validation and prices a negative volatility.",
+      "edits": [
+        {
+          "file": "src/simd/simd_pricer.cpp",
+          "find": "  if (contract_error != pricer::ContractError::kNone) {\n    return std::unexpected(LanePriceError{.price = {.contract = contract_error}});",
+          "replace": "  if (contract_error == pricer::ContractError::kProduct) {\n    return std::unexpected(LanePriceError{.price = {.contract = contract_error}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_price_agreement_test"],
+      "command": ["{build}/bin/aadp_simd_price_agreement_test", "--gtest_filter=SimdPrices.RefusesWhatPriceRefusesAndUnknownWidths"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SimdPrices\\.RefusesWhatPriceRefusesAndUnknownWidths \\(",
+      "timeout_s": 300
     }
   ]
 }
