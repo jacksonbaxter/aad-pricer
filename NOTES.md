@@ -344,6 +344,49 @@ Disclosed, from the stage's own record:
 - For stage 5b: `LaneReal` carries values only. The lane kernels copy `kernels.hpp`, and a test holds the copy to it; templating the uniform type would remove the copy. The lane inverse normal computes the tail's `log` and `sqrt` on every lane.
 - Speedups, all iteration only, are in `BENCHMARKS.md`, `SIMD-1`.
 
+#### Vector tape: design and oracle (stage 5b)
+
+Written before the code. Pathwise gradients on lanes through one tape per group of N lanes (`src/simd/lane_tape.hpp`): statements and operand indices are recorded once per group, and each lane has its own values, partials and adjoints. The reverse sweep runs across lanes, one vector multiply and add per operand. Stage 5b makes no speed claim; timing, the AAD multiple on lanes and assembly are stage 5c's.
+
+Bytes per entry, against the scalar tape's 16 B Real, 1 B statement, 12 B operand and 8 B adjoint:
+
+| N | Active type | Statement | Operand | Operand per lane | Adjoint |
+|---|---|---|---|---|---|
+| 1 | 16 (32 on x86) | 1 | 12 | 12 | 8 |
+| 2 | 32 | 1 | 21 | 10.5 | 16 |
+| 4 | 64 | 1 | 37 | 9.25 | 32 |
+| 8 | 128 | 1 | 69 | 8.63 | 64 |
+
+- Active type: the lanes' values as one Highway vector, a 4-byte index and a 1-byte lane mask, padded to the vector's alignment, so 16 B per lane. At one lane on x86 Highway keeps the lane in a 16-byte register, so 32 B there. Asserted at compile time.
+- Statement: its operand count, shared by the lanes, so 1/N B per path.
+- Operand: a 4-byte index and, for N > 1, a 1-byte lane mask, both shared, and N 8-byte partials: 5 + 8N bytes, 12 at one lane, which needs no mask.
+- Adjoint: N doubles per statement, for the sweep only, reported apart as now. The boundary buffer below is sweep scratch too: per operand that names a set-up statement, an index, a mask and N contributions.
+- A group records the union of its lanes' statements and operands, so it has at least its largest lane's. Tape bytes per path are the group's S + O(5 + 8N), S statements and O operands, over N.
+
+Reused from the scalar tape:
+- Chunking: the same 2^13-entry statement and operand chunks, allocated once and never resized, with no statement's operands straddling two chunks. The adjoint vector covers every allocated statement slot.
+- Thread-local slot: one per width, a `thread_local LaneTape<D>*` set by an RAII `LaneTapeScope`; a second activation on a thread is an error. It is separate from the scalar tape's slot, since each worker holds both.
+- Mark and rewind: the same `Position`. A group is recorded after the mark, swept back to it and rewound, so the tape holds one group.
+- The set-up, swept once per block: it stays on the worker's scalar tape (`ad::PathGradient`), recorded once, as now. The lane tape's indices start at the scalar mark, so a lane operand names a set-up statement by its scalar index. The lane sweep never adds into a set-up adjoint: it appends each contribution to a set-up operand to the boundary buffer, in sweep order. After the sweep the buffer is added into the scalar tape's set-up adjoints lane by lane, in path order, skipping lanes past the block's end. At the block's end the scalar tape's own `SweepSetup` runs, once per block, as now. That replay is where the lanes are reduced in path order.
+
+Lane activity, and which kernels are branch-free on lanes:
+- The scalar tape records a statement only for its active operands, and `Select` returns the chosen operand itself, so a path's statements depend on which side each Select took. On lanes each Real carries a mask of the lanes in which it is active, and each operand stores that mask. In the sweep a lane whose bit is clear skips the operand by a select, not a multiply by zero, so there is no 0 × ∞ and no extra add. A statement is recorded when any lane has an active operand. So lane ℓ's sweep does exactly the scalar tape's operations on path ℓ, in its order, and nothing else.
+- A Select between an active Real and a constant only sets lane values and masks: the payoff floor, `Max(gap, 0)` in the bridge and the sampled crossing, the smoothed ramp's two clamps, and one-step survival's `Select(alive, p, 0)` and `Select(alive, drawn, v)`.
+- The hard indicators, discrete and sampled crossing, are Selects of the constants 1 and 0: lane values and no statement. The weight's product then records one operand, as the scalar tape does.
+- The one-step guard below 2^-1000 makes q passive on that path in the scalar tape. On lanes it clears that lane's bit of q, so that lane's draw carries no derivative and the others keep theirs. The guard's reach and bias are the scalar's, above under "Tape".
+- So European, digital, both Asians, the bridge, the sampled crossing, one-step survival, the hard indicator, smoothing and knock-ins by parity all run on the vector tape.
+
+Where lanes diverge. A Select in which one lane takes one active statement and another lane a different active statement has no single index for its result. No kernel has one: every Select in `kernels.hpp` chooses between an active Real and a constant, or between constants. `Select` detects it and marks the group divergent. The driver then rewinds the group and runs its lanes inside the block on the scalar tape, one path at a time in path order, into the same set-up adjoints, so the bits are the same either way. Every fallback is counted, in groups and in paths, and returned with the estimate. The tests require zero on every product. A test-only kernel with such a Select forces fallbacks and checks the count against the groups whose lanes split.
+
+Oracle, stated before any test runs. No tolerance anywhere:
+1. Per path: on every product and treatment of `tests/ad/cases.hpp` at 1, 12 and 50 steps, at every width the build can run, each lane's value and five-input gradient, after its own set-up sweep, are `PathGradient::Evaluate`'s for that path, bit for bit.
+2. Block sums: `PriceWithGradientLanes` gives `PriceWithGradient`'s estimate bit for bit (value and five Greeks: mean, SE and every batch mean) at every width, on 1, 2, 3 and 8 threads, with batches that end inside a block so a group runs past the block's end. Fallbacks zero.
+3. B16: on random straight-line programs (`tests/ad/random_program.hpp`) with each lane at its own inputs, each lane's input adjoints are those of a scalar sweep of the same program at that lane's inputs: N scalar sweeps per program, bit for bit.
+4. Dot product on lanes: each lane's ⟨y', ȳ⟩ from a lane tangent sweep and ⟨x', x̄⟩ from the lane reverse sweep are the scalar tape's bits for that program or path, and so within `dot_product_test.cpp`'s bound, which is checked too.
+5. Forced fallback: counted as above, and the bits still those of the scalar loop.
+
+The basis: each lane's values are the scalar's bits (stage 5a); each partial is the scalar's formula on them; no `MulAdd`, and `-ffp-contract=off`; round to nearest; the sweep's multiply and add in the scalar's order with masked lanes doing nothing; and set-up contributions added in path order, then sweep order, which is the order in which the scalar tape adds them. Nothing is expected to differ. One reservation, stated now: the payload of a NaN, should a gradient ever be NaN, since a compiler may commute a scalar multiply. The tests and fuzzers here require finite Greeks, so it is outside their reach. If one turns up, it is reported, not masked.
+
 ### CI
 
 - CI first ran on GitHub as run 41770201004 at bc3e6d3 and failed 9 of 17 jobs: actionlint, clang-tidy, `linux-gcc-release`, `linux-gcc-debug`, `linux-tsan` and the four macOS jobs. The Linux clang, AVX2, AVX-512, ASan and UBSan, fuzz-smoke, format and repo-scan jobs passed.
