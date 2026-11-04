@@ -209,8 +209,8 @@ TEST(PathAgreement, PricerMatchesTheReferenceWithinTheBound) {
 
       Add(value, own.value, reference, t.value, scale);
       Add(weight, own.weight, t.weight.ref, t.weight, 1.0);
-      value.differing += Bits(own.value) != Bits(reference) ? 1 : 0;
-      value.unsure += t.value.unsure && t.value.bound > kUnsureFraction * scale ? 1 : 0;
+      value.differing += Bits(own.value) != Bits(reference) ? 1U : 0U;
+      value.unsure += t.value.unsure && t.value.bound > kUnsureFraction * scale ? 1U : 0U;
     }
     std::printf(
         "measured, %s, %llu paths: payoff bits differ on %llu; max |diff| / bound %.3g; max "

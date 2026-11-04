@@ -247,7 +247,9 @@ TEST(PricerClosedForm, TheFamilyIsAsStated) {
   EXPECT_EQ(rows.size(), kFamily);
   for (const Row& row : rows) {
     EXPECT_EQ(Validate(row.contract, row.market), ContractError::kNone) << row.name;
-    if (!row.paired) EXPECT_TRUE(std::isfinite(row.reference)) << row.name;
+    if (!row.paired) {
+      EXPECT_TRUE(std::isfinite(row.reference)) << row.name;
+    }
   }
 }
 
