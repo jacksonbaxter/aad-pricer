@@ -137,7 +137,11 @@ int RunProbeVariant(const Options& options) {
 int RunProbe(const Options& options) {
   const int status = RunProbeVariant(options);
   if (status != 0) return status;
-  return aadp::bench::ReportOwnPeakRss() ? 0 : 1;
+  if (!aadp::bench::ReportOwnPeakRss()) {
+    std::cerr << "aadp_bench_aad: RSS probe: cannot read or report this process's peak RSS\n";
+    return 1;
+  }
+  return 0;
 }
 
 std::string ScaleText(std::uint64_t scale) {

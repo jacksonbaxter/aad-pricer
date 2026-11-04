@@ -29,6 +29,19 @@ TEST(RssProbe, RefusesAMissingOrBadReport) {
   }
 }
 
+// The bytes of a real line from debian: a tab, then spaces. Space-only padding was all the first
+// parser took, so on Linux every probe failed.
+TEST(RssProbe, ReadsVmHwmAsTheKernelWritesIt) {
+  EXPECT_EQ(ParseVmHwm("Name:\tx\nVmPeak:\t   10000 kB\nVmHWM:\t    2304 kB\nVmRSS:\t    2000 kB\n")
+                .value_or(0),
+            2304U * 1024U);
+  EXPECT_EQ(ParseVmHwm("VmHWM:  7 kB").value_or(0), 7U * 1024U);
+  for (const std::string status : {"", "VmRSS:\t 1 kB\n", "VmHWM:\t\n", "VmHWM:\t 12 MB\n",
+                                   "VmHWM:\t 0 kB\n", "VmHWM:\t x kB\n"}) {
+    EXPECT_FALSE(ParseVmHwm(status).has_value()) << status;
+  }
+}
+
 #ifdef AADP_BENCH_AAD_BIN
 constexpr std::uint64_t kMiB = std::uint64_t{1024} * 1024;
 

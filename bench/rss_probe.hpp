@@ -37,6 +37,9 @@ std::expected<std::uint64_t, std::string> ChildPeakRss(const std::string& execut
 // line, kPeakReportPrefix and the bytes. False if the peak cannot be read or written.
 bool ReportOwnPeakRss();
 
+// Bytes from the VmHWM line of a /proc/<pid>/status text (Linux).
+std::expected<std::uint64_t, std::string> ParseVmHwm(std::string_view status);
+
 // The value of the last report line in a child's stdout.
 std::expected<std::uint64_t, std::string> ParsePeakReport(std::string_view output);
 

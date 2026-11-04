@@ -2,10 +2,10 @@
 
 #include <fcntl.h>
 #include <spawn.h>
-#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <charconv>
@@ -19,6 +19,9 @@
 
 #ifdef __linux__
 #include <fstream>
+#include <sstream>
+#else
+#include <sys/resource.h>
 #endif
 
 // POSIX declares it nowhere, and posix_spawn takes it as it is.
@@ -30,22 +33,10 @@ namespace {
 
 std::expected<std::uint64_t, std::string> OwnPeakBytes() {
 #ifdef __linux__
-  // "VmHWM:     4152 kB": the high-water RSS of the address space exec made.
-  std::ifstream status("/proc/self/status");
-  std::string line;
-  while (std::getline(status, line)) {
-    constexpr std::string_view kKey = "VmHWM:";
-    if (!line.starts_with(kKey)) continue;
-    std::string_view rest = std::string_view(line).substr(kKey.size());
-    while (!rest.empty() && rest.front() == ' ') rest.remove_prefix(1);
-    std::uint64_t kib = 0;
-    const auto [end, error] = std::from_chars(rest.data(), rest.data() + rest.size(), kib);
-    if (error != std::errc{} || std::string_view(end, rest.data() + rest.size()) != " kB") {
-      return std::unexpected("cannot read VmHWM");
-    }
-    return kib * 1024;
-  }
-  return std::unexpected("no VmHWM in /proc/self/status");
+  const std::ifstream in("/proc/self/status");
+  std::ostringstream status;
+  status << in.rdbuf();
+  return ParseVmHwm(status.str());
 #else
   rusage usage{};
   if (getrusage(RUSAGE_SELF, &usage) != 0) return std::unexpected("getrusage failed");
@@ -69,6 +60,26 @@ bool MakePipe(std::array<int, 2>& fds) {
 }
 
 }  // namespace
+
+std::expected<std::uint64_t, std::string> ParseVmHwm(std::string_view status) {
+  constexpr std::string_view kKey = "VmHWM:";
+  while (!status.empty()) {
+    const std::string_view line = status.substr(0, status.find('\n'));
+    status.remove_prefix(std::min(status.size(), line.size() + 1));
+    if (!line.starts_with(kKey)) continue;
+    std::string_view rest = line.substr(kKey.size());
+    // The kernel pads with a tab and then spaces: "VmHWM:\t    2304 kB".
+    while (!rest.empty() && (rest.front() == ' ' || rest.front() == '\t')) rest.remove_prefix(1);
+    std::uint64_t kib = 0;
+    const auto [end, error] = std::from_chars(rest.data(), rest.data() + rest.size(), kib);
+    if (error != std::errc{} || std::string_view(end, rest.data() + rest.size()) != " kB" ||
+        kib == 0) {
+      return std::unexpected("cannot read VmHWM");
+    }
+    return kib * 1024;
+  }
+  return std::unexpected("no VmHWM line");
+}
 
 bool ReportOwnPeakRss() {
   const auto peak = OwnPeakBytes();
