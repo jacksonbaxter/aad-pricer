@@ -16,6 +16,7 @@
 #include "aad_steps.hpp"
 #include "ad/gradient.hpp"
 #include "ad/hand_adjoint.hpp"
+#include "ad/second_order.hpp"
 #include "ad/tape.hpp"
 #include "lax_wendroff.hpp"
 #include "oracle/tolerance.hpp"
@@ -36,7 +37,8 @@ using pricer::Market;
 using pricer::RunConfig;
 
 constexpr std::array<std::string_view, kVariants.size()> kVariantNames = {
-    "price", "tape", "tape-skip", "tape-record", "hand", "bump-central", "bump-forward"};
+    "price",        "tape",       "tape-skip", "tape-record", "hand",        "bump-central",
+    "bump-forward", "cond-price", "cond-tape", "for-spot",    "for-spot-vol"};
 
 Contract Barrier() {
   Contract c;
@@ -51,6 +53,15 @@ Contract Barrier() {
                .treatment = pricer::Treatment::kSmoothed,
                .level = 150.0,
                .smoothing_width = 0.05};
+  return c;
+}
+
+// The AAD-1 contract under one-step survival, which has second derivatives, in place of the
+// smoothing, which is biased by design (pricer::ValidateConditional refuses it).
+Contract OneStepBarrier() {
+  Contract c = Barrier();
+  c.barrier.treatment = pricer::Treatment::kOneStep;
+  c.barrier.smoothing_width = 0.0;
   return c;
 }
 
@@ -154,6 +165,44 @@ std::vector<Workload> MakeWorkloads() {
                  .study = "mc-asian252",
                  .central = kAsian252Central,
                  .forward = kAsian252Forward});
+  // Second order (proposed AAD-8): their multiples are reported apart, never in AAD-1 or AAD-4.
+  out.push_back({.id = "aad8-asian12",
+                 .targets = "AAD-8 (proposed): second order on AAD-4's contract",
+                 .description = "arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, "
+                                "300,000 paths; gamma, vanna and volga by forward over reverse "
+                                "on the conditional kernels",
+                 .differences = "AAD-4's contract and paths; the second-order and cond-* "
+                                "variants price the last step's expectation in closed form, so "
+                                "their primal is cond-price, not price",
+                 .kind = Kind::kPricer,
+                 .contract = Asian(12),
+                 .market = kAsianMarket,
+                 .paths = 300'000,
+                 .threaded = false,
+                 .hand = false,
+                 .second_order = true,
+                 .study = "aad4-asian12",
+                 .central = kAsian12Central,
+                 .forward = kAsian12Forward});
+  out.push_back({.id = "aad8-barrier",
+                 .targets = "AAD-8 (proposed): second order on AAD-1's contract",
+                 .description = "up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly "
+                                "dates, one-step survival, 3 years, 500,000 paths; gamma, vanna "
+                                "and volga by forward over reverse on the conditional kernels",
+                 .differences = "AAD-1's contract with one-step survival (Gerstner, Harrach, "
+                                "Roth, arXiv 1804.03975v3) in place of Savine's smoothing, which "
+                                "has no unbiased second derivative; price and tape run the "
+                                "production one-step kernel",
+                 .kind = Kind::kPricer,
+                 .contract = OneStepBarrier(),
+                 .market = kBarrierMarket,
+                 .paths = 500'000,
+                 .threaded = false,
+                 .hand = false,
+                 .second_order = true,
+                 .study = "aad1-barrier",
+                 .central = kAad1Central,
+                 .forward = kAad1Forward});
   out.push_back({.id = "lw-worst",
                  .targets = "B34 (Hogan's LW: Adept 32 to 33 times, hand 2.1)",
                  .description = "Lax-Wendroff advection, 100 points, 2000 steps, c = 0.5, "
@@ -182,6 +231,17 @@ VariantResult FromGradient(Variant variant, ad::GradientEstimate estimate) {
   out.value = std::move(estimate.value);
   out.greeks = std::move(estimate.greeks);
   out.has_greeks = true;
+  return out;
+}
+
+template <std::size_t N>
+VariantResult FromHessian(Variant variant, ad::HessianEstimate<N> estimate) {
+  VariantResult out;
+  out.variant = variant;
+  out.value = std::move(estimate.value);
+  out.greeks = std::move(estimate.greeks);
+  out.has_greeks = true;
+  for (auto& row : estimate.rows) out.hessian_rows.push_back(std::move(row));
   return out;
 }
 
@@ -304,6 +364,33 @@ Runner PricerRunner(const Workload& w, Variant variant, const RunConfig& config)
         return FromBump(variant, std::move(*run));
       };
     }
+    case Variant::kCondPrice:
+      return [c, m, config] {
+        auto run = ad::PriceConditional(c, m, config);
+        Require(run.has_value(), "conditional price refused");
+        VariantResult out;
+        out.variant = Variant::kCondPrice;
+        out.value = std::move(*run);
+        return out;
+      };
+    case Variant::kCondTape:
+      return [c, m, config] {
+        auto run = ad::PriceWithConditionalGradient(c, m, config);
+        Require(run.has_value(), "conditional tape refused");
+        return FromGradient(Variant::kCondTape, std::move(*run));
+      };
+    case Variant::kForSpot:
+      return [c, m, config] {
+        auto run = ad::PriceWithHessian<1>(c, m, config, {ad::kSpotInput});
+        Require(run.has_value(), "forward over reverse refused");
+        return FromHessian(Variant::kForSpot, std::move(*run));
+      };
+    case Variant::kForSpotVol:
+      return [c, m, config] {
+        auto run = ad::PriceWithHessian<2>(c, m, config, {ad::kSpotInput, ad::kVolInput});
+        Require(run.has_value(), "forward over reverse refused");
+        return FromHessian(Variant::kForSpotVol, std::move(*run));
+      };
   }
   throw std::runtime_error("unknown variant");
 }
@@ -403,6 +490,11 @@ Runner LwRunner(const Workload& w, Variant variant) {
       return [h = w.central[0].h] { return LwBumps(Variant::kBumpCentral, h); };
     case Variant::kBumpForward:
       return [h = w.forward[0].h] { return LwBumps(Variant::kBumpForward, h); };
+    case Variant::kCondPrice:
+    case Variant::kCondTape:
+    case Variant::kForSpot:
+    case Variant::kForSpotVol:
+      break;
   }
   throw std::runtime_error("unknown variant");
 }
@@ -433,7 +525,12 @@ const Workload* FindWorkload(std::string_view id) {
 }
 
 bool HasVariant(const Workload& workload, Variant variant) {
-  return variant != Variant::kHand || workload.hand;
+  const bool second = variant == Variant::kCondPrice || variant == Variant::kCondTape ||
+                      variant == Variant::kForSpot || variant == Variant::kForSpotVol;
+  if (workload.second_order) {
+    return second || variant == Variant::kPrice || variant == Variant::kTape;
+  }
+  return !second && (variant != Variant::kHand || workload.hand);
 }
 
 std::optional<RunConfig> ConfigFor(const Workload& workload, std::uint64_t divisor,

@@ -15,6 +15,7 @@
 #include "aad_workloads.hpp"
 #include "ad/bounds.hpp"
 #include "ad/gradient.hpp"
+#include "ad/second_order.hpp"
 #include "ad/tape.hpp"
 #include "bump_study.hpp"
 #include "lax_wendroff.hpp"
@@ -116,6 +117,97 @@ void CheckValueBits(const WorkloadReport& report, CheckResult& check) {
         break;
       }
     }
+  }
+}
+
+// The second-order workloads: each variant's value against the primal of its own kernels.
+void CheckSecondValueBits(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* price = report.Result(Variant::kPrice);
+  const VariantResult* conditional = report.Result(Variant::kCondPrice);
+  for (const VariantResult& r : report.results) {
+    if (r.variant == Variant::kPrice || r.variant == Variant::kCondPrice) continue;
+    const VariantResult* primal = r.variant == Variant::kTape ? price : conditional;
+    const std::string name(VariantName(r.variant));
+    if (r.value.batch_means.size() != primal->value.batch_means.size()) {
+      Fail(check, name + " has another batch count");
+      continue;
+    }
+    for (std::size_t b = 0; b < r.value.batch_means.size(); ++b) {
+      if (!SameBits(r.value.batch_means[b], primal->value.batch_means[b])) {
+        Fail(check, name + " value batch " + std::to_string(b) + " is not " +
+                        std::string(VariantName(primal->variant)) + "'s");
+        break;
+      }
+    }
+  }
+}
+
+bool SameBatchBits(const pricer::Estimate& a, const pricer::Estimate& b, std::string& where) {
+  if (a.batch_means.size() != b.batch_means.size()) {
+    where = "another batch count";
+    return false;
+  }
+  for (std::size_t i = 0; i < a.batch_means.size(); ++i) {
+    if (!SameBits(a.batch_means[i], b.batch_means[i])) {
+      where = "batch " + std::to_string(i) + ": " + Number(a.batch_means[i]) + " against " +
+              Number(b.batch_means[i]);
+      return false;
+    }
+  }
+  return true;
+}
+
+void CheckForGradient(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* tape = report.Result(Variant::kCondTape);
+  for (const Variant variant : {Variant::kForSpot, Variant::kForSpotVol}) {
+    const VariantResult* r = report.Result(variant);
+    for (std::size_t g = 0; g < pricer::kInputCount; ++g) {
+      std::string where;
+      if (!SameBatchBits(r->greeks[g], tape->greeks[g], where)) {
+        Fail(check,
+             std::string(VariantName(variant)) + " " + std::string(InputName(g)) + " " + where);
+      }
+    }
+  }
+}
+
+void CheckSpotRow(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* one = report.Result(Variant::kForSpot);
+  const VariantResult* two = report.Result(Variant::kForSpotVol);
+  if (one->hessian_rows.size() != 1 || two->hessian_rows.size() != 2) {
+    Fail(check, "a Hessian with the wrong number of rows");
+    return;
+  }
+  for (std::size_t i = 0; i < pricer::kInputCount; ++i) {
+    std::string where;
+    if (!SameBatchBits(two->hessian_rows[0][i], one->hessian_rows[0][i], where)) {
+      Fail(check, "input " + std::to_string(i) + " " + where);
+    }
+  }
+}
+
+void CheckVannaSymmetry(const WorkloadReport& report, CheckResult& check) {
+  const VariantResult* two = report.Result(Variant::kForSpotVol);
+  const Workload& w = *report.workload;
+  const auto bounds = ad::VannaSymmetryBounds(w.contract, w.market, report.config);
+  if (!bounds || two->hessian_rows.size() != 2) {
+    Fail(check, "no bound or no vol row");
+    return;
+  }
+  const std::vector<double>& spot_row = two->hessian_rows[0][ad::kVolInput].batch_means;
+  const std::vector<double>& vol_row = two->hessian_rows[1][ad::kSpotInput].batch_means;
+  if (spot_row.size() != bounds->size() || vol_row.size() != bounds->size()) {
+    Fail(check, "another batch count");
+    return;
+  }
+  for (std::size_t b = 0; b < bounds->size(); ++b) {
+    const double distance = std::fabs(spot_row[b] - vol_row[b]);
+    const double limit = (*bounds)[b];
+    if (!(distance <= limit)) {
+      Fail(check, "batch " + std::to_string(b) + ": " + Number(spot_row[b]) + " against " +
+                      Number(vol_row[b]) + ", bound " + Number(limit));
+    }
+    check.worst = std::max(check.worst, distance / limit);
   }
 }
 
@@ -259,6 +351,18 @@ std::string ResultLines(const Workload& w, const VariantResult& r) {
         Line("estimate", variant + " " + std::string(InputName(g)) + " " +
                              Number(r.greeks[g].mean) + " " + Number(r.greeks[g].standard_error));
   }
+  // Row k, input i: d2V / dx_k dx_i, rows on spot then vol.
+  constexpr std::array<std::array<std::string_view, pricer::kInputCount>, 2> kEntries = {{
+      {"gamma", "vanna", "d2V/dS.dr", "d2V/dS.dq", "d2V/dS.dT"},
+      {"d2V/dsigma.dS", "volga", "d2V/dsigma.dr", "d2V/dsigma.dq", "d2V/dsigma.dT"},
+  }};
+  for (std::size_t k = 0; k < r.hessian_rows.size() && k < kEntries.size(); ++k) {
+    for (std::size_t i = 0; i < pricer::kInputCount; ++i) {
+      const pricer::Estimate& e = r.hessian_rows[k][i];
+      out += Line("estimate", variant + " " + std::string(kEntries[k][i]) + " " + Number(e.mean) +
+                                  " " + Number(e.standard_error));
+    }
+  }
   return out;
 }
 
@@ -303,6 +407,13 @@ std::vector<CheckResult> CheckResults(const WorkloadReport& report) {
     checks.push_back({.name = std::move(name), .passed = true, .worst = 0.0, .detail = {}});
     return checks.back();
   };
+  if (report.workload->second_order) {
+    CheckSecondValueBits(report, add("value-bits"));
+    CheckForGradient(report, add("for-gradient-bits"));
+    CheckSpotRow(report, add("spot-row-bits"));
+    CheckVannaSymmetry(report, add("vanna-symmetry"));
+    return checks;
+  }
   CheckValueBits(report, add("value-bits"));
   CheckSkip(report, add("skip-equals-tape"));
   if (report.workload->hand) {
@@ -380,7 +491,8 @@ std::string RenderSection(const WorkloadReport& report) {
     line("peak_rss", variant + " " + std::to_string(bytes));
   }
   for (const VariantResult& r : report.results) out += ResultLines(w, r);
-  return out + StepLines(w);
+  // The second-order workloads have no bumps, so no steps.
+  return w.second_order ? out : out + StepLines(w);
 }
 
 }  // namespace aadp::bench::aad

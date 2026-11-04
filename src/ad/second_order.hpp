@@ -543,6 +543,16 @@ std::expected<pricer::Estimate, SecondOrderError> PriceConditional(
     const pricer::Contract& contract, const pricer::Market<double>& market,
     const pricer::RunConfig& config);
 
+// For an in-run check of PriceWithHessian<2> on directions {spot, vol} at the same config: per
+// batch, a bound on |mean of rows[0][vol] - mean of rows[1][spot]|, whose exact values are equal.
+// Each block of paths is one tape with one sweep, as far as rounding goes (the per-path sweeps and
+// the set-up sweep form the products of a single sweep), so its two entries are each within
+// HessianRoundoffBound of the exact value, with the block's statement and operand totals and the
+// block's absolute pass. The bound adds the merge of the blocks and the division by the paths.
+std::expected<std::vector<double>, SecondOrderError> VannaSymmetryBounds(
+    const pricer::Contract& contract, const pricer::Market<double>& market,
+    const pricer::RunConfig& config);
+
 // One worker's first-order tape on the conditional kernels, as PathGradient on the production
 // kernels.
 class ConditionalPathGradient {

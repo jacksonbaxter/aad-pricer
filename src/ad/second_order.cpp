@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <expected>
@@ -272,6 +273,78 @@ std::expected<pricer::Estimate, SecondOrderError> PriceConditional(
   means.reserve(table.size());
   for (const auto& row : table) means.push_back(row[0]);
   return FromBatchMeans(std::move(means));
+}
+
+namespace {
+
+// The absolute pass of HessianPathFn<2>, path for path and block for block, with each path's
+// statement and operand counts. At each block's end: [2] the bound on the block's two entries,
+// [3] a bound on the sum of their magnitudes.
+class VannaBoundPathFn {
+ public:
+  static constexpr std::size_t kStats = 4;
+  using D = AbsoluteHessianDual<2>;
+
+  VannaBoundPathFn(const pricer::Contract& c, const pricer::Market<double>& m)
+      : path_(c, m, {kSpotInput, kVolInput}), setup_(path_.tape().Memory()) {}
+
+  void operator()(const pricer::PathUniforms& u, std::array<double, kStats>& stats) {
+    stats = {};
+    SecondTape<D>& tape = path_.tape();
+    const SecondReal<D> payoff = path_.Record(u);
+    const SecondPosition end = tape.GetPosition();
+    const SecondMemory memory = tape.Memory();
+    stats[0] = static_cast<double>(memory.statements - setup_.statements);
+    stats[1] = static_cast<double>(memory.operands - setup_.operands);
+    tape.AddAdjoint(payoff, 1.0);
+    tape.SweepBack(end, path_.mark());
+    // The absolute sweep keeps what it propagated: clear the path's adjoints before the next.
+    tape.ClearAdjoints(end, path_.mark());
+    path_.Rewind();
+  }
+  void EndBlock(std::array<double, kStats>& sum) {
+    const SecondOrderPath<D>::Sums s = path_.SweepSetup();
+    const double absolute = s.rows[0][kVolInput] + s.rows[1][kSpotInput];
+    const auto statements = static_cast<std::size_t>(sum[0]) + setup_.statements;
+    const auto operands = static_cast<std::size_t>(sum[1]) + setup_.operands;
+    // The entries' own bounds, and the absolute entries, which bound their magnitudes once the
+    // same round-off is allowed for them.
+    // The floor is check 4's 2^-1000 below the normal range (tests/ad/second_order_test.cpp),
+    // once per statement, which is more than once per path.
+    sum[2] = HessianRoundoffBound(s.rows[0][kVolInput], statements, operands) +
+             HessianRoundoffBound(s.rows[1][kSpotInput], statements, operands) +
+             (0x1p-1000 * static_cast<double>(statements));
+    sum[3] = absolute + sum[2];
+  }
+
+ private:
+  SecondOrderPath<D> path_;
+  SecondMemory setup_;
+};
+
+}  // namespace
+
+std::expected<std::vector<double>, SecondOrderError> VannaSymmetryBounds(
+    const pricer::Contract& contract, const pricer::Market<double>& market,
+    const pricer::RunConfig& config) {
+  if (auto admitted = Admit(contract, market, config); !admitted) {
+    return std::unexpected(admitted.error());
+  }
+  const auto table = pricer::RunBatches<VannaBoundPathFn::kStats>(
+      config, ShapeOf(contract), [&] { return VannaBoundPathFn(contract, market); });
+  // Batch b's means m1 and m2 are fl(S / n) of block sums merged in order, k blocks: the merge
+  // adds gamma_k sum_blocks |entry| to each, the division u |S / n|. table[b][2] and [3] are
+  // themselves batch means, rounded by at most gamma_{k + 1} relative, which the last factor
+  // covers.
+  const std::uint64_t per_batch = config.paths / config.batches;
+  const std::uint64_t block_count = (per_batch + pricer::kBlockPaths - 1) / pricer::kBlockPaths;
+  const auto blocks = static_cast<double>(block_count);
+  const double merge = bounds::Gamma(blocks) + 0x1p-53;
+  const double margin = 1.0 + (2.0 * bounds::Gamma(blocks + 1.0));
+  std::vector<double> out;
+  out.reserve(table.size());
+  for (const auto& row : table) out.push_back((row[2] + (merge * row[3])) * margin * margin);
+  return out;
 }
 
 ConditionalPathGradient::ConditionalPathGradient(const pricer::Contract& contract,

@@ -30,6 +30,20 @@
 //                    bump is not on common random numbers. K = kStatisticalFamily, every such
 //                    comparison of the suite, so the family is the same however many workloads
 //                    one run selects. Lax-Wendroff is deterministic: |d| <= b, input by input.
+//
+// The second-order workloads (aad8-*) have these four, and no statistical check, so the family
+// above is unchanged:
+//   value-bits       tape's value batch means are Price()'s, and cond-tape's, for-spot's and
+//                    for-spot-vol's are cond-price's, bit for bit, as above.
+//   for-gradient-bits
+//                    for-spot's and for-spot-vol's five Greeks are cond-tape's, bit for bit: the
+//                    value lanes of forward over reverse form the first-order tape's products in
+//                    its order (src/ad/second_order.hpp).
+//   spot-row-bits    for-spot-vol's spot row is for-spot's, bit for bit: lane 0 never reads lane 1.
+//   vanna-symmetry   for-spot-vol's d2V/dS dsigma against its d2V/dsigma dS, batch by batch,
+//                    within ad::VannaSymmetryBounds: each block's HessianRoundoffBound with the
+//                    block's statement and operand totals and its absolute pass, plus the merge of
+//                    the blocks and the division by the paths. The exact values are equal.
 #ifndef AADP_BENCH_AAD_CHECKS_HPP_
 #define AADP_BENCH_AAD_CHECKS_HPP_
 

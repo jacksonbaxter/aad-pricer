@@ -22,8 +22,9 @@
 namespace aadp::results {
 namespace {
 
-constexpr std::array<std::string_view, 7> kVariantOrder = {
-    "price", "tape", "tape-skip", "tape-record", "hand", "bump-central", "bump-forward"};
+constexpr std::array<std::string_view, 11> kVariantOrder = {
+    "price",        "tape",       "tape-skip", "tape-record", "hand",        "bump-central",
+    "bump-forward", "cond-price", "cond-tape", "for-spot",    "for-spot-vol"};
 constexpr double kNanosecondsPerSecond = 1e9;
 constexpr double kNanosecondsPerMillisecond = 1e6;
 constexpr double kBytesPerMebibyte = 1024.0 * 1024.0;
@@ -269,6 +270,32 @@ std::string variant_note(const Section& section, std::string_view variant,
   if (variant == "bump-forward") {
     return format("%.0f", inputs + 1.0) + " pricings expected (N + 1)";
   }
+  // The second-order variants, on the conditional kernels: their multiples against the
+  // first-order AAD of the same kernels, apart from the scalar primal's column.
+  const auto against = [&times](std::string_view variant_name, std::string_view base) {
+    const auto found = times.find(base);
+    return found == times.end()
+               ? std::string()
+               : ", " + format("%.3g", times.find(variant_name)->second / found->second) + " x " +
+                     std::string(base);
+  };
+  if (variant == "cond-price") {
+    return "value only, conditional kernels (last step in closed form)";
+  }
+  if (variant == "cond-tape") {
+    return "value and every Greek, conditional kernels, one reverse sweep per path" +
+           against(variant, "cond-price");
+  }
+  if (variant == "for-spot") {
+    return "value, every Greek and the spot Hessian row (gamma, vanna) in one forward-over-reverse "
+           "sweep per path, 1 tangent lane" +
+           against(variant, "cond-tape") + against(variant, "cond-price");
+  }
+  if (variant == "for-spot-vol") {
+    return "value, every Greek and the spot and vol Hessian rows (gamma, vanna, volga) in one "
+           "forward-over-reverse sweep per path, 2 tangent lanes" +
+           against(variant, "cond-tape") + against(variant, "cond-price");
+  }
   return "value only";
 }
 
@@ -340,8 +367,10 @@ std::string accuracy_table(const Section& section,
   }
   for (const Estimate& e : section.estimates) {
     const bool value_row = e.quantity == "value";
-    // The value is Price()'s bits in every variant, and tape-skip's Greeks are the tape's.
-    if ((value_row && e.variant != "price") || e.variant == "tape-skip") {
+    // The value is Price()'s bits in every variant (cond-price's in the conditional ones), and
+    // tape-skip's Greeks are the tape's.
+    if ((value_row && e.variant != "price" && e.variant != "cond-price") ||
+        e.variant == "tape-skip") {
       continue;
     }
     out += accuracy_row(e.quantity, e.variant, format("%.8g", e.mean), e.se,

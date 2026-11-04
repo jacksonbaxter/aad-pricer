@@ -13,6 +13,17 @@
 // The Lax-Wendroff worst case (lax_wendroff.hpp) has the same variants on its 100 inputs, so its
 // bumps cost 201 and 101 primal runs.
 //
+// The second-order workloads (aad8-*) run price and tape, and these, on the conditional kernels
+// of src/pricer/conditional_kernels.hpp (the last step's expectation in closed form):
+//   cond-price    PriceConditional(): value only, the primal of the kernels below.
+//   cond-tape     PriceWithConditionalGradient(): value and five Greeks, one reverse sweep per
+//                 path. The first-order AAD the second-order variants are measured against.
+//   for-spot      PriceWithHessian<1> on spot: value, five Greeks and the spot row of the Hessian
+//                 (gamma, vanna, d2V/dS dr, dS dq, dS dT), one forward-over-reverse sweep per path.
+//   for-spot-vol  PriceWithHessian<2> on spot and vol: the same and the vol row (volga), one
+//                 sweep per path with two tangent lanes.
+// No variant runs a second pass, and none of their multiples enters AAD-1 or AAD-4.
+//
 // The hand adjoint skips the reverse pass on a path out of the money; the plain tape does not.
 // Both fairness answers are given: tape-skip is the tape with a skip, and every workload reports
 // the fraction of paths whose payoff is not zero beside its multiples.
@@ -53,10 +64,15 @@ enum class Variant : std::uint8_t {
   kHand,
   kBumpCentral,
   kBumpForward,
+  kCondPrice,
+  kCondTape,
+  kForSpot,
+  kForSpotVol,
 };
-inline constexpr std::array<Variant, 7> kVariants = {
-    Variant::kPrice, Variant::kTape,        Variant::kTapeSkip,   Variant::kTapeRecord,
-    Variant::kHand,  Variant::kBumpCentral, Variant::kBumpForward};
+inline constexpr std::array<Variant, 11> kVariants = {
+    Variant::kPrice,    Variant::kTape,        Variant::kTapeSkip,    Variant::kTapeRecord,
+    Variant::kHand,     Variant::kBumpCentral, Variant::kBumpForward, Variant::kCondPrice,
+    Variant::kCondTape, Variant::kForSpot,     Variant::kForSpotVol};
 std::string_view VariantName(Variant variant);
 std::optional<Variant> ParseVariant(std::string_view name);
 
@@ -82,6 +98,8 @@ struct Workload {
   std::uint64_t paths = 0;  // The target's path count. Lax-Wendroff: 1, one run.
   bool threaded = false;    // Runs on the --aadp-threads count, else on one thread.
   bool hand = false;
+  // Runs price, tape and the conditional and second-order variants, and no others.
+  bool second_order = false;
   std::string_view study;  // The workload whose h study this one uses: the same contract and N
   StepChoices central{};   // Lax-Wendroff: index 0 for every input
   StepChoices forward{};
@@ -106,6 +124,9 @@ struct VariantResult {
   std::array<pricer::Estimate, pricer::kInputCount> greeks;
   bool has_greeks = false;
   lw::Field<double> gradient{};
+  // for-spot and for-spot-vol: row k is the Hessian row of lane k's input (spot, then vol), raw
+  // d2V / dx_k dx_i with no theta sign.
+  std::vector<std::array<pricer::Estimate, pricer::kInputCount>> hessian_rows;
   // Bumps only: realised denominators and mean |V| (or |J|) at the up and down markets.
   std::vector<double> denominator;
   std::vector<double> absolute_up;
