@@ -114,6 +114,8 @@ class PathGradient {
   [[nodiscard]] Tape& tape() { return tape_; }
   [[nodiscard]] const Tape& tape() const { return tape_; }
   [[nodiscard]] const std::array<Real, kInputs>& inputs() const { return inputs_; }
+  // The set-up: the model built on the registered inputs.
+  [[nodiscard]] const pricer::GbmModel<Real>& model() const { return model_; }
   [[nodiscard]] Position mark() const { return mark_; }
   // Records one path after the mark and returns its payoff, leaving it on the tape. The caller
   // sweeps or reads it, then calls Rewind.

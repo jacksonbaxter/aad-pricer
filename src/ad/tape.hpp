@@ -131,6 +131,9 @@ class Tape {
     if (x.active()) adjoints_[x.index()] += adjoint;
   }
   [[nodiscard]] double AdjointAt(Index i) const { return adjoints_[i]; }
+  // For a tape that sweeps elsewhere and adds its contributions here: the lane tape of
+  // src/simd/lane_path_gradient.hpp, whose set-up is this tape's.
+  void AddAdjointAt(Index i, double adjoint) { adjoints_[i] += adjoint; }
   // Zeroes the adjoints of statements [stop, from).
   void ClearAdjoints(const Position& from, const Position& stop);
 
@@ -152,6 +155,9 @@ class Tape {
   void SweepForwardAbsolute(const Position& from);
   void SetTangent(const Real& x, double tangent);
   [[nodiscard]] double Tangent(const Real& x) const;
+  [[nodiscard]] double TangentAt(Index i) const {
+    return i < tangents_.size() ? tangents_[i] : 0.0;
+  }
   void ClearTangents();
 
   // For error bounds (src/ad/bounds.hpp): over every operand of the statements in

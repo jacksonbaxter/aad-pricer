@@ -43,16 +43,39 @@ foreach(_aadp_sized IN ITEMS aadp_simd_math_agreement_test aadp_simd_path_agreem
   endif()
 endforeach()
 
-# Stage 5b: the vector tape. It keeps the set-up on the scalar tape, so it needs the ad library.
+# Stage 5b: the vector tape, gradients on lanes. It records onto the pricer's kernels on lanes and
+# keeps the set-up on the scalar tape, so it needs the ad library too.
 if(TARGET aadp_ad)
+  aadp_library(aadp_simd_ad
+    SOURCES src/simd/lane_gradient.cpp
+    LINK aadp_simd aadp_ad)
   # B16 and the dot product on lanes: random programs against one scalar sweep per lane.
   aadp_test(aadp_simd_lane_tape_test
     SOURCES tests/simd/lane_tape_test.cpp
-    LINK aadp_simd aadp_ad aadp_test_support
+    LINK aadp_simd_ad aadp_test_support
     LABELS simd ad)
-  if(TARGET aadp_simd_lane_tape_test)
-    target_compile_definitions(aadp_simd_lane_tape_test PRIVATE
-      AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+  # Per path, block sums on 1, 2, 3 and 8 threads, the dot product on priced paths and the
+  # counted fallback, all against the scalar tape, bit for bit.
+  aadp_test(aadp_simd_lane_gradient_test
+    SOURCES tests/simd/lane_gradient_test.cpp
+    LINK aadp_simd_ad aadp_test_support
+    LABELS simd ad threads tsan)
+  # Tape bytes per path at every width, beside the scalar tape's.
+  aadp_test(aadp_simd_lane_tape_memory_test
+    SOURCES tests/simd/lane_tape_memory_test.cpp
+    LINK aadp_simd_ad aadp_test_support
+    LABELS simd ad)
+  foreach(_aadp_sized IN ITEMS aadp_simd_lane_tape_test aadp_simd_lane_gradient_test)
+    if(TARGET ${_aadp_sized})
+      target_compile_definitions(${_aadp_sized} PRIVATE
+        AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+    endif()
+  endforeach()
+  # MEM-6 on lanes, in the allocation test's own binary (cmake/area_pricer.cmake says which
+  # presets build it).
+  if(TARGET aadp_ad_allocation_test)
+    target_sources(aadp_ad_allocation_test PRIVATE tests/simd/lane_allocation_test.cpp)
+    target_link_libraries(aadp_ad_allocation_test PRIVATE aadp_simd_ad)
   endif()
 endif()
 

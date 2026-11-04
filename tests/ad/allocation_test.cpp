@@ -1,7 +1,9 @@
 // MEM-6 (EVIDENCE B5): no heap allocation after warm-up. This binary replaces the global
 // allocation functions with ones that count while counting is on, warms each worker's tape up
 // with one path, and then counts across many paths and block-end set-up sweeps, exactly as
-// RunBatches drives them. The expectation, stated before measuring, is zero.
+// RunBatches drives them. The expectation, stated before measuring, is zero. The vector tape's
+// part of this binary is tests/simd/lane_allocation_test.cpp, which reads the counters through
+// allocation_counter.hpp.
 //
 // Not built under TSan on Linux: that runtime is linked statically and its libclang_rt.tsan_cxx.a
 // defines these same replaceable functions, so the link fails with multiple definitions. It runs
@@ -18,6 +20,7 @@
 #include <new>
 #include <vector>
 
+#include "ad/allocation_counter.hpp"
 #include "ad/gradient.hpp"
 #include "ad/real.hpp"
 #include "ad/tape.hpp"
@@ -25,17 +28,23 @@
 #include "pricer/draws.hpp"
 #include "pricer/runner.hpp"
 
-namespace {
+namespace aadp::testing::allocation {
 
-// The replaced operator new has no way to reach state but a global.
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables): see above.
-std::atomic<bool> g_counting{false};
-std::atomic<std::uint64_t> g_allocations{0};
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables): allocation_counter.hpp.
+std::atomic<bool> counting{false};
+std::atomic<std::uint64_t> allocations{0};
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
+}  // namespace aadp::testing::allocation
+
+namespace {
+
+using aadp::testing::allocation::allocations;
+using aadp::testing::allocation::counting;
+
 void* Allocate(std::size_t size) {
-  if (g_counting.load(std::memory_order_relaxed)) {
-    g_allocations.fetch_add(1, std::memory_order_relaxed);
+  if (counting.load(std::memory_order_relaxed)) {
+    allocations.fetch_add(1, std::memory_order_relaxed);
   }
   // This is the allocator being replaced.
   // NOLINTNEXTLINE(cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory): see above.
@@ -90,13 +99,13 @@ TEST(TapeAllocation, TheCounterSeesATapeGrow) {
   const Position mark = tape.GetPosition();
   static_cast<void>(x * 2.0);
   tape.Rewind(mark);
-  g_allocations = 0;
-  g_counting = true;
+  allocations = 0;
+  counting = true;
   Real y = x;
   for (std::size_t i = 0; i < 2 * kChunkEntries; ++i) y = y * 1.0001;
-  g_counting = false;
+  counting = false;
   tape.Rewind(mark);
-  EXPECT_GE(g_allocations.load(), 1U);
+  EXPECT_GE(allocations.load(), 1U);
 }
 
 TEST(TapeAllocation, NoHeapAllocationAfterWarmUp) {
@@ -114,8 +123,8 @@ TEST(TapeAllocation, NoHeapAllocationAfterWarmUp) {
       path_fn(u, stats);
       path_fn.EndBlock(sum);
 
-      g_allocations = 0;
-      g_counting = true;
+      allocations = 0;
+      counting = true;
       for (std::uint64_t p = 1; p <= kPaths; ++p) {
         pricer::FillPath(kSeed, p, normal, crossing);
         path_fn(u, stats);
@@ -123,12 +132,12 @@ TEST(TapeAllocation, NoHeapAllocationAfterWarmUp) {
         if (p % pricer::kBlockPaths == 0) path_fn.EndBlock(sum);
         // One allocation already fails the test. A tape that never rewinds also makes every
         // later sweep longer, so stop at the first one rather than run on.
-        if (g_allocations.load(std::memory_order_relaxed) != 0) break;
+        if (allocations.load(std::memory_order_relaxed) != 0) break;
       }
-      g_counting = false;
-      const std::uint64_t allocations = g_allocations.load();
-      total += allocations;
-      ASSERT_EQ(allocations, 0U) << c.name << ", " << steps << " steps: allocated after warm-up";
+      counting = false;
+      const std::uint64_t counted = allocations.load();
+      total += counted;
+      ASSERT_EQ(counted, 0U) << c.name << ", " << steps << " steps: allocated after warm-up";
     }
   }
   std::printf(

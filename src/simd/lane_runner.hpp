@@ -11,7 +11,10 @@
 // give other bits for any L > 1.
 //
 // make_lane_fn() returns a callable (const LaneUniforms<LaneReal<D>>&,
-// std::array<LaneReal<D>, M>&) -> void, built once per worker, as in runner.hpp.
+// std::array<LaneReal<D>, M>&) -> void, built once per worker, as in runner.hpp. One that also
+// takes a std::size_t is told how many of the group's lanes are inside the block, so a lane
+// gradient (lane_path_gradient.hpp) adds only theirs into its set-up. An EndBlock is called as
+// runner.hpp calls it.
 #ifndef AADP_SIMD_LANE_RUNNER_HPP_
 #define AADP_SIMD_LANE_RUNNER_HPP_
 
@@ -24,6 +27,7 @@
 #include <cstdint>
 #include <span>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "pricer/runner.hpp"
@@ -60,9 +64,14 @@ std::array<double, M> SumBlock(D d, std::uint64_t seed, std::uint64_t first, std
   std::array<double, M> sum{};
   for (std::uint64_t group = first; group < last; group += kLanes) {
     FillLanes(d, seed, group, normal, crossing);
-    lane_fn(uniforms, stats);
-    for (std::size_t i = 0; i < M; ++i) hn::StoreU(stats[i].vec(), d, lanes[i].data());
     const auto count = static_cast<std::size_t>(std::min<std::uint64_t>(kLanes, last - group));
+    if constexpr (std::is_invocable_v<LaneFn&, const LaneUniforms<LaneReal<D>>&,
+                                      std::array<LaneReal<D>, M>&, std::size_t>) {
+      lane_fn(uniforms, stats, count);
+    } else {
+      lane_fn(uniforms, stats);
+    }
+    for (std::size_t i = 0; i < M; ++i) hn::StoreU(stats[i].vec(), d, lanes[i].data());
     for (std::size_t lane = 0; lane < count; ++lane) {
       for (std::size_t i = 0; i < M; ++i) sum[i] += lanes[i][lane];
     }
