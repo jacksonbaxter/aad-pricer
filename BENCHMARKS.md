@@ -84,6 +84,60 @@ Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz coun
 
 The bound is on operation counts, not wall time. Griewank gives "the complexity ratio is exactly ω = 3" for polynomial multiplication counts (https://papers.baulab.info/papers/also/Griewank-2012.pdf, PDF p.8). Capriotti gives Cost[F & J] / Cost[F] ≤ ω_A m with ω_A ∈ [3, 4] (eq. 3.5, printed p.10, PDF p.8, read from the page image, citing Griewank 2000). These are different models and different numerators, and the textbook that would map constants to models (Griewank & Walther) could not be opened, so no single number is "the" bound. Real tapes exceed it: dco/c++ "between 5 and 15" (https://support.nag.com/doc/techrep/pdf/tr3_14.pdf, section 4.1).
 
+### How Phase 3 numbers are produced
+
+One binary, `aadp_bench_aad` (`bench/aad_bench.cpp`), one results file per workload. Each workload times seven variants as Google Benchmarks named `<workload>.<variant>`: `price` (the scalar primal), `tape` (value and all Greeks), `tape-skip` (the same with the zero-adjoint skip, B9), `tape-record` (record and rewind only, so reverse = tape - tape-record), `hand` (hand-written adjoint, where one exists), `bump-central` (2N + 1 pricings) and `bump-forward` (N + 1). One timed batch is one run over all the workload's paths.
+
+| Workload | Targets | Setup |
+|---|---|---|
+| `aad1-barrier` | AAD-1, AAD-7 | up-and-out call, smoothed discrete barrier, 156 dates, 500,000 paths, 1 thread |
+| `aad3-barrier-mt` | AAD-3 | the same on `--aadp-threads` worker threads |
+| `aad4-asian12` | AAD-4, AAD-5, AAD-6 | arithmetic Asian call, 12 fixings, 300,000 paths, 1 thread |
+| `mc-asian252` | MC-1, MC-2, AAD-5, AAD-6 | the same at 252 fixings |
+| `mc3-asian252-mt` | MC-3 | `mc-asian252` on `--aadp-threads` worker threads |
+| `lw-worst` | Hogan's Lax-Wendroff (B34) | 100 points, 2000 steps, c = 0.5, 100 inputs |
+
+Each workload's section and the header state the rest: differences from the target, seed 20261103, 50 batches, threads and their setup, the instruction set (scalar until stage 5, whose SIMD primal fills the "x fastest primal" column), the tape configuration, tape bytes per path, peak RSS per variant (a fresh process running that variant alone), and the nonzero-payoff fraction.
+
+Before anything is timed, every variant runs once at the benchmark's own size and is checked (`bench/aad_checks.hpp` states each bound): value bits against `Price()`, the skip against the tape, the hand adjoint against the tape, and both bumps against the tape. A failed check writes `valid no` and `gradient_check: FAILED` into the file, the table prints the workload as INVALID with no multiples, and `--aadp-require-valid` exits 9.
+
+Bump steps come from the h study, committed as `bench/bump_size_study.csv` (every halving, its change, round-off scale and verdict) and `bench/aad_steps.hpp` (the chosen step, bias, bias SE and bias bound per Greek). The ctest `aadp_bump_study_committed` checks that one chooses the other. To redo it: `build/release/bin/aadp_bump_study --threads=8 --out=bench/bump_size_study.csv`, then `build/release/bin/aadp_bump_study --steps-header=bench/bump_size_study.csv` into `bench/aad_steps.hpp` and clang-format.
+
+On `mac-m4max`, from a clean checkout of the commit, with the toolchain sourced:
+
+```sh
+cmake --preset release && cmake --build --preset release -j 6
+python3 -I scripts/run_tests.py ctest release
+B=build/release/bin/aadp_bench_aad
+scripts/run_bench.sh $B aad1-barrier --aadp-workload=aad1-barrier --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh $B aad3-barrier-mt --aadp-workload=aad3-barrier-mt --aadp-threads=8 --aadp-require-valid --batches=10 --repetitions=3
+scripts/run_bench.sh $B aad4-asian12 --aadp-workload=aad4-asian12 --aadp-require-valid --batches=20 --repetitions=3
+scripts/run_bench.sh $B mc-asian252 --aadp-workload=mc-asian252 --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh $B mc3-asian252-mt --aadp-workload=mc3-asian252-mt --aadp-threads=8 --aadp-require-valid --batches=10 --repetitions=3
+scripts/run_bench.sh $B lw-worst --aadp-workload=lw-worst --aadp-require-valid --batches=200 --repetitions=3
+build/release/bin/aadp_results_table build/release/results/mac-m4max
+```
+
+`run_bench.sh` runs each under `measure.sh`, passes `--reportable`, and stamps the file into `build/release/results/<host>/`. It reaches `results/<host>/` only when copied there after reading. At one batch per run, `aad1-barrier` and `mc-asian252` take about 15 minutes each on `mac-m4max`, mostly in `bump-central`.
+
+On `linux-zen1`, in the export of the same commit, with `$HOME/quant-projects/.toolchain/env.sh` sourced, builds through `$HOME/quant-projects/bin/heavy.sh` at `-j 2`, and each run detached with its output in a file on the host:
+
+```sh
+$HOME/quant-projects/bin/heavy.sh cmake --preset release
+$HOME/quant-projects/bin/heavy.sh cmake --build --preset release -j 2
+python3 -I scripts/run_tests.py ctest release
+B=build/release/bin/aadp_bench_aad
+scripts/run_bench.sh $B aad1-barrier --aadp-workload=aad1-barrier --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh $B aad4-asian12 --aadp-workload=aad4-asian12 --aadp-require-valid --batches=20 --repetitions=3
+scripts/run_bench.sh $B mc-asian252 --aadp-workload=mc-asian252 --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh $B lw-worst --aadp-workload=lw-worst --aadp-require-valid --batches=200 --repetitions=3
+build/release/bin/aadp_results_table build/release/results/linux-zen1
+```
+
+There `run_bench.sh` adds `taskset -c 4`. The threaded workloads need two threads on CPUs 4 and 6, which `run_bench.sh` (one CPU) and the stamp (which refuses a pin to more than one CPU) do not support yet. Until they do, `aad3-barrier-mt` and `mc3-asian252-mt` have `mac-m4max` numbers only.
+
+An iteration run, which is never a result: `AADP_NOT_REPORTABLE="iteration" scripts/run_bench.sh $B aad-iteration --aadp-scale=50 --batches=1 --repetitions=3`, rendered with `aadp_results_table --iteration <file>`, which prints it under an ITERATION ONLY banner.
+
 ## 2. Tape memory
 
 Tape memory is the main practical limit of AAD, so every AAD multiple is reported beside tape bytes per path and peak RSS.
