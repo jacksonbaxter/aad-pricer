@@ -3024,6 +3024,216 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] PerfCounters\\.ADarwinCounterThatDidNotMoveIsUnavailableNotZero",
       "timeout_s": 120
+    },
+    {
+      "id": "lane-tape-swapped-partial",
+      "kind": "oracle",
+      "covers": "vector tape per-path gradients against the scalar tape",
+      "bug": "The tape stores each operand's partials with the lanes reversed, so lane l is swept with lane N-1-l's partial.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "    hn::StoreU(partial, D(), partials_ + (k * kLanes));",
+          "replace": "    hn::StoreU(hn::Reverse(D(), partial), D(), partials_ + (k * kLanes));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.PerPathGradientsAreTheScalarTapesBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.PerPathGradientsAreTheScalarTapesBits \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-tape-mask-ignored",
+      "kind": "oracle",
+      "covers": "vector tape lane masks in the reverse sweep",
+      "bug": "The reverse sweep adds every lane's contribution, so a lane where the operand was a constant still sends adjoint to the active statement of the others.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "          hn::StoreU(hn::IfThenElse(mask, hn::Add(old, contribution), old), d, slot);",
+          "replace": "          static_cast<void>(mask);\n          hn::StoreU(hn::Add(old, contribution), d, slot);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.PerPathGradientsAreTheScalarTapesBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.PerPathGradientsAreTheScalarTapesBits \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-tape-broadcast-adjoint",
+      "kind": "oracle",
+      "covers": "B16, vector adjoints against N scalar sweeps",
+      "bug": "The reverse sweep multiplies every lane's partials by lane 0's adjoint.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "            hn::Mul(adjoint, hn::LoadU(d, operands->partials.get() + (k * kLanes)));",
+          "replace": "            hn::Mul(hn::Set(d, hn::GetLane(adjoint)),\n                    hn::LoadU(d, operands->partials.get() + (k * kLanes)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_tape_test"],
+      "command": ["{build}/bin/aadp_simd_lane_tape_test", "--gtest_filter=LaneTape.RandomProgramsMatchNScalarSweepsAndTheDotProduct"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneTape\\.RandomProgramsMatchNScalarSweepsAndTheDotProduct \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-tape-forward-mask",
+      "kind": "oracle",
+      "covers": "dot product on lanes, priced paths",
+      "bug": "The tangent sweep ignores lane masks, so a lane where the operand was a constant takes the tangent of the active statement of the others.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "          tangent = hn::IfThenElse(hn::LoadMaskBits(d, operands.masks.get() + k), sum, tangent);",
+          "replace": "          tangent = sum;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.DotProductOnPricedPathsIsTheScalarTapesBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.DotProductOnPricedPathsIsTheScalarTapesBits \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-reduction-path-order",
+      "kind": "oracle",
+      "covers": "vector tape block sums, path order of the set-up replay",
+      "bug": "A group's set-up contributions are replayed last lane first, so they reach the set-up adjoints out of path order at every width above one.",
+      "edits": [
+        {
+          "file": "src/simd/lane_path_gradient.hpp",
+          "find": "    for (std::size_t lane = 0; lane < count; ++lane) Replay(lane);",
+          "replace": "    for (std::size_t lane = count; lane-- > 0;) Replay(lane);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.BlockSumsAreTheScalarGradientsBitsForEveryWidthAndThreadCount"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.BlockSumsAreTheScalarGradientsBitsForEveryWidthAndThreadCount \\(",
+      "timeout_s": 600
+    },
+    {
+      "id": "lane-fallback-uncounted",
+      "kind": "oracle",
+      "covers": "the counted fallback",
+      "bug": "A group that fell back to the scalar tape is not counted.",
+      "edits": [
+        {
+          "file": "src/simd/lane_path_gradient.hpp",
+          "find": "    if (group.fell_back) {",
+          "replace": "    if (group.fell_back && count == 0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.DivergingLanesFallBackCountedAndKeepTheScalarBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.DivergingLanesFallBackCountedAndKeepTheScalarBits \\(",
+      "timeout_s": 600
+    },
+    {
+      "id": "lane-select-divergence-unmarked",
+      "kind": "oracle",
+      "covers": "Select's divergence flag and the fallback",
+      "bug": "A Select whose lanes choose two different active statements does not mark the group, so the lanes that chose the other statement send their adjoint to the wrong one.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape_ops.hpp",
+          "find": "  if (if_true.index() != if_false.index()) ActiveLaneTape<D>().MarkDivergent();\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_gradient_test"],
+      "command": ["{build}/bin/aadp_simd_lane_gradient_test", "--gtest_filter=LaneGradient.DivergingLanesFallBackCountedAndKeepTheScalarBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneGradient\\.DivergingLanesFallBackCountedAndKeepTheScalarBits \\(",
+      "timeout_s": 600
+    },
+    {
+      "id": "lane-layout-mask-byte",
+      "kind": "check",
+      "covers": "vector tape layout, bytes per operand",
+      "bug": "The operand size leaves out the lane mask byte.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "      sizeof(ad::Index) + (kMasked ? sizeof(LaneBits) : 0) + (kLanes * sizeof(double));",
+          "replace": "      sizeof(ad::Index) + (kLanes * sizeof(double));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_tape_test"],
+      "command": ["{build}/bin/aadp_simd_lane_tape_test", "--gtest_filter=LaneTape.LayoutAtEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneTape\\.LayoutAtEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-memory-operands",
+      "kind": "check",
+      "covers": "vector tape bytes per path, MEM on lanes",
+      "bug": "The memory report leaves out the operand chunk in use.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "    for (std::size_t c = 0; c <= op_chunk_; ++c) report.operands += UsedOf(c);",
+          "replace": "    for (std::size_t c = 0; c < op_chunk_; ++c) report.operands += UsedOf(c);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_lane_tape_memory_test"],
+      "command": ["{build}/bin/aadp_simd_lane_tape_memory_test", "--gtest_filter=LaneTapeMemory.BytesPerPathAtEveryWidthBesideTheScalarTape"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneTapeMemory\\.BytesPerPathAtEveryWidthBesideTheScalarTape \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "lane-allocation-per-group",
+      "kind": "check",
+      "covers": "no heap allocation after warm-up on lanes, MEM-6",
+      "bug": "The boundary buffer is released after every group, so the next group allocates it again.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "  void ClearBoundary() { boundary_count_ = 0; }",
+          "replace": "  void ClearBoundary() {\n    boundary_count_ = 0;\n    decltype(boundary_indices_){}.swap(boundary_indices_);\n    decltype(boundary_masks_){}.swap(boundary_masks_);\n    decltype(boundary_values_){}.swap(boundary_values_);\n  }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_allocation_test"],
+      "command": ["{build}/bin/aadp_ad_allocation_test", "--gtest_filter=LaneTapeAllocation.NoHeapAllocationAfterWarmUpAtEveryWidth"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaneTapeAllocation\\.NoHeapAllocationAfterWarmUpAtEveryWidth \\(",
+      "timeout_s": 300
+    },
+    {
+      "id": "fuzz-lane-gradient",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_lane_gradient, vector tape against the scalar tape",
+      "bug": "The set-up replay gives every lane lane 0's contribution.",
+      "edits": [
+        {
+          "file": "src/simd/lane_tape.hpp",
+          "find": "        add(boundary_indices_[e], boundary_values_[(e * kLanes) + lane]);",
+          "replace": "        add(boundary_indices_[e], boundary_values_[e * kLanes]);"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_lane_gradient"],
+      "command": ["{build}/bin/aadp_fuzz_lane_gradient", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-lane-gradient/", "{build}/fault-fuzz/fuzz-lane-gradient/corpus", "fuzz/fuzz_pricer_seeds"],
+      "detect": "test",
+      "reason": "lane gradient mismatch: \\w[^\\n]* at 2 lanes",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-lane-gradient/*", "build/fuzz/fault-fuzz/fuzz-lane-gradient/corpus/*"]
     }
   ]
 }
