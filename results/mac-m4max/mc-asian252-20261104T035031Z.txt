@@ -1,0 +1,1052 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2 (build 26B123)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.535
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 3
+batches_per_repetition: 5
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: bc3e6d3abf0c91dcacc9b1db211d50a5fa8d775e
+commit_source: git
+tree_state: clean
+run_started_at: 2026-11-04T03:52:37Z
+bench_workloads: mc-asian252
+bench_scale: 1 (the targets' path counts)
+bench_seed: 20261103
+bench_mc_batches: 50
+bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
+bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
+bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
+tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size; idle runs nothing
+gradient_check: pass
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 3488363246885
+perf_instructions: 11386920547467
+perf_counters_note: none
+peak_rss_bytes: 4521984
+measure_start: measure.sh: start load1=2.77 at=2026-11-04T03:50:31Z
+measure_end: measure.sh: end load1=1.45 exit=0 at=2026-11-04T04:12:56Z
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-03T20:54:32-07:00",
+    "num_cpus": 16,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [
+      2.75488,
+      3.46973,
+      4.07812
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.1422274750000000e+09,
+      "cpu_time": 2.1411533999999962e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.6680383463945629e-01
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.1425791083333335e+09,
+      "cpu_time": 2.1414997999999969e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.6672722426472202e-01
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.1377936000000000e+09,
+      "cpu_time": 2.1369229999999957e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.6777200567912630e-01
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.1408667277777779e+09,
+      "cpu_time": 2.1398587333333294e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.6710102152776822e-01
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.1422274750000000e+09,
+      "cpu_time": 2.1411533999999959e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.6680383463945629e-01
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.6672077635414586e+06,
+      "cpu_time": 2.5483123619332793e+06,
+      "time_unit": "ns",
+      "items_per_second": 5.8235048363397893e-04
+    },
+    {
+      "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.2458541808952413e-03,
+      "cpu_time": 1.1908787819669238e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.2467334833249971e-03
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 6.0584334583333340e+09,
+      "cpu_time": 6.0538841999999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.6505917030821010e-01
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 5.9924275000000000e+09,
+      "cpu_time": 5.9891910000000057e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.6687727970008814e-01
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 5.9402388166666670e+09,
+      "cpu_time": 5.9375935999999905e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.6834340013305132e-01
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.9970332583333330e+09,
+      "cpu_time": 5.9935562666666641e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.6675995004711652e-01
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_median",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.9924275000000000e+09,
+      "cpu_time": 5.9891910000000048e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.6687727970008814e-01
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.9231774302740060e+07,
+      "cpu_time": 5.8268066527846336e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.6452556248772855e-03
+    },
+    {
+      "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 9.8768460589130479e-03,
+      "cpu_time": 9.7217851865187051e-03,
+      "time_unit": "ns",
+      "items_per_second": 9.8660117397038876e-03
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 5.2194968333333340e+09,
+      "cpu_time": 5.2164671999999990e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.9158934892223486e-01
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 5.2158453916666660e+09,
+      "cpu_time": 5.2134221999999905e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.9172347431879319e-01
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 5.1940142500000000e+09,
+      "cpu_time": 5.1918861999999876e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.9252931391168210e-01
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.2097854916666660e+09,
+      "cpu_time": 5.2072585333333254e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.9194737905090337e-01
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_median",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.2158453916666670e+09,
+      "cpu_time": 5.2134221999999905e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.9172347431879319e-01
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.3779778820654420e+07,
+      "cpu_time": 1.3399607469370423e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.0841276749678734e-04
+    },
+    {
+      "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 2.6449800750330166e-03,
+      "cpu_time": 2.5732556552733560e-03,
+      "time_unit": "ns",
+      "items_per_second": 2.6487090889735936e-03
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 4.2816989166666665e+09,
+      "cpu_time": 4.2775537999999986e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.3355215288666473e-01
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 4.2665909250000000e+09,
+      "cpu_time": 4.2629791999999838e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.3437916068787401e-01
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 4.1936084666666670e+09,
+      "cpu_time": 4.1912122000000181e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.3845812215150841e-01
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 4.2472994361111112e+09,
+      "cpu_time": 4.2439150666666660e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.3546314524201573e-01
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_median",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 4.2665909250000000e+09,
+      "cpu_time": 4.2629791999999833e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.3437916068787401e-01
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 4.7107356144913502e+07,
+      "cpu_time": 4.6220113126820028e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6264806285426767e-03
+    },
+    {
+      "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.1091131400908640e-02,
+      "cpu_time": 1.0890913790865063e-02,
+      "time_unit": "ns",
+      "items_per_second": 1.1154529622217970e-02
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.2227027833333335e+09,
+      "cpu_time": 2.2208143999999948e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.4990270741476479e-01
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.2327424416666670e+09,
+      "cpu_time": 2.2310422000000014e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.4787969330378014e-01
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.2527304666666665e+09,
+      "cpu_time": 2.2508166000000072e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.4390574673573169e-01
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.2360585638888893e+09,
+      "cpu_time": 2.2342244000000010e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.4722938248475885e-01
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_median",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.2327424416666665e+09,
+      "cpu_time": 2.2310422000000014e+09,
+      "time_unit": "ns",
+      "items_per_second": 4.4787969330378014e-01
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.5286037470035477e+07,
+      "cpu_time": 1.5252140795336930e+07,
+      "time_unit": "ns",
+      "items_per_second": 3.0509117436436817e-03
+    },
+    {
+      "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 6.8361525574045954e-03,
+      "cpu_time": 6.8265930652878564e-03,
+      "time_unit": "ns",
+      "items_per_second": 6.8218052371540093e-03
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.3370169808333336e+10,
+      "cpu_time": 2.3363261999999985e+10,
+      "time_unit": "ns",
+      "items_per_second": 4.2789590670557293e-02
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.3015234183333336e+10,
+      "cpu_time": 2.3011588600000008e+10,
+      "time_unit": "ns",
+      "items_per_second": 4.3449481853378574e-02
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.2428141500000000e+10,
+      "cpu_time": 2.2426617600000008e+10,
+      "time_unit": "ns",
+      "items_per_second": 4.4586841936947827e-02
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.2937848497222218e+10,
+      "cpu_time": 2.2933822733333328e+10,
+      "time_unit": "ns",
+      "items_per_second": 4.3608638153627900e-02
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_median",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.3015234183333332e+10,
+      "cpu_time": 2.3011588600000004e+10,
+      "time_unit": "ns",
+      "items_per_second": 4.3449481853378574e-02
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 4.7575807059551603e+08,
+      "cpu_time": 4.7313986359912348e+08,
+      "time_unit": "ns",
+      "items_per_second": 9.0913479449794739e-04
+    },
+    {
+      "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 2.0741181137940226e-02,
+      "cpu_time": 2.0630658442800067e-02,
+      "time_unit": "ns",
+      "items_per_second": 2.0847585088421626e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.2072802825000002e+10,
+      "cpu_time": 1.2072004799999968e+10,
+      "time_unit": "ns",
+      "items_per_second": 8.2830806938156046e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.2025762716666668e+10,
+      "cpu_time": 1.2024960400000010e+10,
+      "time_unit": "ns",
+      "items_per_second": 8.3154808851673617e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.1994963283333334e+10,
+      "cpu_time": 1.1994167000000015e+10,
+      "time_unit": "ns",
+      "items_per_second": 8.3368325219425388e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.2031176275000000e+10,
+      "cpu_time": 1.2030377399999998e+10,
+      "time_unit": "ns",
+      "items_per_second": 8.3117980336418346e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_median",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.2025762716666666e+10,
+      "cpu_time": 1.2024960400000010e+10,
+      "time_unit": "ns",
+      "items_per_second": 8.3154808851673617e-02
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 3.9201129091995388e+07,
+      "cpu_time": 3.9200621091613390e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.7064502642503530e-04
+    },
+    {
+      "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 3.2582956309478049e-03,
+      "cpu_time": 3.2584697709993203e-03,
+      "time_unit": "ns",
+      "items_per_second": 3.2561549899264280e-03
+    }
+  ]
+}
+@section histogram_mc-asian252.price
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 2116026368
+p50 2136997887
+p90 2178940927
+p99 2193620991
+p99.9 2193620991
+p99.99 2193620991
+max 2193620991
+@section histogram_mc-asian252.tape
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 5909774336
+p50 5997854719
+p90 6069157887
+p99 6069157887
+p99.9 6069157887
+p99.99 6069157887
+max 6069157887
+@section histogram_mc-asian252.tape-skip
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 5158993920
+p50 5192548351
+p90 5259657215
+p99 5326766079
+p99.9 5326766079
+p99.99 5326766079
+max 5326766079
+@section histogram_mc-asian252.tape-record
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 4141875200
+p50 4242538495
+p90 4332716031
+p99 4378853375
+p99.9 4378853375
+p99.99 4378853375
+max 4378853375
+@section histogram_mc-asian252.hand
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 2178940928
+p50 2231369727
+p90 2269118463
+p99 2287992831
+p99.9 2287992831
+p99.99 2287992831
+max 2287992831
+@section histogram_mc-asian252.bump-central
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 22313697280
+p50 23068671999
+p90 23320330239
+p99 23840423935
+p99.9 23840423935
+p99.99 23840423935
+max 23840423935
+@section histogram_mc-asian252.bump-forward
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 11978932224
+p50 12029263871
+p90 12071206911
+p99 12163481599
+p99.9 12163481599
+p99.99 12163481599
+max 12163481599
+@section aad_mc-asian252
+workload mc-asian252
+targets MC-1, MC-2, AAD-4 at 252 fixings, AAD-5, AAD-6
+description arithmetic Asian call, S0 = K = 100, 252 fixings, 1 year, 300,000 paths
+differences one spot, not a ladder of seven; Philox draws generated inline, not cached (the source's 0.197 million paths/s is cached, 0.127 fresh); the five Greeks are delta, vega, rho, dividend rho and theta, not delta, strike, vega, rho and maturity; q 0, which the source does not state
+kind pricer
+paths 300000
+batches 50
+threads 1
+seed 20261103
+steps 252
+inputs 5
+tape_setup_statements 18
+tape_statements_per_path 1263
+tape_mean_statements_per_path 1263.0
+tape_operands_per_path 2018
+tape_bytes_per_path 25479
+tape_adjoint_bytes_per_path 10104
+tape_allocated_bytes 172032
+tape_paths_sampled 1024
+nonzero_payoff_fraction 0.524003
+rounding_count 16154.0
+critical_value 4.0205
+valid yes
+check value-bits pass 0
+check skip-equals-tape pass 0
+check hand-vs-tape pass 5.137e-08
+check central-vs-tape pass 0.0926
+check forward-vs-tape pass 0.2881
+peak_rss idle 2080768
+peak_rss price 2162688
+peak_rss tape 2408448
+peak_rss tape-skip 2392064
+peak_rss tape-record 2359296
+peak_rss hand 2179072
+peak_rss bump-central 2260992
+peak_rss bump-forward 2228224
+variant price mc-asian252.price
+estimate price value 5.269572148239754 0.013805443923656409
+variant tape mc-asian252.tape
+estimate tape value 5.269572148239754 0.013805443923656409
+estimate tape delta 0.56121241588026105 0.00095912081439144376
+estimate tape vega 22.217466030937757 0.069611742434256607
+estimate tape rho 23.597125904057666 0.039848077417178669
+estimate tape dividend-rho -28.866698052297433 0.049825774103033592
+estimate tape theta -2.9296603802155055 0.0076652891372845913
+variant tape-skip mc-asian252.tape-skip
+estimate tape-skip value 5.269572148239754 0.013805443923656409
+estimate tape-skip delta 0.56121241588026105 0.00095912081439144376
+estimate tape-skip vega 22.217466030937757 0.069611742434256607
+estimate tape-skip rho 23.597125904057666 0.039848077417178669
+estimate tape-skip dividend-rho -28.866698052297433 0.049825774103033592
+estimate tape-skip theta -2.9296603802155055 0.0076652891372845913
+variant tape-record mc-asian252.tape-record
+estimate tape-record value 5.269572148239754 0.013805443923656409
+variant hand mc-asian252.hand
+estimate hand value 5.269572148239754 0.013805443923656409
+estimate hand delta 0.56121241588026105 0.00095912081439144376
+estimate hand vega 22.217466030937757 0.069611742434256593
+estimate hand rho 23.597125904057666 0.039848077417178669
+estimate hand dividend-rho -28.866698052297433 0.049825774103033592
+estimate hand theta -2.9296603802155055 0.0076652891372845965
+variant bump-central mc-asian252.bump-central
+estimate bump-central value 5.269572148239754 0.013805443923656409
+estimate bump-central delta 0.56121200761180368 0.0009592270759145174
+estimate bump-central vega 22.217470021259505 0.069611204743595945
+estimate bump-central rho 23.597102342108265 0.03985388184180079
+estimate bump-central dividend-rho -28.866674490217118 0.049831363173882197
+estimate bump-central theta -2.9296603631976903 0.0076652945542868651
+variant bump-forward mc-asian252.bump-forward
+estimate bump-forward value 5.269572148239754 0.013805443923656409
+estimate bump-forward delta 0.56121298163738098 0.00095910177485300735
+estimate bump-forward vega 22.217468074797651 0.069610766816562891
+estimate bump-forward rho 23.597116497969253 0.039847088811004093
+estimate bump-forward dividend-rho -28.86664336025715 0.049836947997983827
+estimate bump-forward theta -2.9296553544979544 0.0076652765849431221
+step central delta 4.76837158203125e-05 -5.4436301192950505e-07 5.4436123807469891e-07 7.9278525414804435e-07
+step central vega 3.814697265625e-06 4.8612648000319795e-06 5.9912381389189278e-06 9.9098156768270083e-06
+step central rho 9.5367431640625e-07 -2.9121749103069304e-05 2.912206588429692e-05 3.9639262707349213e-05
+step central dividend-rho 9.5367431640625e-07 2.9121960202852882e-05 2.9122200957195098e-05 3.9639262707438951e-05
+step central theta 0.0001220703125 4.3536322967459754e-08 4.7878140880649467e-08 3.0968173963316032e-07
+step forward delta 9.5367431640625e-05 1.1315207928408455e-06 1.1315154710435356e-06 1.1891819072578551e-06
+step forward vega 3.814697265625e-06 8.9918356388807295e-06 1.7989958641078845e-05 2.972960641455123e-05
+step forward rho 1.9073486328125e-06 1.6085635870695114e-05 4.7543917438044333e-05 5.9459063342399008e-05
+step forward dividend-rho 9.5367431640625e-07 9.6654519438743591e-05 8.7362392426982099e-05 0.00011891758103786723
+step forward theta 7.62939453125e-06 4.6691950410604479e-06 1.2163113573592764e-08 1.486474453207757e-05
