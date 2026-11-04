@@ -119,8 +119,9 @@ jobs:
             --allow-skipped "$ALLOWED_SKIPS"
 
   # The lane matrix: one job per SIMD lane width, each running the simd-labelled tests (the lane
-  # kernels, Philox lanes, paths and prices against the scalar ones, bit for bit, and the SIMD
-  # bench's smoke run with its in-run checks). Widths 2 and 4 also run the full suite in
+  # kernels, Philox lanes, paths and prices against the scalar ones, bit for bit, the vector tape's
+  # gradients against the scalar tape's, bit for bit, and the SIMD bench's smoke run with its
+  # in-run checks). Widths 2 and 4 also run the full suite in
   # build-test (macos-*, linux-clang-*, linux-avx2). A job whose CPU lacks its target's features
   # fails, except AVX-512: a GitHub runner may or may not have it, so that job builds the whole
   # tree and runs the tests only if /proc/cpuinfo lists every x86-64-v4 feature. Otherwise it says
@@ -228,7 +229,9 @@ jobs:
           targets=()
           if [[ $ALL != true ]]; then
             for target in aadp_simd_math_agreement_test aadp_simd_philox_lanes_test \
-              aadp_simd_path_agreement_test aadp_simd_price_agreement_test aadp_bench_simd; do
+              aadp_simd_path_agreement_test aadp_simd_price_agreement_test aadp_bench_simd \
+              aadp_simd_lane_tape_test aadp_simd_lane_gradient_test \
+              aadp_simd_lane_tape_memory_test; do
               targets+=(--target "$target")
             done
           fi

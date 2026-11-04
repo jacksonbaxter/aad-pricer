@@ -71,6 +71,13 @@ if(TARGET aadp_ad)
         AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
     endif()
   endforeach()
+  # The vector tape against the scalar tape on arbitrary contracts, under libFuzzer, ASan and
+  # UBSan. Same input layout and seed corpus as aadp_fuzz_pricer. fuzz-avx2 builds it for AVX2.
+  aadp_fuzz(aadp_fuzz_lane_gradient
+    SOURCES fuzz/fuzz_lane_gradient.cpp
+    LINK aadp_simd_ad
+    LABELS simd ad
+    CORPUS fuzz/fuzz_pricer_seeds)
   # MEM-6 on lanes, in the allocation test's own binary (cmake/area_pricer.cmake says which
   # presets build it).
   if(TARGET aadp_ad_allocation_test)
