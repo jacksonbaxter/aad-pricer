@@ -26,7 +26,29 @@ Open Government Data License: https://data.gov.tw/license
 Third-party build dependencies. None is vendored: each is a pinned archive fetched into the build
 tree, and each keeps its own licence. Versions and hashes are in cmake/AadpDependencies.cmake.
 
-  GoogleTest, Google Benchmark, HdrHistogram_c, Highway.
+  GoogleTest, Google Benchmark, HdrHistogram_c, Highway, Let's Be Rational.
   Boost and QuantLib, only with AAD_PRICER_BUILD_QUANTLIB_COMPARE.
 
-Let's Be Rational is not in the build yet. When it joins, its notice must be preserved here.
+----------------------------------------------------------------------------------------------------
+
+Let's Be Rational, by Peter Jäckel: the implied Black volatility of src/svi/implied_vol.cpp.
+Fetched at build time from http://www.jaeckel.org/LetsBeRational.7z (revision 1520, the archive of
+2024-02-18, SHA-256 da2f6870b213e04ef35b4d309269ee5ce12be5830d9733e5f29542bf7b652470) and built
+from four of its files: lets_be_rational.cpp, normaldistribution.cpp, rationalcubic.cpp and
+erf_cody.cpp. One identifier in normaldistribution.cpp is renamed in the build tree, for C++23
+(cmake/patch_lets_be_rational.cmake); nothing else is changed and nothing of it is committed.
+Its notice, quoted from the archive's README.txt and source headers:
+
+  Copyright © 2013-2024 Peter Jäckel.
+
+  Permission to use, copy, modify, and distribute this software is freely granted,
+  provided that this notice is preserved.
+
+  WARRANTY DISCLAIMER
+  The Software is provided "as is" without warranty of any kind, either express or implied,
+  including without limitation any implied warranties of condition, uninterrupted use,
+  merchantability, fitness for a particular purpose, or non-infringement.
+
+erf_cody.cpp carries the same warranty disclaimer and this provenance line instead of the
+copyright notice: "Original Fortran code taken from http://www.netlib.org/specfun/erf, compiled
+with f2c, and adapted by hand." (W. J. Cody's SPECFUN routine CALERF.)

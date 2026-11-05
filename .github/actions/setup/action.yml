@@ -1,7 +1,8 @@
 name: Set up the job
 description: >
-  Installs Ninja, the pinned LLVM and the pinned data captures, each only if the job needs it.
-  LLVM comes from scripts/fetch_tools.sh, which checks its sha256, and from no other place.
+  Installs Ninja, the pinned LLVM, the pinned Let's Be Rational archive and the pinned data
+  captures, each only if the job needs it. LLVM comes from scripts/fetch_tools.sh, which checks
+  its sha256, and from no other place.
 
 inputs:
   ninja:
@@ -17,6 +18,11 @@ inputs:
     description: >
       On Linux, have clang++ use the pinned LLVM's own libc++, as on the Linux measurement host.
       "false" leaves it on the image's libstdc++.
+    default: "true"
+  lbr:
+    description: >
+      Fetch the pinned Let's Be Rational archive for the svi area and point AADP_LBR_ARCHIVE at
+      it, so configure does not download it again.
     default: "true"
 
 runs:
@@ -104,6 +110,48 @@ runs:
         echo "SDKROOT=$(DEVELOPER_DIR=$developer xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
         sw_vers
         printf 'macOS SDK %s\n' "$(DEVELOPER_DIR=$developer xcrun --sdk macosx --show-sdk-version)"
+
+    # The archive's host serves plain http only, so the SHA-256, the one in
+    # cmake/AadpDependencies.cmake, is checked here on a fresh download and on a cache hit alike,
+    # and FetchContent checks it again. The cache keeps the jobs of a run from fetching it from
+    # the author's site one by one.
+    - name: Restore Let's Be Rational
+      if: inputs.lbr == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: build/downloads/lbr
+        key: lbr-da2f6870b213e04ef35b4d309269ee5ce12be5830d9733e5f29542bf7b652470
+        enableCrossOsArchive: true
+
+    - name: Fetch and verify Let's Be Rational
+      if: inputs.lbr == 'true'
+      shell: bash
+      run: |
+        want=da2f6870b213e04ef35b4d309269ee5ce12be5830d9733e5f29542bf7b652470
+        if ! grep -q "SHA256=$want" cmake/AadpDependencies.cmake; then
+          echo "::error::cmake/AadpDependencies.cmake does not pin Let's Be Rational at $want"
+          exit 1
+        fi
+        archive=$PWD/build/downloads/lbr/LetsBeRational.7z
+        mkdir -p -- "${archive%/*}"
+        sha() {
+          if command -v sha256sum >/dev/null; then sha256sum -- "$1"; else shasum -a 256 -- "$1"; fi
+        }
+        if [[ -f $archive ]] && [[ $(sha "$archive" | cut -d' ' -f1) == "$want" ]]; then
+          echo "Let's Be Rational from the cache"
+        else
+          rm -f -- "$archive"
+          curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+            --retry-delay 10 --max-time 300 -o "$archive" http://www.jaeckel.org/LetsBeRational.7z
+        fi
+        got=$(sha "$archive" | cut -d' ' -f1)
+        if [[ $got != "$want" ]]; then
+          echo "::error::LetsBeRational.7z has sha256 $got, not $want"
+          rm -f -- "$archive"
+          exit 1
+        fi
+        echo "LetsBeRational.7z sha256 $got"
+        echo "AADP_LBR_ARCHIVE=$archive" >> "$GITHUB_ENV"
 
     - name: Restore the data captures
       if: inputs.data == 'true'

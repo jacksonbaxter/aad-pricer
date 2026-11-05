@@ -53,6 +53,43 @@ if(AADP_BUILD_TESTS OR AADP_BUILD_BENCHMARKS)
   FetchContent_MakeAvailable(benchmark)
 endif()
 
+# Let's Be Rational, Peter Jäckel's reference implementation of implied Black volatility, for the
+# svi area. Revision 1520, the archive of 2024-02-18; its licence is quoted in NOTICE. The host
+# serves plain http only, so the SHA-256 is all that protects it. A local copy named by the
+# environment variable AADP_LBR_ARCHIVE, which CI restores from its cache, is used instead, and the
+# same hash is checked either way. The archive has no CMake build, so SOURCE_SUBDIR names a folder
+# it does not have: MakeAvailable then only unpacks it, and aadp_lets_be_rational below builds the
+# four files the inversion needs. One identifier is renamed at fetch time, for C++23; see
+# patch_lets_be_rational.cmake. Nothing of the archive is committed.
+if(NOT DEFINED AADP_AREA_SVI OR AADP_AREA_SVI)
+  # One URL, not a list: ExternalProject turns file:// into a path, and a list may not hold paths.
+  set(_aadp_lbr_url "http://www.jaeckel.org/LetsBeRational.7z")
+  if(DEFINED ENV{AADP_LBR_ARCHIVE} AND IS_ABSOLUTE "$ENV{AADP_LBR_ARCHIVE}"
+     AND EXISTS "$ENV{AADP_LBR_ARCHIVE}")
+    set(_aadp_lbr_url "$ENV{AADP_LBR_ARCHIVE}")
+  endif()
+  FetchContent_Declare(lets_be_rational
+    URL      "${_aadp_lbr_url}"
+    URL_HASH SHA256=da2f6870b213e04ef35b4d309269ee5ce12be5830d9733e5f29542bf7b652470
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+    PATCH_COMMAND "${CMAKE_COMMAND}" "-DFILE=<SOURCE_DIR>/normaldistribution.cpp"
+                  -P "${CMAKE_CURRENT_LIST_DIR}/patch_lets_be_rational.cmake"
+    SOURCE_SUBDIR no-cmake-build-here
+    SYSTEM EXCLUDE_FROM_ALL)
+  FetchContent_MakeAvailable(lets_be_rational)
+
+  # Third-party code: it never links aadp_warnings, so -Werror and our warning set do not reach
+  # it, and its headers are SYSTEM. It keeps the presets' -ffp-contract=off and the sanitizers.
+  # NO_XL_API leaves out the Excel add-in layer.
+  add_library(aadp_lets_be_rational STATIC
+    "${lets_be_rational_SOURCE_DIR}/lets_be_rational.cpp"
+    "${lets_be_rational_SOURCE_DIR}/normaldistribution.cpp"
+    "${lets_be_rational_SOURCE_DIR}/rationalcubic.cpp"
+    "${lets_be_rational_SOURCE_DIR}/erf_cody.cpp")
+  target_compile_definitions(aadp_lets_be_rational PRIVATE NO_XL_API)
+  target_include_directories(aadp_lets_be_rational SYSTEM PUBLIC "${lets_be_rational_SOURCE_DIR}")
+endif()
+
 # 985 translation units, so optional. QuantLib tag v1.44 peels to commit
 # ab4cb476d35f7275834bc05b47d1324403d1823b. Nothing links ql_library yet.
 option(AAD_PRICER_BUILD_QUANTLIB_COMPARE "Fetch Boost and QuantLib for the comparison bench" OFF)

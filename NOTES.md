@@ -549,6 +549,15 @@ That is 8 × 8 × 145 × 2 = 18,560 quotes. Out of the money, with s = σ √T, 
 
 An independent price check guards against a wrong archive, a wrong patch or a wrong call/put flag, which a round trip through the same code cannot see. On the grid points with |z| ≤ 6 and s = σ √T ≤ 3, `Black76Price` must agree with the oracle's Black-Scholes closed form (`src/oracle/black_scholes.hpp`, with S = F and r = q = −ln D / T) within 2^-36 D (F N(d1) + K N(d2)). The reason: the oracle's d1 and d2 carry an absolute error of about 2ε (|ln(F/K)|/s + s/2), at most 18ε there. N's elasticity, |d| φ(d) / N(d), is below d² + 1 ≤ 58 for |d| ≤ 7.5, so each term is good to about 1000ε, or 2.3e-13 relative, plus erfc's own few ulps. 2^-36 is 1.5e-11, a margin of about 60. A wrong flag or discount is an O(1) error.
 
+#### SVI-1, first run, and what changed
+
+The first run (macOS, and the same numbers with g++ 14 on the Linux host) failed: of 18,560 quotes, 11,288 were `ok`, 6,397 `at-intrinsic`, 790 `above-maximum` and 85 `below-intrinsic`, and 7 vol errors were over the bound. No price error was over its bound, and the oracle check passed (3,000 prices, worst 4.05e-15 of the terms). Two causes, one in the wrapper and one in the test:
+
+- The wrapper compared V / D with the undiscounted bounds, so the division's rounding put prices that sit at a bound in double on either side of it: 85 deep in-the-money quotes came out below intrinsic, and 790 deep in-the-money calls, where F − K and F are the same double, came out at or above the maximum D F. It now compares V with D times each bound, as the statuses were documented, tests the intrinsic value before the maximum, and treats a V / D that rounds onto the intrinsic value as `at-intrinsic`. With that, every grid point is `ok` (11,216) or `at-intrinsic` (7,344, each with no time value left in double).
+- The test applied the vol bound at `at-intrinsic` points too, where vol 0 is what the status rule above demands, so the error there is 1 by construction. At 7,337 of them the bound is vacuous anyway; at the other 7 (C ≈ 1.5e14 to 3e14, bound 0.26 to 0.53) it is not. The bound is a linearisation; at those points the price is flat in σ in double, every σ up to some value (the quote's own among them) giving the same double, so no vol is attainable to any digit whatever C says. The test now judges `at-intrinsic` points by the status rule and the price bound only, and lists those 7. The tolerance itself is unchanged, and it is applied in full to every `ok` point. This reading of the stated rule was chosen after the run, so it is recorded here as such.
+
+Fuzzing also found two cases outside the grid, fixed before this run: a vol below DBL_MIN is now an error (`vol-underflow`), and the fuzzer's own round-trip property counts the subnormal spacing at the normalised price V / (D √(FK)), not only at V.
+
 ### Rule slips
 
 None affected a number.
