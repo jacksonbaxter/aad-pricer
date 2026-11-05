@@ -235,7 +235,7 @@ Fixed before any Phase 3 code exists, so git history shows it came first.
 
 ## Phase 3 findings so far
 
-Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
+Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Stage 6a, e5d4cc5 to 6216fad, and stage 6b to 23936a9, with its CI fix in 2b6f343. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
 
 ### Math kernels
 
@@ -506,6 +506,8 @@ Rule slips: two zsh redirections on the Mac, both empty and both writing to `/tm
 - Owed: `scripts/verify_commits.sh` needs rsync, which the Linux host lacks; the GCC pre-commit check there copies files without it.
 - Stage 5b's runs 41918421254 and 41924618330 passed 22 of 22, but on both the 8-lane runner lacked AVX-512, so that job was build-only with a warning. Run 41898528776's runner had it. Whether a green run had tested 8 lanes depended on the runner GitHub assigned.
 - Run 41942650525 at a398d1f passed 16 of 22. Both tidy jobs failed on `tests/bench/platform_test.cpp`, whose x86-only CPUID test (8e8a464) the Mac's tidy cannot see: unchecked optional access, and `find` where tidy wants `contains`. The four lane jobs that ran tests counted `aadp_simd_fallback_cost_smoke_not_a_result` as skipped, because their build target list lacked that binary (added in 7b97155), and a skip fails a job. 1029047 fixes both. So 8e8a464 to a398d1f fail CI's tidy, and 7b97155 to a398d1f its lane jobs. Run 41953763165 at 1029047 passed 22 of 22, with the 8-lane job build-only again.
+- Stage 6a's run 41996756050 at 6216fad passed 22 of 22 on its first run.
+- Run 42018873540 at 23936a9, stage 6b's push, passed 21 of 22: `clang-tidy-libstdcxx` failed on two findings that only libstdc++ shows. In `src/data/forwards.cpp`, assigning `*row.settlement_price` to a `std::optional<double>` dereferences an optional only to rewrap it (`bugprone-optional-value-conversion`), and `tests/data/forwards_test.cpp` included `<cstddef>` without using it directly (`misc-include-cleaner`). The Mac's tidy, on libc++, reported 151 units clean at 8ae3239, and CI's `clang-tidy` job on libc++ passed in the same run. Both lines came in with 9328a13, so 9328a13 to 23936a9 fail that CI job. 2b6f343 assigns the optional as it is and drops the include. Run 42023625872 at 2b6f343 passed 22 of 22. Since then, the files a stage touches also go through tidy against libstdc++ on the Linux host before a push.
 
 #### Intel SDE for the 8-lane job
 
@@ -739,7 +741,7 @@ None of this was resolved in the data's favour.
 - Not used: mids, `盤後`, venue quotes, a two-consecutive-zero-bid cut (a `-` in the open file is not a zero bid).
 - Forward and discount factor from `settle_all` parity regression: F 22761.47, 22786.07, 22792.92, DF 0.99987, 0.99944, 0.99829. Within 0.92 points of TX futures where a TX month exists.
 - T: calendar time from 13:45 on 2024-11-15 to 13:30 on expiry.
-- Weights: price residual over σ_i, where σ_i² = σ_leg² + tick_i²/12, and σ_leg = 1.87, 2.43, 1.55 points. No volume or spread weights.
+- Weights: price residual over σ_i, where σ_i² = σ_leg² + tick_i²/12, and σ_leg = RMS / √2 of the `settle_all` regression: 1.80, 2.42, 1.98 points, which the stage 6b fit uses. No volume or spread weights. (Corrected at stage 6b. This line first gave 1.87, 2.43, 1.55 as if from `settle_all`. Those come from Phase 1's `settle_near` route, strikes with |K / TXref − 1| ≤ 5%, whose RMS `profile_recommended.py` hard-codes rounded to two places, 2.65, 3.44, 2.19, before dividing by √2. Stage 6b reproduces them by that route; see "Stage 6b".)
 
 Input arbitrage before any fit, to report beside fit violations:
 
