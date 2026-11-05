@@ -399,6 +399,92 @@ Results, at 77dd0c8. Nothing differed from the scalar tape in any bit, at any wi
 - Fuzzer, seed 20261126, 900 s each: 481 569 runs on the Mac (NEON) and 79 090 on the Linux host under `fuzz-avx2`, both clean.
 - Faults: all 11 new faults caught. The allocation fault first missed: `v = {}` keeps a vector's capacity, so it freed nothing. It now swaps with an empty vector.
 
+#### Stage 5c: lanes in the AAD bench, assembly, and the Zen 1 speedups
+
+Everything below is iteration only, run through `measure.sh`, and was never stamped into `results/`. The raw files are in the research cache, under `phase3/evidence/stage5c/`.
+
+The bench (8e8a464):
+- `price-lanes` is `simd::PriceLanes`, and `tape-lanes` is the vector tape, both at the build's widest lanes. They run on the five first-order pricer workloads.
+- "x fastest primal" is the faster of `price` and `price-lanes`.
+- Every lane speedup is printed beside the lane ceiling. On Zen 1 the ceiling also carries "Zen 1: 128-bit FP datapath" (family 17h below model 30h, read through CPUID).
+- Two checks run in every run:
+  - `lanes-gradient-bits`: the vector tape's value and five Greeks must be the tape's bits (mean, SE and batch means).
+  - `lanes-fallback-zero`: any fallback is reported with its group and path counts, and makes the run INVALID.
+
+Iteration runs at 1/50 scale, 3 repetitions, at 1078a20. Every check passed, and no group fell back on either host. Each range below is over the five workloads:
+
+| host, ISA, ceiling | price / price-lanes | tape / tape-lanes | tape-lanes x scalar primal | tape-lanes x fastest primal |
+|---|---|---|---|---|
+| `mac-m4max`, NEON, 2 lanes, unpinned | 1.31–1.37 | 1.92–2.01 | 1.32–1.42 | 1.78–1.86 |
+| `linux-zen1`, AVX2, 4 lanes (Zen 1: 128-bit FP datapath), cpu4 | 1.96–2.08 | 1.82–2.03 | 1.01–1.11 | 2.00–2.23 |
+
+- On the Mac, the threaded workloads ran 8 threads. On Linux they ran 2 threads, on cpus 4 and 6.
+- Lane tape bytes per path:
+
+| workload | scalar tape | 2 lanes | 4 lanes |
+|---|---|---|---|
+| `aad1` | 17 794 | 15 165.5 | 13 506.2 |
+| `aad4` | 1 239 | 1 071.0 | 931.5 |
+| `mc-asian252` | 25 479 | 21 820.5 | 18 991.5 |
+
+- Peak RSS of tape-lanes over the primal's: 1.33–1.35 on the Mac and 1.16–1.34 on Linux, on one thread.
+
+B17, whether the scalar primal auto-vectorised:
+- It did not. Recompiling `pricer.cpp` at the bench flags with `-Rpass` remarks for the loop and SLP vectorisers shows that no loop in `src/pricer` or `src/math` was vectorised, on NEON or AVX2.
+- SLP packed only a few straight-line pairs: Horner pairs (`common.hpp:40`), the scale pair in `exp.hpp:99` and `Magnitude`.
+- `OutSmoothed<double>`'s step loop has no packed double arithmetic at any width (`docs/asm/`).
+
+B15, the assembly (`scripts/extract_asm.py`, run on the bench binary; the excerpts are in `docs/asm/neon-2.txt`, `avx2-4.txt` and `avx512-8.txt`):
+- The vector tape's operand loop is truly vector at all three widths. Each operand does a packed multiply (adjoint by the stored partials), a packed add into the target's adjoints, and a masked store:
+  - NEON: `fmul.2d`, `fadd.2d`, `bif`.
+  - AVX2: `vmulpd`, `vaddpd` and `vmaskmovpd` on ymm.
+  - AVX-512: `vmulpd`, `vaddpd`, and `vmovupd {k1}` on zmm, with the mask byte loaded by `kmovb`.
+- In that loop, one scalar index load per operand is shared by the lanes. There are no gathers, no lane inserts and no scalar double arithmetic.
+- The scalar tape's loop is `vmulsd`/`vaddsd`, unrolled 4 times on x86.
+- The lane primal has no scalar double arithmetic and no calls: 121 packed operations (NEON), 124 on ymm (AVX2) and 123 on zmm (AVX-512).
+- The scalar primal has 47–51 scalar double operations, no packed ones, and one call to `inverse_normal`. That function's conditional branches differ by width:
+  - NEON: none. Clang uses `fcsel`.
+  - AVX2: 17.
+  - AVX-512: 1. It uses mask registers.
+
+Why AVX2 on Zen 1 gives more than 2 (SIMD-1's 3.20, 2.76, 2.83, and 2.73 and 2.82 for the kernels):
+- Measured with `aadp_bench_simd` at 1/10 scale, under `measure.sh`, `taskset -c 4`, at 1078a20.
+- `perf stat` counts are user space, `(6 repetitions − 1) / 5`, so they cover one repetition of one variant.
+- Cycles and instructions are the harness's own counters over the timed region. That pass ran 3 `perf stat` events, so nothing was multiplexed.
+- A first pass with 4 events had the harness's counters running 80% of the time, and the harness flagged them "MULTIPLEXED, raw counts not scaled". Its timed counts are not used.
+
+| scalar / 4 lanes | cycles | instructions | IPC scalar → lanes | µops per cycle | FP-pipe µops per cycle |
+|---|---|---|---|---|---|
+| European | 3.18 | 3.35 | 1.18 → 1.12 | 1.23 → 2.17 | 0.53 → 1.93 |
+| Asian, 252 | 2.76 | 2.59 | 0.97 → 1.03 | 1.14 → 2.01 | 0.57 → 1.91 |
+| barrier, one-step | 2.83 | 2.26 | 0.78 → 0.98 | 0.85 → 1.92 | 0.85 → 1.65 |
+| inverse normal | 2.79 | 2.85 | 1.05 → 1.02 | 1.04 → 2.01 | 0.94 → 1.56 |
+| `log` | 2.51 | 4.33 | 1.68 → 0.97 | 1.76 → 2.33 | 0.79 → 2.57 |
+
+- The cycle ratio is the instruction ratio times the IPC ratio, which is what the table shows.
+- Zen 1 retires each 256-bit instruction as two 128-bit µops, 1.8 to 2.0 µops per instruction in the lanes against 1.1 to 1.2 in the scalar code.
+- The two halves run on two of the four 128-bit FP pipes at once. So the split halves peak throughput, which is what "about 2 lanes' throughput" assumes. It does not double the latency.
+- The scalar pricers and the inverse normal are latency-bound, not throughput-bound. They run at IPC 0.8 to 1.2 and use 0.5 to 0.95 FP-pipe µops per cycle out of 4: each path waits on its own chain of polynomials and divisions.
+- With four independent paths in each instruction, the lane code keeps the same IPC while issuing twice the µops per cycle. So its speedup is the instruction ratio, 2.3 to 3.4. That is below 4 because the lanes compute both sides of every select.
+- The barrier also gains IPC, 1.25 times. Its scalar code has 5.1 million branch misses per repetition, against 0.13 million in the lanes. The rest of that gain is not attributed. The Asian shows the same split, 5.1 million against 0.10 million.
+- `log` is the throughput-bound case. Its IPC falls from 1.68 to 0.97 as the FP pipes fill. It still exceeds 2 only because the scalar `log` is different code: 98.6 instructions per value, against 22.8 per value at 4 lanes, with branches the lane form lacks (3.7% of them missed).
+- The scalar baseline differs from the lanes' one-lane build too. The scalar pricers take 0.60 to 0.90 of `lanes-1`'s cycles, so `lanes-1` / `lanes-4` reaches 3.3 to 4.5, with the Asian above 4. That figure comes from the first, multiplexed `perf stat` pass, scaled by `perf`.
+- No speedup above 2 here is left unexplained. Each is the instruction count of code that was latency-bound, or, for `log`, of different scalar code.
+
+Fallback cost (the test-only diverging kernel, European call, 50 steps, 2^17 paths, one thread, medians of 3):
+- Every check passed: the bits are the scalar tape's, the control did not fall back, and the diverging run did.
+- Fallen-back groups: 32 848 of 65 536 on NEON, and 28 641 of 32 768 on AVX2.
+- The cost of a fallback is the diverging time minus the uniform time, divided by the fallen-back groups:
+
+| host | scalar tape | vector tape, diverging | vector tape, uniform | extra per fallen-back group | a fallen-back group against its paths on the scalar tape |
+|---|---|---|---|---|---|
+| NEON, 2 lanes | 281.3 ms | 308.7 ms | 187.0 ms | 3.71 µs | 1.53 times |
+| AVX2, 4 lanes, cpu4 | 569.6 ms | 682.6 ms | 259.2 ms | 14.78 µs | 1.31 times |
+
+Faults: all 9 new faults were caught (1078a20). One needed a second draft: `bench-lanes-fallback` first edited the `Select` branch that the payoff floor never takes, so it changed nothing. It now edits the branch the floor takes.
+
+Rule slips: two zsh redirections on the Mac, both empty and both writing to `/tmp`: a here-string (`<<< ""`) and a heredoc (`python3 - <<'EOF'`).
+
 ### CI
 
 - CI first ran on GitHub as run 41770201004 at bc3e6d3 and failed 9 of 17 jobs: actionlint, clang-tidy, `linux-gcc-release`, `linux-gcc-debug`, `linux-tsan` and the four macOS jobs. The Linux clang, AVX2, AVX-512, ASan and UBSan, fuzz-smoke, format and repo-scan jobs passed.
