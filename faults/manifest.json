@@ -3438,6 +3438,430 @@
       "reason": "check lanes-uniform-bits FAILED",
       "mutated_exit": 9,
       "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-put-flag",
+      "kind": "oracle",
+      "covers": "Black-76 price and inversion against the Black-Scholes oracle",
+      "bug": "Puts are priced and inverted as calls, which a round trip through the same code cannot see.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "return type == OptionType::kCall ? 1.0 : -1.0;",
+          "replace": "return type == OptionType::kCall ? 1.0 : 1.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.PriceMatchesTheBlackScholesOracle"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.PriceMatchesTheBlackScholesOracle",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-undiscounted",
+      "kind": "check",
+      "covers": "SVI-1 round trip over the stated grid",
+      "bug": "The discounted price goes to Let's Be Rational as if it were undiscounted.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "double undiscounted = v / d;",
+          "replace": "double undiscounted = v;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.RoundTrips*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.RoundTripsAtTheAttainablePrecisionOverTheStatedGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-float-vol",
+      "kind": "check",
+      "covers": "SVI-1 tolerance at the attainable precision",
+      "bug": "The vol is rounded through float, so it carries 24 bits instead of 53: wrong only by about 3e-8, which a loose tolerance would pass.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "const double vol = s / std::sqrt(t);",
+          "replace": "const double vol = static_cast<float>(s / std::sqrt(t));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.RoundTrips*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.RoundTripsAtTheAttainablePrecisionOverTheStatedGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-nonfinite",
+      "kind": "check",
+      "covers": "the inversion's non-finite input error",
+      "bug": "A NaN forward is not reported as non-finite input, so it falls through to a later check with the wrong name.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "if (!std::isfinite(f) || !std::isfinite(d)",
+          "replace": "if (!std::isfinite(d)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.InvalidQuotes*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.InvalidQuotesGetNamedErrorValuesAndNaN",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-intrinsic-discount",
+      "kind": "check",
+      "covers": "the inversion's discounted bounds",
+      "bug": "The discounted price is compared with the undiscounted intrinsic value, so a valid in-the-money quote is rejected as below intrinsic.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "const double at_intrinsic = d * intrinsic;",
+          "replace": "const double at_intrinsic = intrinsic;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.Bounds*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.BoundsAreTheDiscountedOnesNotTheUndiscounted",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-intrinsic-order",
+      "kind": "check",
+      "covers": "SVI-1 statuses deep in the money",
+      "bug": "The maximum is tested before the intrinsic value, so a deep in-the-money call whose F - K and F are the same double is reported above the maximum instead of at intrinsic.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "  if (v == at_intrinsic) return AtIntrinsic();\n",
+          "replace": ""
+        },
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "  if (v >= d * maximum) return Fail(InversionStatus::kAboveMaximum);\n",
+          "replace": "  if (v >= d * maximum) return Fail(InversionStatus::kAboveMaximum);\n  if (v == at_intrinsic) return AtIntrinsic();\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.RoundTrips*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.RoundTripsAtTheAttainablePrecisionOverTheStatedGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-inversion-vol-underflow",
+      "kind": "check",
+      "covers": "the inversion's subnormal-vol error",
+      "bug": "A subnormal vol, with fewer than 53 bits, is returned as ok.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "if (s < DBL_MIN || vol < DBL_MIN) return",
+          "replace": "if (s < 0.0) return"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_implied_vol_test"],
+      "command": ["{build}/bin/aadp_svi_implied_vol_test", "--gtest_filter=ImpliedVol.InvalidQuotes*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ImpliedVol\\.InvalidQuotesGetNamedErrorValuesAndNaN",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-lbr-declaration",
+      "kind": "check",
+      "covers": "the Let's Be Rational declarations against its header",
+      "bug": "A declaration of BlackAccuracyFactor takes an int flag, which with C linkage would link and pass garbage.",
+      "edits": [
+        {
+          "file": "src/svi/lets_be_rational_api.hpp",
+          "find": "double BlackAccuracyFactor(double x, double s, double q);",
+          "replace": "double BlackAccuracyFactor(double x, double s, int q);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_lets_be_rational_api_test"],
+      "detect": "build",
+      "reason": "conflicting types for 'BlackAccuracyFactor'",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-raw-w2",
+      "kind": "check",
+      "covers": "raw SVI w'' against the tape",
+      "bug": "w'' divides by r^2 instead of r^3.",
+      "edits": [
+        {
+          "file": "src/svi/raw_svi.hpp",
+          "find": ".w2 = p.b * p.sigma * p.sigma / (r * r * r)}",
+          "replace": ".w2 = p.b * p.sigma * p.sigma / (r * r)}"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_raw_svi_test"],
+      "command": ["{build}/bin/aadp_svi_raw_svi_test", "--gtest_filter=RawSvi.TapeDerivatives*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RawSvi\\.TapeDerivativesInKAreTheClosedFormWPrimeAndWSecond",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-durrleman-g",
+      "kind": "check",
+      "covers": "g of GJ eq. (2.1) against the density of call prices",
+      "bug": "g subtracts w'^2 / 4 (1/w - 1/4) instead of (1/w + 1/4).",
+      "edits": [
+        {
+          "file": "src/svi/raw_svi.hpp",
+          "find": "(1.0 / s.w + 0.25)",
+          "replace": "(1.0 / s.w - 0.25)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_raw_svi_test"],
+      "command": ["{build}/bin/aadp_svi_raw_svi_test", "--gtest_filter=RawSvi.DurrlemanG*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RawSvi\\.DurrlemanGIsTheDensityOfTheCallPricesItImplies",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-butterfly-grid",
+      "kind": "check",
+      "covers": "the butterfly grid check on Vogt's slice (SVI-3)",
+      "bug": "The density check only fails g below -1, so Vogt's g of -0.033 passes.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    if (g < -tolerance) {",
+          "replace": "    if (g < -tolerance - 1.0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Butterfly.Vogt*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Butterfly\\.VogtIsFlaggedWhereGJAndMMFindItsArbitrage",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-dplus-limit",
+      "kind": "check",
+      "covers": "GJ Lemma 2.2's d+ limit at b (1 + rho) = 2",
+      "bug": "The d+ check passes a right-wing slope of exactly 2, where d+ tends to 0.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "  if (slope < 2.0) return {};",
+          "replace": "  if (slope <= 2.0) return {};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Butterfly.SlopeTwo*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Butterfly\\.SlopeTwoPointTwoFiveIsRejectedAtTwoAndPassedByFour",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-lee-bound-four",
+      "kind": "check",
+      "covers": "Lee's moment bound 2, not QuantLib's 4 (SVI-4)",
+      "bug": "The wing check's default bound is 4, so a slope of 2.25 passes.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.hpp",
+          "find": "CheckWings(const SviParams& p, double bound = 2.0);",
+          "replace": "CheckWings(const SviParams& p, double bound = 4.0);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Butterfly.SlopeTwo*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Butterfly\\.SlopeTwoPointTwoFiveIsRejectedAtTwoAndPassedByFour",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-mm-lminus",
+      "kind": "check",
+      "covers": "the Martini-Mingone interval against MM's Vogt numbers",
+      "bug": "L- of MM eq. (5) uses 1/N' - 1/4 instead of 1/N' + 1/4.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "return (2.0 * n.n * ((1.0 / n.n1) + 0.25)) - l;",
+          "replace": "return (2.0 * n.n * ((1.0 / n.n1) - 0.25)) - l;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Butterfly.Vogt*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Butterfly\\.VogtIsFlaggedWhereGJAndMMFindItsArbitrage",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-mm-sigma-star",
+      "kind": "check",
+      "covers": "the Martini-Mingone type 4 test against the grid",
+      "bug": "sigma is compared with sigma* / 4, so a slice at sigma* / 2 passes as free of arbitrage.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "  if (sigma < r.sigma_star) {",
+          "replace": "  if (sigma < 0.25 * r.sigma_star) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=MartiniMingone.TypeFour*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MartiniMingone\\.TypeFourAgreesWithTheGridOnBothSidesOfSigmaStar",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-mm-reflection",
+      "kind": "check",
+      "covers": "rho = +1 decided by reflection",
+      "bug": "The reflection to rho = -1 keeps mu instead of negating it.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    r.mu = -r.mu;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=MartiniMingone.VerdictIsSymmetric*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MartiniMingone\\.VerdictIsSymmetricUnderReflection",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-parameters-positivity",
+      "kind": "check",
+      "covers": "the positive-variance check",
+      "bug": "min w is only rejected below -1, so a slice with negative variance is evaluated.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    if (!(w_min > 0.0)) {",
+          "replace": "    if (w_min < -1.0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Butterfly.InvalidAndNonPositive*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Butterfly\\.InvalidAndNonPositiveSlicesAreReportedNotEvaluated",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-calendar-grid",
+      "kind": "check",
+      "covers": "the calendar crossing grid (SVI-5)",
+      "bug": "The crossing check only fails a gap below -1, so the near-the-money crossing passes.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    if (gap < -tolerance) {",
+          "replace": "    if (gap < -tolerance - 1.0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Calendar.CrossingNearTheMoney*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Calendar\\.CrossingNearTheMoneyIsCaughtByTheGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-calendar-wing-slope",
+      "kind": "check",
+      "covers": "the calendar asymptote comparison by slope",
+      "bug": "A later slice with a lower wing slope is not flagged, so crossings past the grid pass.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    if (d_slope < -t_slope) {",
+          "replace": "    if (d_slope < -t_slope - 1.0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Calendar.CrossingPastTheGrid*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Calendar\\.CrossingPastTheGridIsCaughtOnlyByTheAsymptotes",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-calendar-wing-q",
+      "kind": "check",
+      "covers": "the calendar asymptote comparison at the 1/k order",
+      "bug": "Two slices with the same slope and intercept are only flagged at the 1/k order when the gap is below -1.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "    if (d_q < -t_q) out.push_back(",
+          "replace": "    if (d_q < -t_q - 1.0) out.push_back("
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_arbitrage_test"],
+      "command": ["{build}/bin/aadp_svi_arbitrage_test", "--gtest_filter=Calendar.CrossingPastTheGrid*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Calendar\\.CrossingPastTheGridIsCaughtOnlyByTheAsymptotes",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fuzz-at-intrinsic",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_svi, inversion output validity",
+      "bug": "A quote at its intrinsic value returns vol NaN instead of 0 from the early exit, which the at-intrinsic seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/implied_vol.cpp",
+          "find": "ImpliedVol AtIntrinsic() { return {.vol = 0.0,",
+          "replace": "ImpliedVol AtIntrinsic() { return {.vol = kNaN,"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_svi"],
+      "command": ["{build}/bin/aadp_fuzz_svi", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/svi-at-intrinsic/", "{build}/fault-fuzz/svi-at-intrinsic/corpus", "fuzz/fuzz_svi_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: at-intrinsic vol is 0",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/svi-at-intrinsic/*", "build/fuzz/fault-fuzz/svi-at-intrinsic/corpus/*"]
+    },
+    {
+      "id": "svi-fuzz-dplus-location",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_svi, violation field validity",
+      "bug": "The d+ limit violation is placed at k = -infinity instead of +infinity, which the slope 2.25 seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/arbitrage.cpp",
+          "find": "Point(ViolationKind::kDPlusLimit, kInf,",
+          "replace": "Point(ViolationKind::kDPlusLimit, -kInf,"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_svi"],
+      "command": ["{build}/bin/aadp_fuzz_svi", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/svi-dplus-location/", "{build}/fault-fuzz/svi-dplus-location/corpus", "fuzz/fuzz_svi_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: at \\+inf",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/svi-dplus-location/*", "build/fuzz/fault-fuzz/svi-dplus-location/corpus/*"]
     }
   ]
 }
