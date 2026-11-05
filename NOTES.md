@@ -234,7 +234,7 @@ Fixed before any Phase 3 code exists, so git history shows it came first.
 
 ## Phase 3 findings so far
 
-Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
+Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
 
 ### Math kernels
 
@@ -388,7 +388,8 @@ Oracle, stated before any test runs. No tolerance anywhere:
 The basis: each lane's values are the scalar's bits (stage 5a); each partial is the scalar's formula on them; no `MulAdd`, and `-ffp-contract=off`; round to nearest; the sweep's multiply and add in the scalar's order with masked lanes doing nothing; and set-up contributions added in path order, then sweep order, which is the order in which the scalar tape adds them. Nothing is expected to differ. One reservation, stated now: the payload of a NaN, should a gradient ever be NaN, since a compiler may commute a scalar multiply. The tests and fuzzers here require finite Greeks, so it is outside their reach. If one turns up, it is reported, not masked.
 
 Results, at 77dd0c8. Nothing differed from the scalar tape in any bit, at any width:
-- Widths run: 1 and 2 (NEON) on the Mac; 1, 2 and 4 (AVX2) on the Linux host, on cores 6 and 7; 1, 2 and 4 in CI's lane jobs. AVX-512 built on the Linux host. CI run 41918421254's 8-lane runner lacked AVX-512, so that job was build-only and the 8-lane tests have not yet run.
+- Widths run: 1 and 2 (NEON) on the Mac; 1, 2 and 4 (AVX2) on the Linux host, on cores 6 and 7; 1, 2 and 4 in CI's lane jobs. AVX-512 built on the Linux host. CI run 41918421254's 8-lane runner lacked AVX-512, so that job was build-only and the 8-lane tests had not yet run. They have since: in run 41957624701 at a6be05a, under Intel SDE, every vector tape and lane gradient test passed at 8 lanes too (below, "CI").
+- The Linux host's full AVX2 ctest at a859c7c was not clean: 526 of 539 passed. `PerfCounters.EachRegionReportsItsOwnTimes` failed while the stage's own jobs loaded the host, and failed again in a pinned rerun; the log of the unpinned rerun keeps only its last lines, so it does not show whether it passed. CI already allows that one test as a named skip on Linux. It needs a look. The 12 skips were the data tests: the synced tree had no data link. At 1078a20, with the data linked, the same ctest passed 547 of 547 with 0 skipped.
 - Item 1: 7168 paths per width on each of 1, 12 and 50 steps and the wild and dying markets, all bit-identical.
 - Item 2: 28 cases at every width on 1, 2, 3 and 8 threads, 4 batches of 3 · 1024 + 17 paths, all bit-identical; 224 runs at widths up to 2 and 336 at widths up to 4. No pricer kernel fell back.
 - Item 3: 8000 programs. 245 diverged at 2 lanes and 587 at 4, as the spread is meant to make them; every other lane matched.
@@ -502,6 +503,18 @@ Rule slips: two zsh redirections on the Mac, both empty and both writing to `/tm
 - The `check-actionlint` fault matched twice once 065e5b6 added the lane matrix's second `runs-on` line, so it silently stopped applying. dca8324 makes its find unique again.
 - Run 41898528776 at 48d30a7 passed 22 of 22 jobs. Each Linux test job had the one named allowed skip, above; the macOS jobs had none. Both tidy jobs report 126 units clean, on libc++ and on libstdc++.
 - Owed: `scripts/verify_commits.sh` needs rsync, which the Linux host lacks; the GCC pre-commit check there copies files without it.
+- Stage 5b's runs 41918421254 and 41924618330 passed 22 of 22, but on both the 8-lane runner lacked AVX-512, so that job was build-only with a warning. Run 41898528776's runner had it. Whether a green run had tested 8 lanes depended on the runner GitHub assigned.
+- Run 41942650525 at a398d1f passed 16 of 22. Both tidy jobs failed on `tests/bench/platform_test.cpp`, whose x86-only CPUID test (8e8a464) the Mac's tidy cannot see: unchecked optional access, and `find` where tidy wants `contains`. The four lane jobs that ran tests counted `aadp_simd_fallback_cost_smoke_not_a_result` as skipped, because their build target list lacked that binary (added in 7b97155), and a skip fails a job. 1029047 fixes both. So 8e8a464 to a398d1f fail CI's tidy, and 7b97155 to a398d1f its lane jobs. Run 41953763165 at 1029047 passed 22 of 22, with the 8-lane job build-only again.
+
+#### Intel SDE for the 8-lane job
+
+- Since 36d701d, `simd-lanes-8-avx512` tests 8 lanes on every run. Where `/proc/cpuinfo` lists every x86-64-v4 feature it runs the simd label natively, as before. Otherwise it runs it under Intel's Software Development Emulator as a Skylake-X, `sde64 -skx --`, passed to CMake as `CMAKE_TEST_LAUNCHER`. Skylake-X has every feature of Highway's AVX3, the build's static target, which `Smoke.HighwayMatchesTheConfiguredTarget` checks under the same launcher.
+- The job prints the CPU's model and the mode, and checks that every listed simd test will run in that mode. If SDE cannot be downloaded the job fails as BUILD ONLY, so a green run always means the 8-lane tests ran.
+- Pin: SDE 10.13.1, released 2026-07-28, from Intel's direct mirror, `https://downloadmirror.intel.com/924984/sde-external-10.13.1-2026-07-28-lin.tar.xz`, sha256 `94e97d62…2b50` (in full in `ci.yml`). That is the SHA256 Intel's download page lists for the file. `actions/cache` keeps the archive under a key of version and hash, and the hash is checked before it is unpacked, so a wrong archive fails at once. It is fetched in CI only and never committed.
+- Licence: the Intel Simplified Software License. Its October 2022 text: "You may use and redistribute the software, which is provided in binary form only, (the "Software"), without modification". SDE's own documentation: "free of charge for any type of use". This repo only downloads it. The mirror URL needs no login, cookie or form. Intel's download page puts a licence-acceptance dialog in front of its button, and the CI job prints the archive's licence files to its log. The version named differs by source: August 2021 in the archive's documentation, October 2022 on Intel's licence page, and August 23, 2023 in the SDE article. The texts read are in the research cache, `phase3/sde/`.
+- Run 41957624701 at a6be05a passed 22 of 22. The 8-lane runner was an AMD EPYC 7763 without avx512f, avx512bw, avx512cd, avx512dq or avx512vl, so the tests ran under SDE 10.13.1 `-skx`, with Highway at AVX3. 24 of 24 simd tests passed, 0 skipped, in 705 s of ctest real time.
+- Those 24 tests include every lane kernel and price test, and every vector tape and lane gradient test: per-path bits, block sums on 1, 2, 3 and 8 threads, B16's random programs, the dot product, the counted fallback, and bytes per path. So stage 5a's lane primal and stage 5b's vector tape are now verified bit for bit at 8 lanes too. A passing test's printed counts are not in the CI log, so the 8-lane counts are not recorded. Times under SDE measure the emulator, and none is used.
+- a6be05a adds the fault `check-actionlint-sde-launcher`: the configure step reads the SDE launcher from a step id that does not exist. The 8-lane code itself cannot be faulted locally, since no host here runs AVX-512 and SDE runs only on GitHub's runners.
 
 ### Rule slips
 
@@ -513,6 +526,9 @@ None affected a number.
 - Stage 3b: one here-string. A rebuild on the Mac during a measurement, which was later discarded. One build on the Linux host run over an attached SSH session, which timed out.
 - Stage 4: one empty heredoc. 0d682fc fails the format check, in `src/ad/dual.hpp` and `src/pricer/conditional_kernels.hpp`; 09ad30a formats them. It also edited `cmake/area_pricer.cmake` and `src/results/aad_table.cpp`, outside its brief, where its work needed them.
 - Second CI round: one `python3 - <<'EOF'` heredoc.
+- Stage 5b: one here-string and one empty heredoc, both written to `/tmp`.
+- Stage 5c: an empty here-string and an empty heredoc, both written to `/tmp` (above, under "Stage 5c"). A pre-commit wrapper hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed. Its first `perf` pass was multiplexed: the harness's counts from it are not used, and the one figure taken from it, scaled by `perf`, says so (above).
+- Intel SDE: one wait call longer than 600 s, which the tool moved to the background.
 
 ## Option chain
 
