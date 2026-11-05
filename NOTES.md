@@ -558,6 +558,28 @@ The first run (macOS, and the same numbers with g++ 14 on the Linux host) failed
 
 Fuzzing also found two cases outside the grid, fixed before this run: a vol below DBL_MIN is now an error (`vol-underflow`), and the fuzzer's own round-trip property counts the subnormal spacing at the normalised price V / (D √(FK)), not only at V.
 
+#### Stage 6a results
+
+Let's Be Rational: the live archive's SHA-256 on 2026-11-04 was the Phase 1 pin, da2f6870…2470 (8,191,851 bytes, Last-Modified 2024-02-18). Its notice permits use, copying, modification and distribution if the notice is preserved; NOTICE quotes it. It is fetched, never committed, and built as its own target without our warning flags and with SYSTEM headers; no per-target flag was needed. clang rejects the identifier `inverse_norm_cdfm½_for_midrange_probabilities` in every language mode, so the build renames it (3 uses) in the build tree; g++ 14 builds the archive unchanged and without a warning. CI restores the archive from `actions/cache`, checks its hash, and fetches it over http only on a miss.
+
+SVI-1 (macOS, clang 23.1.4, and the same on g++ 14 on the Linux host), after the fixes above: 18,560 quotes, 11,216 `ok` and 7,344 `at-intrinsic`, none other. Over the `ok` points the worst vol error is 0.25 of its bound (5.6e-16, 2.5 ulps, C = 0.23, z = −1.5, σ = 0.01, T = 0.0833, put) and the worst price error 0.27 of its bound (1.3e-15, 6 ulps, C = 0.57, z = +0.5, σ = 1.6, T = 0.0833, call). Where the bound is near ε (C ≤ 1 and a normal price), the worst vol error is 3 ulps; where 1/C ≤ 1, the worst price error 2.5 ulps. The smallest out-of-the-money price on the grid is 1.6e-319, subnormal, as the corrected paragraph above expects. The Black-Scholes check: 3,000 prices, worst 4.05e-15 of the terms against 2^-36 (1.46e-11).
+
+SVI-2, iteration only, not a result: 400 out-of-the-money quotes (|z| ≤ 3, T from 0.0137 to 2, σ from 0.1 to 0.8) through `measure.sh` on macOS, 5 repetitions: 140 ns per inversion (56.1 µs per set, CV 0.09 %), against 20.9 ns per `Black76Price`. No measurement plan, stamped file or BENCHMARKS entry exists for it.
+
+The checks, none of which repairs anything; each violation carries its kind, its k range, worst k, value and bound:
+- butterfly grid: k from −3 to 3 in steps of 0.001, joined with m + σ y for y from −40 to 40 in steps of 0.01, so about 14,000 points, 100 per σ around the minimum of w. Reason: [−3, 3] is e^±3 of the forward, far beyond quoted strikes, and w'' has width σ. ε_g(k) = 32 ε c_w S, with S the sum of the magnitudes of g's terms and c_w the condition of w's sum: about 1e-14 on these slices, against Vogt's −0.033;
+- d+ limit: b (1 + ρ) < 2 (MM Lemma 2.1, so that GJ Lemma 2.2's limit holds); Lee: b (1 ± ρ) < 2, a parameter only so the test can show what 4 passes;
+- Martini-Mingone: Theorems 5.10, 6.2 and 6.3 with the waterfall of sections 5.5 and 6.3, ρ = +1 by reflection, σ* on a 4,096-point grid in h = 1/l refined by golden section (MM section 6.2.1);
+- calendar: the same union grid for both slices, with ε_w = 16 ε (|w1| + |w2| term sums); and the asymptotes w ~ β|k| + c + q/|k| compared in that order, with tolerances 4 ε, 8 ε and 4 ε of the magnitudes. No necessary and sufficient condition is known (MM, conclusion); the API says so.
+
+Known violators: Vogt (SVI-3) is flagged on k ∈ [0.643, 1.256], 762 points, worst g = −0.0329 at k = 0.879, and the classifier gives type 3 with α = −0.09872, μ = 0.86347, the interval ]−0.72407, 0.82939[ and F = −0.12663, each within 5e-6 of MM section 5.5.1. Slope 2.25 (SVI-4; a = 0.02, b = 1.5, ρ = 0.5, m = 0, σ = 0.2) fails the wing check at 2, the d+ limit and the classifier (type 1), and passes the wing check at bound 4. The crossing pairs (SVI-5): one near the money (gap −0.005 on k ∈ [−0.128, 0.128]) is caught by the grid only, one in both wings by the grid and by the slopes, one with slopes lower by 1e-3, crossing near k = 71 and −38, by the asymptotes only, and one at the 1/|k| order by the asymptotes. Known good: the six arbitrage-free rows of MM Table 1 (min g from 0.0099 to 0.26), GJ Example 5.1's repaired slice (JW to raw by GJ Lemma 3.2; min g 0.258) and SSVI slices of GJ eq. (4.5) with γ = 1/2 and η (1 + |ρ|) ≤ 2 (three surfaces, seven θ from 4e-4 to 1) pass every butterfly check, and adjacent SSVI slices the calendar check. At σ*/2 and 2σ* of each Table 1 row, the classifier and the grid agree (type 4 with negative g, and free).
+
+Faults: 22 added, all caught at 4dafb00 on macOS. Two (`svi-inversion-put-flag`, `svi-calendar-wing-q`) first did not compile, an unused parameter and an unused variable under -Werror, and were rewritten before the commit.
+
+Fuzz (`aadp_fuzz_svi`, ASan and UBSan, macOS): trials of 60, 120 and 180 s found the cases above, then 300 s ran clean; the stated run, 600 s through heavy.sh at the committed code, made 15,056,557 executions with no failure (coverage 652, corpus 461 from 17 seeds).
+
+Process notes: the first macOS gate of the inversion commit tested a stale build, because restoring files with their old timestamps hid the CMake change from ninja; it was rerun before any commit. g++ 14 rejected an unbraced `if` around `EXPECT_STRNE` (-Wdangling-else), fixed before the commit. One Linux pre-commit run failed `PerfCounters.EachRegionReportsItsOwnTimes` (29.11 ms enabled against a 29.7 ms floor) while another project's measurement held the host; it passed on the rerun, and the code under test was not changed by this stage.
+
 ### Rule slips
 
 None affected a number.
@@ -571,6 +593,7 @@ None affected a number.
 - Stage 5b: one here-string and one empty heredoc, both written to `/tmp`.
 - Stage 5c: an empty here-string and an empty heredoc, both written to `/tmp` (above, under "Stage 5c"). A pre-commit wrapper hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed. Its first `perf` pass was multiplexed: the harness's counts from it are not used, and the one figure taken from it, scaled by `perf`, says so (above).
 - Intel SDE: one wait call longer than 600 s, which the tool moved to the background.
+- Stage 6a: the first pre-commit wrapper (the README commit) hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed, and its logs were fetched by hand. The 600 s fuzz call ran past its 600 s tool timeout and was moved to the background, then waited for by polling.
 
 ## Option chain
 
