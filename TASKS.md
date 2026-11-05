@@ -117,7 +117,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ## Phase 3: Implementation
 
-Stages 1a to 3b are done, then stage 4, second-order Greeks, stage 5a, the SIMD primal on Highway lanes, stage 5b, the vector tape, and stage 5c, the lanes in the AAD bench with their assembly, with three rounds of CI fixes and Intel SDE for the 8-lane CI job. SVI, stage 6, is next. Findings are in `NOTES.md`, "Phase 3 findings so far", and measured numbers under each target in `BENCHMARKS.md`. Every stage 5b and 5c timing is iteration only.
+Stages 1a to 3b are done, then stage 4, second-order Greeks, stage 5a, the SIMD primal on Highway lanes, stage 5b, the vector tape, and stage 5c, the lanes in the AAD bench with their assembly, with three rounds of CI fixes and Intel SDE for the 8-lane CI job. Stage 6a, implied volatility and the arbitrage checks, and stage 6b, the parity forwards, the calibration set and the raw SVI fit to one day's settlements, are done, with one CI fix (2b6f343). Stage 7, the rest of SVI, is next. Findings are in `NOTES.md`, "Phase 3 findings so far", and measured numbers under each target in `BENCHMARKS.md`. Every stage 5b, 5c and 6 timing is iteration only.
 
 ### Tape
 
@@ -171,17 +171,19 @@ Stages 1a to 3b are done, then stage 4, second-order Greeks, stage 5a, the SIMD 
 
 ### SVI
 
-- [ ] Vendor nothing. Let's Be Rational through pinned FetchContent, with its notice preserved; note the host only serves plain http, so the hash is what protects it
-- [ ] TAIFEX parser, filters and parity regression from `NOTES.md`, "Recommended calibration set"
-- [ ] Let's Be Rational inversion, accuracy and speed
-- [ ] Raw SVI per slice: quasi-explicit inner solve, multi-start, parity-noise weights
-- [ ] Handle rho sticking at its bound: an active bound breaks a plain implicit-function adjoint
-- [ ] Butterfly: g(k) on a grid, wing conditions at 2, Lee moment formula, Martini-Mingone classifier
-- [ ] Calendar: numerical crossing check between slices
-- [ ] Tests on known violators: Vogt, the slope 2.25 counterexample, a constructed crossing pair
-- [ ] Report input butterfly counts beside fit violations. Do not repair silently
-- [ ] Report per-slice implied-vol RMSE by the `SVI-11` formula, unweighted, beside the weighted objective
+- [x] Vendor nothing. Let's Be Rational through pinned FetchContent, with its notice preserved; note the host only serves plain http, so the hash is what protects it (83d93b1). The live archive's SHA-256 is Phase 1's pin, its notice is quoted in `NOTICE`, and it is fetched, cached in CI and never committed. clang needs one identifier renamed in the build tree
+- [x] TAIFEX parser, filters and parity regression from `NOTES.md`, "Recommended calibration set". Parser (622d569) and filters (d98cb32) from Phase 2. The parity regression over `settle_all` (9328a13) reproduces Phase 1's F, D and residual RMS within a relative 1e-9, F within 0.92 points of TX where a TX month exists, and the 65, 51 and 64 rows of the calibration set
+- [x] Let's Be Rational inversion, accuracy and speed (83d93b1; bench 74e5b62). `SVI-1` met on 18,560 quotes: worst 0.25 of the vol bound and 0.27 of the price bound. Speed is iteration only so far (`SVI-2`, 140 ns on macOS); its measured run is under "Iterate"
+- [x] Raw SVI per slice: quasi-explicit inner solve, multi-start, parity-noise weights (8eef2cb; chain and `aadp_svi_fit` 75fa774). Gauss-Newton on the price objective, σ_i² = σ_leg² + tick²/12 with `settle_all`'s σ_leg, a 9 × 9 grid in (m, σ) and Nelder-Mead from the best 5. Synthetic slices are recovered within the pre-registered tolerances. The fit is to settlements of one day, not tradable quotes, and maturity reaches 33 days
+- [x] Handle rho sticking at its bound: an active bound breaks a plain implicit-function adjoint (8eef2cb, c94296d). Every bound's slack is recorded, and an active bound is set exactly, so stage 7 can take the derivative on the free parameters only. ρ = −1.05 and +1.05 fit −1 and +1 exactly, with the bound recorded active. On the real slices ρ stays inside its bounds; the active bound there is b(1 + |ρ|) = 4
+- [x] Butterfly: g(k) on a grid, wing conditions at 2, Lee moment formula, Martini-Mingone classifier (fd60de0)
+- [x] Calendar: numerical crossing check between slices (fd60de0). A union grid and the wing asymptotes. No necessary and sufficient condition is known, and the API says so
+- [x] Tests on known violators: Vogt, the slope 2.25 counterexample, a constructed crossing pair (fd60de0; faults 4dafb00). Vogt is flagged on k ∈ [0.643, 1.256] and classified type 3; slope 2.25 fails at 2 and passes at 4; four crossing pairs are caught
+- [x] Report input butterfly counts beside fit violations. Do not repair silently (9328a13, 75fa774). Input triples, non-convex and beyond half a tick: 168, 51 and 23, as Phase 1. The fit report lists each fitted slice's violations beside them, and the same triple count on the model prices at the quoted strikes: 0 of 168 non-convex. Nothing is repaired
+- [x] Report per-slice implied-vol RMSE by the `SVI-11` formula, unweighted, beside the weighted objective (8eef2cb, 75fa774): 0.96, 0.41 and 1.40 vol points at 5, 12 and 33 days, beside Φ / (n − 5) of 0.207, 2.32 and 3.24
+- [ ] `aadp_results_stamp` cannot stamp a non-timing report: it refuses the fit report ("first line is not the results magic"). So the fit report is not yet in `results/` and cannot reach the README table. It needs a non-timing report kind, with a fault. Until then the report is kept in the research cache
 - [ ] eSSVI as an optional arbitrage-free comparison, reporting what it costs in fit error
+  - Why it matters: the raw SVI fit pins b(1 + |ρ|) = 4, Zeliade's bound and twice Lee's 2, on all three slices, with ρ from 0.964 to 0.992 and the vertex m to the right of the data. So every fitted slice has butterfly arbitrage beyond its quoted strikes (density, right wing, d+ limit, Martini-Mingone type 1), and adjacent slices cross in total variance, once inside the 12-day slice's quotes (`NOTES.md`, "Stage 6b results"). The pricing surface stays raw SVI, as pre-registered; eSSVI at stage 7 is the arbitrage-free comparison, with its cost in fit error (`SVI-9`)
 - [ ] Time interpolation: Gatheral-Jacquier Lemma 5.1, or eSSVI scheme
 - [ ] Dupire local variance as ∂T w / g, on the tape. Count any floored points and report them
 - [ ] Price Asian and barrier off the surface. Maturity is limited to 33 days by the usable chain, and this is stated
@@ -228,6 +230,7 @@ Build only behind an option, because 985 source files make it a long build.
 - [x] CI's Linux clang jobs use libc++, like the Linux measurement host. The GCC jobs keep libstdc++ (2f1997f). A second tidy job, `clang-tidy-libstdcxx`, keeps tidy on libstdc++, because the findings differ by library
 - [x] Fix the failures of run 41942650525 at a398d1f, which passed 16 of 22 jobs: 1029047. Both tidy jobs flagged an x86-only test branch the Mac's tidy cannot see, and four lane jobs lacked the fallback-cost binary, so its smoke test was skipped. Run 41953763165 at 1029047 passed 22 of 22
 - [x] Run the 8-lane tests on every CI run: Intel SDE 10.13.1 `-skx` where the runner lacks AVX-512, at a pinned URL and sha256 (36d701d), with the fault `check-actionlint-sde-launcher` (a6be05a). Run 41957624701 at a6be05a passed 22 of 22
+- [x] Fix the failure of run 42018873540 at 23936a9, which failed only `clang-tidy-libstdcxx`, on two findings that only libstdc++ shows: 2b6f343. Run 42023625872 at 2b6f343 passed 22 of 22
 - [ ] `scripts/verify_commits.sh` needs rsync, which the Linux host lacks. Fix before stage 12
 
 ## Phase 4: Final review and Done
