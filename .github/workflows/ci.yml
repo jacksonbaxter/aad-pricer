@@ -36,7 +36,7 @@ jobs:
           - { name: linux-asan-ubsan, os: ubuntu-24.04, compiler: clang, preset: asan-ubsan, test: true }
           - { name: linux-tsan, os: ubuntu-24.04, compiler: clang, preset: tsan, test: true }
           - { name: linux-avx2, os: ubuntu-24.04, compiler: clang, preset: release-avx2, test: true }
-          # AVX-512 is built, and tested where the runner can run it, by simd-lanes below.
+          # AVX-512 is built and tested, natively or under Intel SDE, by simd-lanes below.
           # The measurement Mac compiles against LLVM 23.1.4's own libc++ headers and links the
           # system /usr/lib/libc++.1.dylib, on macOS 27.2 with the 27.2 SDK. The xcode-27 image
           # (a preview) runs macOS 27, and the setup action selects Xcode 27.2 for its 27.2 SDK.
@@ -123,13 +123,22 @@ jobs:
   # gradients against the scalar tape's, bit for bit, and the SIMD bench's smoke run with its
   # in-run checks). Widths 2 and 4 also run the full suite in
   # build-test (macos-*, linux-clang-*, linux-avx2). A job whose CPU lacks its target's features
-  # fails, except AVX-512: a GitHub runner may or may not have it, so that job builds the whole
-  # tree and runs the tests only if /proc/cpuinfo lists every x86-64-v4 feature. Otherwise it says
-  # it was build-only, in a warning and in the job summary; it never passes silently.
+  # fails, except AVX-512: a GitHub runner may or may not have it. That job builds the whole tree
+  # and runs the same tests natively where /proc/cpuinfo lists every x86-64-v4 feature, and
+  # otherwise under Intel's Software Development Emulator as a Skylake-X (-skx), which has every
+  # feature of Highway's AVX3, the build's static target (src/smoke/smoke.cpp asserts it). SDE is
+  # fetched from Intel's mirror at a pinned version, its sha256 checked before it is unpacked, and
+  # never committed: the Intel Simplified Software License lets anyone use it. If it cannot be
+  # downloaded the job fails as BUILD ONLY, so 8 lanes are never untested in a green run.
   simd-lanes:
     name: simd-${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      SDE_VERSION: 10.13.1-2026-07-28
+      SDE_URL: https://downloadmirror.intel.com/924984/sde-external-10.13.1-2026-07-28-lin.tar.xz
+      SDE_SHA256: 94e97d623fec54385686e1e7ba65ebc9941748c05ee451423948334892bf2b50
+      SDE_CPU: -skx
     strategy:
       fail-fast: false
       matrix:
@@ -140,7 +149,7 @@ jobs:
             preset: release
             target: scalar
             cpu: ""
-            optional: false
+            sde: false
             all: false
           - name: lanes-2-sse2
             os: ubuntu-24.04
@@ -148,7 +157,7 @@ jobs:
             preset: release
             target: baseline
             cpu: sse2
-            optional: false
+            sde: false
             all: false
           - name: lanes-2-neon
             os: xcode-27
@@ -156,7 +165,7 @@ jobs:
             preset: release
             target: baseline
             cpu: ""
-            optional: false
+            sde: false
             all: false
           - name: lanes-4-avx2
             os: ubuntu-24.04
@@ -164,7 +173,7 @@ jobs:
             preset: release-avx2
             target: avx2
             cpu: avx avx2 bmi1 bmi2 f16c fma abm movbe aes pclmulqdq
-            optional: false
+            sde: false
             all: false
           - name: lanes-8-avx512
             os: ubuntu-24.04
@@ -174,7 +183,7 @@ jobs:
             cpu: >-
               avx avx2 bmi1 bmi2 f16c fma abm movbe aes pclmulqdq
               avx512f avx512bw avx512cd avx512dq avx512vl
-            optional: true
+            sde: true
             all: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -185,16 +194,24 @@ jobs:
         with:
           data: "false"
 
+      # Prints the CPU and its flags, and picks how the tests run: native, or under SDE for the
+      # AVX-512 job on a runner without x86-64-v4.
       - name: Check the CPU
         id: cpu
         env:
           LANE_JOB: ${{ matrix.name }}
           ARCH: ${{ matrix.arch }}
           NEEDS: ${{ matrix.cpu }}
-          OPTIONAL: ${{ matrix.optional }}
+          SDE: ${{ matrix.sde }}
         run: |
           missing=()
           machine=$(uname -m)
+          if [[ -r /proc/cpuinfo ]]; then
+            grep -m1 '^model name' /proc/cpuinfo || true
+            grep -m1 '^flags' /proc/cpuinfo || true
+          else
+            sysctl -n machdep.cpu.brand_string
+          fi
           [[ $machine == "$ARCH" ]] || missing+=("$ARCH (the runner is $machine)")
           if [[ -n $NEEDS ]]; then
             flags=" $(grep -m1 '^flags' /proc/cpuinfo | cut -d: -f2) "
@@ -203,23 +220,81 @@ jobs:
             done
           fi
           if ((${#missing[@]} == 0)); then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            printf '%s: the runner has %s\n' "$LANE_JOB" "${NEEDS:-$ARCH}"
-          elif [[ $OPTIONAL == true ]]; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            message="BUILD ONLY: the runner's CPU lacks ${missing[*]}, so the agreement tests did not run"
-            echo "::warning title=$LANE_JOB was build-only::$message"
-            printf '### %s\n\n%s\n' "$LANE_JOB" "$message" >> "$GITHUB_STEP_SUMMARY"
+            echo "mode=native" >> "$GITHUB_OUTPUT"
+            printf '%s: the runner has %s, so the tests run natively\n' "$LANE_JOB" "${NEEDS:-$ARCH}"
+          elif [[ $SDE == true && $machine == x86_64 ]]; then
+            echo "mode=sde" >> "$GITHUB_OUTPUT"
+            printf '%s: the runner lacks %s, so the tests run under Intel SDE %s %s\n' \
+              "$LANE_JOB" "${missing[*]}" "$SDE_VERSION" "$SDE_CPU"
           else
             echo "::error title=$LANE_JOB cannot run::the runner's CPU lacks ${missing[*]}"
             exit 1
           fi
 
+      # The archive as downloaded, not the unpacked tree, so the sha256 is checked on every run.
+      # actions/cache saves only when the job succeeds, so only an archive that passed is kept.
+      - name: Restore Intel SDE
+        if: steps.cpu.outputs.mode == 'sde'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/tools/sde-archive
+          key: intel-sde-${{ env.SDE_VERSION }}-${{ env.SDE_SHA256 }}
+
+      # A failed download is not an error here: the job still builds, and the test step fails it
+      # as BUILD ONLY. A wrong sha256 fails at once, before anything is unpacked.
+      - name: Fetch, verify and unpack Intel SDE
+        id: sde
+        if: steps.cpu.outputs.mode == 'sde'
+        run: |
+          mkdir -p build/tools/sde-archive
+          archive=build/tools/sde-archive/${SDE_URL##*/}
+          if [[ -f $archive ]]; then
+            echo "restored $archive from the cache"
+          elif ! curl -q --silent --show-error --fail --location --proto '=https' --tlsv1.2 \
+            --retry 3 --retry-delay 5 --connect-timeout 30 --output "$archive" --url "$SDE_URL"; then
+            rm -f -- "$archive"
+            echo "fetched=false" >> "$GITHUB_OUTPUT"
+            echo "::error title=Intel SDE download failed::$SDE_URL"
+            exit 0
+          fi
+          actual=$(sha256sum -- "$archive" | cut -d' ' -f1)
+          if [[ $actual != "$SDE_SHA256" ]]; then
+            rm -f -- "$archive"
+            echo "::error title=Intel SDE checksum mismatch::expected $SDE_SHA256, got $actual"
+            exit 1
+          fi
+          echo "sha256 ok $actual"
+          sde=$PWD/build/tools/sde
+          rm -rf -- "$sde"
+          mkdir -p -- "$sde"
+          tar -xJf "$archive" -C "$sde" --strip-components=1
+          version=$("$sde/sde64" -version)
+          echo "$version"
+          if [[ $version != *"${SDE_VERSION%%-*}"* ]]; then
+            echo "::error::the archive's sde64 does not report version ${SDE_VERSION%%-*}"
+            exit 1
+          fi
+          # The licence it ships with, for the record.
+          find "$sde" -maxdepth 2 -type f \( -iname '*licen*' -o -iname '*eula*' \) -print \
+            -exec cat -- {} \;
+          echo "bin=$sde/sde64" >> "$GITHUB_OUTPUT"
+          echo "fetched=true" >> "$GITHUB_OUTPUT"
+
+      # Under SDE, ctest runs every test, and the gtest discovery, through CMAKE_TEST_LAUNCHER
+      # (CMake 3.29 or later). CMAKE_CROSSCOMPILING_EMULATOR would not do: CMake uses it only
+      # when cross-compiling.
       - name: Configure
         env:
           PRESET: ${{ matrix.preset }}
           TARGET: ${{ matrix.target }}
-        run: cmake --preset "$PRESET" -DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF "-DAADP_SIMD_TARGET=$TARGET"
+          SDE_BIN: ${{ steps.sde.outputs.bin }}
+        run: |
+          args=(-DAAD_PRICER_BUILD_QUANTLIB_COMPARE=OFF "-DAADP_SIMD_TARGET=$TARGET")
+          if [[ -n $SDE_BIN ]]; then
+            args+=("-DCMAKE_TEST_LAUNCHER=$SDE_BIN;$SDE_CPU;--")
+          fi
+          cmake --version
+          cmake --preset "$PRESET" "${args[@]}"
 
       - name: Build
         env:
@@ -237,12 +312,37 @@ jobs:
           fi
           cmake --build --preset "$PRESET" --parallel "$AADP_JOBS" "${targets[@]}"
 
+      # Runs on every lane job: none can skip its tests. Before them it lists the simd tests and
+      # checks that each runs as the mode says, all through sde64 under SDE and none natively.
       - name: Test the simd label
-        if: steps.cpu.outputs.run == 'true'
         env:
+          LANE_JOB: ${{ matrix.name }}
           PRESET: ${{ matrix.preset }}
+          ALL: ${{ matrix.all }}
+          MODE: ${{ steps.cpu.outputs.mode }}
+          FETCHED: ${{ steps.sde.outputs.fetched }}
+          SDE_BIN: ${{ steps.sde.outputs.bin }}
         # At nice 0, as in build-test: the macOS runners start a job at nice -10.
         run: |
+          launch=()
+          case $MODE in
+            native) summary="the tests ran natively" ;;
+            sde)
+              if [[ $FETCHED != true || -z $SDE_BIN ]]; then
+                message="BUILD ONLY: Intel SDE could not be downloaded, so the tests did not run"
+                echo "::error title=$LANE_JOB was build-only::$message"
+                printf '### %s\n\n%s\n' "$LANE_JOB" "$message" >> "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
+              launch=("$SDE_BIN" "$SDE_CPU" --)
+              summary="the tests ran under Intel SDE $SDE_VERSION $SDE_CPU"
+              ;;
+            *)
+              echo "::error::no test mode was chosen"
+              exit 1
+              ;;
+          esac
+          echo "$LANE_JOB: $summary"
           level=$(ps -o ni= -p $$)
           level=${level//[[:space:]]/}
           if ((level > 0)); then
@@ -254,12 +354,38 @@ jobs:
           printf 'the job runs at nice %s; the tests run under nice -n %s, at nice %s\n' \
             "$level" "$offset" "$now"
           [[ $now == 0 ]] || exit 1
-          junit="$PWD/build/logs/simd-lanes-junit.xml"
           mkdir -p build/logs
+          if [[ $ALL == true ]]; then
+            "${launch[@]}" "build/$PRESET/bin/aadp_smoke" \
+              --gtest_filter=Smoke.HighwayMatchesTheConfiguredTarget
+          fi
+          listing=build/logs/simd-lanes-tests.json
+          ctest --test-dir "build/$PRESET" -L simd --show-only=json-v1 > "$listing"
+          python3 -I -c '
+          import json, os, sys
+          listing, mode, *launch = sys.argv[1:]
+          tests = json.load(open(listing))["tests"]
+          def runs_as(command):
+              if not command or command[: len(launch)] != launch:
+                  return False
+              return launch or os.path.basename(command[0]) != "sde64"
+          wrong = [t["name"] for t in tests if not runs_as(t.get("command", []))]
+          print(f"{len(tests)} simd tests, run {mode}:")
+          for test in tests:
+              print("  " + test["name"])
+          for name in wrong:
+              print(f"::error::{name} would not run {mode}")
+          sys.exit(1 if wrong or not tests else 0)
+          ' "$listing" "$MODE" "${launch[@]}"
+          junit="$PWD/build/logs/simd-lanes-junit.xml"
           status=0
+          start=$SECONDS
           nice -n "$offset" ctest --test-dir "build/$PRESET" -L simd --no-tests=error \
             --output-on-failure --parallel "$AADP_JOBS" --output-junit "$junit" || status=$?
           python3 -I scripts/run_tests.py verdict "$junit" || status=1
+          printf '%s: %s, in %s s\n' "$LANE_JOB" "$summary" "$((SECONDS - start))"
+          printf '### %s\n\n%s, in %s s\n' "$LANE_JOB" "$summary" "$((SECONDS - start))" \
+            >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
   format:
