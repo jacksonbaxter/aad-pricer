@@ -203,9 +203,14 @@ TEST(FitSynthetic, RhoAtMinusOneIsRecoveredWithinTheNoiselessTolerance) {
 TEST(FitSynthetic, RhoBeyondItsBoundFitsTheBoundAndRecordsIt) {
   Spec lower = kA;
   lower.params.rho = -1.05;
-  const auto low_fit = FitRawSvi(MakeSlice(lower, GridStrikes(lower)));
+  const FitSlice low_slice = MakeSlice(lower, GridStrikes(lower));
+  const auto low_fit = FitRawSvi(low_slice);
   ASSERT_TRUE(low_fit.has_value()) << FitErrorName(low_fit.error().code);
   EXPECT_EQ(low_fit->params.rho, -1.0);
+  // The reported parameters give the reported Phi: the bound held in the solve, not only in the
+  // conversion to raw parameters, which clamps rho.
+  EXPECT_NEAR(Objective(low_slice, low_fit->params), low_fit->objective,
+              1e-12 + (1e-9 * low_fit->objective));
   EXPECT_TRUE(low_fit->bounds[static_cast<std::size_t>(Bound::kRhoLower)].active);
   EXPECT_FALSE(low_fit->bounds[static_cast<std::size_t>(Bound::kRhoUpper)].active);
   const auto low_active = low_fit->ActiveBounds();
@@ -218,9 +223,12 @@ TEST(FitSynthetic, RhoBeyondItsBoundFitsTheBoundAndRecordsIt) {
   upper.params.m = -0.002;
   std::vector<double> reflected;
   for (const double strike : GridStrikes(kA)) reflected.push_back(kForward * kForward / strike);
-  const auto high_fit = FitRawSvi(MakeSlice(upper, reflected));
+  const FitSlice high_slice = MakeSlice(upper, reflected);
+  const auto high_fit = FitRawSvi(high_slice);
   ASSERT_TRUE(high_fit.has_value()) << FitErrorName(high_fit.error().code);
   EXPECT_EQ(high_fit->params.rho, 1.0);
+  EXPECT_NEAR(Objective(high_slice, high_fit->params), high_fit->objective,
+              1e-12 + (1e-9 * high_fit->objective));
   EXPECT_TRUE(high_fit->bounds[static_cast<std::size_t>(Bound::kRhoUpper)].active);
   EXPECT_FALSE(high_fit->bounds[static_cast<std::size_t>(Bound::kRhoLower)].active);
   std::printf("rho beyond: lower fit rho %.17g Phi %.4g; upper fit rho %.17g Phi %.4g\n",
