@@ -584,6 +584,32 @@
       "mutated_exit": 1
     },
     {
+      "id": "check-actionlint-sde-launcher",
+      "kind": "check",
+      "covers": "the 8-lane job's SDE wiring, through actionlint",
+      "bug": "The lane job's configure step reads the SDE launcher from a step id that does not exist, so the 8-lane tests would be configured without SDE.",
+      "edits": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "find": "          TARGET: ${{ matrix.target }}\n          SDE_BIN: ${{ steps.sde.outputs.bin }}\n",
+          "replace": "          TARGET: ${{ matrix.target }}\n          SDE_BIN: ${{ steps.sdee.outputs.bin }}\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": [
+        "build/tools/actionlint",
+        "-no-color",
+        "-shellcheck",
+        "build/tools/shellcheck",
+        ".github/workflows/ci.yml"
+      ],
+      "detect": "test",
+      "reason": "ci\\.yml:\\d+:\\d+: property \"sdee\" is not defined in object type",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
       "id": "check-script-keeps-going",
       "kind": "check",
       "covers": "scripts/check.sh: a failed step, then the steps after it",
