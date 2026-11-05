@@ -352,6 +352,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Source: Jäckel, "Let's Be Rational", abstract, version of 25 Mar 2016. http://www.jaeckel.org/LetsBeRational.pdf
 - Quote: "two iterations to maximum attainable precision on standard (64 bit floating point) hardware for all possible inputs."
 - Class: `DIRECT` for accuracy. Lead check: done.
+- Measured: met, by test rather than a results file (83d93b1), on macOS, against the tolerance stated before any measurement (5c53dc0; `NOTES.md`, "Stage 6a"): vol within 8η(1 + C) and price within 8η(1 + 1/C), C the price's conditioning. 18,560 quotes from 5 days to 5 years, 11,216 `ok` and 7,344 `at-intrinsic`, none other. Over the `ok` points the worst vol error is 0.25 of its bound (2.5 ulps) and the worst price error 0.27 of its bound (6 ulps). An independent Black-Scholes price check: 3,000 prices, worst 4.05e-15 of the terms against 2^-36. The first run failed; the wrapper's fix, and how the 7 `at-intrinsic` points with a non-vacuous vol bound are judged, a reading chosen after that run, are in `NOTES.md`.
 
 ### SVI-2: inversion speed: 180 ns
 
@@ -359,6 +360,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "the explicit formula requires 59.49 nanoseconds per evaluation at the median run, compared with 180.03 nanoseconds for LBR"
 - Source measured: i5-1145G7 2.60 GHz, GCC under Linux/WSL2, flags not stated | 100,000 random cases × 10 × 10 runs | threads not stated | ns per evaluation.
 - Class: `CONTEXT`. Preprint. Lead check: done.
+- No measured run yet. Iteration only, not a result: `aadp_bench_implied_vol` (74e5b62) through `measure.sh` on `mac-m4max`, macOS, 5 repetitions, 400 out-of-the-money quotes (|z| ≤ 3, T from 0.0137 to 2, σ from 0.1 to 0.8): 140 ns per inversion (56.1 µs per set, CV 0.09 %), against 20.9 ns per `Black76Price`. Not comparable with the source's i5 under Linux. The measured run is at stage 11.
 
 ### SVI-3: butterfly check catches a known violation
 
@@ -366,6 +368,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "A slice is free of butterfly arbitrage if and only if g(k) ≥ 0 for all k ∈ R and lim d+ (k) = −∞."
 - Target: the check flags the Vogt vector (a, b, m, ρ, σ) = (−0.0410, 0.1331, 0.3586, 0.3060, 0.4153), t = 1.
 - Class: `STRUCTURAL`. Lead check: done.
+- Measured: met, by test (fd60de0). Vogt is flagged on k ∈ [0.643, 1.256], 762 grid points, worst g = −0.0329 at k = 0.879 against a round-off allowance of 6e-14, and the Martini-Mingone classifier gives type 3. Known arbitrage-free slices pass: the six of Martini-Mingone Table 1, Gatheral-Jacquier Example 5.1's repaired slice and SSVI slices.
 
 ### SVI-4: wing check at the Lee limit of 2, not 4
 
@@ -373,11 +376,13 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "In the case of SVI, the 1st condition translates to b(1+ρ) < 2 and the second one to b(1−ρ) < 2."
 - Target: the check rejects a = 0.02, b = 1.5, ρ = 0.5, m = 0, σ = 0.2, which has b(1+|ρ|) = 2.25 and passes QuantLib's bound of 4 (derived counterexample).
 - Class: `STRUCTURAL`. Lead check: done.
+- Measured: met, by test (fd60de0). The slice fails the wing check at 2 (2.25 against 2), the d+ limit and the Martini-Mingone classifier (type 1), and passes the wing check at a bound of 4.
 
 ### SVI-5: calendar check by dense numerical crossing test
 
 - Target: flags any crossing of total variance between adjacent slices, tested on a constructed crossing pair. A necessary-and-sufficient condition for two raw SVI slices was not found. Martini & Mingone list as still pending "the question of the characterization of no Calendar Spread arbitrage for two SVI slices corresponding to different maturities." (https://arxiv.org/pdf/2005.03340, conclusion). The check is numerical, and we say so.
 - Class: `STRUCTURAL`. Lead check: done.
+- Measured: met, by test (fd60de0). Four constructed crossing pairs are caught: one near the money (gap −0.005 on k ∈ [−0.128, 0.128]) by the grid only; one in both wings by the grid and the wing slopes; one with wing slopes lower by 1e-3, crossing near k = 71 and −38, by the asymptotes only; and one at the 1/|k| order by the asymptotes. Ordered and identical pairs, and adjacent SSVI slices, pass.
 
 ### SVI-6: fit error at most 4 bp of forward
 
@@ -385,6 +390,8 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "with a typical average option price error below 4 bips of the underlying value."
 - Source measured: SPX end of day, 8 Jan 2018, 12 maturities, OTM, price at least 2 ticks | eSSVI, not raw SVI | error against mid, in bp of forward, read from plots.
 - Class: `CONTEXT`. A fit error on one underlying and date does not transfer to another. Our input noise is 2 to 3.4 index points of parity RMSE on a forward near 22,800, about 0.9 to 1.5 bp (derived), so the target is reachable in principle. Lead check: done.
+- Fit result, not yet stamped (the stamp tool refuses a non-timing report; open in `TASKS.md`): raw SVI per slice, fitted to TAIFEX settlements of 2024-11-15, not tradable quotes, by `aadp_svi_fit` through `measure.sh` on macOS at 75fa774 (the same to the last digit at c05b538). 0.29, 1.13 and 1.23 bp of F for 202411, 202411W4 and 202412, at 5, 12 and 33 days. Below the 4 bp context on every slice, which is eSSVI against SPX mids, so not like for like. Every slice is fitted at the slope bound b(1 + |ρ|) = 4, with arbitrage beyond its quotes (`SVI-9`).
+- Note on the input noise above (derived): the 2 to 3.4 points are Phase 1's parity RMS by its `settle_near` route (2.19 to 3.44 on these expiries). The fit's weights use `settle_all`, whose RMS is 2.55, 3.43 and 2.80 points, 1.12, 1.50 and 1.23 bp of F, so σ_leg = RMS / √2 = 1.80, 2.42 and 1.98 points.
 
 ### SVI-7: calibration time: 15 ms per slice, stretch 3 ms
 
@@ -392,6 +399,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "for the FPI-SVI algorithm, the calculation time of each contract is stable at approximately 0.003 s; for the quasi-explicit SVI method, the calculation time of each contract is stable at approximately 0.015 s."
 - Source measured: personal computer, unspecified | 100 calculation steps | per contract. The same paragraph says "50 times", but its own numbers give 5 (derived), so the 50 is not used.
 - Class: `CONTEXT`. Lead check: done.
+- No measured run yet. Iteration only, not a result: `aadp_svi_fit` timing through `measure.sh` on `mac-m4max`, macOS, 50 repetitions, median 82.0, 42.7 and 60.4 ms per slice for 202411, 202411W4 and 202412 (65, 51 and 64 quotes). The measured run is at stage 11.
 
 ### SVI-8: surface time below 1.2 s
 
@@ -399,11 +407,13 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "takes 1.2 seconds on a Intel E5-2673 v3 processor."
 - Source measured: Intel E5-2673 v3, Python, no parallelism | 12 maturities, average 98 options | eSSVI | whole-surface wall time. The 0.1 s and 0.01 s in the same section are projections, not measurements, and are not used.
 - Class: `CONTEXT`. A low bar for C++ and three slices. `SVI-7` is the real target. Lead check: done.
+- No measured run yet. Iteration only, not a result: in the same run as `SVI-7`, median 186.7 ms on macOS for the three fits and every check. The measured run is at stage 11.
 
 ### SVI-9: every violation reported, none repaired silently
 
 - Target: butterfly and calendar violations on the real fit are listed beside the counts already in the input (section 11). If an arbitrage-free constrained fit is added, its cost in fit error is reported.
 - Class: `STRUCTURAL`.
+- Open. What stage 6b found, on the raw SVI fit to settlements (75fa774; `NOTES.md`, "Stage 6b results"), with nothing repaired. Input butterflies (triples, non-convex, beyond half a tick): (61, 15, 3), (47, 19, 13) and (60, 17, 7) for 202411, 202411W4 and 202412. The model prices at the same strikes have 0 non-convex triples. Each fitted slice has ρ near +1, its vertex to the right of the data and the right wing at the slope bound 4, and 4 violations beyond its quotes: density (g < 0 from k = 0.120, 0.161 and 0.683, worst g −28.9, −24.9 and −3.26), the right wing and the d+ limit (4 against 2), and Martini-Mingone type 1. Calendar: 202411 → 202411W4 crosses on k ∈ [−3, −0.733] and [0.071, 3], so partly inside the 12-day quotes, and in both wing asymptotes; 202411W4 → 202412 on k ∈ [0.127, 6.09] and in the right asymptote. Open until the arbitrage-free comparison, eSSVI at stage 7, reports its cost in fit error.
 
 ### SVI-10: market-quote sensitivities through calibration
 
@@ -418,6 +428,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Source measured: CSI 300 index options, contract IO202504, 2025-01-20 to 2025-04-17, about 88 to 1 days to expiry, 5-minute calibrations | raw SVI per slice in total variance, with a > 0, tighter than usual | in-sample, equal-weighted across strikes, no strike filter stated | mean of per-timestamp slice RMSEs. The table has no unit, so 0.73 vol points assumes vol as a decimal (derived).
 - Target: our per-slice RMSE by this formula, unweighted, for each of the three slices, beside the fitted objective, which is weighted. A mean over a contract's life is not a slice at 5 days, and short-dated slices are harder, so a miss at 5 days is reported with that reason. It says nothing about error against bid-ask.
 - Class: `CONTEXT`. Preprint, on data from a database provided by one author's institution, and a different market. A quartic polynomial and a cubic spline beat SVI on the three near contracts of the same table, so 0.73 reflects this paper's calibration and is not a floor for raw SVI. Lead check: done, table read from the page image.
+- Fit result, not yet stamped (as `SVI-6`, same run): 0.96, 0.41 and 1.40 vol points for 202411, 202411W4 and 202412, at 5, 12 and 33 days, unweighted, beside the weighted objective Φ / (n − 5) of 0.207, 2.32 and 3.24. Above the 0.73 context on the 5-day and 33-day slices, below it on the 12-day slice. The target anticipates this for short slices: 0.73 is a mean over a contract's life, from about 88 days to 1, not one slice at 5 or 33 days, and short-dated slices are harder.
 
 ## 9. Reference values for oracles
 
