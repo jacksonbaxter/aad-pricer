@@ -5,6 +5,7 @@ aadp_library(aadp_data
     src/data/calibration_set.cpp
     src/data/cp950.cpp
     src/data/decimal.cpp
+    src/data/forwards.cpp
     src/data/taifex_csv.cpp
     src/data/taifex_futures.cpp
     src/data/taifex_options.cpp)
@@ -15,6 +16,7 @@ aadp_test(aadp_data_tests
     tests/data/calibration_set_test.cpp
     tests/data/cp950_test.cpp
     tests/data/decimal_test.cpp
+    tests/data/forwards_test.cpp
     tests/data/taifex_futures_test.cpp
     tests/data/taifex_options_test.cpp
   LINK aadp_data)

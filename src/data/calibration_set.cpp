@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <expected>
 #include <iterator>
 #include <span>
@@ -54,6 +55,49 @@ std::expected<std::vector<CalibrationSlice>, CalibrationError> select_calibratio
     slices.push_back(std::move(slice));
   }
   return slices;
+}
+
+double settlement_tick(double price) {
+  if (price < 10.0) return 0.1;
+  if (price < 50.0) return 0.5;
+  if (price < 500.0) return 1.0;
+  if (price < 1000.0) return 5.0;
+  return 10.0;
+}
+
+ButterflyCounts count_butterflies(std::span<const StrikePrice> points) {
+  ButterflyCounts counts;
+  for (const taifex::OptionRight right : {taifex::OptionRight::kCall, taifex::OptionRight::kPut}) {
+    std::vector<StrikePrice> side;
+    std::ranges::copy_if(points, std::back_inserter(side),
+                         [right](const StrikePrice& p) { return p.right == right; });
+    std::ranges::stable_sort(side, {}, &StrikePrice::strike);
+    for (std::size_t i = 2; i < side.size(); ++i) {
+      const StrikePrice& p1 = side[i - 2];
+      const StrikePrice& p2 = side[i - 1];
+      const StrikePrice& p3 = side[i];
+      // Operation order as in Phase 1's script, so a value at the guard rounds the same way.
+      const double w = (p3.strike - p2.strike) / (p3.strike - p1.strike);
+      const double excess = p2.price - ((w * p1.price) + ((1.0 - w) * p3.price));
+      const double band = (w * settlement_tick(p1.price) / 2.0) +
+                          (settlement_tick(p2.price) / 2.0) +
+                          ((1.0 - w) * settlement_tick(p3.price) / 2.0);
+      ++counts.triples;
+      counts.non_convex += excess > kButterflyGuard ? 1 : 0;
+      counts.beyond_half_tick += excess > band + kButterflyGuard ? 1 : 0;
+    }
+  }
+  return counts;
+}
+
+ButterflyCounts count_input_butterflies(const CalibrationSlice& slice) {
+  std::vector<StrikePrice> points;
+  points.reserve(slice.rows.size());
+  for (const taifex::OptionRow& row : slice.rows) {
+    points.push_back(
+        {.strike = row.strike, .price = row.settlement_price.value_or(0.0), .right = row.right});
+  }
+  return count_butterflies(points);
 }
 
 }  // namespace aadp

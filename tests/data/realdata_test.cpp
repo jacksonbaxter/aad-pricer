@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -17,6 +18,7 @@
 #include <vector>
 
 #include "data/calibration_set.hpp"
+#include "data/forwards.hpp"
 #include "data/taifex_csv.hpp"
 #include "data/taifex_futures.hpp"
 #include "data/taifex_options.hpp"
@@ -257,6 +259,227 @@ TEST(RealFutures, TxSettlementsAndThePublishedForwards) {
   constexpr double kPublishedGap = 0.92 + 0.005;
   EXPECT_LE(std::abs(22761.47 - settlements["202411"]), kPublishedGap);
   EXPECT_LE(std::abs(22792.92 - settlements["202412"]), kPublishedGap);
+}
+
+// Phase 1's chain profile, chain-verify/output/parity.csv in the research cache, at the precision
+// it printed (Python repr of a double).
+struct PhaseOneParity {
+  std::string_view expiry;
+  std::size_t n;
+  double forward;
+  double forward_se;
+  double discount;
+  double discount_se;
+  double rms;
+  double max_residual;
+};
+
+constexpr std::array<PhaseOneParity, 3> kSettleAll = {{
+    {.expiry = "202411",
+     .n = 117,
+     .forward = 22761.4707319168,
+     .forward_se = 0.2385562100758513,
+     .discount = 0.999873383900814,
+     .discount_se = 9.65029435860093e-05,
+     .rms = 2.551570345560012,
+     .max_residual = 7.954750803019124},
+    {.expiry = "202411W4",
+     .n = 67,
+     .forward = 22786.069861925156,
+     .forward_se = 0.4258963078848856,
+     .discount = 0.9994351924587589,
+     .discount_se = 0.0003345210195918744,
+     .rms = 3.4274123197842625,
+     .max_residual = 10.880047132755863},
+    {.expiry = "202412",
+     .n = 115,
+     .forward = 22792.920713091145,
+     .forward_se = 0.26451286843265237,
+     .discount = 0.998286007115074,
+     .discount_se = 7.341975464290616e-05,
+     .rms = 2.800740720117704,
+     .max_residual = 5.124969426131429},
+}};
+
+constexpr std::array<PhaseOneParity, 3> kSettleNear = {{
+    {.expiry = "202411",
+     .n = 42,
+     .forward = 22763.08117467441,
+     .forward_se = 0.4257936287831767,
+     .discount = 0.9988204620535467,
+     .discount_se = 0.0006782183497093036,
+     .rms = 2.651966079061519,
+     .max_residual = 5.947791137852619},
+    {.expiry = "202411W4",
+     .n = 40,
+     .forward = 22785.977554822875,
+     .forward_se = 0.5590381890843759,
+     .discount = 0.9997180468471952,
+     .discount_se = 0.0009355630585066344,
+     .rms = 3.4391602959028202,
+     .max_residual = 10.933905558656988},
+    {.expiry = "202412",
+     .n = 23,
+     .forward = 22793.130774171237,
+     .forward_se = 0.4784916856975249,
+     .discount = 1.0000494071146244,
+     .discount_se = 0.0007213503192965455,
+     .rms = 2.1927151334131088,
+     .max_residual = 4.179841897232109},
+}};
+
+// Two implementations of the same centred regression in double differ by rounding, about 1e-13
+// here; one strike more or less moves F by far more. NOTES.md, "Stage 6b".
+constexpr double kSameRegression = 1e-9;
+
+double round_to(double value, int places) {
+  const double scale = std::pow(10.0, places);
+  return std::round(value * scale) / scale;
+}
+
+void expect_matches(const ParityFit& fit, const PhaseOneParity& want) {
+  EXPECT_EQ(fit.points, want.n) << want.expiry;
+  EXPECT_NEAR(fit.forward / want.forward, 1.0, kSameRegression) << want.expiry;
+  EXPECT_NEAR(fit.forward_se / want.forward_se, 1.0, kSameRegression) << want.expiry;
+  EXPECT_NEAR(fit.discount / want.discount, 1.0, kSameRegression) << want.expiry;
+  EXPECT_NEAR(fit.discount_se / want.discount_se, 1.0, kSameRegression) << want.expiry;
+  EXPECT_NEAR(fit.rms_residual / want.rms, 1.0, kSameRegression) << want.expiry;
+  EXPECT_NEAR(fit.max_abs_residual / want.max_residual, 1.0, kSameRegression) << want.expiry;
+}
+
+TEST(RealParity, SettleAllReproducesPhaseOne) {
+  AADP_LOAD_OR_SKIP(bytes, kOptionsFile);
+  const auto file = read_options(*bytes);
+  ASSERT_TRUE(file.has_value());
+  for (const PhaseOneParity& want : kSettleAll) {
+    const auto fit = fit_parity(settlement_parity_points(file->rows, want.expiry));
+    ASSERT_TRUE(fit.has_value()) << want.expiry;
+    expect_matches(*fit, want);
+  }
+}
+
+TEST(RealParity, PublishedForwardsAndDiscountsToTheirPrintedPlaces) {
+  AADP_LOAD_OR_SKIP(bytes, kOptionsFile);
+  const auto file = read_options(*bytes);
+  ASSERT_TRUE(file.has_value());
+  // NOTES.md, "Recommended calibration set": F to two places and D to five.
+  const std::array<double, 3> forwards = {22761.47, 22786.07, 22792.92};
+  const std::array<double, 3> discounts = {0.99987, 0.99944, 0.99829};
+  for (std::size_t i = 0; i < kSettleAll.size(); ++i) {
+    const auto fit = fit_parity(settlement_parity_points(file->rows, kSettleAll[i].expiry));
+    ASSERT_TRUE(fit.has_value());
+    EXPECT_EQ(round_to(fit->forward, 2), forwards[i]) << kSettleAll[i].expiry;
+    EXPECT_EQ(round_to(fit->discount, 5), discounts[i]) << kSettleAll[i].expiry;
+  }
+}
+
+// The weights' sigma_leg is settle_all's RMS / sqrt(2), as the method says. NOTES.md's 1.87, 2.43
+// and 1.55 come from settle_near instead: strikes within 5% of the TX settlement (of settle_all's
+// F where there is no TX month), with the RMS rounded to two places before dividing by sqrt(2).
+// Both are asserted, so the difference is on record.
+TEST(RealParity, SigmaLegBySettleAllAndPhaseOnesSettleNearRoute) {
+  AADP_LOAD_OR_SKIP(options_bytes, kOptionsFile);
+  AADP_LOAD_OR_SKIP(futures_bytes, kFuturesFile);
+  const auto options = read_options(*options_bytes);
+  const auto futures = read_futures(*futures_bytes);
+  ASSERT_TRUE(options.has_value());
+  ASSERT_TRUE(futures.has_value());
+  const std::array<double, 3> settle_all_legs = {1.80, 2.42, 1.98};
+  const std::array<double, 3> published_legs = {1.87, 2.43, 1.55};
+  const std::array<double, 3> unrounded_near_legs = {1.88, 2.43, 1.55};
+  for (std::size_t i = 0; i < kSettleAll.size(); ++i) {
+    const std::string_view expiry = kSettleAll[i].expiry;
+    const auto points = settlement_parity_points(options->rows, expiry);
+    const auto all = fit_parity(points);
+    ASSERT_TRUE(all.has_value());
+    EXPECT_EQ(round_to(all->sigma_leg, 2), settle_all_legs[i]) << expiry;
+
+    const double reference = tx_settlement(futures->rows, expiry).value_or(all->forward);
+    std::vector<ParityPoint> near;
+    std::ranges::copy_if(points, std::back_inserter(near), [&](const ParityPoint& p) {
+      return std::abs((p.strike / reference) - 1.0) <= 0.05;
+    });
+    const auto near_fit = fit_parity(near);
+    ASSERT_TRUE(near_fit.has_value());
+    expect_matches(*near_fit, kSettleNear[i]);
+    EXPECT_EQ(round_to(round_to(near_fit->rms_residual, 2) / std::sqrt(2.0), 2), published_legs[i])
+        << expiry;
+    EXPECT_EQ(round_to(near_fit->sigma_leg, 2), unrounded_near_legs[i]) << expiry;
+  }
+}
+
+TEST(RealParity, ForwardsWithinPrintedRoundingOfTxWhereATxMonthExists) {
+  AADP_LOAD_OR_SKIP(options_bytes, kOptionsFile);
+  AADP_LOAD_OR_SKIP(futures_bytes, kFuturesFile);
+  const auto options = read_options(*options_bytes);
+  const auto futures = read_futures(*futures_bytes);
+  ASSERT_TRUE(options.has_value());
+  ASSERT_TRUE(futures.has_value());
+  int compared = 0;
+  for (const PhaseOneParity& want : kSettleAll) {
+    const auto fit = fit_parity(settlement_parity_points(options->rows, want.expiry));
+    ASSERT_TRUE(fit.has_value());
+    const auto tx = tx_settlement(futures->rows, want.expiry);
+    if (!tx) {
+      EXPECT_EQ(want.expiry, "202411W4");
+      continue;
+    }
+    ++compared;
+    // "Within 0.92 points", to two places: 202412's gap is 0.9207.
+    EXPECT_LE(round_to(std::abs(fit->forward - *tx), 2), 0.92) << want.expiry;
+  }
+  EXPECT_EQ(compared, 2);
+}
+
+std::vector<ExpiryForward> regressed_forwards(const OptionsFile& file) {
+  std::vector<ExpiryForward> forwards;
+  for (const PhaseOneParity& want : kSettleAll) {
+    const auto fit = fit_parity(settlement_parity_points(file.rows, want.expiry));
+    EXPECT_TRUE(fit.has_value()) << want.expiry;
+    forwards.push_back({.expiry = std::string(want.expiry), .forward = fit ? fit->forward : 0.0});
+  }
+  return forwards;
+}
+
+TEST(RealCalibrationSet, RegressedForwardsGiveThePublishedCounts) {
+  AADP_LOAD_OR_SKIP(bytes, kOptionsFile);
+  const auto file = read_options(*bytes);
+  ASSERT_TRUE(file.has_value());
+  const auto slices = select_calibration_set(file->rows, regressed_forwards(*file));
+  ASSERT_TRUE(slices.has_value());
+  ASSERT_EQ(slices->size(), 3U);
+  const std::array<std::size_t, 3> sizes = {65, 51, 64};
+  for (std::size_t i = 0; i < sizes.size(); ++i) {
+    EXPECT_EQ((*slices)[i].rows.size(), sizes[i]) << (*slices)[i].expiry;
+  }
+}
+
+// profile_recommended.txt: fly_triples 61, 47, 60; fly0 15, 19, 17; flyT 3, 13, 7. BENCHMARKS.md
+// section 11 has the totals, 168, 51 and 23.
+TEST(RealCalibrationSet, InputButterflyCountsMatchPhaseOne) {
+  AADP_LOAD_OR_SKIP(bytes, kOptionsFile);
+  const auto file = read_options(*bytes);
+  ASSERT_TRUE(file.has_value());
+  const auto slices = select_calibration_set(file->rows, regressed_forwards(*file));
+  ASSERT_TRUE(slices.has_value());
+  ASSERT_EQ(slices->size(), 3U);
+  const std::array<ButterflyCounts, 3> want = {
+      {{.triples = 61, .non_convex = 15, .beyond_half_tick = 3},
+       {.triples = 47, .non_convex = 19, .beyond_half_tick = 13},
+       {.triples = 60, .non_convex = 17, .beyond_half_tick = 7}}};
+  ButterflyCounts total;
+  for (std::size_t i = 0; i < want.size(); ++i) {
+    const ButterflyCounts got = count_input_butterflies((*slices)[i]);
+    EXPECT_EQ(got.triples, want[i].triples) << (*slices)[i].expiry;
+    EXPECT_EQ(got.non_convex, want[i].non_convex) << (*slices)[i].expiry;
+    EXPECT_EQ(got.beyond_half_tick, want[i].beyond_half_tick) << (*slices)[i].expiry;
+    total.triples += got.triples;
+    total.non_convex += got.non_convex;
+    total.beyond_half_tick += got.beyond_half_tick;
+  }
+  EXPECT_EQ(total.triples, 168U);
+  EXPECT_EQ(total.non_convex, 51U);
+  EXPECT_EQ(total.beyond_half_tick, 23U);
 }
 
 TEST(RealFutures, NegativePricesAppearOnlyOnSpreads) {
