@@ -1,0 +1,192 @@
+# avx512-8: aadp_bench_aad, AADP_SIMD_TARGET=avx512, 8 double lanes, the widest the build has
+# clang version 23.1.4; flags: -DHWY_STATIC_DEFINE -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -march=x86-64-v4 -maes -mpclmul -O3 -DNDEBUG
+# regenerate: python3 -I scripts/extract_asm.py --build <build dir> --label avx512-8 --out docs/asm/avx512-8.txt
+
+=== lane-sweep: aadp::simd::LaneTape<hwy::N_AVX3::Simd<double, 8ul, 0>>::SweepBack(...)
+loop: +0x110 to +0x1bb, 38 instructions of the function's 209
+  conditional branch: 4
+  packed double arithmetic (512-bit): 2
+  scalar double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+the whole loop:
+  +0x0110  mov        rcx, qword ptr [r14 + 0x10]
+  +0x0114  kmovb      k1, byte ptr [rcx + r13]
+  +0x011a  shl        rax, 0x6
+  +0x011e  vaddpd     zmm0, zmm0, zmmword ptr [r10 + rax]
+  +0x0125  vmovupd    zmmword ptr [r10 + rax] {k1}, zmm0
+  +0x012c  inc        r13
+  +0x012f  add        rbx, 0x40
+  +0x0133  dec        rbp
+  +0x0136  je         +0x70
+  +0x013c  mov        rax, qword ptr [r14]
+  +0x013f  mov        rcx, qword ptr [r14 + 0x8]
+  +0x0143  vmulpd     zmm0, zmm2, zmmword ptr [rax + rbx]
+  +0x014a  mov        r12d, dword ptr [rcx + 4*r13]
+  +0x014e  mov        eax, r12d
+  +0x0151  sub        eax, dword ptr [rdi]
+  +0x0153  jae        +0x110
+  +0x0155  mov        rax, qword ptr [r14 + 0x10]
+  +0x0159  movzx      r8d, byte ptr [rax + r13]
+  +0x015e  mov        rax, qword ptr [rdi + 0xe8]
+  +0x0165  mov        rcx, qword ptr [rdi + 0xa0]
+  +0x016c  mov        r15, qword ptr [rdi + 0xa8]
+  +0x0173  sub        r15, rcx
+  +0x0176  mov        rsi, r15
+  +0x0179  sar        rsi, 0x2
+  +0x017d  cmp        rax, rsi
+  +0x0180  je         +0x1c6
+  +0x0182  mov        dword ptr [rcx + 4*rax], r12d
+  +0x0186  mov        rcx, qword ptr [rdi + 0xb8]
+  +0x018d  mov        byte ptr [rcx + rax], r8b
+  +0x0191  mov        rax, qword ptr [rdi + 0xd0]
+  +0x0198  mov        rcx, qword ptr [rdi + 0xe8]
+  +0x019f  shl        rcx, 0x6
+  +0x01a3  vmovupd    zmmword ptr [rax + rcx], zmm0
+  +0x01aa  inc        qword ptr [rdi + 0xe8]
+  +0x01b1  inc        r13
+  +0x01b4  add        rbx, 0x40
+  +0x01b8  dec        rbp
+  +0x01bb  jne        +0x13c
+
+=== scalar-sweep: aadp::ad::Tape::SweepBack(...)
+loop: +0x160 to +0x1bd, 19 instructions of the function's 129
+  conditional branch: 1
+  scalar double arithmetic: 8
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+the whole loop:
+  +0x0160  vmulsd     xmm1, xmm0, qword ptr [r10 + 8*r9 - 0x18]
+  +0x0167  mov        edi, dword ptr [rsi + 4*r9 - 0xc]
+  +0x016c  vaddsd     xmm1, xmm1, qword ptr [rdx + 8*rdi]
+  +0x0171  vmovsd     qword ptr [rdx + 8*rdi], xmm1
+  +0x0176  vmulsd     xmm1, xmm0, qword ptr [r10 + 8*r9 - 0x10]
+  +0x017d  mov        edi, dword ptr [rsi + 4*r9 - 0x8]
+  +0x0182  vaddsd     xmm1, xmm1, qword ptr [rdx + 8*rdi]
+  +0x0187  vmovsd     qword ptr [rdx + 8*rdi], xmm1
+  +0x018c  vmulsd     xmm1, xmm0, qword ptr [r10 + 8*r9 - 0x8]
+  +0x0193  mov        edi, dword ptr [rsi + 4*r9 - 0x4]
+  +0x0198  vaddsd     xmm1, xmm1, qword ptr [rdx + 8*rdi]
+  +0x019d  vmovsd     qword ptr [rdx + 8*rdi], xmm1
+  +0x01a2  vmulsd     xmm1, xmm0, qword ptr [r10 + 8*r9]
+  +0x01a8  mov        edi, dword ptr [rsi + 4*r9]
+  +0x01ac  vaddsd     xmm1, xmm1, qword ptr [rdx + 8*rdi]
+  +0x01b1  vmovsd     qword ptr [rdx + 8*rdi], xmm1
+  +0x01b6  add        r9, 0x4
+  +0x01ba  cmp        rbp, r9
+  +0x01bd  jne        +0x160
+
+=== lane-primal: aadp::pricer::PathValue<aadp::simd::LaneReal<hwy::N_AVX3::Simd<double, 8ul, 0>>> aadp::simd::lane_detail::OutSmoothed<aadp::simd::LaneReal<hwy::N_AVX3::Simd<double, 8ul, 0>>, aadp::simd::LaneGbm<aadp::simd::LaneReal<hwy::N_AVX3::Simd<double, 8ul, 0>>>>(...)
+loop: +0x120 to +0x882, 258 instructions of the function's 376
+  conditional branch: 2
+  packed double arithmetic (512-bit): 123
+  packed select, compare or logic (512-bit): 43
+  scalar double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+first 40 instructions of the loop:
+  +0x0120  vmovupd    zmm16, zmmword ptr [rsp - 0x40]
+  +0x0128  vsubpd     zmm14, zmm16, zmm14
+  +0x012e  vdivpd     zmm14, zmm14, zmm4
+  +0x0134  vmaxpd     zmm14, zmm12, zmm14
+  +0x013a  vcmpltpd   k2, zmm13, zmm14
+  +0x0141  vmulpd     zmm14, zmm6, zmm14
+  +0x0147  vmovapd    zmm14 {k2}, zmm6
+  +0x014d  add        r9, 0x40
+  +0x0151  vmovapd    zmm6, zmm14
+  +0x0157  cmp        rdi, r9
+  +0x015a  je         +0x8a6
+  +0x0160  vmovapd    zmm14, zmmword ptr [rcx + r9]
+  +0x0167  vaddpd     zmm17, zmm14, qword ptr [rip + 0x2115f]{1to8} # 0x127620
+  +0x0171  vcmpltpd   k1, zmm17, zmm12
+  +0x0178  vandpd     zmm16, zmm17, zmm8
+  +0x017e  vcmpnlepd  k2, zmm16, qword ptr [rip + 0x2114f]{1to8} # 0x127628
+  +0x0189  vsubpd     zmm16, zmm13, zmm14
+  +0x018f  vmovapd    zmm16 {k1}, zmm14
+  +0x0195  vcmpltpd   k3 {k2}, zmm12, zmm16
+  +0x019c  vblendmpd  zmm19 {k3}, zmm10, zmm16
+  +0x01a2  vpcmpnltq  k3, zmm19, zmm12
+  +0x01a9  vandpd     zmm20, zmm19, zmm8
+  +0x01af  vpsubq     zmm20, zmm20, qword ptr [rip + 0x21087]{1to8} # 0x127590
+  +0x01b9  vpcmpltuq  k0 {k3}, zmm20, qword ptr [rip + 0x213ac]{1to8} # 0x1278c0
+  +0x01c4  vpternlogd zmm18, zmm18, zmm18, 0xff # zmm18 = -1
+  +0x01cb  vpaddq     zmm20, zmm19, zmm18
+  +0x01d1  vpcmpltuq  k3, zmm20, zmm15
+  +0x01d8  korb       k3, k3, k0
+  +0x01dc  vblendmpd  zmm20 {k3}, zmm13, zmm19
+  +0x01e2  vcmpltpd   k3, zmm20, qword ptr [rip + 0x21053]{1to8} # 0x127590
+  +0x01ed  vmulpd     zmm20 {k3}, zmm20, qword ptr [rip + 0x21051]{1to8} # 0x127598
+  +0x01f7  vmovdqa64  zmm18, zmm22
+  +0x01fd  vpternlogq zmm18, zmm20, zmm15, 0xf8 # zmm18 = zmm18 | (zmm20 & zmm15)
+  +0x0204  vcmpgepd   k4, zmm18, qword ptr [rip + 0x21041]{1to8} # 0x1275a0
+  +0x020f  vmulpd     zmm18 {k4}, zmm18, zmm10
+  +0x0215  vpsrlq     zmm20, zmm20, 0x34
+  +0x021c  vpbroadcastq zmm23, qword ptr [rip + 0x21352] # 0x1278c8
+  +0x0226  vpblendmq  zmm23 {k3}, zmm23, qword ptr [rip + 0x21350]{1to8} # 0x1278d0
+  +0x0230  vpaddq     zmm20, zmm20, zmm23
+  +0x0236  vpmovm2q   zmm23, k4
+
+=== scalar-primal: aadp::pricer::PathValue<double> aadp::pricer::kernel_detail::OutSmoothed<double, aadp::pricer::GbmModel<double>>(...)
+loop: +0x90 to +0x25c, 90 instructions of the function's 203
+  call: 1
+  conditional branch: 1
+  packed select, compare or logic (128-bit): 1
+  scalar double arithmetic: 51
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+first 40 instructions of the loop:
+  +0x0090  vmovsd     qword ptr [rsp + 0x40], xmm1
+  +0x0096  cmp        byte ptr [rsp + 0xf], 0x0
+  +0x009b  sete       bl
+  +0x009e  vmovsd     xmm0, qword ptr [r14 + 8*r12]
+  +0x00a4  vaddsd     xmm1, xmm7, qword ptr [rsi + 0x18]
+  +0x00a9  vmovsd     qword ptr [rsp + 0x38], xmm1
+  +0x00af  vmovsd     xmm1, qword ptr [rsi + 0x20]
+  +0x00b4  vmovsd     qword ptr [rsp + 0x30], xmm1
+  +0x00ba  call       aadp::math::inverse_normal(...)
+  +0x00bf  vmovsd     xmm1, qword ptr [rsp + 0x40]
+  +0x00c5  vmulsd     xmm0, xmm0, qword ptr [rsp + 0x30]
+  +0x00cb  vaddsd     xmm7, xmm0, qword ptr [rsp + 0x38]
+  +0x00d1  vucomisd   xmm7, xmm7
+  +0x00d5  vmovsd     xmm0, qword ptr [rip + 0xf4983] # 0x1274b0
+  +0x00dd  vmaxsd     xmm0, xmm0, xmm7
+  +0x00e1  setp       al
+  +0x00e4  vmovsd     xmm2, qword ptr [rip + 0xf497c] # 0x1274b8
+  +0x00ec  vminsd     xmm0, xmm2, xmm0
+  +0x00f0  kmovd      k1, eax
+  +0x00f4  vxorpd     xmm9, xmm9, xmm9
+  +0x00f9  vmovsd     xmm0 {k1}, xmm0, xmm9
+  +0x00ff  vmulsd     xmm2, xmm0, qword ptr [rip + 0xf4969] # 0x1274c0
+  +0x0107  vaddsd     xmm2, xmm2, qword ptr [rip + 0xf4969] # 0x1274c8
+  +0x010f  vaddsd     xmm3, xmm2, qword ptr [rip + 0xf4969] # 0x1274d0
+  +0x0117  vmovq      rax, xmm2
+  +0x011c  lea        rcx, [rax + rbp]
+  +0x0120  vmulsd     xmm2, xmm3, qword ptr [rip + 0xf4968] # 0x1274e0
+  +0x0128  vaddsd     xmm0, xmm0, xmm2
+  +0x012c  vmulsd     xmm2, xmm3, qword ptr [rip + 0xf4964] # 0x1274e8
+  +0x0134  vsubsd     xmm3, xmm0, xmm2
+  +0x0138  vsubsd     xmm0, xmm0, xmm3
+  +0x013c  vmovsd     xmm8, qword ptr [rip + 0xf495c] # 0x1274f0
+  +0x0144  vaddsd     xmm4, xmm8, xmm3
+  +0x0148  vmulsd     xmm5, xmm3, qword ptr [rip + 0xf4958] # 0x1274f8
+  +0x0150  vaddsd     xmm5, xmm5, qword ptr [rip + 0xf4958] # 0x127500
+  +0x0158  vmulsd     xmm5, xmm3, xmm5
+  +0x015c  vaddsd     xmm5, xmm5, qword ptr [rip + 0xf4954] # 0x127508
+  +0x0164  vmulsd     xmm6, xmm3, xmm3
+  +0x0168  vmulsd     xmm5, xmm3, xmm5
+  +0x016c  vaddsd     xmm5, xmm5, qword ptr [rip + 0xf494c] # 0x127510
+
+=== scalar-inverse-normal: aadp::math::inverse_normal(...)
+function: +0x0 to +0x3bc, 178 instructions of the function's 178
+  conditional branch: 1
+  packed select, compare or logic (128-bit): 4
+  scalar double arithmetic: 73
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0

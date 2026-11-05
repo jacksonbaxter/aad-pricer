@@ -1,0 +1,220 @@
+# neon-2: aadp_bench_aad, AADP_SIMD_TARGET=baseline, 2 double lanes, the widest the build has
+# clang version 23.1.4; flags: -DHWY_STATIC_DEFINE -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+# regenerate: python3 -I scripts/extract_asm.py --build <build dir> --label neon-2 --out docs/asm/neon-2.txt
+
+=== lane-sweep: aadp::simd::LaneTape<hwy::N_NEON::Simd<double, 2ul, 0>>::SweepBack(...)
+loop: +0x54 to +0x150, 64 instructions of the function's 175
+  conditional branch: 7
+  lane insert, extract or shuffle: 1
+  packed double arithmetic (128-bit): 2
+  packed select, compare or logic (128-bit): 3
+  scalar double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+the whole loop:
+  +0x0054  ldr        x8, [x2]
+  +0x0058  cmp        x26, x8
+  +0x005c  b.ls       +0x298
+  +0x0060  sub        x26, x26, #0x1
+  +0x0064  lsr        x9, x26, #13
+  +0x0068  ldr        x10, [x0, #0x8]
+  +0x006c  and        x11, x26, #0x1fff
+  +0x0070  ldr        x9, [x10, x9, lsl #3]
+  +0x0074  ldrb       w25, [x9, x11]
+  +0x0078  cbz        x25, +0x58
+  +0x007c  add        x8, x27, x26, lsl #4
+  +0x0080  ldr        q4, [x8]
+  +0x0084  stp        xzr, xzr, [x8]
+  +0x0088  cbnz       x22, +0xac
+  +0x008c  sub        x28, x28, #0x1
+  +0x0090  ldr        x8, [x0, #0x78]
+  +0x0094  ldr        x9, [x0, #0x20]
+  +0x0098  add        x21, x9, x28, lsl #5
+  +0x009c  add        x9, x21, #0x18
+  +0x00a0  cmp        x28, x8
+  +0x00a4  csel       x8, x13, x9, eq
+  +0x00a8  ldr        x22, [x8]
+  +0x00ac  sub        x22, x22, x25
+  +0x00b0  mov        x23, x22
+  +0x00b4  b          +0xec
+  +0x00b8  ubfiz      x8, x8, #4, #32
+  +0x00bc  ldr        q0, [x27, x8]
+  +0x00c0  ldr        x9, [x21, #0x10]
+  +0x00c4  ldr        b1, [x9, x23]
+  +0x00c8  dup.2d     v1, v1[0]
+  +0x00cc  and.16b    v1, v1, v3
+  +0x00d0  cmeq.2d    v1, v1, #0
+  +0x00d4  fadd.2d    v2, v2, v0
+  +0x00d8  bif.16b    v0, v2, v1
+  +0x00dc  str        q0, [x27, x8]
+  +0x00e0  add        x23, x23, #0x1
+  +0x00e4  subs       x25, x25, #0x1
+  +0x00e8  b.eq       +0x54
+  +0x00ec  ldp        x8, x9, [x21]
+  +0x00f0  ldr        q0, [x8, x23, lsl #4]
+  +0x00f4  fmul.2d    v2, v4, v0
+  +0x00f8  ldr        w20, [x9, x23, lsl #2]
+  +0x00fc  ldr        w8, [x0]
+  +0x0100  subs       w8, w20, w8
+  +0x0104  b.hs       +0xb8
+  +0x0108  ldr        x8, [x21, #0x10]
+  +0x010c  ldrb       w19, [x8, x23]
+  +0x0110  ldr        x8, [x0, #0xe8]
+  +0x0114  ldp        x9, x10, [x0, #0xa0]
+  +0x0118  sub        x10, x10, x9
+  +0x011c  cmp        x8, x10, asr #2
+  +0x0120  b.eq       +0x158
+  +0x0124  str        w20, [x9, x8, lsl #2]
+  +0x0128  ldr        x9, [x0, #0xb8]
+  +0x012c  strb       w19, [x9, x8]
+  +0x0130  ldr        x8, [x0, #0xd0]
+  +0x0134  ldr        x9, [x0, #0xe8]
+  +0x0138  str        q2, [x8, x9, lsl #4]
+  +0x013c  ldr        x8, [x0, #0xe8]
+  +0x0140  add        x8, x8, #0x1
+  +0x0144  str        x8, [x0, #0xe8]
+  +0x0148  add        x23, x23, #0x1
+  +0x014c  subs       x25, x25, #0x1
+  +0x0150  b.ne       +0xec
+
+=== scalar-sweep: aadp::ad::Tape::SweepBack(...)
+loop: +0x128 to +0x178, 21 instructions of the function's 115
+  conditional branch: 1
+  scalar double arithmetic: 6
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+the whole loop:
+  +0x0128  ldur       d1, [x20, #-0x8]
+  +0x012c  fmul       d1, d0, d1
+  +0x0130  ldur       w22, [x21, #-0x4]
+  +0x0134  ldr        d2, [x10, x22, lsl #3]
+  +0x0138  fadd       d1, d1, d2
+  +0x013c  str        d1, [x10, x22, lsl #3]
+  +0x0140  ldr        d1, [x20]
+  +0x0144  fmul       d1, d0, d1
+  +0x0148  ldp        w22, w23, [x21], #0xc
+  +0x014c  ldr        d2, [x10, x22, lsl #3]
+  +0x0150  fadd       d1, d1, d2
+  +0x0154  str        d1, [x10, x22, lsl #3]
+  +0x0158  ldr        d1, [x20, #0x8]
+  +0x015c  fmul       d1, d0, d1
+  +0x0160  ldr        d2, [x10, x23, lsl #3]
+  +0x0164  fadd       d1, d1, d2
+  +0x0168  str        d1, [x10, x23, lsl #3]
+  +0x016c  sub        x7, x7, #0x3
+  +0x0170  add        x20, x20, #0x18
+  +0x0174  cmp        x19, x7
+  +0x0178  b.ne       +0x128
+
+=== lane-primal: aadp::pricer::PathValue<aadp::simd::LaneReal<hwy::N_NEON::Simd<double, 2ul, 0>>> aadp::simd::lane_detail::OutSmoothed<aadp::simd::LaneReal<hwy::N_NEON::Simd<double, 2ul, 0>>, aadp::simd::LaneGbm<aadp::simd::LaneReal<hwy::N_NEON::Simd<double, 2ul, 0>>>>(...)
+loop: +0x314 to +0xae0, 500 instructions of the function's 825
+  conditional branch: 1
+  packed double arithmetic (128-bit): 121
+  packed select, compare or logic (128-bit): 82
+  scalar double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+first 40 instructions of the loop:
+  +0x0314  stp        q7, q20, [sp, #0x1a0]
+  +0x0318  ldr        q14, [x2], #0x10
+  +0x031c  fmov.2d    v0, #-0.50000000
+  +0x0320  fadd.2d    v4, v14, v0
+  +0x0324  fcmlt.2d   v0, v4, #0.0
+  +0x0328  fabs.2d    v3, v4
+  +0x032c  ldr        q1, [sp, #0x130]
+  +0x0330  fcmge.2d   v11, v1, v3
+  +0x0334  fsub.2d    v3, v15, v14
+  +0x0338  bit.16b    v3, v14, v0
+  +0x033c  fcmgt.2d   v5, v3, #0.0
+  +0x0340  bic.16b    v5, v5, v11
+  +0x0344  fmov.2d    v1, #0.50000000
+  +0x0348  mov.16b    v17, v5
+  +0x034c  bsl.16b    v17, v3, v1
+  +0x0350  fmov.2d    v18, #0.50000000
+  +0x0354  ldr        q16, [sp, #0x20]
+  +0x0358  and.16b    v5, v17, v16
+  +0x035c  ldp        q2, q1, [sp, #0x110]
+  +0x0360  sub.2d     v5, v5, v1
+  +0x0364  cmhi.2d    v5, v2, v5
+  +0x0368  cmge.2d    v6, v17, #0
+  +0x036c  ldr        q2, [sp, #0x100]
+  +0x0370  sub.2d     v7, v17, v2
+  +0x0374  ldr        q2, [sp, #0xf0]
+  +0x0378  cmhi.2d    v7, v2, v7
+  +0x037c  and.16b    v5, v5, v6
+  +0x0380  orr.16b    v5, v7, v5
+  +0x0384  bsl.16b    v5, v17, v15
+  +0x0388  fcmgt.2d   v6, v1, v5
+  +0x038c  ldp        q1, q2, [sp, #0xd0]
+  +0x0390  fmul.2d    v7, v5, v2
+  +0x0394  bit.16b    v5, v7, v6
+  +0x0398  and.16b    v7, v5, v1
+  +0x039c  orr.16b    v7, v7, v15
+  +0x03a0  ldp        q1, q2, [sp, #0xb0]
+  +0x03a4  fcmge.2d   v19, v7, v2
+  +0x03a8  fmul.2d    v20, v7, v18
+  +0x03ac  bit.16b    v7, v20, v19
+  +0x03b0  ldr        q2, [sp, #0xa0]
+
+=== scalar-primal: aadp::pricer::PathValue<double> aadp::pricer::kernel_detail::OutSmoothed<double, aadp::pricer::GbmModel<double>>(...)
+loop: +0x1a4 to +0x318, 94 instructions of the function's 360
+  call: 1
+  conditional branch: 1
+  scalar double arithmetic: 47
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+first 40 instructions of the loop:
+  +0x01a4  ldr        d0, [x21, x22, lsl #3]
+  +0x01a8  ldp        d2, d15, [x20, #0x18]
+  +0x01ac  fadd       d14, d1, d2
+  +0x01b0  bl         aadp::math::inverse_normal(...)
+  +0x01b4  fmul       d0, d15, d0
+  +0x01b8  fadd       d1, d14, d0
+  +0x01bc  nop
+  +0x01c0  fcmp       d1, d10
+  +0x01c4  fcsel      d0, d10, d1, mi
+  +0x01c8  fcmp       d0, d11
+  +0x01cc  fcsel      d0, d11, d0, gt
+  +0x01d0  fcmp       d1, d1
+  +0x01d4  movi.2d    v7, #0000000000000000
+  +0x01d8  fcsel      d0, d7, d0, vs
+  +0x01dc  ldp        d3, d2, [sp, #0x80]
+  +0x01e0  fmul       d2, d0, d2
+  +0x01e4  fadd       d2, d2, d3
+  +0x01e8  ldr        d3, [sp, #0x78]
+  +0x01ec  fadd       d3, d2, d3
+  +0x01f0  fmov       x8, d2
+  +0x01f4  add        x9, x8, x24
+  +0x01f8  add        x9, x9, x9, lsr #63
+  +0x01fc  asr        x9, x9, #1
+  +0x0200  sub        w8, w8, w9
+  +0x0204  ldr        d2, [sp, #0x68]
+  +0x0208  fmul       d2, d3, d2
+  +0x020c  fadd       d0, d0, d2
+  +0x0210  ldr        d2, [sp, #0x58]
+  +0x0214  fmul       d2, d3, d2
+  +0x0218  fsub       d3, d0, d2
+  +0x021c  fsub       d0, d0, d3
+  +0x0220  ldp        d5, d4, [sp, #0x40]
+  +0x0224  fmul       d4, d3, d4
+  +0x0228  fadd       d4, d4, d5
+  +0x022c  fadd       d5, d3, d12
+  +0x0230  fmul       d4, d3, d4
+  +0x0234  ldr        d6, [sp, #0x38]
+  +0x0238  fadd       d4, d4, d6
+  +0x023c  fmul       d4, d3, d4
+  +0x0240  ldp        d16, d6, [sp, #0x28]
+
+=== scalar-inverse-normal: aadp::math::inverse_normal(...)
+function: +0x0 to +0x3bc, 240 instructions of the function's 240
+  scalar double arithmetic: 73
+  packed double arithmetic: 0
+  gather: 0
+  fma: 0
+  call: 0
+  conditional branch: 0
