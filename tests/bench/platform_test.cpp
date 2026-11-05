@@ -115,11 +115,12 @@ TEST(FpDatapath, ReadsTheFamilyOnX86AndNothingElsewhere) {
   const auto cpu = read_x86_model();
 #if defined(__x86_64__) || defined(__i386__)
   ASSERT_TRUE(cpu.has_value());
-  EXPECT_GE(cpu->family, 6U);
+  const X86Model model = cpu.value_or(X86Model{});
+  EXPECT_GE(model.family, 6U);
   // The Linux host is the Zen 1 this note exists for.
-  if (read_cpu_info().cpu_model.find("V1605B") != std::string::npos) {
-    EXPECT_EQ(cpu->family, 0x17U);
-    EXPECT_EQ(cpu->model, 0x11U);
+  if (read_cpu_info().cpu_model.contains("V1605B")) {
+    EXPECT_EQ(model.family, 0x17U);
+    EXPECT_EQ(model.model, 0x11U);
   }
 #else
   EXPECT_FALSE(cpu.has_value());

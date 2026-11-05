@@ -231,7 +231,7 @@ jobs:
             for target in aadp_simd_math_agreement_test aadp_simd_philox_lanes_test \
               aadp_simd_path_agreement_test aadp_simd_price_agreement_test aadp_bench_simd \
               aadp_simd_lane_tape_test aadp_simd_lane_gradient_test \
-              aadp_simd_lane_tape_memory_test; do
+              aadp_simd_lane_tape_memory_test aadp_simd_fallback_cost; do
               targets+=(--target "$target")
             done
           fi
