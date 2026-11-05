@@ -103,8 +103,8 @@
     },
     {
       "name": "release-avx512",
-      "displayName": "Release, AVX-512 (x86-64, build-only)",
-      "description": "No host here can run AVX-512, so this preset has no test preset.",
+      "displayName": "Release, AVX-512 (x86-64; build-only on the development hosts)",
+      "description": "Neither development host can run AVX-512, so this preset has no test preset. CI's simd-lanes-8-avx512 runs its simd tests natively on x86-64-v4 runners, otherwise under Intel SDE -skx.",
       "inherits": "optimised",
       "cacheVariables": { "AADP_SIMD_TARGET": "avx512" }
     }

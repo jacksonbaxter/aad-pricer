@@ -4,7 +4,8 @@
 #
 # The agreement tests carry the label simd, which the CI lane matrix (simd-lanes in
 # .github/workflows/ci.yml) runs at every width: HWY_SCALAR 1, SSE2 2, NEON 2 and AVX2 4, and
-# AVX-512 8 where the runner has it, build-only and saying so where it does not.
+# AVX-512 8, natively where the runner has x86-64-v4 and otherwise under Intel SDE as a Skylake-X
+# (-skx). Neither development host can run AVX-512, so there it is build-only.
 if(NOT TARGET aadp_pricer)
   return()
 endif()
