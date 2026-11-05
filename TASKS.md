@@ -44,9 +44,9 @@ All of this is written for both architectures from the start, so a Linux run nee
 - [x] `platform/cacheline`: project constant, 128 on Apple arm64, 64 on x86-64. Do not use `std::hardware_destructive_interference_size` in layouts: Apple clang reports 256 here
 - [x] `platform/fp_state`: record FPCR or MXCSR in the results header. Assert no FTZ or DAZ
 - [x] Guard float-to-int conversions: out-of-range behaviour differs between arm64 and x86-64
-- [x] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only: no host here can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build (a486c9a, 065e5b6). The lanes use no fused multiply-add at all, so every width gives the scalar pricer's bits. Neither host runs AVX-512, but GitHub's runner did, in run 41898528776
-- [x] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON: `linux-avx2`, `simd-lanes-8-avx512` (named `linux-avx512-build` until 065e5b6) and the macOS jobs, now on `xcode-27` (54933ed). The AVX-512 job runs the SIMD tests only where the runner has every x86-64-v4 feature, and otherwise says it was build-only. The workflow first ran on GitHub in Phase 3: see the Phase 3 CI items and `NOTES.md`
-- [x] Lane-width test matrix in CI, one job for each lane width that can run: `simd-lanes-1-scalar`, `-2-sse2`, `-2-neon`, `-4-avx2` and `-8-avx512` (065e5b6). Each passed its 14 SIMD tests in run 41898528776 at 48d30a7
+- [x] SIMD layer on Google Highway with static dispatch per build (`HWY_COMPILE_ONLY_STATIC`). Targets: NEON (2), AVX2 with FMA (4), AVX-512 (8, build-only on both hosts here: neither can run it), each with a one-lane `FixedTag<double, 1>` instantiation, so scalar and SIMD share one FMA behaviour. `HWY_SCALAR` as a separate no-SIMD build (a486c9a, 065e5b6). The lanes use no fused multiply-add at all, so every width gives the scalar pricer's bits. Neither host runs AVX-512, but GitHub's runner did, in run 41898528776, and CI runs it under Intel SDE where the runner lacks it (36d701d)
+- [x] CI compiles x86-64 AVX2 and AVX-512 and arm64 NEON: `linux-avx2`, `simd-lanes-8-avx512` (named `linux-avx512-build` until 065e5b6) and the macOS jobs, now on `xcode-27` (54933ed). The AVX-512 job runs the SIMD tests natively where the runner has every x86-64-v4 feature, and otherwise, since 36d701d, under Intel SDE `-skx`; before that it said it was build-only. The workflow first ran on GitHub in Phase 3: see the Phase 3 CI items and `NOTES.md`
+- [x] Lane-width test matrix in CI, one job for each lane width that can run: `simd-lanes-1-scalar`, `-2-sse2`, `-2-neon`, `-4-avx2` and `-8-avx512` (065e5b6). Each passed its 14 SIMD tests in run 41898528776 at 48d30a7. Since 36d701d the 8-lane job runs its tests on every run, natively on x86-64-v4 and otherwise under Intel SDE 10.13.1 `-skx`, and a failed SDE download fails it. In run 41957624701 at a6be05a, on an AMD EPYC 7763 without AVX-512, it ran all 24 of the simd label under SDE, with Highway at AVX3: 24 passed, 0 skipped, 705 s
 - [x] Any code that depends on lane count takes it from the type, never a constant
 - [x] Hosts: `results/mac-m4max/` and `results/linux-zen1/`. No file holds numbers from both
 - [x] Every reported benchmark runs through `.orchestrator/measure.sh` on the Mac, or `~/quant-projects/bin/measure.sh` on `debian`. Its load line goes in the results header. A results writer refuses to mark a run as reportable without it
@@ -117,7 +117,7 @@ All of this is written for both architectures from the start, so a Linux run nee
 
 ## Phase 3: Implementation
 
-Stages 1a to 3b are done, then stage 4, second-order Greeks, and stage 5a, the SIMD primal on Highway lanes, with two rounds of CI fixes. The vector tape, stage 5b, remains. Findings are in `NOTES.md`, "Phase 3 findings so far", and measured numbers under each target in `BENCHMARKS.md`.
+Stages 1a to 3b are done, then stage 4, second-order Greeks, stage 5a, the SIMD primal on Highway lanes, stage 5b, the vector tape, and stage 5c, the lanes in the AAD bench with their assembly, with three rounds of CI fixes and Intel SDE for the 8-lane CI job. SVI, stage 6, is next. Findings are in `NOTES.md`, "Phase 3 findings so far", and measured numbers under each target in `BENCHMARKS.md`. Every stage 5b and 5c timing is iteration only.
 
 ### Tape
 
@@ -131,10 +131,11 @@ Stages 1a to 3b are done, then stage 4, second-order Greeks, and stage 5a, the S
 - [x] Surface and other set-up stay outside the per-path tape, swept once from a mark to the start. Per-path adjoint of shared set-up breaks the constant multiple (19d7789). Swept once per block of 1024 paths, counted in 653ea07
 - [x] Hand-coded pathwise adjoint for the GBM Asian, as the `AAD-5` baseline (16a5211)
 - [ ] One-node-per-operation tape first. Then evaluate expression templates against `AAD-2`. The one-node tape is done (19d7789). Expression templates remain, at stage 11
-- [ ] Vector values: one tape structure shared across lanes, with per-lane partials and a vector adjoint. Requires branch-free kernels, which the smoothed and bridge treatments give. Fall back to the scalar tape where lanes diverge. Measure both, and show assembly for any claim (B15). The lane kernels are branch-free on every product and treatment, but `LaneReal` carries values only (a486c9a). The vector tape remains, at stage 5b
+- [x] Vector values: one tape structure shared across lanes, with per-lane partials and a vector adjoint. Requires branch-free kernels, which the smoothed and bridge treatments give. Fall back to the scalar tape where lanes diverge. Measure both, and show assembly for any claim (B15). Lane kernels branch-free on every product and treatment (a486c9a). Design and oracle first (6c72d84), vector tape and B16 (139f398), gradients with the counted fallback (a60129d), lane fuzzer and CI (a859c7c), 11 faults (77dd0c8). Bit-identical to the scalar tape at 1 and 2 lanes on NEON, 1, 2 and 4 on AVX2, and 8 in CI under Intel SDE (36d701d, run 41957624701). No pricer kernel falls back. Both tapes and a fallback's cost timed, iteration only (8e8a464, 7b97155); measured runs are under "Iterate". B15: the operand loop is packed at 2, 4 and 8 lanes, with no gathers (`docs/asm/`, 8022793)
 - [x] Multi-threaded: one tape per worker, gradient accumulators merged in fixed block order. TSan clean (653ea07)
 - [ ] B4: justify the chunk size, 2^13 entries, by a sweep. Not swept yet
 - [ ] B9: keep the zero-adjoint skip only if the measurement supports it. Measured as `tape-skip` (c90e7ca): faster than the plain sweep on every pricer workload on both hosts, slower on Lax-Wendroff. Whether the default sweep uses it is not decided
+- [ ] B17: benchmarks record whether the primal auto-vectorised. Checked once, at 1078a20: it did not. By `-Rpass` remarks on NEON and AVX2, no loop in `src/pricer` or `src/math` vectorised, and the scalar step loop has no packed double arithmetic in the NEON, AVX2 or AVX-512 build (`docs/asm/`, 8022793; `NOTES.md`, "Stage 5c"). The results files do not record it yet
 - [ ] B13: time the thread-local slot with and without `thread_local`. Every recorded operation reads it once, and on macOS that read is a thread-local lookup. Needs a CMake option to build the other way
 - [x] B14: merge documented and order-independent. Block sums go to per-block slots, merged in block order after the workers join (653ea07; `src/ad/gradient.hpp`)
 - [ ] Draw the one-step survival step in the complement form 1 − q = Φ(−a) + p u. At a = 8, u = 2^-53 the tape's delta is 0.0351 against the true 0.0266: the primal's conditioning, not the adjoint (`tests/ad/one_step_corner_test.cpp`)
@@ -216,8 +217,8 @@ Build only behind an option, because 985 source files make it a long build.
 - [ ] Iterate against the harness. Record what was tried in `NOTES.md`, including what did not help
 - [ ] Find out why the tape costs 166 times the primal on Lax-Wendroff on `mac-m4max`, and 106 on `linux-zen1`, against Hogan's 32 to 33 for Adept (B34). The hand adjoint costs 3.37 and 3.24 times, against Hogan's 2.1
 - [ ] Reported numbers through `measure.sh` only
-- [ ] Run all benchmarks on `linux-zen1` once it is ready. The six AAD workloads ran there at d1596e0 (e495a37), the threaded ones on two pinned CPUs. Later stages' benchmarks remain. Neither `aad8-asian12` and `aad8-barrier` (stage 4) nor `aadp_bench_simd` (stage 5a) has a measured run on either host yet
-- [ ] Fill the AAD benchmark's "x fastest primal" column. It still reads "pending stage 5": `aadp_bench_aad` does not run the SIMD primal yet (`bench/aad_bench.cpp`)
+- [ ] Run all benchmarks on `linux-zen1` once it is ready. The six AAD workloads ran there at d1596e0 (e495a37), the threaded ones on two pinned CPUs. Later stages' benchmarks remain. Neither `aad8-asian12` and `aad8-barrier` (stage 4), `aadp_bench_simd` (stage 5a), nor the lane variants `price-lanes` and `tape-lanes` (stage 5c) has a measured run on either host yet
+- [x] Fill the AAD benchmark's "x fastest primal" column: the faster of `price` and `price-lanes`, on the five first-order pricer workloads (8e8a464). The second-order workloads and `lw-worst` have no lane primal, and the table says so. Iteration figures only (`NOTES.md`, "Stage 5c"); the measured runs are the item above
 
 ### CI
 
@@ -225,6 +226,8 @@ Build only behind an option, because 985 source files make it a long build.
 - [x] Fix the failures of run 41884006533 at 065e5b6, which passed 16 of 21 jobs: 22aaf7c, 4cf7fea, dca8324, f8aa71f, 2f1997f. Causes in `NOTES.md` (48d30a7)
 - [x] Confirm every CI job is green once a push works. Run 41898528776 at 48d30a7 passed 22 of 22 jobs
 - [x] CI's Linux clang jobs use libc++, like the Linux measurement host. The GCC jobs keep libstdc++ (2f1997f). A second tidy job, `clang-tidy-libstdcxx`, keeps tidy on libstdc++, because the findings differ by library
+- [x] Fix the failures of run 41942650525 at a398d1f, which passed 16 of 22 jobs: 1029047. Both tidy jobs flagged an x86-only test branch the Mac's tidy cannot see, and four lane jobs lacked the fallback-cost binary, so its smoke test was skipped. Run 41953763165 at 1029047 passed 22 of 22
+- [x] Run the 8-lane tests on every CI run: Intel SDE 10.13.1 `-skx` where the runner lacks AVX-512, at a pinned URL and sha256 (36d701d), with the fault `check-actionlint-sde-launcher` (a6be05a). Run 41957624701 at a6be05a passed 22 of 22
 - [ ] `scripts/verify_commits.sh` needs rsync, which the Linux host lacks. Fix before stage 12
 
 ## Phase 4: Final review and Done
