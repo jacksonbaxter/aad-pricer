@@ -744,6 +744,12 @@ Every check above gets a fault in `faults/manifest.json`, VW4's displayed sign a
 
 Out of scope here: quote sensitivities through the implicit function theorem (7b), eSSVI (7c), stage 8's references and pilots, the vector tape on the surface.
 
+#### Stage 7a results
+
+Decided after the pre-registration, each before the run it affects:
+- Dupire part 1, g. The registered bound, 1e-6 S_g, failed on synthetic surface B at 31 of 610 points, all on its left wing (k from −0.29 to −0.10); A passed at 0.088 of it. The failure is in the bound, not in g: at the failing points the same differences in 60-digit Decimal err by 2e-11 to 9e-11, and in double by 4e-7 to 1.1e-6 (`evidence/stage7a/g_fd_rounding.py`). The registration said the rounding was "smaller still", which holds for w of the size of its terms but not here, where ρ x + √(x² + σ²) cancels (ρ = 0.985, x < 0): w is 0.006 while its terms are near 1. The bound now adds the differences' own rounding, R = E (|∂g/∂w| + |∂g/∂w′| / h_k + 2 / h_k²), with E = 2^-51 S_w, S_w = Σ |c_j| (|a_j| + b_j (|ρ_j x_j| + r_j)) weighted as w is, and E taken as about four roundings of S_w per evaluation of w. h_k, the grid and 1e-6 S_g are unchanged. With R, the worst point is at 0.74 of the bound on B and 0.088 on A. The test prints both ratios and the count beyond the registered bound.
+- Dupire part 2, prices. The first run failed at k = 0 in the first segment, with Dupire −2.3e-5 against ∂T w / g = 0.027: the test chose put or call at each strike of the second difference, so at K = F it mixed a put at K − h_K with calls at K and K + h_K, which adds (F − K + h_K) / h_K² to it. The type is now that of the centre strike, at every point of the difference. Then 76 points pass, the worst at 2.1e-6 of the 1e-4 bound.
+
 ### Rule slips
 
 None affected a number.

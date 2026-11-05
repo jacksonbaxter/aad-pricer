@@ -82,6 +82,26 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     endif()
   endif()
 
+  # Stage 7a: the slices joined in time, Dupire local variance with the floor rule, the
+  # local-volatility pricer and its gradient in the slice parameters (NOTES.md, "Stage 7a").
+  # Header-only templates on Real, with their double parts here; no Let's Be Rational needed.
+  aadp_library(aadp_svi_surface
+    SOURCES src/svi/surface.cpp src/svi/local_vol.cpp
+    LINK aadp_math)
+  if(TARGET aadp_ad)
+    # Interpolation, the curves and refusal beyond the last slice, in double and on the tape.
+    aadp_test(aadp_svi_surface_test
+      SOURCES tests/svi/surface_test.cpp
+      LINK aadp_svi_surface aadp_ad aadp_test_support
+      LABELS svi)
+    # The floor rule, and the Dupire check: finite differences of dT w and g, and Dupire in call
+    # prices through Let's Be Rational.
+    aadp_test(aadp_svi_local_vol_test
+      SOURCES tests/svi/local_vol_test.cpp
+      LINK aadp_svi_surface aadp_ad aadp_svi aadp_test_support
+      LABELS svi)
+  endif()
+
   # SVI-2, iteration only: no measurement plan or results file yet.
   aadp_bench(aadp_bench_implied_vol
     SOURCES bench/implied_vol_bench.cpp
