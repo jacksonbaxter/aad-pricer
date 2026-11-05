@@ -4,7 +4,7 @@
 # pricer area's tape, and the price oracle the oracle area's closed form.
 if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   aadp_library(aadp_svi
-    SOURCES src/svi/implied_vol.cpp src/svi/arbitrage.cpp
+    SOURCES src/svi/implied_vol.cpp src/svi/arbitrage.cpp src/svi/fit.cpp
     LINK aadp_math aadp_lets_be_rational)
 
   # SVI-1: round trips over a stated grid, error values, and the price against an independent
@@ -30,6 +30,12 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   # The butterfly and calendar checks on known violators and published arbitrage-free slices.
   aadp_test(aadp_svi_arbitrage_test
     SOURCES tests/svi/arbitrage_test.cpp
+    LINK aadp_svi
+    LABELS svi)
+
+  # The raw SVI fit on hand-made slices: recovery, rho at its bound, no repair, metrics, errors.
+  aadp_test(aadp_svi_fit_test
+    SOURCES tests/svi/fit_test.cpp
     LINK aadp_svi
     LABELS svi)
 
