@@ -52,7 +52,8 @@ The harness comes first, and a check that cannot fail proves nothing. So every o
 | `src/results/`, `tools/results_stamp/`, `bench/` | Benchmarks, measure.sh line parser, results-file reader and writer | `bench` |
 | `src/rng/`, `src/mc/` | Philox, inverse normal, minimal path kernels | `oracle` |
 | `src/oracle/`, `tools/quadrature/`, `references/` | Closed forms, tolerance rule, comparison plan, quadrature tool, reference values | `oracle` |
-| `src/data/`, `tools/chain_profile/`, `scripts/fetch_data.sh`, `NOTICE` | cp950 decoder, TAIFEX readers, data script | `data` |
+| `src/data/`, `tools/chain_profile/`, `scripts/fetch_data.sh`, `NOTICE` | cp950 decoder, TAIFEX readers, parity forwards, calibration set, data script | `data` |
+| `src/svi/`, `tools/svi_fit/` | Implied vol, raw SVI, arbitrage checks, the raw SVI fit, the chain into it, fit report | `svi` |
 | `tests/<area>/`, `fuzz/` | Unit tests, libFuzzer targets, hand-written seed corpora | per area |
 | `scripts/check.sh`, `.github/workflows/`, `faults/` | Local check script, CI, fault manifest | `checks` |
 | `results/mac-m4max/`, `results/linux-zen1/` | Raw results. No file holds numbers from both | |
@@ -621,6 +622,50 @@ Synthetic recovery, on hand-made parameters only. Three slices shaped like the c
 
 Timing (`SVI-7` per slice, `SVI-8` for the surface) is iteration only, through `measure.sh`, kept in the research cache and not in the report.
 
+#### Stage 6b results
+
+Settlements of one day, not tradable quotes; the surface reaches 33 days only. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
+
+Parity, `settle_all`, as pre-registered: F, D, their standard errors and the residual RMS reproduce Phase 1's `parity.csv` within a relative 1e-9. F = 22,761.47, 22,786.07, 22,792.92 and D = 0.99987, 0.99944, 0.99829, as printed. σ_leg is 1.80, 2.42 and 1.98 points; Phase 1's 1.87, 2.43 and 1.55 come back exactly by its `settle_near` route (above). F − TX is −0.53 for 202411 and +0.9207 for 202412, which is 0.92 to the printed places; 202411W4 has no TX month. T on ACT/365 in seconds: 431,100, 1,035,900 and 2,850,300 s, so 0.0136701, 0.0328482 and 0.0903824 years. The calibration set has 65, 51 and 64 rows. Input butterflies per slice are (triples, non-convex, beyond half a tick) = (61, 15, 3), (47, 19, 13) and (60, 17, 7), which total 168, 51 and 23. Every number above matched on its first run.
+
+The fit (`aadp_svi_fit`, macOS, through `measure.sh` at 75fa774; identical to the last digit at c05b538). The stamp tool refused the report ("first line is not the results magic"): it stamps only timing runs, with their run header. So the report stays in the research cache and nothing goes under `results/`.
+
+| | 202411 | 202411W4 | 202412 |
+|---|---|---|---|
+| n | 65 | 51 | 64 |
+| a | −0.0026677 | −0.0019272 | −0.070714 |
+| b | 2.009347 | 2.008524 | 2.036356 |
+| ρ | 0.990696 | 0.991513 | 0.964294 |
+| m | 0.112363 | 0.150447 | 0.587762 |
+| σ | 0.0111257 | 0.0114447 | 0.137556 |
+| active | b (1 + \|ρ\|) = 4 | b (1 + \|ρ\|) = 4 | b (1 + \|ρ\|) = 4 |
+| Φ, Φ / (n − 5) | 12.42, 0.207 | 106.89, 2.324 | 191.03, 3.238 |
+| SVI-6 (bp of F) | 0.287 | 1.132 | 1.231 |
+| SVI-11 (vol points) | 0.958 | 0.410 | 1.397 |
+| model triples non-convex | 0 of 61 | 0 of 47 | 0 of 60 |
+| Martini-Mingone | type 1 | type 1 | type 1 |
+
+All three converged, and all 5 starts reached the best Φ. Every slice has the same shape: ρ near +1, its vertex m to the right of the data (k_max = 0.057, 0.105 and 0.199), and the right wing at the slope bound 4. The quotes lie on the left branch of the hyperbola, so the fit spends the right wing, which no quote constrains, on curvature. As fitted, each slice fails stage 6a's checks beyond its data. Density: g < 0 from k = 0.120, 0.161 and 0.683, with worst g −28.9, −24.9 and −3.26. The right wing and the d+ limit fail (slope 4 against 2), and the Martini-Mingone verdict is type 1. At the quoted strikes the model prices are convex (0 non-convex triples), against 15, 19 and 17 among the settlements. Calendar: 202411 → 202411W4 crosses on k ∈ [0.071, 3], inside the W4 quotes from 0.071 to 0.105, and on k ∈ [−3, −0.733], and both wing asymptotes cross. 202411W4 → 202412 crosses on k ∈ [0.127, 6.09], with the right asymptote crossing. Nothing was repaired. SVI-6 is below the 4 bp context, which comes from eSSVI on SPX mids and so is not like for like. SVI-11 is above 0.73 for 202411 and 202412 and below it for 202411W4.
+
+Synthetic recovery, at c94296d. Noiseless: errors are 0.30 to 0.50 of the tolerance on A, B and C, 0.21 to 0.50 on Vogt and 0.10 to 0.40 on slope 2.25, and no bound is active on A, B or C. Noisy (n = 40, 50, 70; Φ = 28.9, 43.0, 58.8): the largest |z| is 1.265, for ρ of A. A's fit has a = −8.1e-5 < 0, the case for which a ≥ 0 was dropped. ρ = −1 fits −1 exactly, with the bound active. ρ = −1.05 and +1.05 fit −1 and +1 exactly with that bound active (Φ 0.0112 and 0.0114), and the reported parameters give the reported Φ. The fit leaves Vogt's density violation, the slope-2.25 wing and d+ violations and the crossing pair in place for the checks to report.
+
+Linux host, the same commit (75fa774), clang 23.1.4, run under `heavy.sh` with `taskset -c 6,7`. These differences are reported, not judged. T, F, D, σ_leg, n and every count are identical. The active bounds are identical, and every fit converged. The largest absolute differences are a 1.4e-8, b 3.4e-9, ρ 3.3e-9, m 4.4e-8 and σ 2.0e-8 (all 202412), Φ 4.7e-11 (relative 2.5e-13), SVI-6 1.6e-8 bp and SVI-11 3.5e-7 vol points. The parameters move along the flat valley of a fit at its slope bound, while Φ agrees to 13 digits.
+
+Timing, iteration only and not a result (`measure.sh`, macOS, 50 repetitions): `SVI-7` median 82.0, 42.7 and 60.4 ms per slice; `SVI-8` median 186.7 ms for the three fits and every check.
+
+Faults: 29 added. In the first run 25 were caught. Four did not compile (an unused parameter, variable or constant under -Werror) and were rewritten. All 29 were then caught at 8ae3239 on macOS.
+
+Fuzz (`aadp_fuzz_svi_fit`, ASan and UBSan, macOS): trials of 60 s and 180 s and a 300 s run at 45eb4dd. The 300 s run found a fit with b = −1.9e-17: the QP holds |d| ≤ c only to its feasibility tolerance, so c came out at −1.9e-20. b is now reported at its bound (c05b538), and the input is a regression seed. The stated run, 300 s through heavy.sh at c05b538, made 126,226 executions with no failure (coverage 771, corpus 502 from 11 seeds).
+
+Decided after the pre-registration, each before the first real fit unless stated:
+- The noisy slices apply the 1-point floor after the noise is added, so a quote can fall out (A has 40 quotes noisy and 42 noiseless).
+- Nelder-Mead sorts its vertices with a stable sort, so ties order the same with every standard library. The synthetic outputs were unchanged.
+- The real-file chain test asserts only what was pre-registered (sizes, counts, weights, that every fit returns and every check runs), not fitted values.
+- After the fuzz finding: the clamp of c at 0 in the conversion to raw parameters. The real and synthetic fits are unchanged to the last digit.
+- After writing the faults: the ρ-beyond-bound test also checks Φ at the reported parameters, to FitResultFields' tolerance, because the conversion's clamp of ρ would otherwise hide a solve that ignored ρ ≥ −1.
+
+Process notes: the first run of the real-file chain test expected no TX month for 202411, which was wrong (the realdata parity test already knew it has one). The test was fixed before its commit. The code was unchanged.
+
 ### Rule slips
 
 None affected a number.
@@ -635,6 +680,7 @@ None affected a number.
 - Stage 5c: an empty here-string and an empty heredoc, both written to `/tmp` (above, under "Stage 5c"). A pre-commit wrapper hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed. Its first `perf` pass was multiplexed: the harness's counts from it are not used, and the one figure taken from it, scaled by `perf`, says so (above).
 - Intel SDE: one wait call longer than 600 s, which the tool moved to the background.
 - Stage 6a: the first pre-commit wrapper (the README commit) hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed, and its logs were fetched by hand. The 600 s fuzz call ran past its 600 s tool timeout and was moved to the background, then waited for by polling.
+- Stage 6b: one empty here-string, written to `/tmp`. The Linux host's fit run was first started with `&` from its zsh login shell, so at nice 5. It was stopped within a minute, before it had built anything, and restarted from bash at nice 0; nothing from the first start is used. The `measure.sh` call for the fit report waited on load past its 600 s tool timeout and was moved to the background, then waited for.
 
 ## Option chain
 
