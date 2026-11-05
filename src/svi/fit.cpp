@@ -566,7 +566,9 @@ StartResult NelderMead(Profile& profile, Vertex start, double hm, double hu) {
 }
 
 SviParams ToRaw(const Vec3& x, double m, double sigma) {
-  const double c = x[2];
+  // The QP holds |d| <= c only to its feasibility tolerance, so at b = 0 c can come out a few
+  // ulps below zero (the fuzzer found c = -1.9e-20); b is reported at its bound, not below it.
+  const double c = std::max(x[2], 0.0);
   const double rho = c > 0.0 ? std::clamp(x[1] / c, -1.0, 1.0) : 0.0;
   return {.a = x[0], .b = c / sigma, .rho = rho, .m = m, .sigma = sigma};
 }
