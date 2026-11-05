@@ -516,6 +516,39 @@ Rule slips: two zsh redirections on the Mac, both empty and both writing to `/tm
 - Those 24 tests include every lane kernel and price test, and every vector tape and lane gradient test: per-path bits, block sums on 1, 2, 3 and 8 threads, B16's random programs, the dot product, the counted fallback, and bytes per path. So stage 5a's lane primal and stage 5b's vector tape are now verified bit for bit at 8 lanes too. A passing test's printed counts are not in the CI log, so the 8-lane counts are not recorded. Times under SDE measure the emulator, and none is used.
 - a6be05a adds the fault `check-actionlint-sde-launcher`: the configure step reads the SDE launcher from a step id that does not exist. The 8-lane code itself cannot be faulted locally, since no host here runs AVX-512 and SDE runs only on GitHub's runners.
 
+### Stage 6a: implied volatility, raw SVI and the arbitrage checks
+
+No market data is used in this stage.
+
+#### SVI-1 tolerance, stated before any measurement
+
+A quote at volatility σ is priced by `Black76Price` (Let's Be Rational's `Black` times the discount factor D) and inverted by `ImpliedVolatility`, giving σ̂. It passes only if both of these hold:
+
+- vol: |σ̂/σ − 1| ≤ 8 η (1 + C);
+- price: |V(σ̂)/V − 1| ≤ 8 η (1 + 1/C).
+
+C = V / (σ ∂V/∂σ) is the conditioning of the full price as quoted, intrinsic value included: a relative error e in V moves σ by about C e. It comes from Jäckel's `BlackAccuracyFactor`, which evaluates it in scaled form, so it does not underflow in the wings. η = ε + 2^-1074 / V, with ε = 2^-52, one ulp at 1. The second term is the fixed spacing of subnormal doubles, which only matters for a price below about 1e-292.
+
+The reason for each part:
+- The price is computed with a relative error of order (1 + 1/C) ε, the attainable accuracy Jäckel gives for the Black function (the comment on `BlackAccuracyFactor` in `lets_be_rational.h`). The inversion maps that to (1 + C) ε in vol, since C times 1/C is 1.
+- The inversion itself attains (1 + C) ε: Jäckel's "maximum attainable precision" (SVI-1), whose first-order form is his `ImpliedVolatilityAttainableAccuracy`.
+- Discounting and undiscounting add two roundings, which is ε in price and C ε in vol.
+- So there are three sources of about (1 + C) ε each, and the factor 8 gives each about 2ε, with margin. For the price, the same three sources apply with 1/C in place of C: a σ̂ off by one ulp moves the price by 1/C ulps.
+
+"Machine precision" means this attainable level, not ε. Where C is large, no digit of σ is attainable in double, and the bound says so. Where 8 η (1 + C) ≥ 1, the vol bound cannot fail; those points are counted and reported, not hidden. In the deep in-the-money wings this is most of the points, because the time value is lost below the intrinsic value's last digit.
+
+Statuses: every grid point must return `ok`. The exception is a point whose computed price equals the discounted intrinsic value exactly, with no time value left in double, which must return `at-intrinsic` with vol 0. Those are counted.
+
+The grid:
+- T ∈ {0.0137, 0.0274, 0.0833, 0.25, 0.5, 1, 2, 5} years, so down to 5 days;
+- σ ∈ {0.01, 0.03, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2};
+- z = ln(K/F) / (σ √T) from −36 to 36 in steps of 0.5;
+- calls and puts, F = 100, D = exp(−0.03 T).
+
+That is 8 × 8 × 145 × 2 = 18,560 quotes. Out of the money, with s = σ √T, Let's Be Rational's normalised price b = V / (D √(FK)) is about φ(z) e^(−s²/8) s / (z² − s²/4), at least about 1e-288 on the grid, so always normal. The price itself is b D √(FK), and √(FK) = F e^(z s / 2): above F for calls, but as small as F e^(−129) for the deepest puts. So at the far put wing with large s the price is subnormal or zero. η's second term makes the vol bound vacuous at a subnormal price, and a zero price equals its intrinsic value and must return `at-intrinsic`; both are counted. (A first draft of this paragraph said every grid price was above DBL_MIN; that was corrected before the test first ran.) The test prints the worst point by ratio to the bound, and the worst raw error in ulps among points with C ≤ 1.
+
+An independent price check guards against a wrong archive, a wrong patch or a wrong call/put flag, which a round trip through the same code cannot see. On the grid points with |z| ≤ 6 and s = σ √T ≤ 3, `Black76Price` must agree with the oracle's Black-Scholes closed form (`src/oracle/black_scholes.hpp`, with S = F and r = q = −ln D / T) within 2^-36 D (F N(d1) + K N(d2)). The reason: the oracle's d1 and d2 carry an absolute error of about 2ε (|ln(F/K)|/s + s/2), at most 18ε there. N's elasticity, |d| φ(d) / N(d), is below d² + 1 ≤ 58 for |d| ≤ 7.5, so each term is good to about 1000ε, or 2.3e-13 relative, plus erfc's own few ulps. 2^-36 is 1.5e-11, a margin of about 60. A wrong flag or discount is an O(1) error.
+
 ### Rule slips
 
 None affected a number.
