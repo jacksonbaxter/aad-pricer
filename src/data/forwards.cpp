@@ -55,7 +55,7 @@ std::vector<ParityPoint> settlement_parity_points(std::span<const taifex::Option
       continue;
     }
     auto& legs = by_strike[row.strike];
-    (row.right == taifex::OptionRight::kCall ? legs.first : legs.second) = *row.settlement_price;
+    (row.right == taifex::OptionRight::kCall ? legs.first : legs.second) = row.settlement_price;
   }
   std::vector<ParityPoint> points;
   for (const auto& [strike, legs] : by_strike) {
