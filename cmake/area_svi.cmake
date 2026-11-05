@@ -46,6 +46,13 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     LABELS svi
     CORPUS fuzz/fuzz_svi_seeds)
 
+  # The fit on small quote sets from raw bytes: no crash, no exception, errors as values.
+  aadp_fuzz(aadp_fuzz_svi_fit
+    SOURCES fuzz/fuzz_svi_fit.cpp
+    LINK aadp_svi
+    LABELS svi
+    CORPUS fuzz/fuzz_svi_fit_seeds)
+
   # Stage 6b: the TAIFEX chain into the fit, and the fit report tool. Needs the data area.
   if(TARGET aadp_data)
     aadp_library(aadp_svi_chain
