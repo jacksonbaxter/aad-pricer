@@ -8,6 +8,9 @@
 // writes each as tests/pricer/dual_ops.hpp does), so only association differs. The Dual has five
 // tangents, so each path runs three times, one slice seeded each time. The values of the tape, the
 // Dual and the double kernel must be the same bits.
+// Added after the pre-registration, before it ran (see ComparePath): each difference also within
+// 2^-26 of the path's largest |derivative|, because AgreementBound is vacuous on surface B at
+// n = 4.
 //
 // Cases: surfaces A (free of static arbitrage) and B (crossing slices and density violations,
 // which must floor on the checked paths), every product and treatment the pricer accepts,
@@ -121,8 +124,18 @@ pricer::LocalVolModel<test::Dual> DualModel(const Surface& s, std::size_t seeded
 
 struct Worst {
   double ratio = 0.0;
+  double scaled = 0.0;  // max |tape - dual| / the path's largest |derivative|
   std::size_t statements = 0;
 };
+
+// The second, empirical check (NOTES.md, "Stage 7a", decisions after the pre-registration):
+// AgreementBound sums absolute partials, which grow geometrically along a path where the local
+// variance is steep in k, so on surface B at n = 4 and on the real surface it is far above the
+// derivatives themselves and detects nothing. So each difference must also be within 2^-26 of the
+// path's largest |derivative| over the 15. Not a proof: it is about 2,000 times the largest
+// difference seen before it was written, 7.3e-12 of the parameter's own derivative, and a wrong
+// or misplaced derivative is off by the order of the scale.
+inline constexpr double kScaledAgreement = 0x1p-26;
 
 // One path: the tape's value and gradient against the double kernel and the three seeded Duals.
 void ComparePath(const LocalVolPathGradient::PathResult& result, double value,
@@ -131,9 +144,18 @@ void ComparePath(const LocalVolPathGradient::PathResult& result, double value,
                  const pricer::PathUniforms& u, const std::string& label, Worst& worst) {
   ASSERT_EQ(Bits(result.value), Bits(value)) << label;
   worst.statements = std::max(worst.statements, result.statements);
-  for (std::size_t j = 0; j < duals.size(); ++j) {
-    const test::Dual dual = pricer::EvaluateSubstepped<test::Dual>(contract, n, duals[j], u).value;
-    ASSERT_EQ(Bits(dual.value), Bits(value)) << label;
+  std::vector<test::Dual> seeded;
+  seeded.reserve(duals.size());
+  double scale = 0.0;
+  for (const pricer::LocalVolModel<test::Dual>& model : duals) {
+    seeded.push_back(pricer::EvaluateSubstepped<test::Dual>(contract, n, model, u).value);
+    ASSERT_EQ(Bits(seeded.back().value), Bits(value)) << label;
+    for (std::size_t i = 0; i < 5; ++i) {
+      scale = std::max(scale, std::fabs(seeded.back().tangent[i]));
+    }
+  }
+  for (std::size_t j = 0; j < seeded.size(); ++j) {
+    const test::Dual& dual = seeded[j];
     for (std::size_t i = 0; i < 5; ++i) {
       const std::size_t input = (5 * j) + i;
       const double bound = bounds::AgreementBound(
@@ -142,7 +164,13 @@ void ComparePath(const LocalVolPathGradient::PathResult& result, double value,
       ASSERT_TRUE(std::isfinite(result.gradient[input])) << label;
       ASSERT_LE(diff, bound) << label << ", parameter " << input << ": tape "
                              << result.gradient[input] << ", dual " << dual.tangent[i];
-      if (diff > 0.0) worst.ratio = std::max(worst.ratio, diff / bound);
+      ASSERT_LE(diff, kScaledAgreement * scale)
+          << label << ", parameter " << input << ": tape " << result.gradient[input] << ", dual "
+          << dual.tangent[i] << ", path scale " << scale;
+      if (diff > 0.0) {
+        worst.ratio = std::max(worst.ratio, diff / bound);
+        worst.scaled = std::max(worst.scaled, diff / scale);
+      }
     }
   }
 }
@@ -182,9 +210,9 @@ TEST(LocalVolTapeVsDual, EveryParameterAgreesPerPathWithinTheTapeBound) {
         }
         std::printf(
             "measured, surface %s, %s, n %u, %llu paths: max |tape - dual| / bound %.3g, "
-            "statements %zu\n",
+            "/ path scale %.3g (bound 2^-26), statements %zu\n",
             surface_name, name.c_str(), n, static_cast<unsigned long long>(kPaths), worst.ratio,
-            worst.statements);
+            worst.scaled, worst.statements);
       }
     }
     std::printf("surface %s: %llu of %llu checked path-steps floored, %llu capped\n", surface_name,

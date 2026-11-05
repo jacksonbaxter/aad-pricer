@@ -4422,6 +4422,562 @@
       "reason": "invariant failed: b >= 0 and \\|rho\\| <= 1",
       "timeout_s": 180,
       "output_files": ["build/fuzz/fault-fuzz/svi-fit-b-below-zero/*", "build/fuzz/fault-fuzz/svi-fit-b-below-zero/corpus/*"]
+    },
+    {
+      "id": "lv-surface-alpha-swapped",
+      "kind": "check",
+      "covers": "linear-in-T interpolation of w at fixed k",
+      "bug": "The two slices' weights are swapped, so w runs from the later slice to the earlier.",
+      "edits": [
+        {
+          "file": "src/svi/surface.hpp",
+          "find": "    const Real w = beta * lo.w + alpha * hi.w;",
+          "replace": "    const Real w = alpha * lo.w + beta * hi.w;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_surface_test"],
+      "command": ["{build}/bin/aadp_svi_surface_test", "--gtest_filter=Surface.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Surface\\.EachSliceComesBackExactlyAtItsOwnTime",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-surface-first-segment-dwdt",
+      "kind": "check",
+      "covers": "dT w before the first slice, by differences",
+      "bug": "Before the first slice dT w is lambda w_1 / T_1, the derivative of the wrong function.",
+      "edits": [
+        {
+          "file": "src/svi/surface.hpp",
+          "find": "              .dwdt = s.w * slot.inverse_length,",
+          "replace": "              .dwdt = lambda * s.w * slot.inverse_length,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=Dupire.Finite*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Dupire\\.FiniteDifferencesOfTheTimeDerivativeAndOfGAgree",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-surface-dwdt-unscaled",
+      "kind": "check",
+      "covers": "dT w between slices, by differences",
+      "bug": "dT w is the slices' difference in w, not divided by the segment's length.",
+      "edits": [
+        {
+          "file": "src/svi/surface.hpp",
+          "find": "            .dwdt = (hi.w - lo.w) * slot.inverse_length,",
+          "replace": "            .dwdt = (hi.w - lo.w),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=Dupire.Finite*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Dupire\\.FiniteDifferencesOfTheTimeDerivativeAndOfGAgree",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-curve-spot-forward",
+      "kind": "check",
+      "covers": "S0 = D_1 F_1, the curves through their nodes",
+      "bug": "The spot is the first parity forward itself, not discounted to today.",
+      "edits": [
+        {
+          "file": "src/svi/surface.cpp",
+          "find": "    : spot_(terms.front().discount * terms.front().forward) {",
+          "replace": "    : spot_(terms.front().forward) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_surface_test"],
+      "command": ["{build}/bin/aadp_svi_surface_test", "--gtest_filter=Surface.Curves*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Surface\\.CurvesPassThroughTheirNodesWithPiecewiseConstantCarryAndRate",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-curve-midpoint",
+      "kind": "check",
+      "covers": "ln F and ln D piecewise linear in t",
+      "bug": "The curves interpolate in the square of the segment weight, not the weight.",
+      "edits": [
+        {
+          "file": "src/svi/surface.cpp",
+          "find": "  return values[i - 1] + (weight * (values[i] - values[i - 1]));",
+          "replace": "  return values[i - 1] + (weight * weight * (values[i] - values[i - 1]));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_surface_test"],
+      "command": ["{build}/bin/aadp_svi_surface_test", "--gtest_filter=Surface.Curves*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Surface\\.CurvesPassThroughTheirNodesWithPiecewiseConstantCarryAndRate",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-locate-node",
+      "kind": "check",
+      "covers": "a slice's own time starts its segment",
+      "bug": "At t = T_j for an inner slice, Locate gives the segment that ends there.",
+      "edits": [
+        {
+          "file": "src/svi/surface.cpp",
+          "find": "  while (s + 1 < n && expiries[s] <= t) ++s;",
+          "replace": "  while (s + 1 < n && expiries[s] < t) ++s;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_surface_test"],
+      "command": ["{build}/bin/aadp_svi_surface_test", "--gtest_filter=Surface.Locate*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Surface\\.LocateGivesTheSegmentAndItsWeight",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-surface-parameters-unchecked",
+      "kind": "check",
+      "covers": "ValidateSurface names every error",
+      "bug": "rho a little above 1 passes validation.",
+      "edits": [
+        {
+          "file": "src/svi/surface.cpp",
+          "find": "         InRange(p.b, 0.0, kMaxSurfaceParameter) && InRange(p.rho, -1.0, 1.0) &&",
+          "replace": "         InRange(p.b, 0.0, kMaxSurfaceParameter) && InRange(p.rho, -1.0, 1.0 + 1e-6) &&"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_surface_test"],
+      "command": ["{build}/bin/aadp_svi_surface_test", "--gtest_filter=Surface.Validation*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Surface\\.ValidationNamesEveryError",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-vw4-displayed-sign",
+      "kind": "oracle",
+      "covers": "Dupire in call prices against dT w / g",
+      "bug": "g takes VW4's displayed eq. (12) sign on the (1/4)(1/4 + 1/w) w'^2 term.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.hpp",
+          "find": "  return u * u - 0.25 * (w1 * q) - 0.0625 * (w1 * w1) + 0.5 * w2;",
+          "replace": "  return u * u + 0.25 * (w1 * q) + 0.0625 * (w1 * w1) + 0.5 * w2;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=Dupire.LocalVariance*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Dupire\\.LocalVarianceIsDupiresInCallPrices",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-floor-calendar-dropped",
+      "kind": "check",
+      "covers": "the floor rule's classes in their order",
+      "bug": "dT w <= omega is not classified as calendar, so it falls through to below-the-floor.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.cpp",
+          "find": "  if (!(dwdt > kAdmissibleThreshold)) return LocalVarianceClass::kCalendar;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=FloorRule.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FloorRule\\.ClassifiesInTheRegisteredOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-cap-dropped",
+      "kind": "check",
+      "covers": "the cap of the floor rule",
+      "bug": "Nothing is capped, so dT w / g grows without bound as g falls to zero.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.cpp",
+          "find": "  if (dwdt >= rule.cap * g) return LocalVarianceClass::kCapped;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=FloorRule.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FloorRule\\.ClassifiesInTheRegisteredOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-q-unguarded",
+      "kind": "check",
+      "covers": "finite tape gradient where w is not positive",
+      "bug": "q divides by w even where it is not positive, so the tape records an infinite partial.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.hpp",
+          "find": "  const Real q = p.q_num / Select(positive, p.q_den, Real(1.0));",
+          "replace": "  const Real q = p.q_num / Select(positive || true, p.q_den, Real(1.0));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_test", "--gtest_filter=LocalVariance.TheTape*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVariance\\.TheTapeGivesTheDoubleBitsAndAFiniteGradientEvenWhereFloored",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-drift-without-half-variance",
+      "kind": "oracle",
+      "covers": "flat surface against GBM, path by path",
+      "bug": "The log-Euler step drops -sigma^2 dt / 2.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol_model.hpp",
+          "find": "    return {(x + s.log_forward_increment) - 0.5 * variance, Sqrt(variance)};",
+          "replace": "    return {x + s.log_forward_increment, Sqrt(variance)};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.AFlat*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.AFlatSurfaceIsGbmPathByPathWithinTheRoundingBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-step-length",
+      "kind": "oracle",
+      "covers": "flat surface against GBM, path by path",
+      "bug": "dt is T / (steps + 1), so the paths stop short of the maturity.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol_model.hpp",
+          "find": "        dt_(maturity / static_cast<double>(steps)),",
+          "replace": "        dt_(maturity / static_cast<double>(steps + 1)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.AFlat*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.AFlatSurfaceIsGbmPathByPathWithinTheRoundingBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-carry-at-step-start",
+      "kind": "oracle",
+      "covers": "flat surface against GBM, path by path",
+      "bug": "Each step's forward increment runs from t = 0, so the carry accumulates.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol_model.hpp",
+          "find": "                        .log_forward_increment = next_log_forward - log_forward});",
+          "replace": "                        .log_forward_increment = next_log_forward - curve.LogForward(0.0)});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.AFlat*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.AFlatSurfaceIsGbmPathByPathWithinTheRoundingBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-asian-fixes-first-substep",
+      "kind": "check",
+      "covers": "Asian fixing stride against a hand loop",
+      "bug": "The Asian fixes after the first sub-step of each date rather than at the date.",
+      "edits": [
+        {
+          "file": "src/pricer/substep_kernels.hpp",
+          "find": "    for (std::uint32_t j = 0; j < n; ++j, ++s) x = Advance(model, s, x, u[s]);\n    sum = sum + Exp(x);",
+          "replace": "    for (std::uint32_t j = 0; j < n; ++j, ++s) {\n      x = Advance(model, s, x, u[s]);\n      if (j == 0) sum = sum + Exp(x);\n    }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=SubstepKernels.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SubstepKernels\\.AsiansFixAndDiscreteBarriersMonitorOnlyAtTheDates",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-hard-barrier-every-substep",
+      "kind": "check",
+      "covers": "discrete monitoring stride against a hand loop",
+      "bug": "The discrete hard barrier is checked after every sub-step, not only at the dates.",
+      "edits": [
+        {
+          "file": "src/pricer/substep_kernels.hpp",
+          "find": "    for (std::uint32_t j = 0; j < n; ++j, ++s) x = Advance(model, s, x, u[s]);\n    const auto alive = down ? x > log_barrier : x < log_barrier;\n    weight = weight * Select(alive, Real(1.0), Real(0.0));",
+          "replace": "    for (std::uint32_t j = 0; j < n; ++j, ++s) {\n      x = Advance(model, s, x, u[s]);\n      const auto alive = down ? x > log_barrier : x < log_barrier;\n      weight = weight * Select(alive, Real(1.0), Real(0.0));\n    }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=SubstepKernels.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SubstepKernels\\.AsiansFixAndDiscreteBarriersMonitorOnlyAtTheDates",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-maturity-extrapolated",
+      "kind": "check",
+      "covers": "refusal past the last slice",
+      "bug": "A maturity up to twice the last expiry is accepted, so the surface is extrapolated.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol.cpp",
+          "find": "  if (!(lv.maturity <= curve.LastExpiry())) return {.code = LocalVolError::kMaturity};",
+          "replace": "  if (!(lv.maturity <= 2.0 * curve.LastExpiry())) return {.code = LocalVolError::kMaturity};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.Validation*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.ValidationNamesEachRefusal",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-range-unchecked",
+      "kind": "check",
+      "covers": "refusal of paths that could leave the finite range",
+      "bug": "The range check takes the floor's volatility, not the cap's, so a long contract at cap 100 passes.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol.cpp",
+          "find": "  const double diffusion = kMaxDrawMagnitude * math::sqrt(rule.cap * lv.maturity * steps);",
+          "replace": "  const double diffusion = kMaxDrawMagnitude * math::sqrt(rule.floor * lv.maturity * steps);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.Validation*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.ValidationNamesEachRefusal",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-tally-first-worker",
+      "kind": "check",
+      "covers": "tallies merged over every worker",
+      "bug": "Only the first worker's tally is kept, so the counts depend on the thread count.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol.cpp",
+          "find": "  for (const FloorTally& t : tallies) estimate.floors.Merge(t);",
+          "replace": "  estimate.floors.Merge(tallies.front());"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_pricer_local_vol_test"],
+      "command": ["{build}/bin/aadp_pricer_local_vol_test", "--gtest_filter=LocalVol.TheSameBits*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVol\\.TheSameBitsAndTalliesForAnyThreadCountAndTheTallyAddsUp",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-paths-with-floor-uncounted",
+      "kind": "check",
+      "covers": "paths with a floor, price against tape run",
+      "bug": "The price run counts a path with a floor only if it has two or more.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol.cpp",
+          "find": "      if (tally->Floored() != floored) tally->paths_with_floor += 1;",
+          "replace": "      if (tally->Floored() > floored + 1) tally->paths_with_floor += 1;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_local_vol_gradient_test"],
+      "command": ["{build}/bin/aadp_ad_local_vol_gradient_test", "--gtest_filter=LocalVolGradient.TheValue*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolGradient\\.TheValueIsThePricersAndNothingDependsOnTheThreadCount",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-gradient-shuffled",
+      "kind": "oracle",
+      "covers": "the tape's 15 derivatives against the Dual, per path",
+      "bug": "The set-up sweep reads each parameter's adjoint from the next parameter.",
+      "edits": [
+        {
+          "file": "src/ad/local_vol_gradient.cpp",
+          "find": "  for (std::size_t i = 0; i < inputs_.size(); ++i) out[i] = tape_.Adjoint(inputs_[i]);",
+          "replace": "  for (std::size_t i = 0; i < inputs_.size(); ++i) {\n    out[i] = tape_.Adjoint(inputs_[(i + 1) % inputs_.size()]);\n  }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_local_vol_gradient_test"],
+      "command": ["{build}/bin/aadp_ad_local_vol_gradient_test", "--gtest_filter=LocalVolTapeVsDual.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolTapeVsDual\\.EveryParameterAgreesPerPathWithinTheTapeBound",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-block-sweep-skips-a",
+      "kind": "check",
+      "covers": "batch gradient against the per-path gradients",
+      "bug": "The block-end sweep leaves out the first parameter, a of the first slice.",
+      "edits": [
+        {
+          "file": "src/ad/local_vol_gradient.cpp",
+          "find": "  for (std::size_t i = 0; i < path_.Inputs(); ++i) sum[1 + i] += gradient[i];",
+          "replace": "  for (std::size_t i = 1; i < path_.Inputs(); ++i) sum[1 + i] += gradient[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_local_vol_gradient_test"],
+      "command": ["{build}/bin/aadp_ad_local_vol_gradient_test", "--gtest_filter=LocalVolGradient.TheBatch*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolGradient\\.TheBatchGradientIsTheMeanOfThePerPathGradients",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-realdata-spot-forward",
+      "kind": "check",
+      "covers": "real surface: S0 = D_1 F_1",
+      "bug": "The spot is the first parity forward itself, not discounted to today.",
+      "edits": [
+        {
+          "file": "src/svi/surface.cpp",
+          "find": "    : spot_(terms.front().discount * terms.front().forward) {",
+          "replace": "    : spot_(terms.front().forward) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_realdata_test", "--gtest_filter=RealLocalVol.TheSurface*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealLocalVol\\.TheSurfaceBuildsWithTheSpotAtTheFirstParityForward",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "lv-realdata-maturity-extrapolated",
+      "kind": "check",
+      "covers": "real surface: one second past T_3",
+      "bug": "A maturity up to twice the last expiry is accepted on the real surface.",
+      "edits": [
+        {
+          "file": "src/pricer/local_vol.cpp",
+          "find": "  if (!(lv.maturity <= curve.LastExpiry())) return {.code = LocalVolError::kMaturity};",
+          "replace": "  if (!(lv.maturity <= 2.0 * curve.LastExpiry())) return {.code = LocalVolError::kMaturity};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_realdata_test", "--gtest_filter=RealLocalVol.TheContracts*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealLocalVol\\.TheContractsValidateAndAMaturityPastTheLastSliceIsRefused",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "lv-realdata-gradient-shuffled",
+      "kind": "oracle",
+      "covers": "real surface: tape against Dual, 64 paths",
+      "bug": "The set-up sweep reads each parameter's adjoint from the next parameter.",
+      "edits": [
+        {
+          "file": "src/ad/local_vol_gradient.cpp",
+          "find": "  for (std::size_t i = 0; i < inputs_.size(); ++i) out[i] = tape_.Adjoint(inputs_[i]);",
+          "replace": "  for (std::size_t i = 0; i < inputs_.size(); ++i) {\n    out[i] = tape_.Adjoint(inputs_[(i + 1) % inputs_.size()]);\n  }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_local_vol_realdata_test", "--gtest_filter=RealLocalVol.TapeAgrees*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealLocalVol\\.TapeAgreesWithTheDualOnSixtyFourPathsPerContract",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "lv-report-attribution",
+      "kind": "check",
+      "covers": "attribution on output, tools/local_vol_report",
+      "bug": "aadp_local_vol_report prints prices off the chain without the attribution.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "void Header(const Options& o) {\n  aadp::write_attribution(std::cout);\n",
+          "replace": "void Header(const Options& o) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.ReportOpens*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.ReportOpensWithTheAttributionAndSaysIterationOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-timing-unlabelled",
+      "kind": "check",
+      "covers": "timing labelled iteration only",
+      "bug": "The timing section does not say it is iteration only.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "  std::printf(\"\\n== timing: ITERATION ONLY, not a result ==\\n\");",
+          "replace": "  std::printf(\"\\n== timing ==\\n\");"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.Timing*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.TimingIsLabelledIterationOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-fuzz-q-unguarded",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_local_vol, finite tape gradient where w <= 0",
+      "bug": "q divides by w even where it is not positive, which the zero-variance seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.hpp",
+          "find": "  const Real q = p.q_num / Select(positive, p.q_den, Real(1.0));",
+          "replace": "  const Real q = p.q_num / Select(positive || true, p.q_den, Real(1.0));"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_local_vol"],
+      "command": ["{build}/bin/aadp_fuzz_local_vol", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/lv-fuzz-q-unguarded/", "{build}/fault-fuzz/lv-fuzz-q-unguarded/corpus", "fuzz/fuzz_local_vol_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: (point|path) gradient not finite",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/lv-fuzz-q-unguarded/*", "build/fuzz/fault-fuzz/lv-fuzz-q-unguarded/corpus/*"]
+    },
+    {
+      "id": "lv-fuzz-cap-dropped",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_local_vol, every local variance within [floor, cap]",
+      "bug": "Nothing is capped, so a local variance above the cap comes back.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.cpp",
+          "find": "  if (dwdt >= rule.cap * g) return LocalVarianceClass::kCapped;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_local_vol"],
+      "command": ["{build}/bin/aadp_fuzz_local_vol", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/lv-fuzz-cap-dropped/", "{build}/fault-fuzz/lv-fuzz-cap-dropped/corpus", "fuzz/fuzz_local_vol_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: local variance outside \\[floor, cap\\]",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/lv-fuzz-cap-dropped/*", "build/fuzz/fault-fuzz/lv-fuzz-cap-dropped/corpus/*"]
     }
   ]
 }

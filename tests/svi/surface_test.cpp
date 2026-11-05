@@ -101,6 +101,10 @@ TEST(Surface, LocateGivesTheSegmentAndItsWeight) {
   EXPECT_EQ(first.segment, 1U);
   EXPECT_EQ(first.weight, 0.0);
   EXPECT_EQ(first.inverse_length, 1.0 / (t[1] - t[0]));
+  const TimeSlot second = Locate(t, t[1]);
+  EXPECT_EQ(second.segment, 2U);
+  EXPECT_EQ(second.weight, 0.0);
+  EXPECT_EQ(second.inverse_length, 1.0 / (t[2] - t[1]));
   const double mid = t[1] + (0.75 * (t[2] - t[1]));
   const TimeSlot late = Locate(t, mid);
   EXPECT_EQ(late.segment, 2U);

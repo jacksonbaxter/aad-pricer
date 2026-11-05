@@ -53,7 +53,7 @@ The harness comes first, and a check that cannot fail proves nothing. So every o
 | `src/rng/`, `src/mc/` | Philox, inverse normal, minimal path kernels | `oracle` |
 | `src/oracle/`, `tools/quadrature/`, `references/` | Closed forms, tolerance rule, comparison plan, quadrature tool, reference values | `oracle` |
 | `src/data/`, `tools/chain_profile/`, `scripts/fetch_data.sh`, `NOTICE` | cp950 decoder, TAIFEX readers, parity forwards, calibration set, data script | `data` |
-| `src/svi/`, `tools/svi_fit/` | Implied vol, raw SVI, arbitrage checks, the raw SVI fit, the chain into it, fit report | `svi` |
+| `src/svi/`, `tools/svi_fit/`, `tools/local_vol_report/` | Implied vol, raw SVI, arbitrage checks, the raw SVI fit, the chain into it, fit report, the surface in time, Dupire local variance, the chain as a surface, local-vol report | `svi` |
 | `tests/<area>/`, `fuzz/` | Unit tests, libFuzzer targets, hand-written seed corpora | per area |
 | `scripts/check.sh`, `.github/workflows/`, `faults/` | Local check script, CI, fault manifest | `checks` |
 | `results/mac-m4max/`, `results/linux-zen1/` | Raw results. No file holds numbers from both | |
@@ -749,6 +749,68 @@ Out of scope here: quote sensitivities through the implicit function theorem (7b
 Decided after the pre-registration, each before the run it affects:
 - Dupire part 1, g. The registered bound, 1e-6 S_g, failed on synthetic surface B at 31 of 610 points, all on its left wing (k from −0.29 to −0.10); A passed at 0.088 of it. The failure is in the bound, not in g: at the failing points the same differences in 60-digit Decimal err by 2e-11 to 9e-11, and in double by 4e-7 to 1.1e-6 (`evidence/stage7a/g_fd_rounding.py`). The registration said the rounding was "smaller still", which holds for w of the size of its terms but not here, where ρ x + √(x² + σ²) cancels (ρ = 0.985, x < 0): w is 0.006 while its terms are near 1. The bound now adds the differences' own rounding, R = E (|∂g/∂w| + |∂g/∂w′| / h_k + 2 / h_k²), with E = 2^-51 S_w, S_w = Σ |c_j| (|a_j| + b_j (|ρ_j x_j| + r_j)) weighted as w is, and E taken as about four roundings of S_w per evaluation of w. h_k, the grid and 1e-6 S_g are unchanged. With R, the worst point is at 0.74 of the bound on B and 0.088 on A. The test prints both ratios and the count beyond the registered bound.
 - Dupire part 2, prices. The first run failed at k = 0 in the first segment, with Dupire −2.3e-5 against ∂T w / g = 0.027: the test chose put or call at each strike of the second difference, so at K = F it mixed a put at K − h_K with calls at K and K + h_K, which adds (F − K + h_K) / h_K² to it. The type is now that of the centre strike, at every point of the difference. Then 76 points pass, the worst at 2.1e-6 of the 1e-4 bound.
+- Batch against path, a check the registration did not list, with its bound stated before it first ran: the batch gradient sums each path's adjoints into the set-up and sweeps it once per block, so it must be the mean of the per-path gradients within 1e-10 times the mean of their absolute values. Only the order of the same additions differs, about 2^-52 times a few thousand statements at most, while a set-up sweep skipped, repeated or misread is off by whole multiples.
+- Tape against `Dual`, a second check, added after the first fault run: a fault that shuffled the real-data test's gradient passed it. `AgreementBound` sums absolute partials, which grow geometrically along a path where the local variance is steep in k, so it is far above the derivatives themselves: on the real surface the smallest bound is 1.2e46 times the path's largest |derivative|, so it detects nothing there, and on surface B at n = 4 it is loose by the same mechanism. It stays as registered, and each difference must also be within 2^-26 of the path's largest |derivative| over the 15. Not a proof: 2^-26 is about 2,000 times the largest difference seen before it was written (7.3e-12 of the parameter's own derivative), and a wrong or misplaced derivative is off by the order of the scale. Measured with the check in place: worst 5.1e-14 of the scale on the synthetic surfaces and 5.2e-14 on the real one.
+- The surface test now also locates a slice's own time, t = T₁, as the start of the next segment with weight 0, after a fault that moved that node passed the first fault run.
+- Seven faults did not compile under `-Werror` in the first run (an unused variable or function left behind by the mutation), and were rewritten to keep their intent and compile: the curve midpoint, ρ's bound, the q guard (twice: test and fuzz), the carry taken at the step's start, the range check and the floored-path count.
+- The report tool has `--mode report|bias|timing` and `--paths`, so that one tool gives the three registered runs; the plan named only the tool.
+
+Settlements of one day, not tradable quotes; the surface reaches 33 days only. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE). Every number below is iteration only: none is stamped, and the outputs are in the research cache (`evidence/stage7a/`), not under `results/`.
+
+Synthetic checks (macOS, at 5347509), as registered:
+- Flat surface against GBM, path by path, 4,096 paths, n = 1 and 4, nine contracts: the worst path is at 1.0e-4 of the 2^-30 D max(S₀, K) bound (the bridge at n = 4); n = 1 is `EvaluatePath`'s bits, and the hand loop at n = 4 gives the Asian's and the hard barrier's bits.
+- Tape against `Dual`, 256 paths per case, surfaces A and B, seven contracts, n = 1 and 4: the worst difference is 6.6e-4 of `AgreementBound` and 5.1e-14 of the path scale, and values are the double kernel's bits. On B, 2,086 of 98,560 checked path-steps floored, as the registration requires; none on A. The batch gradient agrees with the mean of the per-path gradients, as the new check below asks.
+- Dupire part 1: ∂T w within 1.4e-4 of its bound on A and B; g as in the decisions below. Part 2: 76 points, worst |Dupire in prices / (∂T w / g) − 1| = 2.1e-6, bound 1e-4.
+- Prices, Greeks and tallies are the same bits for 1, 2, 3 and 8 threads, and the tallies add up to the path-steps.
+
+The real surface (`aadp_local_vol_report`, macOS, N = 2^20, 64 batches, seed 20261115, 8 threads, n = 4: 132 steps). S₀ = D₁ F₁ = 22,758.588763. Carry 0.009263, 0.056322 and 0.005225 and rate 0.009263, 0.022856 and 0.019997 on the three segments, as registered. Price ± SE, then d price / d parameter ± SE:
+
+| | Asian call | discrete down-and-out call, one-step | continuous down-and-out call, bridge |
+|---|---|---|---|
+| price | 336.794 ± 0.440 | 570.356 ± 0.829 | 552.838 ± 0.820 |
+| 202411 a | 35,315 ± 590 | −3,807 ± 911 | −2,342 ± 1,025 |
+| 202411 b | 56.84 ± 0.93 | −5.88 ± 1.46 | −4.56 ± 1.66 |
+| 202411 ρ | −8,194 ± 96 | 486 ± 152 | 440 ± 197 |
+| 202411 m | 339.8 ± 7.0 | 54.8 ± 12.4 | 61.3 ± 13.3 |
+| 202411 σ | 6,813 ± 181 | −1,299 ± 285 | −898 ± 296 |
+| 202411W4 a | 51,787 ± 231 | 2,368 ± 412 | 661 ± 500 |
+| 202411W4 b | 88.34 ± 0.36 | 2.62 ± 0.68 | −2.16 ± 0.84 |
+| 202411W4 ρ | −15,569 ± 55 | −358 ± 100 | 771 ± 138 |
+| 202411W4 m | 584.6 ± 2.1 | 41.4 ± 8.0 | 3.6 ± 8.9 |
+| 202411W4 σ | 7,904 ± 49 | 391 ± 101 | 389 ± 107 |
+| 202412 a | 17,247 ± 59 | 56,778 ± 164 | 50,696 ± 152 |
+| 202412 b | 635.8 ± 2.2 | 2,088.9 ± 6.0 | 1,863.3 ± 5.6 |
+| 202412 ρ | −20,640 ± 65 | −67,092 ± 176 | −59,514 ± 165 |
+| 202412 m | 330.6 ± 0.7 | 1,015.6 ± 1.8 | 874.1 ± 2.2 |
+| 202412 σ | 8,002 ± 30 | 26,654 ± 85 | 23,940 ± 79 |
+
+Floors, per contract over 138,412,032 path-steps. The Asian and the bridge share their paths, so their tallies are equal; one-step survival conditions the dated sub-steps, so its paths differ.
+- Asian and bridge: 532,933 floored (0.385%): 521,608 calendar and 11,325 below the floor; no non-finite, non-positive or butterfly point. 34,156 paths (3.26%) have at least one floor. Floored k from 0.0713 to 0.1344, t from 0.0137 to 0.0897; by segment, none before T₁, 181,408 in [T₁, T₂) at k 0.0713 to 0.1134, 351,525 in [T₂, T₃] at k 0.1264 to 0.1344. Capped: 52 path-steps on 8 paths, in [T₂, T₃], at k from −1.201 to −1.001 and t from 0.0760 to 0.0897.
+- One-step: 534,901 floored (523,535 calendar, 11,366 below the floor) on 34,297 paths, the same k and t ranges, and no cap.
+- Against the expectation registered from stage 6b: the crossings for k ≥ 0.071 between 202411 and 202411W4 and for k ≥ 0.127 between 202411W4 and 202412 are where the floors are (from 0.0713 and 0.1264). No path reached the density violations of 202411 beyond k = 0.120 before T₁, nor the crossings for k ≤ −0.733 in [T₁, T₂). The cap was not expected; it falls where 202412's left wing has g near zero far outside the quotes.
+
+Diagnostic, European call K = 22,800 at each slice's expiry (n = 4; 5, 12 and 33 dates), against Black-76 at w_j(k): 202411 190.312 ± 0.241 against 188.943 (+1.369, +5.7 SE), no floor; 202411W4 346.573 ± 0.489 against 345.463 (+1.110, +2.3 SE), 181,163 floored path-steps; 202412 595.756 ± 0.820 against 595.674 (+0.083, +0.1 SE). The first slice's gap is beyond its SE with no floor or cap on its paths, so it is the scheme's bias over 20 steps of a 5-day option; this run cannot split it further. The bias table below is for the 33-day contracts only.
+
+Euler bias (coupled draws, N = 2^20, 64 batches; V(n) and Δ(n) = V(n) − V(2n) ± SE, ratio Δ(n) / Δ(2n)):
+
+| | Δ(1) | Δ(2) | Δ(4) | Δ(8) | bias left at n = 4, 2 Δ(4) |
+|---|---|---|---|---|---|
+| Asian | +0.545 ± 0.031 (1.67) | +0.325 ± 0.022 (1.83) | +0.178 ± 0.015 (1.71) | +0.104 ± 0.012 | +0.355 ± 0.030 |
+| discrete, one-step | +0.264 ± 0.073 | +0.107 ± 0.061 | +0.066 ± 0.057 | −0.047 ± 0.042 | +0.131 ± 0.114, not resolved |
+| discrete, hard | +0.097 ± 0.098 | +0.133 ± 0.075 | −0.059 ± 0.056 | +0.012 ± 0.048 | −0.118 ± 0.112, not resolved |
+| discrete, smoothed 0.005 | +0.108 ± 0.068 | +0.082 ± 0.052 | +0.031 ± 0.036 | +0.011 ± 0.028 | +0.061 ± 0.072, not resolved |
+| continuous, bridge | +0.823 ± 0.084 (1.78) | +0.463 ± 0.070 (2.83) | +0.163 ± 0.054 (2.29) | +0.071 ± 0.045 | +0.327 ± 0.108 |
+| continuous, sampled crossing | +0.793 ± 0.109 (1.45) | +0.546 ± 0.115 (1.60) | +0.342 ± 0.085 (6.79) | +0.050 ± 0.061 | +0.683 ± 0.169 |
+
+V(16) is 336.517, 570.484, 570.510, 569.663, 552.581 and 552.607. The Asian's ratios, 1.7 to 1.8, are near the 2 of first-order weak convergence, so 2 Δ(4) is a fair estimate there: +0.36 ± 0.03, about 0.8 of the price's SE at N = 2^20. The bridge's ratios are noisier but consistent with first order: +0.33 ± 0.11. The discrete barriers are not resolved at this N at any level past n = 1. Ratios whose Δ(2n) is within 2 SE of zero say nothing and are not quoted.
+
+Timing, iteration only and not a result (`measure.sh`, macOS, single thread, N = 2^16, 5 repetitions, load1 3.86 at the start): price alone median 344.9, 566.1 and 429.6 ms for the Asian, one-step and bridge; with the 15 sensitivities 4,417.6, 4,630.4 and 5,084.9 ms, 12.8, 8.2 and 11.8 times the price alone.
+
+Real-data test: its four checks pass on macOS with the captures present (0 skipped). Report tool test: six checks pass on the synthetic chain.
+
+Fuzz (`aadp_fuzz_local_vol`, ASan and UBSan, macOS): a 60 s trial and the stated 300 s run through heavy.sh, seed 20261120, made 367,147 executions with no failure, from 16 hand-written seeds (`evidence/stage7a/gen_fuzz_local_vol_seeds.py`).
+
+Faults: 29 added to `faults/manifest.json`, VW4's displayed sign among them (`evidence/stage7a/add_faults.py`). The first run, at 5347509, caught 20: seven did not compile and two passed, which the decisions above answer. The second, on the tree of the next commit with the LLVM toolchain, caught all 29: 26 on the source tree and the three real-data faults on a copy of the captures under `build/` (`evidence/stage7a/faults-run1-5347509.txt`, `faults-run2.txt`, `faults-run2-realdata.txt`).
 
 ### Rule slips
 
@@ -765,6 +827,7 @@ None affected a number.
 - Intel SDE: one wait call longer than 600 s, which the tool moved to the background.
 - Stage 6a: the first pre-commit wrapper (the README commit) hit the tool's 30-minute background limit while waiting on another project's measurement lock; the Linux host's run itself finished and passed, and its logs were fetched by hand. The 600 s fuzz call ran past its 600 s tool timeout and was moved to the background, then waited for by polling.
 - Stage 6b: one empty here-string, written to `/tmp`. The Linux host's fit run was first started with `&` from its zsh login shell, so at nice 5. It was stopped within a minute, before it had built anything, and restarted from bash at nice 0; nothing from the first start is used. The `measure.sh` call for the fit report waited on load past its 600 s tool timeout and was moved to the background, then waited for.
+- Stage 7a: one empty heredoc. One foreground wait ran past its tool timeout and was moved to the background, then waited for. Two pre-commit wrappers on the Linux host hit the tool's background time limit; the remote runs finished and their logs were fetched by poll. Before the coordinator's heavy.sh rule (2026-11-05), these Mac jobs ran outside `heavy.sh`: the gates of the first three commits (release and fuzz builds and their full ctest runs), three further full release builds, the full fuzz build, the 60 s development fuzz, the per-file clang-tidy runs, the report preview and the first fault run, which also ran without the toolchain environment and so with Apple clang.
 
 ## Option chain
 

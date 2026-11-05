@@ -7,12 +7,15 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -45,6 +48,9 @@ namespace fs = std::filesystem;
 // Development seed, never 1729 or 271828.
 constexpr std::uint64_t kSeed = 20261118;
 constexpr std::uint64_t kCheckedPaths = 64;
+// The second, empirical check of tests/ad/local_vol_gradient_test.cpp, because AgreementBound is
+// vacuous here (NOTES.md, "Stage 7a", decisions after the pre-registration).
+constexpr double kScaledAgreement = 0x1p-26;
 
 // Tests run with the repo root as working directory.
 fs::path data_dir() {
@@ -159,6 +165,59 @@ TEST(RealLocalVol, PricesAndTalliesAreFiniteAndConsistent) {
   }
 }
 
+struct Agreement {
+  double bound = 0.0;   // max |tape - dual| / AgreementBound
+  double scaled = 0.0;  // max |tape - dual| / the path's largest |derivative|
+  double tightest = std::numeric_limits<double>::infinity();  // min AgreementBound / that scale
+};
+
+// The surface on the Dual, slice `seeded`'s five parameters on the five tangents.
+pricer::LocalVolModel<test::Dual> DualModel(const ChainSurface& s, std::size_t seeded,
+                                            const pricer::LocalVolContract& lv) {
+  std::vector<RawSvi<test::Dual>> params;
+  for (std::size_t j = 0; j < s.params.size(); ++j) {
+    const RawSvi<double>& p = s.params[j];
+    const auto x = [&](double v, std::size_t slot) {
+      return j == seeded ? test::Dual::Variable(v, slot) : test::Dual(v);
+    };
+    params.push_back({.a = x(p.a, 0),
+                      .b = x(p.b, 1),
+                      .rho = x(p.rho, 2),
+                      .m = x(p.m, 3),
+                      .sigma = x(p.sigma, 4)});
+  }
+  return {SviSurface<test::Dual>(s.terms, params), lv.maturity, lv.contract.steps * lv.substeps,
+          LocalVolRule{}};
+}
+
+// One path's 15 tape derivatives against the three seeded Duals, by both checks.
+void ComparePath(const ad::LocalVolPathGradient::PathResult& result,
+                 const std::vector<test::Dual>& seeded, const std::string& label,
+                 Agreement& worst) {
+  double scale = 0.0;
+  for (const test::Dual& dual : seeded) {
+    for (std::size_t i = 0; i < 5; ++i) scale = std::max(scale, std::fabs(dual.tangent[i]));
+  }
+  for (std::size_t j = 0; j < seeded.size(); ++j) {
+    for (std::size_t i = 0; i < 5; ++i) {
+      const std::size_t input = (5 * j) + i;
+      const double bound = ad::bounds::AgreementBound(
+          result.absolute[input], result.operand_sums[input], result.statements, result.operands);
+      const double diff = std::fabs(result.gradient[input] - seeded[j].tangent[i]);
+      ASSERT_TRUE(std::isfinite(result.gradient[input])) << label;
+      ASSERT_LE(diff, bound) << label << ", parameter " << input;
+      ASSERT_LE(diff, kScaledAgreement * scale)
+          << label << ", parameter " << input << ": tape " << result.gradient[input] << ", dual "
+          << seeded[j].tangent[i];
+      if (diff > 0.0) {
+        worst.bound = std::max(worst.bound, diff / bound);
+        worst.scaled = std::max(worst.scaled, diff / scale);
+        worst.tightest = std::min(worst.tightest, bound / scale);
+      }
+    }
+  }
+}
+
 TEST(RealLocalVol, TapeAgreesWithTheDualOnSixtyFourPathsPerContract) {
   AADP_LOAD_OR_SKIP(option_bytes, kOptionsFile);
   AADP_LOAD_OR_SKIP(future_bytes, kFuturesFile);
@@ -171,23 +230,10 @@ TEST(RealLocalVol, TapeAgreesWithTheDualOnSixtyFourPathsPerContract) {
     const pricer::LocalVolModel<double> model(SviSurface<double>(s.terms, s.params), lv.maturity,
                                               steps, {});
     std::vector<pricer::LocalVolModel<test::Dual>> duals;
-    for (std::size_t seeded = 0; seeded < 3; ++seeded) {
-      std::vector<RawSvi<test::Dual>> params;
-      for (std::size_t j = 0; j < 3; ++j) {
-        const RawSvi<double>& p = s.params[j];
-        const auto x = [&](double v, std::size_t slot) {
-          return j == seeded ? test::Dual::Variable(v, slot) : test::Dual(v);
-        };
-        params.push_back({.a = x(p.a, 0),
-                          .b = x(p.b, 1),
-                          .rho = x(p.rho, 2),
-                          .m = x(p.m, 3),
-                          .sigma = x(p.sigma, 4)});
-      }
-      duals.emplace_back(SviSurface<test::Dual>(s.terms, params), lv.maturity, steps,
-                         LocalVolRule{});
-    }
+    duals.reserve(3);
+    for (std::size_t j = 0; j < 3; ++j) duals.push_back(DualModel(s, j, lv));
     ad::LocalVolPathGradient tape(lv, s.terms, s.params, {});
+    Agreement worst;
     std::vector<double> normal(steps);
     std::vector<double> crossing(steps);
     const pricer::PathUniforms u{.normal = normal, .crossing = crossing};
@@ -196,22 +242,23 @@ TEST(RealLocalVol, TapeAgreesWithTheDualOnSixtyFourPathsPerContract) {
       const double value =
           pricer::EvaluateSubstepped<double>(lv.contract, lv.substeps, model, u).value;
       const ad::LocalVolPathGradient::PathResult result = tape.Evaluate(u);
-      ASSERT_EQ(Bits(result.value), Bits(value)) << c.name << ", path " << path;
-      for (std::size_t j = 0; j < 3; ++j) {
-        const test::Dual dual =
-            pricer::EvaluateSubstepped<test::Dual>(lv.contract, lv.substeps, duals[j], u).value;
-        ASSERT_EQ(Bits(dual.value), Bits(value)) << c.name << ", path " << path;
-        for (std::size_t i = 0; i < 5; ++i) {
-          const std::size_t input = (5 * j) + i;
-          const double bound =
-              ad::bounds::AgreementBound(result.absolute[input], result.operand_sums[input],
-                                         result.statements, result.operands);
-          ASSERT_TRUE(std::isfinite(result.gradient[input])) << c.name << ", path " << path;
-          ASSERT_LE(std::fabs(result.gradient[input] - dual.tangent[i]), bound)
-              << c.name << ", path " << path << ", parameter " << input;
-        }
+      const std::string label = std::string(c.name) + ", path " + std::to_string(path);
+      ASSERT_EQ(Bits(result.value), Bits(value)) << label;
+      std::vector<test::Dual> seeded;
+      seeded.reserve(duals.size());
+      for (const pricer::LocalVolModel<test::Dual>& d : duals) {
+        seeded.push_back(
+            pricer::EvaluateSubstepped<test::Dual>(lv.contract, lv.substeps, d, u).value);
+        ASSERT_EQ(Bits(seeded.back().value), Bits(value)) << label;
       }
+      ComparePath(result, seeded, label, worst);
+      if (HasFatalFailure()) return;
     }
+    std::printf(
+        "measured, %s, %llu paths: max |tape - dual| / bound %.3g, / path scale %.3g "
+        "(bound 2^-26); smallest bound / path scale %.3g\n",
+        c.name, static_cast<unsigned long long>(kCheckedPaths), worst.bound, worst.scaled,
+        worst.tightest);
   }
 }
 
