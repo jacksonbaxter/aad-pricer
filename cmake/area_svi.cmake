@@ -101,6 +101,53 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
       LINK aadp_svi_surface aadp_ad aadp_svi aadp_test_support
       LABELS svi)
   endif()
+  if(TARGET aadp_pricer AND TARGET aadp_ad)
+    aadp_library(aadp_local_vol
+      SOURCES src/pricer/local_vol.cpp
+      LINK aadp_pricer aadp_svi_surface)
+    aadp_library(aadp_local_vol_ad
+      SOURCES src/ad/local_vol_gradient.cpp
+      LINK aadp_ad aadp_local_vol)
+
+    # The sub-stepped kernels against EvaluatePath and a hand loop, the flat-surface oracle
+    # against GBM, validation, and the same bits for any thread count.
+    aadp_test(aadp_pricer_local_vol_test
+      SOURCES tests/pricer/local_vol_test.cpp
+      LINK aadp_local_vol aadp_test_support
+      LABELS pricer svi)
+    # Per path, the tape's 15 parameter derivatives against the forward-mode Dual.
+    aadp_test(aadp_ad_local_vol_gradient_test
+      SOURCES tests/ad/local_vol_gradient_test.cpp
+      LINK aadp_local_vol_ad aadp_test_support
+      LABELS ad svi)
+    # The surface entry point and a short path on the tape, from raw bytes.
+    aadp_fuzz(aadp_fuzz_local_vol
+      SOURCES fuzz/fuzz_local_vol.cpp
+      LINK aadp_local_vol_ad aadp_test_support
+      LABELS svi
+      CORPUS fuzz/fuzz_local_vol_seeds)
+  endif()
+  # The local-volatility pricer on the fitted chain, and its report tool. Needs the data area.
+  if(TARGET aadp_svi_chain AND TARGET aadp_local_vol_ad)
+    # Skips, visibly, when data/ has no capture. See scripts/fetch_data.sh.
+    aadp_test(aadp_svi_local_vol_realdata_test
+      SOURCES tests/svi/local_vol_realdata_test.cpp
+      LINK aadp_svi_chain aadp_local_vol_ad aadp_test_support
+      LABELS svi realdata)
+    aadp_tool(aadp_local_vol_report
+      SOURCES tools/local_vol_report/main.cpp
+      LINK aadp_svi_chain aadp_local_vol_ad)
+    aadp_test(aadp_svi_local_vol_report_tool_test
+      SOURCES tests/svi/local_vol_report_tool_test.cpp
+      LINK aadp_svi_chain
+      LABELS svi)
+    if(AADP_BUILD_TESTS AND TARGET aadp_svi_local_vol_report_tool_test)
+      add_dependencies(aadp_svi_local_vol_report_tool_test aadp_local_vol_report)
+      target_compile_definitions(aadp_svi_local_vol_report_tool_test PRIVATE
+        AADP_LOCAL_VOL_REPORT_PATH="$<TARGET_FILE:aadp_local_vol_report>"
+        AADP_LOCAL_VOL_REPORT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/local_vol_report")
+    endif()
+  endif()
 
   # SVI-2, iteration only: no measurement plan or results file yet.
   aadp_bench(aadp_bench_implied_vol
