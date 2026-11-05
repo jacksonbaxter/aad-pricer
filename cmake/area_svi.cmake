@@ -46,6 +46,35 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     LABELS svi
     CORPUS fuzz/fuzz_svi_seeds)
 
+  # Stage 6b: the TAIFEX chain into the fit, and the fit report tool. Needs the data area.
+  if(TARGET aadp_data)
+    aadp_library(aadp_svi_chain
+      SOURCES src/svi/chain_fit.cpp
+      LINK aadp_svi aadp_data)
+    aadp_test(aadp_svi_chain_fit_test
+      SOURCES tests/svi/chain_fit_test.cpp
+      LINK aadp_svi_chain
+      LABELS svi)
+    # Skips, visibly, when data/ has no capture. See scripts/fetch_data.sh.
+    aadp_test(aadp_svi_chain_realdata_test
+      SOURCES tests/svi/chain_realdata_test.cpp
+      LINK aadp_svi_chain
+      LABELS svi realdata)
+    aadp_tool(aadp_svi_fit
+      SOURCES tools/svi_fit/main.cpp
+      LINK aadp_svi_chain)
+    aadp_test(aadp_svi_fit_tool_test
+      SOURCES tests/svi/svi_fit_tool_test.cpp
+      LINK aadp_svi_chain
+      LABELS svi)
+    if(AADP_BUILD_TESTS AND TARGET aadp_svi_fit_tool_test)
+      add_dependencies(aadp_svi_fit_tool_test aadp_svi_fit)
+      target_compile_definitions(aadp_svi_fit_tool_test PRIVATE
+        AADP_SVI_FIT_PATH="$<TARGET_FILE:aadp_svi_fit>"
+        AADP_SVI_FIT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/svi_fit")
+    endif()
+  endif()
+
   # SVI-2, iteration only: no measurement plan or results file yet.
   aadp_bench(aadp_bench_implied_vol
     SOURCES bench/implied_vol_bench.cpp
