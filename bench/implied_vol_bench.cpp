@@ -1,7 +1,8 @@
 // SVI-2, iteration only: the time of one Black-76 implied-volatility inversion through
 // ImpliedVolatility (Let's Be Rational, src/svi/implied_vol.hpp), and of one Black76Price for
-// scale. Not a reported result: it has no measurement plan or stamped results file yet, so every
-// run is labelled "iteration only" and its numbers stay out of BENCHMARKS.md.
+// scale. Not a reported result: it has no stamped results file yet, so every run is labelled
+// "iteration only". BENCHMARKS.md quotes one such run under SVI-2, labelled iteration only, until
+// the measured run at stage 11.
 //
 // The quotes: F = 100, D = exp(-0.03 T), T in {0.0137, 0.0833, 0.5, 2}, sigma in {0.1, 0.2, 0.4,
 // 0.8}, z = ln(K/F) / (sigma sqrt(T)) from -3 to 3 in steps of 0.25, out-of-the-money calls and

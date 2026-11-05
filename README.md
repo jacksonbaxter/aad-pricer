@@ -18,7 +18,7 @@ The test and measurement harness was built first, in Phase 2, so that the oracle
 - cp950 and TAIFEX file readers, and libFuzzer targets on every parser, decoder and pricer entry point, plus a tape fuzzer against finite differences.
 - A fault-injection runner that plants one bug at a time in a copy of the code, to show each oracle and check can fail.
 
-The first AAD and bump-and-revalue results are in `results/mac-m4max/` and `results/linux-zen1/`. They are scalar: SIMD comes at stage 5. Second-order Greeks, SIMD, the SVI fit, the GPU pricer and the QuantLib comparison are still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets with what has been measured against them, and `NOTES.md` the findings and decisions.
+The first AAD and bump-and-revalue results are in `results/mac-m4max/` and `results/linux-zen1/`. They were measured on the scalar pricer and tape. Second-order Greeks (stage 4), the SIMD lanes and vector tape (stage 5) and the raw SVI fit to the TAIFEX chain (stage 6) are built and tested, with iteration-only timings so far; their measured runs come at stage 11. Pricing off the SVI surface, the GPU pricer and the QuantLib comparison are still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets with what has been measured against them, and `NOTES.md` the findings and decisions.
 
 ## Build and run
 
