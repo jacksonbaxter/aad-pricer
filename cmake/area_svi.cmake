@@ -32,4 +32,24 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     SOURCES tests/svi/arbitrage_test.cpp
     LINK aadp_svi
     LABELS svi)
+
+  # The inversion and every check on raw bytes: no crash, no UB, outputs valid or named errors.
+  aadp_fuzz(aadp_fuzz_svi
+    SOURCES fuzz/fuzz_svi.cpp
+    LINK aadp_svi
+    LABELS svi
+    CORPUS fuzz/fuzz_svi_seeds)
+
+  # SVI-2, iteration only: no measurement plan or results file yet.
+  aadp_bench(aadp_bench_implied_vol
+    SOURCES bench/implied_vol_bench.cpp
+    LINK aadp_svi)
+  if(AADP_BUILD_TESTS AND TARGET aadp_bench_implied_vol)
+    # Every benchmark once, briefly: each quote must invert before the timing starts. Not a result.
+    add_test(NAME aadp_bench_implied_vol_smoke_not_a_result
+      COMMAND aadp_bench_implied_vol --benchmark_min_time=0.001s)
+    set_tests_properties(aadp_bench_implied_vol_smoke_not_a_result PROPERTIES
+      LABELS "bench;svi"
+      FAIL_REGULAR_EXPRESSION "ERROR OCCURRED")
+  endif()
 endif()
