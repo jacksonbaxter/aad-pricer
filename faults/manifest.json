@@ -3862,6 +3862,566 @@
       "reason": "invariant failed: at \\+inf",
       "timeout_s": 180,
       "output_files": ["build/fuzz/fault-fuzz/svi-dplus-location/*", "build/fuzz/fault-fuzz/svi-dplus-location/corpus/*"]
+    },
+    {
+      "id": "parity-discount-sign",
+      "kind": "check",
+      "covers": "the parity regression D = -slope, F = intercept / D",
+      "bug": "D is taken as the slope of C - P on K, not minus it, so D and F come out negative.",
+      "edits": [
+        {
+          "file": "src/data/forwards.cpp",
+          "find": "  const double discount = -slope;",
+          "replace": "  const double discount = slope;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_tests"],
+      "command": ["{build}/bin/aadp_data_tests", "--gtest_filter=FitParity.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitParity\\.RecoversForwardAndDiscountFromAnExactLine",
+      "timeout_s": 300
+    },
+    {
+      "id": "parity-phase1-forward",
+      "kind": "oracle",
+      "covers": "Phase 1's parity.csv and the calibration set's 65, 51, 64 rows from the regressed forwards",
+      "bug": "F is the intercept, not the intercept over D: about 3 to 39 points low.",
+      "edits": [
+        {
+          "file": "src/data/forwards.cpp",
+          "find": "  const double forward = intercept / discount;",
+          "replace": "  const double forward = intercept;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_realdata_tests"],
+      "command": ["{build}/bin/aadp_data_realdata_tests", "--gtest_filter=RealParity.*:RealCalibrationSet.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealParity\\.SettleAllReproducesPhaseOne",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "parity-phase1-rms",
+      "kind": "oracle",
+      "covers": "Phase 1's residual RMS over n, against parity.csv",
+      "bug": "The residual RMS divides by n - 2, the variance's degrees of freedom, not by n as Phase 1 does.",
+      "edits": [
+        {
+          "file": "src/data/forwards.cpp",
+          "find": "  const double rms = std::sqrt(sum_squares / count);",
+          "replace": "  const double rms = std::sqrt(sum_squares / (count - 2.0));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_realdata_tests"],
+      "command": ["{build}/bin/aadp_data_realdata_tests", "--gtest_filter=RealParity.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealParity\\.SettleAllReproducesPhaseOne",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "parity-phase1-sigma-leg",
+      "kind": "oracle",
+      "covers": "sigma_leg = RMS / sqrt 2, against Phase 1's 1.87, 2.43, 1.55 by its route",
+      "bug": "sigma_leg is the residual RMS itself, the noise of C - P rather than of one leg.",
+      "edits": [
+        {
+          "file": "src/data/forwards.cpp",
+          "find": "                   .sigma_leg = rms / std::numbers::sqrt2,",
+          "replace": "                   .sigma_leg = rms,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_realdata_tests"],
+      "command": ["{build}/bin/aadp_data_realdata_tests", "--gtest_filter=RealParity.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealParity\\.SigmaLegBySettleAllAndPhaseOnesSettleNearRoute",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "parity-tx-spread",
+      "kind": "check",
+      "covers": "the TX settlement lookup, regular outrights only",
+      "bug": "The lookup takes a calendar spread's settlement as the month's.",
+      "edits": [
+        {
+          "file": "src/data/forwards.cpp",
+          "find": "row.contract == \"TX\" && !row.calendar_spread && row.expiry == expiry &&",
+          "replace": "row.contract == \"TX\" && row.expiry == expiry &&"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_tests"],
+      "command": ["{build}/bin/aadp_data_tests", "--gtest_filter=TxSettlement.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TxSettlement\\.RegularOutrightOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "time-expiry-close",
+      "kind": "check",
+      "covers": "T from 13:45 on the trade date to 13:30 on the expiry day",
+      "bug": "T runs to 13:45 on the expiry day, the normal close, not the last day's 13:30.",
+      "edits": [
+        {
+          "file": "src/data/forwards.hpp",
+          "find": "inline constexpr int kExpiryMinutes = (13 * 60) + 30;",
+          "replace": "inline constexpr int kExpiryMinutes = (13 * 60) + 45;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_tests"],
+      "command": ["{build}/bin/aadp_data_tests", "--gtest_filter=TimeToExpiry.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TimeToExpiry\\.CalendarSecondsFromTheCloseToTheLastDayClose",
+      "timeout_s": 300
+    },
+    {
+      "id": "time-year-basis",
+      "kind": "check",
+      "covers": "T on ACT/365",
+      "bug": "The year is 365.25 days, not ACT/365's 365.",
+      "edits": [
+        {
+          "file": "src/data/forwards.hpp",
+          "find": "inline constexpr double kSecondsPerYear = 365.0 * 86400.0;",
+          "replace": "inline constexpr double kSecondsPerYear = 365.25 * 86400.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_tests"],
+      "command": ["{build}/bin/aadp_data_tests", "--gtest_filter=TimeToExpiry.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TimeToExpiry\\.CalendarSecondsFromTheCloseToTheLastDayClose",
+      "timeout_s": 300
+    },
+    {
+      "id": "tick-rules-art-7",
+      "kind": "check",
+      "covers": "the settlement tick of TAIFEX Rules Art. 7",
+      "bug": "A price of exactly 50 gets the 0.5 tick of the band below.",
+      "edits": [
+        {
+          "file": "src/data/calibration_set.cpp",
+          "find": "  if (price < 50.0) return 0.5;",
+          "replace": "  if (price <= 50.0) return 0.5;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_tests"],
+      "command": ["{build}/bin/aadp_data_tests", "--gtest_filter=SettlementTick.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SettlementTick\\.RulesArticleSeven",
+      "timeout_s": 300
+    },
+    {
+      "id": "butterfly-half-tick-band",
+      "kind": "oracle",
+      "covers": "the half-tick band, against Phase 1's 23 butterflies beyond half a tick",
+      "bug": "The middle strike's term of the band is a whole tick, not half.",
+      "edits": [
+        {
+          "file": "src/data/calibration_set.cpp",
+          "find": "                          (settlement_tick(p2.price) / 2.0) +",
+          "replace": "                          settlement_tick(p2.price) +"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_realdata_tests"],
+      "command": ["{build}/bin/aadp_data_realdata_tests", "--gtest_filter=RealCalibrationSet.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealCalibrationSet\\.InputButterflyCountsMatchPhaseOne",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "butterfly-guard",
+      "kind": "oracle",
+      "covers": "the 1e-9 guard of Phase 1's non-convex count, against its 51",
+      "bug": "Non-convex counts every triple whose excess is above -1e-9, so a linear triple counts.",
+      "edits": [
+        {
+          "file": "src/data/calibration_set.cpp",
+          "find": "      counts.non_convex += excess > kButterflyGuard ? 1 : 0;",
+          "replace": "      counts.non_convex += excess > -kButterflyGuard ? 1 : 0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_data_realdata_tests"],
+      "command": ["{build}/bin/aadp_data_realdata_tests", "--gtest_filter=RealCalibrationSet.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealCalibrationSet\\.InputButterflyCountsMatchPhaseOne",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "svi-fit-simplex-tolerance",
+      "kind": "check",
+      "covers": "noiseless recovery within the convergence and conditioning tolerance",
+      "bug": "Nelder-Mead stops when its simplex is 1e-4 wide in m and ln sigma, not 1e-10.",
+      "edits": [
+        {
+          "file": "src/svi/fit.hpp",
+          "find": "  double simplex_tolerance = 1e-10;  // In m and in ln sigma.",
+          "replace": "  double simplex_tolerance = 1e-4;  // In m and in ln sigma."
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitSynthetic.Noiseless*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitSynthetic\\.NoiselessPricesRecoverTheParameters",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-jacobian-noise",
+      "kind": "check",
+      "covers": "the parameter covariance from the analytic Jacobian, and the noisy recovery within 4 SE",
+      "bug": "The Jacobian of the residuals multiplies dV/dw by the noise instead of dividing, so with noise 2 every SE is a quarter of its value.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "    const double dvdw = slice.discount * slice.forward * phi / (2.0 * s) / quote.noise;",
+          "replace": "    const double dvdw = slice.discount * slice.forward * phi / (2.0 * s) * quote.noise;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitSynthetic.Noisy*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitSynthetic\\.NoisyPricesRecoverTheParametersWithinFourStandardErrors",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-rho-constraint",
+      "kind": "check",
+      "covers": "rho >= -1 held in the solve, and rho beyond its bound fitting the bound",
+      "bug": "The QP's rho >= -1 row is c >= 0, so the solve fits rho = -1.05 and only the conversion to raw parameters clamps it.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return {.row = {{{0.0, -1.0, -1.0},  // rho >= -1: c + d >= 0",
+          "replace": "  return {.row = {{{0.0, 0.0, -1.0},  // rho >= -1: c + d >= 0"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitSynthetic.RhoBeyond*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitSynthetic\\.RhoBeyondItsBoundFitsTheBoundAndRecordsIt",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-active-bound",
+      "kind": "check",
+      "covers": "active-bound recording at slack 1e-9 of its scale",
+      "bug": "A bound counts as active only with negative slack, so rho exactly at -1 is not recorded.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": ".active = slack <= kActiveTolerance * scale};",
+          "replace": ".active = slack < 0.0 * scale};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitSynthetic.RhoBeyond*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitSynthetic\\.RhoBeyondItsBoundFitsTheBoundAndRecordsIt",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-lee-slope-bound",
+      "kind": "check",
+      "covers": "the fit never repairs: a slope above 2 is fitted as it is",
+      "bug": "The fit bounds b (1 + |rho|) by Lee's 2 instead of 4, so a slope of 2.25 is cut to 2 by the fit, not reported by the check.",
+      "edits": [
+        {
+          "file": "src/svi/fit.hpp",
+          "find": "  double slope_bound = 4.0;  // b (1 + |rho|) <= slope_bound.",
+          "replace": "  double slope_bound = 2.0;  // b (1 + |rho|) <= slope_bound."
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitNeverRepairs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitNeverRepairs\\.SlopeAboveTwoIsFittedAndItsWingViolationsReported",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-a-nonnegative",
+      "kind": "check",
+      "covers": "the fit never repairs: Vogt's slice, with a < 0, is fitted as it is",
+      "bug": "Zeliade's a >= 0 is back in the domain, which excludes Vogt's a = -0.041.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "std::isfinite(x[2]) && MinVariance(x) > 0.0;",
+          "replace": "std::isfinite(x[2]) && MinVariance(x) > 0.0 && x[0] >= 0.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitNeverRepairs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitNeverRepairs\\.VogtIsFittedAsItIsAndItsDensityViolationReported",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-svi6-units",
+      "kind": "check",
+      "covers": "SVI-6 in basis points of the forward",
+      "bug": "SVI-6 is in percent of the forward, not basis points.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return 1e4 * sum / static_cast<double>(model_price.size()) / slice.forward;",
+          "replace": "  return 1e2 * sum / static_cast<double>(model_price.size()) / slice.forward;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitMetrics.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitMetrics\\.MeanAbsolutePriceErrorInBasisPointsOfTheForward",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-svi11-root",
+      "kind": "check",
+      "covers": "SVI-11, the root of the mean squared vol error",
+      "bug": "SVI-11 is the mean squared error, without the root.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return 100.0 * std::sqrt(sum / static_cast<double>(model_vol.size()));",
+          "replace": "  return 100.0 * (sum / static_cast<double>(model_vol.size()));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitMetrics.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseInVolPointsUnweighted",
+      "timeout_s": 300
+    },
+    {
+      "id": "chain-noise-weights",
+      "kind": "check",
+      "covers": "the noise weights sqrt(sigma_leg^2 + tick^2 / 12)",
+      "bug": "The weights leave out the rounding of the settlement to its tick.",
+      "edits": [
+        {
+          "file": "src/svi/chain_fit.cpp",
+          "find": "         .noise = std::sqrt(leg2 + (tick * tick / 12.0))});",
+          "replace": "         .noise = std::sqrt(leg2 + (0.0 * tick))});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_chain_fit_test"],
+      "command": ["{build}/bin/aadp_svi_chain_fit_test", "--gtest_filter=BuildChainSlices.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BuildChainSlices\\.ForwardsTimesQuotesAndWeights",
+      "timeout_s": 300
+    },
+    {
+      "id": "chain-tx-lookup",
+      "kind": "check",
+      "covers": "the TX settlement beside each slice's forward",
+      "bug": "The chain looks the TX settlement up in no futures rows.",
+      "edits": [
+        {
+          "file": "src/svi/chain_fit.cpp",
+          "find": "    slice.tx_settlement = tx_settlement(futures, expiry);",
+          "replace": "    slice.tx_settlement = tx_settlement(futures.first(0), expiry);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_chain_fit_test"],
+      "command": ["{build}/bin/aadp_svi_chain_fit_test", "--gtest_filter=BuildChainSlices.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] BuildChainSlices\\.TxSettlementIsLookedUp",
+      "timeout_s": 300
+    },
+    {
+      "id": "chain-calendar-order",
+      "kind": "check",
+      "covers": "the calendar check between adjacent fitted slices, shorter expiry first",
+      "bug": "Adjacent slices are compared in the order given, so a list in reverse maturity order checks the later slice as the earlier.",
+      "edits": [
+        {
+          "file": "src/svi/chain_fit.cpp",
+          "find": "    const bool in_order = slices[i].years <= slices[i + 1].years;",
+          "replace": "    const bool in_order = true;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_chain_fit_test"],
+      "command": ["{build}/bin/aadp_svi_chain_fit_test", "--gtest_filter=FitChain.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitChain\\.ACrossingIsReportedAndTheShorterExpiryComesFirstInEitherOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "chain-realdata-forward",
+      "kind": "oracle",
+      "covers": "the chain's slices against the published 65, 51, 64 rows and input butterfly counts",
+      "bug": "The calibration set is cut at a forward 50 points above the regressed one.",
+      "edits": [
+        {
+          "file": "src/svi/chain_fit.cpp",
+          "find": "    forwards.push_back({.expiry = std::string(expiry), .forward = parity->forward});",
+          "replace": "    forwards.push_back({.expiry = std::string(expiry), .forward = parity->forward + 50.0});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_chain_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_chain_realdata_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealChainFit\\.SlicesHaveThePublishedSizesCountsAndWeights",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "svi-fit-tool-attribution",
+      "kind": "check",
+      "covers": "attribution on output, tools/svi_fit",
+      "bug": "aadp_svi_fit prints the fit without the attribution that the data licence requires on derived output.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "void Header() {\n  aadp::write_attribution(std::cout);\n",
+          "replace": "void Header() {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitTool\\.ReportOpensWithTheFullAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-tool-not-tradable",
+      "kind": "check",
+      "covers": "the report says its inputs are settlements, not tradable quotes",
+      "bug": "The header calls the inputs settlement prices but no longer says they are not tradable quotes.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "\"These are daily settlement prices set by the exchange's rules, not tradable \"\n         \"quotes.\\n\"",
+          "replace": "\"These are daily settlement prices set by the exchange's rules.\\n\""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitTool\\.HeaderSaysSettlementsNotTradableQuotesAndThirtyThreeDays",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-tool-33-days",
+      "kind": "check",
+      "covers": "the report states that maturity reaches 33 days only",
+      "bug": "The header lists the expiries without saying that maturity reaches 33 days only.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "\"Maturity reaches 33 days only: expiries",
+          "replace": "\"Expiries"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitTool\\.HeaderSaysSettlementsNotTradableQuotesAndThirtyThreeDays",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-tool-no-timing",
+      "kind": "check",
+      "covers": "no timing in the fit report",
+      "bug": "The report runs the timing loop even without --timing, so wall times reach the report.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "  if (timing > 0) {",
+          "replace": "  if (timing >= 0) {\n    timing = timing > 0 ? timing : 1;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitTool\\.ReportsEverySliceTheCalendarAndNoTiming",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fuzz-fit-bad-quote-index",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_svi_fit, error values match the input",
+      "bug": "A bad quote is reported at the index after its own, which the negative-price seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "FitError{.code = FitErrorCode::kBadQuote, .quote = i});",
+          "replace": "FitError{.code = FitErrorCode::kBadQuote, .quote = i + 1});"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_svi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_svi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/svi-fit-bad-quote-index/", "{build}/fault-fuzz/svi-fit-bad-quote-index/corpus", "fuzz/fuzz_svi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: bad quote is bad",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/svi-fit-bad-quote-index/*", "build/fuzz/fault-fuzz/svi-fit-bad-quote-index/corpus/*"]
+    },
+    {
+      "id": "svi-fuzz-fit-four-strikes",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_svi_fit, a fit needs 5 distinct strikes",
+      "bug": "The fit accepts 4 distinct strikes for 5 parameters, which the too-few-strikes seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  if (distinct < kMinStrikes) {",
+          "replace": "  if (distinct < kMinStrikes - 1) {"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_svi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_svi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/svi-fit-four-strikes/", "{build}/fault-fuzz/svi-fit-four-strikes/corpus", "fuzz/fuzz_svi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: a fit has 5 strikes",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/svi-fit-four-strikes/*", "build/fuzz/fault-fuzz/svi-fit-four-strikes/corpus/*"]
+    },
+    {
+      "id": "svi-fuzz-fit-b-below-zero",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_svi_fit, parameters inside the fit's bounds",
+      "bug": "b is c / sigma with c as the QP left it, a few ulps below zero, which the regression seed shows.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  const double c = std::max(x[2], 0.0);",
+          "replace": "  const double c = x[2];"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_svi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_svi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/svi-fit-b-below-zero/", "{build}/fault-fuzz/svi-fit-b-below-zero/corpus", "fuzz/fuzz_svi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: b >= 0 and \\|rho\\| <= 1",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/svi-fit-b-below-zero/*", "build/fuzz/fault-fuzz/svi-fit-b-below-zero/corpus/*"]
     }
   ]
 }
