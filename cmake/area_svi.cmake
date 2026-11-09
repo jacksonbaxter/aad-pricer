@@ -149,6 +149,36 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     endif()
   endif()
 
+  # Stage 7b: quote sensitivities through the fit by the implicit function theorem, on the
+  # second-order tape (NOTES.md, "Stage 7b").
+  if(TARGET aadp_ad)
+    aadp_library(aadp_svi_adjoint
+      SOURCES src/svi/calibration_adjoint.cpp
+      LINK aadp_svi aadp_ad)
+    # The KKT / implicit-function entry point on small slices from raw bytes: errors as values,
+    # finite results, and every solution solving its KKT system.
+    aadp_fuzz(aadp_fuzz_calibration_adjoint
+      SOURCES fuzz/fuzz_calibration_adjoint.cpp
+      LINK aadp_svi_adjoint
+      LABELS svi
+      CORPUS fuzz/fuzz_calibration_adjoint_seeds)
+  endif()
+
+  # Stage 7b on the fitted chain: the parity regression differentiated, both chains and the bump
+  # check's pieces. Needs the data area.
+  if(TARGET aadp_svi_adjoint AND TARGET aadp_svi_chain)
+    aadp_library(aadp_svi_chain_adjoint
+      SOURCES src/svi/chain_adjoint.cpp
+      LINK aadp_svi_chain aadp_svi_adjoint)
+    # The exact fit against G^-1, the tape against nested forward mode, the slope constraint
+    # against the reduced problem, the refusals, the parity derivative, the halving rule, and a
+    # small bump-and-refit check that the exact Hessian passes and Gauss-Newton does not.
+    aadp_test(aadp_svi_calibration_adjoint_test
+      SOURCES tests/svi/calibration_adjoint_test.cpp
+      LINK aadp_svi_chain_adjoint aadp_test_support
+      LABELS svi)
+  endif()
+
   # SVI-2, iteration only: no measurement plan or results file yet.
   aadp_bench(aadp_bench_implied_vol
     SOURCES bench/implied_vol_bench.cpp
