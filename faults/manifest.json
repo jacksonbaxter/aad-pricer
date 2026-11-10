@@ -6245,6 +6245,25 @@
       "timeout_s": 600
     },
     {
+      "id": "svi-floor-carries-derivative",
+      "kind": "check",
+      "covers": "a floored local variance carries no derivative, per path and floor class",
+      "bug": "A floored point takes floor + (x - Value(x)), so its primal is unchanged and the tape and the Dual both get the unfloored derivative.",
+      "edits": [
+        {
+          "file": "src/svi/local_vol.hpp",
+          "find": "  return {.variance = Select(ok, ratio, bound), .dwdt = p.dwdt, .g = g, .cls = cls};",
+          "replace": "  const Real raw = p.dwdt / g;\n  const Real floored = IsFloored(cls) ? bound + (raw - Real(Value(raw))) : bound;\n  return {.variance = Select(ok, ratio, floored), .dwdt = p.dwdt, .g = g, .cls = cls};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_local_vol_gradient_test"],
+      "command": ["{build}/bin/aadp_ad_local_vol_gradient_test", "--gtest_filter=LocalVolFloors.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] 4 tests, listed below:\\n\\[  FAILED  \\] LocalVolFloors\\.NonPositiveVarianceCarriesNoDerivative\\n\\[  FAILED  \\] LocalVolFloors\\.CalendarFloorCarriesNoDerivative\\n\\[  FAILED  \\] LocalVolFloors\\.ButterflyFloorCarriesNoDerivative\\n\\[  FAILED  \\] LocalVolFloors\\.BelowFloorCarriesNoDerivative$",
+      "timeout_s": 300
+    },
+    {
       "id": "svi-fd-uncoupled",
       "kind": "check",
       "covers": "surface rows, common random numbers",
