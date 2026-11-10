@@ -204,7 +204,7 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
   std::vector<std::optional<std::string>> problems(plan.rows.size());
   for (std::size_t i = 0; i < plan.rows.size(); ++i) {
     const PlanRow& row = plan.rows[i];
-    if (row.status != RowStatus::kRun) continue;
+    if (!InRunOne(row)) continue;
     problems[i] = ProblemWithRow(row, references);
     if (problems[i]) continue;
     const GroupKey key = KeyOf(plan, options, row);
@@ -224,6 +224,11 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
       out << Format("%-18s awaiting-phase3\n", row.id.c_str());
       continue;
     }
+    if (!InRunOne(row)) {
+      ++summary.run2_only;
+      out << Format("%-18s not-in-run-1\n", row.id.c_str());
+      continue;
+    }
     ++summary.run;
     if (const std::optional<std::string>& problem = problems[i]) {
       ++summary.skipped;
@@ -241,7 +246,14 @@ RunSummary RunPlan(const Plan& plan, const ReferenceTable& references, const Run
   }
   out << Format("run=%zu passed=%zu failed=%zu skipped=%zu awaiting=%zu K=%zu\n", summary.run,
                 summary.passed, summary.failed, summary.skipped, summary.awaiting, summary.rows);
+  out << Format("unresolved=%zu run2_only=%zu\n", summary.unresolved, summary.run2_only);
   return summary;
+}
+
+bool InRunOne(const PlanRow& row) {
+  if (row.status != RowStatus::kRun) return false;
+  const auto instrument = ResolveInstrument(row.instrument);
+  return instrument && instrument->kind == InstrumentKind::kGbm;
 }
 
 namespace {
@@ -337,7 +349,8 @@ std::vector<PlanTemplateRow> PlanTemplate() {
   AddRows(rows, "CB085", cat::kBridgeH85, kBarrierPaths, AllClosedForm("CB085", "", ""));
   AddRows(rows, "CBK90", cat::kBridgeK90, kBarrierPaths, AllClosedForm("CBK90", "", ""));
 
-  // Every SVI parameter of every slice of the three usable expiries, on each path product.
+  // Every SVI parameter of every slice of the three usable expiries, on each path product. N is
+  // the barrier count, and the reference step comes from the ladder (NOTES.md, "Stage 8").
   for (const auto& [code, surface] :
        {std::pair{"AS", "svi-surface:arithmetic"}, std::pair{"DB", "svi-surface:discrete-barrier"},
         std::pair{"CB", "svi-surface:continuous-barrier"}}) {
@@ -346,21 +359,25 @@ std::vector<PlanTemplateRow> PlanTemplate() {
         rows.push_back({.id = std::string("P3.") + code + "." + slice + "." + parameter,
                         .instrument = surface,
                         .greek = std::string("d_") + parameter + "_" + slice,
-                        .reference = "phase3",
-                        .paths = 0,
-                        .status = RowStatus::kAwaitingPhase3});
+                        .reference = kPhase3Placeholder,
+                        .paths = kBarrierPaths,
+                        .status = RowStatus::kRun,
+                        .stage8 = true});
       }
     }
   }
+  // At the barrier count, so a knock-in row reads the uniforms of its knock-out row.
   for (const auto& [code, contract] : {std::pair{"KID", "knock-in-parity:discrete"},
                                        std::pair{"KIC", "knock-in-parity:continuous"}}) {
     for (const char* greek : {"value", "delta", "vega", "rho", "divrho", "theta"}) {
-      rows.push_back({.id = std::string("P3.") + code + "." + greek,
+      const std::string id = std::string("P3.") + code + "." + greek;
+      rows.push_back({.id = id,
                       .instrument = contract,
                       .greek = greek,
-                      .reference = "phase3",
-                      .paths = 0,
-                      .status = RowStatus::kAwaitingPhase3});
+                      .reference = id,
+                      .paths = kBarrierPaths,
+                      .status = RowStatus::kRun,
+                      .stage8 = true});
     }
   }
   return rows;
@@ -375,8 +392,9 @@ std::vector<PilotRow> RunPilot(const std::vector<PlanTemplateRow>& rows,
     const std::uint64_t paths = row.paths / config.paths_divisor / config.batches * config.batches;
     return {row.instrument, paths, config.batches, config.seed};
   };
+  // Run 1's rows only; stage 8's have their own pilot (production.hpp).
   for (const PlanTemplateRow& row : rows) {
-    if (row.status != RowStatus::kRun) continue;
+    if (row.status != RowStatus::kRun || row.stage8) continue;
     const GroupKey key = key_of(row);
     GroupRequest& group = groups[key];
     group.instrument = row.instrument;
@@ -396,7 +414,7 @@ std::vector<PilotRow> RunPilot(const std::vector<PlanTemplateRow>& rows,
 
   std::vector<PilotRow> pilot;
   for (const PlanTemplateRow& row : rows) {
-    if (row.status != RowStatus::kRun) continue;
+    if (row.status != RowStatus::kRun || row.stage8) continue;
     const GroupKey key = key_of(row);
     const Table& table = tables.at(key);
     const Greek greek = RequireGreek(row.greek);
@@ -507,18 +525,181 @@ bool DecodePilot(std::string_view text, PilotFile& out) {
   return header_seen;
 }
 
-namespace {
-
-// Up, so the printed ceiling is never below the rule's value.
 double RoundUpToThreeFigures(double value) {
+  if (value == 0.0) return 0.0;
   const double scale = std::pow(10.0, std::floor(std::log10(value)) - 2.0);
   return std::ceil(value / scale) * scale;
+}
+
+double LadderB(const BatchStatistics& two_h, double critical) {
+  const double truncation = (std::fabs(two_h.mean) + critical * two_h.standard_error) / 3.0;
+  return RoundUpToThreeFigures(kFdBFactor * truncation);
+}
+
+std::string EncodeStage8Pilot(const std::vector<PilotRow>& rows, const PilotConfig& config) {
+  using decode::FormatDouble;
+  std::string out =
+      "# Stage 8 pilot, from aadp_run_oracles pilot --rows stage8 --estimator production. Seed\n"
+      "# differs from any measured seed. NOTES.md, \"Stage 8\", registers the rule.\n"
+      "# Estimator: the production pricer's tape, ad::PriceWithGradient on the 12 knock-in rows\n"
+      "# and ad::PriceLocalVolWithGradient on the 45 surface rows.\n"
+      "# Knock-in rows: reference is the value in references/oracle_values.csv, se the tape's,\n"
+      "# two-h columns 0. Ceiling factor 1.65.\n"
+      "# Surface rows: reference is the mean of the central difference D_{h*} of PriceLocalVol on\n"
+      "# the same paths, se that of the paired batch difference, two-h columns those of\n"
+      "# Delta_l* = D_l* - D_{l*+1}. h* and the ladder are in references/svi_fd_ladder.csv.\n"
+      "# Ceiling factor 3. An unresolved row reports D_8 and the paired SE at h_8, two-h 0;\n"
+      "# one whose first step left the domain reports 0 in all three.\n"
+      "# The surface rows rest on TAIFEX settlements of trade date 2024-11-15, not tradable\n"
+      "# quotes, reaching 33 days. Data: TAIFEX via data.gov.tw, Open Government Data License\n"
+      "# (NOTICE).\n";
+  out += "#! seed=" + std::to_string(config.seed) + "\n";
+  out += "#! batches=" + std::to_string(config.batches) + "\n";
+  out += "#! paths_divisor=" + std::to_string(config.paths_divisor) + "\n";
+  out += "id,paths,estimate,reference,se,two_h_mean,two_h_se\n";
+  for (const PilotRow& row : rows) {
+    out += row.id + "," + std::to_string(row.paths) + "," + FormatDouble(row.estimate) + "," +
+           FormatDouble(row.reference) + "," + FormatDouble(row.se) + "," +
+           FormatDouble(row.two_h_mean) + "," + FormatDouble(row.two_h_se) + "\n";
+  }
+  return out;
+}
+
+std::optional<std::string> RefusePilotSeed(std::uint64_t seed, const PlanHeader& header) {
+  if (seed == 0) return "the pilot needs a seed";
+  if (seed == header.measured_seed) return "the pilot may not run on the plan's measured seed";
+  return std::nullopt;
+}
+
+namespace {
+
+// One choice record of the ladder file, or nothing if it is malformed.
+std::optional<LadderChoice> DecodeLadderChoice(const std::vector<std::string_view>& fields) {
+  LadderChoice choice;
+  choice.id = fields[0];
+  choice.resolved = fields[1] == "chosen";
+  const auto h = decode::ParseDouble(fields[3]);
+  const auto h0 = decode::ParseDouble(fields[15]);
+  if (!h || !h0 || !(*h > 0.0) || !(*h0 > 0.0)) return std::nullopt;
+  choice.h_star = *h;
+  choice.h0 = *h0;
+  if (choice.resolved) {
+    const auto level = decode::ParseUnsigned(fields[2]);
+    const auto b = decode::ParseDouble(fields[16]);
+    if (!level || !b || *level > 5 || !(*b >= 0.0)) return std::nullopt;
+    choice.level = static_cast<std::size_t>(*level);
+    choice.b = *b;
+  }
+  choice.note = fields[17];
+  return choice;
+}
+
+}  // namespace
+
+std::optional<std::vector<LadderChoice>> DecodeLadderChoices(std::string_view text) {
+  constexpr std::size_t kColumns = 18;
+  std::vector<LadderChoice> out;
+  bool header_seen = false;
+  for (const std::string_view line : decode::Lines(text)) {
+    if (line.empty() || line.front() == '#') continue;
+    const auto fields = decode::Split(line, ',');
+    if (fields.size() != kColumns) return std::nullopt;
+    if (!header_seen) {
+      if (fields[0] != "id" || fields[1] != "record") return std::nullopt;
+      header_seen = true;
+      continue;
+    }
+    if (fields[1] == "level") continue;
+    if (fields[1] != "chosen" && fields[1] != "unresolved") return std::nullopt;
+    auto choice = DecodeLadderChoice(fields);
+    if (!choice) return std::nullopt;
+    out.push_back(*std::move(choice));
+  }
+  if (!header_seen) return std::nullopt;
+  return out;
+}
+
+namespace {
+
+// NOLINTBEGIN(bugprone-suspicious-missing-comma): each entry is one long line split for width.
+constexpr std::array<std::string_view, 7> kRunOneComments = {
+    "# Pre-registered comparison plan, BENCHMARKS.md section 10. Generated by aadp_run_oracles"
+    " emit-plan from references/pilot_results.csv, and committed before the first measured run.",
+    "# K is the row count, Phase 3 rows included. Never raise a ceiling or b after seeing a"
+    " measured result.",
+    "# se_ceiling = factor * SE_pilot * sqrt(N_pilot / N), rounded up to 3 figures."
+    " ceiling_factor 1.65 on reference rows: exp(critical * sqrt(2 / 126)) = 1.62 is the"
+    " Bonferroni bound on the ratio of two SEs from 64 Gaussian batch means.",
+    "# fd_ceiling_factor 3 on FD rows: paired differences are mostly zero with spikes at the"
+    " kink. sd of log(SE ratio) between pilot seeds was 0.25 against the Gaussian 0.126, and"
+    " exp(critical * 0.25) = 2.9.",
+    "# b, reference rows: the reference's own b. b, FD rows: fd_b_factor * (|mean(FD(2h) -"
+    " FD(h))| + critical * SE of that mean) / 3, from the pilot's two-h check."
+    " fd_b_factor 2: higher-order terms and one more pilot's worth of noise.",
+    "# FD rows compare the Dual estimate with FD(h) on the same paths, and SE is that of the"
+    " paired batch difference. The step h is in the reference field.",
+    "# Awaiting rows fix nothing yet. They get a ceiling from their own pilot before their first"
+    " measured run, and they already count in K.",
+};
+constexpr std::array<std::string_view, 2> kStage8Comments = {
+    "# Stage 8 knock-in rows (P3.KID, P3.KIC; NOTES.md, \"Stage 8\"): the production pricer's tape"
+    " against the reference in references/oracle_values.csv. Ceilings from"
+    " references/pilot_results_stage8.csv with ceiling_factor, b the reference's.",
+    "# Stage 8 surface rows (P3.AS, P3.DB, P3.CB): the production tape against the central"
+    " difference of PriceLocalVol at FD:<h*> on the same paths, h* and b from the ladder in"
+    " references/svi_fd_ladder.csv, ceilings with fd_ceiling_factor. An unresolved row runs at"
+    " FD:<h_8> and never passes. The surface is the fit to TAIFEX settlements of 2024-11-15, not"
+    " tradable quotes, reaching 33 days (NOTICE).",
+};
+// NOLINTEND(bugprone-suspicious-missing-comma)
+
+double Ceiling(double factor, const PilotRow& result, std::uint64_t paths) {
+  return RoundUpToThreeFigures(
+      factor * result.se *
+      std::sqrt(static_cast<double>(result.paths) / static_cast<double>(paths)));
+}
+
+// A stage 8 row from its pilot and ladder. Throws if the inputs do not cover it.
+PlanRow Stage8Row(const PlanTemplateRow& row, PlanRow out, const ReferenceTable& references,
+                  const Stage8Inputs& stage8, std::uint64_t measured_seed, double critical) {
+  const PilotRow* result = nullptr;
+  for (const PilotRow& p : stage8.pilot.rows) {
+    if (p.id == row.id) result = &p;
+  }
+  if (result == nullptr) throw std::runtime_error("no stage 8 pilot row for " + row.id);
+  out.paths = row.paths;
+  out.seed = measured_seed;
+  const auto instrument = ResolveInstrument(row.instrument);
+  if (!instrument) throw std::runtime_error("unresolvable instrument for " + row.id);
+  if (instrument->kind == InstrumentKind::kKnockIn) {
+    const Reference* reference = references.Find(row.reference);
+    if (reference == nullptr) throw std::runtime_error("no reference for " + row.id);
+    out.se_ceiling = Ceiling(kCeilingFactor, *result, row.paths);
+    out.b = reference->b;
+    return out;
+  }
+  const LadderChoice* choice = nullptr;
+  for (const LadderChoice& c : stage8.ladder) {
+    if (c.id == row.id) choice = &c;
+  }
+  if (choice == nullptr) throw std::runtime_error("no ladder choice for " + row.id);
+  out.reference = "FD:" + decode::FormatDouble(choice->h_star);
+  if (!choice->resolved) {
+    out.status = RowStatus::kUnresolved;
+    return out;
+  }
+  out.se_ceiling = Ceiling(kFdCeilingFactor, *result, row.paths);
+  out.b = LadderB({.mean = result->two_h_mean, .standard_error = result->two_h_se}, critical);
+  if (out.b != choice->b) {
+    throw std::runtime_error("b of " + row.id + " differs between the pilot and the ladder");
+  }
+  return out;
 }
 
 }  // namespace
 
 Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& references,
-               const PilotFile& pilot, std::uint64_t measured_seed) {
+               const PilotFile& pilot, std::uint64_t measured_seed, const Stage8Inputs* stage8) {
   std::map<std::string, const PilotRow*, std::less<>> by_id;
   for (const PilotRow& row : pilot.rows) by_id[row.id] = &row;
 
@@ -533,27 +714,10 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
   h.fd_b_factor = kFdBFactor;
   h.pilot_seed = pilot.config.seed;
   h.measured_seed = measured_seed;
-  // NOLINTBEGIN(bugprone-suspicious-missing-comma): each entry is one long line split for width.
-  plan.comments = {
-      "# Pre-registered comparison plan, BENCHMARKS.md section 10. Generated by aadp_run_oracles"
-      " emit-plan from references/pilot_results.csv, and committed before the first measured run.",
-      "# K is the row count, Phase 3 rows included. Never raise a ceiling or b after seeing a"
-      " measured result.",
-      "# se_ceiling = factor * SE_pilot * sqrt(N_pilot / N), rounded up to 3 figures."
-      " ceiling_factor 1.65 on reference rows: exp(critical * sqrt(2 / 126)) = 1.62 is the"
-      " Bonferroni bound on the ratio of two SEs from 64 Gaussian batch means.",
-      "# fd_ceiling_factor 3 on FD rows: paired differences are mostly zero with spikes at the"
-      " kink. sd of log(SE ratio) between pilot seeds was 0.25 against the Gaussian 0.126, and"
-      " exp(critical * 0.25) = 2.9.",
-      "# b, reference rows: the reference's own b. b, FD rows: fd_b_factor * (|mean(FD(2h) -"
-      " FD(h))| + critical * SE of that mean) / 3, from the pilot's two-h check."
-      " fd_b_factor 2: higher-order terms and one more pilot's worth of noise.",
-      "# FD rows compare the Dual estimate with FD(h) on the same paths, and SE is that of the"
-      " paired batch difference. The step h is in the reference field.",
-      "# Awaiting rows fix nothing yet. They get a ceiling from their own pilot before their first"
-      " measured run, and they already count in K.",
-  };
-  // NOLINTEND(bugprone-suspicious-missing-comma)
+  plan.comments.assign(kRunOneComments.begin(), kRunOneComments.end());
+  if (stage8 != nullptr) {
+    plan.comments.insert(plan.comments.end(), kStage8Comments.begin(), kStage8Comments.end());
+  }
 
   for (const PlanTemplateRow& row : rows) {
     PlanRow out;
@@ -563,6 +727,16 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
     out.reference = row.reference;
     out.batches = h.batches;
     out.status = row.status;
+    if (row.stage8) {
+      if (stage8 == nullptr) {
+        out.reference = kPhase3Placeholder;
+        out.status = RowStatus::kAwaitingPhase3;
+      } else {
+        out = Stage8Row(row, out, references, *stage8, measured_seed, h.critical);
+      }
+      plan.rows.push_back(std::move(out));
+      continue;
+    }
     if (row.status == RowStatus::kRun) {
       const auto found = by_id.find(row.id);
       if (found == by_id.end()) continue;
@@ -570,9 +744,8 @@ Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& r
       out.paths = row.paths;
       out.seed = measured_seed;
       const bool finite_difference = FiniteDifferenceStep(row.reference).has_value();
-      out.se_ceiling = RoundUpToThreeFigures(
-          (finite_difference ? kFdCeilingFactor : kCeilingFactor) * result.se *
-          std::sqrt(static_cast<double>(result.paths) / static_cast<double>(row.paths)));
+      out.se_ceiling =
+          Ceiling(finite_difference ? kFdCeilingFactor : kCeilingFactor, result, row.paths);
       if (finite_difference) {
         const double truncation =
             (std::fabs(result.two_h_mean) + h.critical * result.two_h_se) / 3.0;

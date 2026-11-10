@@ -65,31 +65,8 @@ aadp_library(aadp_run_oracles_lib
   SOURCES tools/run_oracles/runner.cpp
   LINK aadp_oracle_lib aadp_test_support)
 target_include_directories(aadp_run_oracles_lib PUBLIC "${PROJECT_SOURCE_DIR}/tools/run_oracles")
-aadp_tool(aadp_run_oracles
-  SOURCES tools/run_oracles/main.cpp
-  LINK aadp_run_oracles_lib)
-
-if(AADP_BUILD_TESTS AND TARGET aadp_run_oracles)
-  # The plan runs in full only where it is evidence. Its seed is fixed, so repeating this reads the
-  # same result again and is not another look at the family-wise error rate.
-  set(_aadp_plan_arguments run
-    --plan references/comparison_plan.csv
-    --references references/oracle_values.csv
-    --threads 8)
-  if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_test(NAME aadp_oracle_plan_measured
-      COMMAND aadp_run_oracles ${_aadp_plan_arguments}
-      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-    set_tests_properties(aadp_oracle_plan_measured PROPERTIES
-      LABELS "oracle" TIMEOUT 900 RUN_SERIAL TRUE)
-  else()
-    add_test(NAME aadp_oracle_plan_smoke_reduced_size_not_a_result
-      COMMAND aadp_run_oracles ${_aadp_plan_arguments} --smoke
-      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-    set_tests_properties(aadp_oracle_plan_smoke_reduced_size_not_a_result PROPERTIES
-      LABELS "oracle;smoke")
-  endif()
-endif()
+# The aadp_run_oracles tool and its plan tests are in area_svi.cmake: stage 8's production
+# estimator needs the pricer, the tape and the fitted chain.
 
 aadp_fuzz(aadp_fuzz_plan
   SOURCES fuzz/fuzz_plan.cpp

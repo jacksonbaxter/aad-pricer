@@ -124,7 +124,10 @@ TEST(OracleEquivalence, TapeEstimatesEqualTheDualOnEveryRunRow) {
   using Key = std::tuple<std::string, std::uint64_t, std::uint32_t>;
   std::map<Key, std::vector<const PlanRow*>> groups;
   for (const PlanRow& row : plan->rows) {
-    if (row.status != RowStatus::kRun) continue;
+    // Scoped to the GBM rows by instrument kind: the knock-in and surface rows of stage 8 are
+    // not priced by the frozen kernels' contracts, and have their own tests.
+    const auto kind = ResolveInstrument(row.instrument);
+    if (row.status != RowStatus::kRun || !kind || kind->kind != InstrumentKind::kGbm) continue;
     ASSERT_NE(row.seed, kSeed);
     groups[{row.instrument, row.paths / kDivisor, row.batches}].push_back(&row);
   }

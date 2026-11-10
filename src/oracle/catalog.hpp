@@ -3,6 +3,8 @@
 #ifndef AADP_ORACLE_CATALOG_HPP_
 #define AADP_ORACLE_CATALOG_HPP_
 
+#include <array>
+
 namespace aadp::catalog {
 
 // Text form: "<kind>:<key>=<value>;...". Maturities 1/12 and 11/12 are spelled to round-trip.
@@ -47,6 +49,28 @@ inline constexpr const char* kBridgeH85 =
 // Strike below the barrier, and a dividend yield: the branch the two BGK contracts never reach.
 inline constexpr const char* kBridgeK90 =
     "bridge:S0=100;K=90;H=95;sigma=0.25;r=0.08;q=0.04;T=0.5;m=25;type=call;spot=0";
+
+// Stage 8's knock-in rows (NOTES.md, "Stage 8"): a down-and-in call by parity, vanilla minus the
+// knock-out with the same monitoring, on DB095's and CB095's terms. A row names the alias; the
+// text it resolves to is the knock-out leg's contract, which its reference must quote, and the
+// flag is what makes the priced contract the knock-in.
+struct KnockInEntry {
+  const char* instrument;
+  const char* contract;
+  bool knock_in;
+};
+inline constexpr std::array<KnockInEntry, 2> kKnockIns = {{
+    {.instrument = "knock-in-parity:discrete", .contract = kOneStepH95, .knock_in = true},
+    {.instrument = "knock-in-parity:continuous", .contract = kBridgeO7, .knock_in = true},
+}};
+
+// Stage 7a's three contracts on the surface fitted to the captured chain, in the order of
+// svi::SurfaceContracts, and the names of the 15 parameters a surface row's Greek d_<p>_<dNN>
+// differentiates by: p in parameter order, dNN the slice at 5, 12 and 33 days.
+inline constexpr std::array<const char*, 3> kSurfaceInstruments = {
+    "svi-surface:arithmetic", "svi-surface:discrete-barrier", "svi-surface:continuous-barrier"};
+inline constexpr std::array<const char*, 5> kSurfaceParameters = {"a", "b", "rho", "m", "sigma"};
+inline constexpr std::array<const char*, 3> kSurfaceSlices = {"d05", "d12", "d33"};
 
 }  // namespace aadp::catalog
 

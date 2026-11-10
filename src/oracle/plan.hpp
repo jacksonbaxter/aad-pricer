@@ -3,12 +3,19 @@
 // Comment lines start with '#'. Lines starting "#! key=value" are directives, and K, the critical
 // value and the seeds live there. Columns:
 //   id,instrument,greek,reference,N,B,seed,se_ceiling,b,status
-// A run row names a catalog contract, a Greek, and a reference id or "FD:<h>". An
-// awaiting-phase3 row counts toward K and writes "-" for what cannot be fixed until the code
-// exists: N, seed, se_ceiling and b.
+// A run row names a contract, a Greek, and a reference id or "FD:<h>". The contract is one of
+//   a GBM kind, "<kind>:<key>=<value>;..."     the frozen kernels' and the pricer's contracts
+//   knock-in-parity:discrete|continuous        catalog.hpp: a knock-in on a catalog contract
+//   svi-surface:<product>                      catalog.hpp: a contract on the fitted chain, whose
+//                                              Greek is d_<p>_<dNN> and reference "FD:<h>"
+// An unresolved row is a surface row whose finite-difference ladder never settled (NOTES.md,
+// "Stage 8"): it has N, seed and "FD:<h>", writes "-" for se_ceiling and b, is run and is never
+// passed. An awaiting-phase3 row counts toward K and writes "-" for what cannot be fixed until
+// the code exists: N, seed, se_ceiling and b.
 #ifndef AADP_ORACLE_PLAN_HPP_
 #define AADP_ORACLE_PLAN_HPP_
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <optional>
@@ -23,11 +30,31 @@
 
 namespace aadp {
 
-enum class RowStatus : std::uint8_t { kRun, kAwaitingPhase3 };
+enum class RowStatus : std::uint8_t { kRun, kAwaitingPhase3, kUnresolved };
 
 struct Instrument {
   Contract contract;
   MarketParams<double> market{};
+  // A knock-in by parity on the knock-out contract above. The frozen kernels have none, so only
+  // the production estimator prices it.
+  bool knock_in = false;
+};
+
+enum class InstrumentKind : std::uint8_t { kGbm, kKnockIn, kSurface };
+
+struct RowInstrument {
+  InstrumentKind kind = InstrumentKind::kGbm;
+  Instrument gbm;               // kGbm and kKnockIn
+  std::string_view parameters;  // What a reference row must quote; kGbm and kKnockIn
+  std::size_t surface = 0;      // kSurface: index into catalog::kSurfaceInstruments
+};
+
+// A surface row's Greek: the derivative in parameter `parameter` (catalog::kSurfaceParameters)
+// of slice `slice` (catalog::kSurfaceSlices), input 5 slice + parameter of the surface gradient.
+struct SurfaceGreek {
+  std::size_t slice = 0;
+  std::size_t parameter = 0;
+  [[nodiscard]] std::size_t Index() const { return (5 * slice) + parameter; }
 };
 
 struct PlanRow {
@@ -76,6 +103,11 @@ std::optional<Instrument> DecodeInstrument(std::string_view text);
 // The part after the kind, which a reference row must quote exactly.
 std::string_view InstrumentParameters(std::string_view text);
 
+// Any instrument a run row may name, through the catalog's tables for the two aliases. The
+// returned parameters view the catalog's text or `text` itself.
+std::optional<RowInstrument> ResolveInstrument(std::string_view text);
+
+std::optional<SurfaceGreek> DecodeSurfaceGreek(std::string_view text);
 std::optional<Greek> DecodeGreek(std::string_view text);
 const char* GreekName(Greek greek);
 

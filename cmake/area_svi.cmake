@@ -149,6 +149,75 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     endif()
   endif()
 
+  # Stage 8: the comparison plan's runner with the production estimator beside the reference one,
+  # the finite-difference ladder of the surface rows, and the run-2 fingerprint (NOTES.md,
+  # "Stage 8").
+  if(TARGET aadp_svi_chain AND TARGET aadp_local_vol_ad AND TARGET aadp_run_oracles_lib)
+    aadp_library(aadp_run_oracles_stage8
+      SOURCES tools/run_oracles/ladder.cpp tools/run_oracles/production.cpp
+      LINK aadp_run_oracles_lib aadp_svi_chain aadp_local_vol_ad aadp_ad)
+    aadp_tool(aadp_run_oracles
+      SOURCES tools/run_oracles/main.cpp
+      LINK aadp_run_oracles_stage8)
+
+    if(AADP_BUILD_TESTS)
+      # The plan runs in full only where it is evidence. Its seed is fixed, so repeating this reads
+      # the same result again and is not another look at the family-wise error rate. The reference
+      # estimator judges run 1's 90 rows and lists the other 57.
+      set(_aadp_plan_arguments run
+        --plan references/comparison_plan.csv
+        --references references/oracle_values.csv
+        --threads 8)
+      if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_test(NAME aadp_oracle_plan_measured
+          COMMAND aadp_run_oracles ${_aadp_plan_arguments}
+          WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+        set_tests_properties(aadp_oracle_plan_measured PROPERTIES
+          LABELS "oracle" TIMEOUT 900 RUN_SERIAL TRUE)
+      else()
+        add_test(NAME aadp_oracle_plan_smoke_reduced_size_not_a_result
+          COMMAND aadp_run_oracles ${_aadp_plan_arguments} --smoke
+          WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+        set_tests_properties(aadp_oracle_plan_smoke_reduced_size_not_a_result PROPERTIES
+          LABELS "oracle;smoke")
+      endif()
+      # Run 2's curation, on a synthetic runner output.
+      add_test(NAME aadp_compare_measured_curation
+        COMMAND "${Python3_EXECUTABLE}" -I tests/oracle/compare_measured_test.py
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+      set_tests_properties(aadp_compare_measured_curation PROPERTIES LABELS "oracle")
+    endif()
+
+    aadp_test(aadp_knock_in_rows_test
+      SOURCES tests/oracle/knock_in_rows_test.cpp
+      LINK aadp_run_oracles_stage8 aadp_test_support
+      LABELS oracle)
+    aadp_test(aadp_fd_ladder_test
+      SOURCES tests/oracle/fd_ladder_test.cpp
+      LINK aadp_run_oracles_stage8 aadp_test_support
+      LABELS oracle svi)
+    aadp_test(aadp_svi_rows_test
+      SOURCES tests/svi/svi_rows_test.cpp
+      LINK aadp_run_oracles_stage8 aadp_test_support
+      LABELS svi)
+    aadp_test(aadp_stage8_plan_test
+      SOURCES tests/oracle/stage8_plan_test.cpp
+      LINK aadp_run_oracles_stage8 aadp_test_support
+      LABELS oracle)
+    # Skips, visibly, when data/ has no capture.
+    aadp_test(aadp_svi_rows_realdata_test
+      SOURCES tests/svi/svi_rows_realdata_test.cpp
+      LINK aadp_run_oracles_stage8 aadp_test_support
+      LABELS svi realdata)
+    foreach(_aadp_sized IN ITEMS aadp_knock_in_rows_test aadp_svi_rows_test)
+      if(TARGET ${_aadp_sized})
+        # Full size only in release. Everywhere else the rows only have to run and stay finite.
+        target_compile_definitions(${_aadp_sized} PRIVATE
+          AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
+      endif()
+    endforeach()
+  endif()
+
   # Stage 7b: quote sensitivities through the fit by the implicit function theorem, on the
   # second-order tape (NOTES.md, "Stage 7b").
   if(TARGET aadp_ad)

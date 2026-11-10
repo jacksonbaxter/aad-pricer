@@ -13,9 +13,11 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "mc/gbm_kernels.hpp"
 #include "oracle/black_scholes.hpp"
+#include "oracle/catalog.hpp"
 #include "oracle/decode_util.hpp"
 #include "oracle/finite_difference.hpp"
 
@@ -27,6 +29,7 @@ constexpr std::string_view kDirectivePrefix = "#! ";
 constexpr std::string_view kNotYet = "-";
 constexpr std::string_view kStatusRun = "run";
 constexpr std::string_view kStatusAwaiting = "awaiting-phase3";
+constexpr std::string_view kStatusUnresolved = "unresolved";
 constexpr std::string_view kFdPrefix = "FD:";
 
 constexpr std::uint64_t kMaxPaths = std::uint64_t{1} << 40;
@@ -90,21 +93,61 @@ bool HeaderIsComplete(const std::set<std::string, std::less<>>& seen) {
   return std::ranges::all_of(kRequired, [&](std::string_view key) { return seen.contains(key); });
 }
 
-std::optional<std::string> ValidateRunRow(const PlanRow& row, const PlanHeader& header) {
-  if (!DecodeInstrument(row.instrument)) return "bad instrument";
+// Whether the Greek and the reference suit the instrument's kind.
+std::optional<std::string> ValidateComparison(const PlanRow& row, InstrumentKind kind) {
+  const bool finite_difference = row.reference.starts_with(kFdPrefix);
+  if (kind == InstrumentKind::kSurface) {
+    if (!DecodeSurfaceGreek(row.greek)) return "bad greek";
+    if (!finite_difference) return "a surface row needs a finite-difference reference";
+    if (!FiniteDifferenceStep(row.reference)) return "bad FD step";
+    return std::nullopt;
+  }
   const auto greek = DecodeGreek(row.greek);
   if (!greek) return "bad greek";
-  if (row.reference.starts_with(kFdPrefix)) {
-    if (!FiniteDifferenceStep(row.reference)) return "bad FD step";
-    if (*greek == Greek::kValue) return "a value cannot have a finite-difference reference";
-  } else if (!decode::IsToken(row.reference)) {
-    return "bad reference";
+  if (!finite_difference) {
+    if (!decode::IsToken(row.reference)) return "bad reference";
+    return std::nullopt;
   }
+  if (!FiniteDifferenceStep(row.reference)) return "bad FD step";
+  if (*greek == Greek::kValue) return "a value cannot have a finite-difference reference";
+  return std::nullopt;
+}
+
+std::optional<std::string> ValidateRunRow(const PlanRow& row, const PlanHeader& header) {
+  const auto instrument = ResolveInstrument(row.instrument);
+  if (!instrument) return "bad instrument";
+  if (auto problem = ValidateComparison(row, instrument->kind)) return problem;
   if (row.paths == 0 || row.paths > kMaxPaths) return "bad N";
   if (row.batches != header.batches) return "B differs from the plan's B";
   if (row.paths % row.batches != 0) return "N is not a multiple of B";
+  if (row.status == RowStatus::kUnresolved) {
+    if (instrument->kind != InstrumentKind::kSurface) return "only a surface row is unresolved";
+    return std::nullopt;
+  }
   if (!(row.se_ceiling > 0.0)) return "se_ceiling must be positive";
   if (!(row.b >= 0.0)) return "b must not be negative";
+  return std::nullopt;
+}
+
+// N, seed, se_ceiling and b of a run or unresolved row. An unresolved row fixes no ceiling or b.
+std::optional<std::string> DecodeRunFields(const std::vector<std::string_view>& fields,
+                                           PlanRow& row) {
+  const auto paths = decode::ParseUnsigned(fields[4]);
+  if (!paths) return "bad N";
+  row.paths = *paths;
+  const auto seed = decode::ParseUnsigned(fields[6]);
+  if (!seed) return "bad seed";
+  row.seed = *seed;
+  if (row.status == RowStatus::kUnresolved) {
+    if (fields[7] != kNotYet || fields[8] != kNotYet) return "unresolved row fixes a ceiling or b";
+    return std::nullopt;
+  }
+  const auto ceiling = decode::ParseDouble(fields[7]);
+  if (!ceiling) return "bad se_ceiling";
+  row.se_ceiling = *ceiling;
+  const auto b = decode::ParseDouble(fields[8]);
+  if (!b) return "bad b";
+  row.b = *b;
   return std::nullopt;
 }
 
@@ -135,19 +178,12 @@ std::expected<PlanRow, std::string> DecodeRow(std::string_view line, const PlanH
     }
     return row;
   }
-  if (fields[9] != kStatusRun) return std::unexpected("bad status");
-  const auto paths = decode::ParseUnsigned(fields[4]);
-  if (!paths) return std::unexpected("bad N");
-  row.paths = *paths;
-  const auto seed = decode::ParseUnsigned(fields[6]);
-  if (!seed) return std::unexpected("bad seed");
-  row.seed = *seed;
-  const auto ceiling = decode::ParseDouble(fields[7]);
-  if (!ceiling) return std::unexpected("bad se_ceiling");
-  row.se_ceiling = *ceiling;
-  const auto b = decode::ParseDouble(fields[8]);
-  if (!b) return std::unexpected("bad b");
-  row.b = *b;
+  if (fields[9] == kStatusUnresolved) {
+    row.status = RowStatus::kUnresolved;
+  } else if (fields[9] != kStatusRun) {
+    return std::unexpected("bad status");
+  }
+  if (const auto problem = DecodeRunFields(fields, row)) return std::unexpected(*problem);
   if (const auto problem = ValidateRunRow(row, header)) return std::unexpected(*problem);
   return row;
 }
@@ -245,13 +281,18 @@ std::string EncodePlan(const Plan& plan) {
   out += '\n';
   for (const PlanRow& row : plan.rows) {
     const bool run = row.status == RowStatus::kRun;
+    const bool sized = run || row.status == RowStatus::kUnresolved;
     const std::string dash(kNotYet);
     out += row.id + "," + row.instrument + "," + row.greek + "," + row.reference + ",";
-    out += (run ? std::to_string(row.paths) : dash) + "," + std::to_string(row.batches) + ",";
-    out += (run ? std::to_string(row.seed) : dash) + ",";
+    out += (sized ? std::to_string(row.paths) : dash) + "," + std::to_string(row.batches) + ",";
+    out += (sized ? std::to_string(row.seed) : dash) + ",";
     out += (run ? FormatDouble(row.se_ceiling) : dash) + ",";
     out += (run ? FormatDouble(row.b) : dash) + ",";
-    out += run ? kStatusRun : kStatusAwaiting;
+    if (run) {
+      out += kStatusRun;
+    } else {
+      out += sized ? kStatusUnresolved : kStatusAwaiting;
+    }
     out += '\n';
   }
   return out;
@@ -363,6 +404,56 @@ std::optional<Instrument> DecodeInstrument(std::string_view text) {
 std::string_view InstrumentParameters(std::string_view text) {
   const std::size_t colon = text.find(':');
   return colon == std::string_view::npos ? text : text.substr(colon + 1);
+}
+
+std::optional<RowInstrument> ResolveInstrument(std::string_view text) {
+  for (const catalog::KnockInEntry& entry : catalog::kKnockIns) {
+    if (text != entry.instrument) continue;
+    auto knock_out = DecodeInstrument(entry.contract);
+    if (!knock_out) return std::nullopt;
+    knock_out->knock_in = entry.knock_in;
+    return RowInstrument{.kind = InstrumentKind::kKnockIn,
+                         .gbm = *knock_out,
+                         .parameters = InstrumentParameters(entry.contract),
+                         .surface = 0};
+  }
+  for (std::size_t i = 0; i < catalog::kSurfaceInstruments.size(); ++i) {
+    if (text == catalog::kSurfaceInstruments[i]) {
+      return RowInstrument{
+          .kind = InstrumentKind::kSurface, .gbm = {}, .parameters = {}, .surface = i};
+    }
+  }
+  auto gbm = DecodeInstrument(text);
+  if (!gbm) return std::nullopt;
+  return RowInstrument{.kind = InstrumentKind::kGbm,
+                       .gbm = *gbm,
+                       .parameters = InstrumentParameters(text),
+                       .surface = 0};
+}
+
+std::optional<SurfaceGreek> DecodeSurfaceGreek(std::string_view text) {
+  if (!text.starts_with("d_")) return std::nullopt;
+  const std::string_view rest = text.substr(2);
+  const std::size_t underscore = rest.rfind('_');
+  if (underscore == std::string_view::npos) return std::nullopt;
+  const std::string_view parameter = rest.substr(0, underscore);
+  const std::string_view slice = rest.substr(underscore + 1);
+  SurfaceGreek out;
+  bool found = false;
+  for (std::size_t i = 0; i < catalog::kSurfaceParameters.size(); ++i) {
+    if (parameter == catalog::kSurfaceParameters[i]) {
+      out.parameter = i;
+      found = true;
+    }
+  }
+  if (!found) return std::nullopt;
+  for (std::size_t j = 0; j < catalog::kSurfaceSlices.size(); ++j) {
+    if (slice == catalog::kSurfaceSlices[j]) {
+      out.slice = j;
+      return out;
+    }
+  }
+  return std::nullopt;
 }
 
 std::optional<Greek> DecodeGreek(std::string_view text) {

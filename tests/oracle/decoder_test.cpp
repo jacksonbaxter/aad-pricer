@@ -137,6 +137,78 @@ TEST(DecodePlan, KeepsADeclaredKThatDiffersFromTheRows) {
   EXPECT_EQ(plan->rows.size(), 1U);
 }
 
+// Stage 8's row kinds (NOTES.md, "Stage 8").
+TEST(DecodePlan, SurfaceAndUnresolvedRows) {
+  const std::string run = "s,svi-surface:continuous-barrier,d_rho_d12,FD:1e-06,400,4,2,0.1,0,run\n";
+  const std::string unresolved =
+      "u,svi-surface:arithmetic,d_sigma_d33,FD:3e-09,400,4,2,-,-,unresolved\n";
+  const auto plan = DecodePlan(Directives() + kColumns + run + unresolved);
+  ASSERT_TRUE(plan.has_value()) << plan.error().message;
+  EXPECT_EQ(plan->rows[0].status, RowStatus::kRun);
+  EXPECT_EQ(plan->rows[1].status, RowStatus::kUnresolved);
+  EXPECT_EQ(plan->rows[1].paths, 400U);
+  const std::string encoded = EncodePlan(*plan);
+  EXPECT_TRUE(encoded.ends_with(unresolved)) << encoded;
+  EXPECT_EQ(EncodePlan(*DecodePlan(encoded)), encoded);
+
+  const std::string d = Directives(1) + kColumns;
+  for (const std::string& bad : {
+           // An unresolved row fixes no ceiling or b.
+           std::string("u,svi-surface:arithmetic,d_a_d05,FD:1e-08,400,4,2,0.1,-,unresolved\n"),
+           std::string("u,svi-surface:arithmetic,d_a_d05,FD:1e-08,400,4,2,-,0,unresolved\n"),
+           // Only a surface row can be unresolved.
+           "u," + kInstrument + ",delta,FD:0.1,400,4,2,-,-,unresolved\n",
+           // A surface row is judged against a central difference of its own Greek.
+           std::string("s,svi-surface:arithmetic,d_a_d05,REF,400,4,2,0.1,0,run\n"),
+           std::string("s,svi-surface:arithmetic,delta,FD:1e-06,400,4,2,0.1,0,run\n"),
+           std::string("s,svi-surface:arithmetic,d_a_d06,FD:1e-06,400,4,2,0.1,0,run\n"),
+           std::string("s,svi-surface:asian,d_a_d05,FD:1e-06,400,4,2,0.1,0,run\n"),
+       }) {
+    EXPECT_FALSE(DecodePlan(d + bad).has_value()) << bad;
+  }
+}
+
+TEST(ResolveInstrument, Kinds) {
+  const auto gbm = ResolveInstrument(kInstrument);
+  if (!gbm) FAIL();
+  EXPECT_EQ(gbm->kind, InstrumentKind::kGbm);
+  EXPECT_FALSE(gbm->gbm.knock_in);
+  EXPECT_EQ(gbm->parameters, InstrumentParameters(kInstrument));
+
+  const auto discrete = ResolveInstrument("knock-in-parity:discrete");
+  if (!discrete) FAIL();
+  EXPECT_EQ(discrete->kind, InstrumentKind::kKnockIn);
+  EXPECT_TRUE(discrete->gbm.knock_in);
+  EXPECT_EQ(discrete->parameters,
+            "S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0");
+  const auto continuous = ResolveInstrument("knock-in-parity:continuous");
+  if (!continuous) FAIL();
+  EXPECT_EQ(continuous->kind, InstrumentKind::kKnockIn);
+  EXPECT_EQ(continuous->gbm.contract.product, Product::kDownOutBridge);
+  EXPECT_EQ(discrete->gbm.contract.product, Product::kDownOutOneStep);
+
+  const auto surface = ResolveInstrument("svi-surface:discrete-barrier");
+  if (!surface) FAIL();
+  EXPECT_EQ(surface->kind, InstrumentKind::kSurface);
+  EXPECT_EQ(surface->surface, 1U);
+  EXPECT_FALSE(ResolveInstrument("svi-surface:asian").has_value());
+  EXPECT_FALSE(ResolveInstrument("knock-in-parity:").has_value());
+}
+
+TEST(DecodeSurfaceGreek, ParameterAndSlice) {
+  const auto g = DecodeSurfaceGreek("d_sigma_d12");
+  if (!g) FAIL();
+  EXPECT_EQ(g->slice, 1U);
+  EXPECT_EQ(g->parameter, 4U);
+  EXPECT_EQ(g->Index(), 9U);
+  const SurfaceGreek none{.slice = 99, .parameter = 99};
+  EXPECT_EQ(DecodeSurfaceGreek("d_a_d05").value_or(none).Index(), 0U);
+  EXPECT_EQ(DecodeSurfaceGreek("d_m_d33").value_or(none).Index(), 13U);
+  for (const char* bad : {"d_a_d06", "d_x_d05", "d_a", "delta", "d_a_d05_", ""}) {
+    EXPECT_FALSE(DecodeSurfaceGreek(bad).has_value()) << bad;
+  }
+}
+
 TEST(DecodeInstrument, ReadsEveryField) {
   const auto in = DecodeInstrument(
       "one_step:S0=100;K=90;H=95;sigma=0.3;r=0.1;q=0.02;T=0.2;m=50;type=put;spot=1");

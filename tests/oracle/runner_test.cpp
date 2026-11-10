@@ -190,16 +190,37 @@ TEST(RunPlan, SmokeRunDoesNotUseTheMeasuredSeed) {
 TEST(PlanTemplate, CoversEveryRequiredComparison) {
   const auto rows = PlanTemplate();
   std::set<std::string> ids;
-  std::size_t run = 0;
-  std::size_t awaiting = 0;
+  // By instrument kind: 102 GBM rows (run 1's 90 and the 12 knock-ins of stage 8) and 45 surface
+  // rows. Whether a surface row is unresolved is the plan's, not the template's.
+  std::size_t gbm = 0;
+  std::size_t knock_in = 0;
+  std::size_t surface = 0;
+  std::size_t stage8 = 0;
   std::size_t fd = 0;
   for (const auto& row : rows) {
     EXPECT_TRUE(ids.insert(row.id).second) << row.id;
-    (row.status == RowStatus::kRun ? run : awaiting) += 1;
+    EXPECT_EQ(row.status, RowStatus::kRun) << row.id;
+    const auto instrument = ResolveInstrument(row.instrument);
+    if (!instrument) FAIL() << row.id;
+    switch (instrument->kind) {
+      case InstrumentKind::kGbm:
+        ++gbm;
+        break;
+      case InstrumentKind::kKnockIn:
+        ++knock_in;
+        break;
+      case InstrumentKind::kSurface:
+        ++surface;
+        break;
+    }
+    stage8 += row.stage8 ? 1 : 0;
+    EXPECT_EQ(row.stage8, instrument->kind != InstrumentKind::kGbm) << row.id;
     if (FiniteDifferenceStep(row.reference)) ++fd;
   }
-  EXPECT_EQ(run, 90U);
-  EXPECT_EQ(awaiting, 57U);
+  EXPECT_EQ(gbm + knock_in, 102U);
+  EXPECT_EQ(knock_in, 12U);
+  EXPECT_EQ(surface, 45U);
+  EXPECT_EQ(stage8, 57U);
   EXPECT_EQ(fd, 29U);  // Asian five, plus four on each of six discrete barriers.
   const auto has = [&](const std::string& id, const std::string& greek,
                        const std::string& reference) {
@@ -229,14 +250,17 @@ TEST(PlanTemplate, EveryRunRowResolvesAgainstTheCommittedReferences) {
   text << file.rdbuf();
   const auto references = DecodeReferences(text.str());
   ASSERT_TRUE(references.has_value());
+  // The GBM rows, knock-ins included, by instrument kind. A surface row's reference is its
+  // ladder's step, which only the plan holds.
   for (const auto& row : PlanTemplate()) {
-    if (row.status != RowStatus::kRun) continue;
-    EXPECT_TRUE(DecodeInstrument(row.instrument).has_value()) << row.id;
+    const auto instrument = ResolveInstrument(row.instrument);
+    if (!instrument) FAIL() << row.id;
     EXPECT_EQ(row.paths % 64, 0U) << row.id;
+    if (instrument->kind == InstrumentKind::kSurface) continue;
     if (FiniteDifferenceStep(row.reference)) continue;
     const Reference* reference = references->Find(row.reference);
     ASSERT_NE(reference, nullptr) << row.reference;
-    EXPECT_EQ(reference->parameters, InstrumentParameters(row.instrument)) << row.id;
+    EXPECT_EQ(reference->parameters, instrument->parameters) << row.id;
   }
 }
 
@@ -274,8 +298,22 @@ TEST(CommittedPlan, MatchesTheTemplateAndTheStatedRule) {
     EXPECT_EQ(row.id, rows[i].id);
     EXPECT_EQ(row.instrument, rows[i].instrument);
     EXPECT_EQ(row.greek, rows[i].greek);
-    EXPECT_EQ(row.reference, rows[i].reference);
-    EXPECT_EQ(row.status, rows[i].status);
+    if (rows[i].stage8 && row.status == RowStatus::kAwaitingPhase3) {
+      // Before stage 8's pilot: the placeholder.
+      EXPECT_EQ(row.reference, kPhase3Placeholder) << row.id;
+      continue;
+    }
+    const auto instrument = ResolveInstrument(row.instrument);
+    if (!instrument) FAIL() << row.id;
+    if (instrument->kind == InstrumentKind::kSurface) {
+      // The ladder's FD:<h*>, or FD:<h_8> on an unresolved row, which fixes no ceiling or b.
+      EXPECT_TRUE(FiniteDifferenceStep(row.reference).has_value()) << row.id;
+      EXPECT_TRUE(row.status == RowStatus::kRun || row.status == RowStatus::kUnresolved) << row.id;
+      if (row.status == RowStatus::kUnresolved) continue;
+    } else {
+      EXPECT_EQ(row.reference, rows[i].reference);
+      EXPECT_EQ(row.status, rows[i].status);
+    }
     if (row.status != RowStatus::kRun) continue;
     EXPECT_EQ(row.paths, rows[i].paths) << row.id;
     EXPECT_EQ(row.batches, 64U) << row.id;

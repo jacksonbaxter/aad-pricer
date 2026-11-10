@@ -81,7 +81,8 @@ aadp::Contract RefContract(aadp::Product product, aadp::OptionType type, double 
           .include_spot = include_spot};
 }
 
-// Parameters of rows in references/comparison_plan.csv, plus puts and a K < H bridge.
+// Parameters of the GBM rows in references/comparison_plan.csv, plus puts and a K < H bridge.
+// The 57 rows of stage 8 are compared by aadp_knock_in_rows_test and aadp_svi_rows_test.
 std::vector<Case> Cases() {
   using aadp::OptionType;
   using aadp::Product;
