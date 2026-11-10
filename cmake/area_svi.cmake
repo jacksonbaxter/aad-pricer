@@ -197,6 +197,56 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     endif()
   endif()
 
+  # Stage 7c: the arbitrage-free eSSVI surface, Mingone's global parametrisation, fitted to all
+  # slices at once, beside the raw SVI fit (NOTES.md, "Stage 7c").
+  if(TARGET aadp_ad)
+    aadp_library(aadp_svi_essvi
+      SOURCES src/svi/essvi.cpp src/svi/essvi_fit.cpp
+      LINK aadp_svi aadp_ad)
+    # The conversion, the constraints by construction, the clamps, the checker's strictness, and
+    # tape against Dual.
+    aadp_test(aadp_svi_essvi_test
+      SOURCES tests/svi/essvi_test.cpp
+      LINK aadp_svi_essvi aadp_rng
+      LABELS svi)
+    # Recovery of hand-made surfaces, a cap at its end, data outside S, errors as values.
+    aadp_test(aadp_svi_essvi_fit_test
+      SOURCES tests/svi/essvi_fit_test.cpp
+      LINK aadp_svi_essvi aadp_rng
+      LABELS svi)
+    # The fit and the global map from raw bytes: errors as values, every fit and box point
+    # arbitrage-free.
+    aadp_fuzz(aadp_fuzz_essvi_fit
+      SOURCES fuzz/fuzz_essvi_fit.cpp
+      LINK aadp_svi_essvi
+      LABELS svi
+      CORPUS fuzz/fuzz_essvi_fit_seeds)
+  endif()
+  # Stage 7c on the fitted chain, and its report tool, which prices off both surfaces.
+  if(TARGET aadp_svi_essvi AND TARGET aadp_svi_chain AND TARGET aadp_local_vol_ad)
+    aadp_library(aadp_svi_chain_essvi
+      SOURCES src/svi/chain_essvi.cpp
+      LINK aadp_svi_chain aadp_svi_essvi)
+    # Skips, visibly, when data/ has no capture. See scripts/fetch_data.sh.
+    aadp_test(aadp_svi_essvi_realdata_test
+      SOURCES tests/svi/essvi_realdata_test.cpp
+      LINK aadp_svi_chain_essvi aadp_local_vol
+      LABELS svi realdata)
+    aadp_tool(aadp_essvi_report
+      SOURCES tools/essvi_report/main.cpp
+      LINK aadp_svi_chain_essvi aadp_local_vol)
+    aadp_test(aadp_svi_essvi_report_tool_test
+      SOURCES tests/svi/essvi_report_tool_test.cpp
+      LINK aadp_svi_chain_essvi
+      LABELS svi)
+    if(AADP_BUILD_TESTS AND TARGET aadp_svi_essvi_report_tool_test)
+      add_dependencies(aadp_svi_essvi_report_tool_test aadp_essvi_report)
+      target_compile_definitions(aadp_svi_essvi_report_tool_test PRIVATE
+        AADP_ESSVI_REPORT_PATH="$<TARGET_FILE:aadp_essvi_report>"
+        AADP_ESSVI_REPORT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/essvi_report")
+    endif()
+  endif()
+
   # SVI-2, iteration only: no measurement plan or results file yet.
   aadp_bench(aadp_bench_implied_vol
     SOURCES bench/implied_vol_bench.cpp
