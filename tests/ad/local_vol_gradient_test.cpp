@@ -16,6 +16,10 @@
 // which must floor on the checked paths), every product and treatment the pricer accepts,
 // n = 1 and 4 sub-steps, 256 paths each. Then the batch estimate: its value is PriceLocalVol's
 // bits, and value, gradient and tally are the same bits on 1 and 3 threads.
+//
+// The tape against the Dual cannot see a floored variance that carries a derivative, since both
+// record the same template. LocalVolFloors compares the tape with central differences of the
+// double path instead, on surfaces where one floor class covers a wide region (below).
 #include "ad/local_vol_gradient.hpp"
 
 #include <gtest/gtest.h>
@@ -27,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,9 +42,11 @@
 #include "pricer/dual_ops.hpp"  // IWYU pragma: keep (tests/pricer/: the Dual overloads, by ADL)
 #include "pricer/local_vol.hpp"
 #include "pricer/local_vol_model.hpp"
+#include "pricer/model.hpp"
 #include "pricer/runner.hpp"
 #include "pricer/substep_kernels.hpp"
 #include "support/dual.hpp"
+#include "svi/local_vol.hpp"
 #include "svi/raw_svi.hpp"
 #include "svi/surface.hpp"
 #include "svi/synthetic_surface.hpp"
@@ -294,6 +301,300 @@ TEST(LocalVolGradient, TheBatchGradientIsTheMeanOfThePerPathGradients) {
           << mean;
     }
   }
+}
+
+// A floored or capped local variance is a constant, so it carries no derivative
+// (svi/local_vol.hpp). Per path, on common random numbers, the tape's 15 derivatives against
+// central differences of the double path. Each surface below is surface A with one floor class
+// over a wide region that every path, or most, crosses: B and the real surface floor too few
+// path-steps for a price-level comparison to see a wrong derivative there (NOTES.md, "Stage 8a
+// results").
+//
+// Tolerance, stated before the comparison first ran. Parameter theta_i is bumped by h_i =
+// 2^-20 max(|theta_i|, 2^-7) and by h_i / 2, giving D_h and D_{h/2}. A path is compared only
+// where every one of its steps keeps its class under all four bumps, and its payoff stays
+// positive (strike 25), so that off those boundaries the path is a smooth function of theta. Then
+//   |tape_i - D_{h/2,i}| <= 2 |D_{h,i} - D_{h/2,i}| + 2^-20 S,  S = max_i |D_{h/2,i}|.
+// D_{h/2}'s truncation error is a quarter of D_h's, so |D_h - D_{h/2}| is three times it, and the
+// first term covers it six times over, and the rounding of either difference where that
+// dominates. The second term is the floor where the two agree by chance: rounding in a path of
+// value about 75 is near 1e-12, so in D at h >= 7.5e-9 near 1.3e-4, against S of order 1e3.
+// A floored step that kept its derivative adds the variance's adjoint times d(dT w / g), which
+// at the floor, where sqrt is steep, is of order S itself.
+// Coverage, stated with it: per product, at least 64 of the 256 paths compared and crossing the
+// surface's class and no other floored class, and at most 32 left out.
+class ClassRecorder {
+ public:
+  ClassRecorder(const Surface& s, const pricer::LocalVolContract& lv)
+      : model_(svi::SviSurface<double>(s.terms, s.params), lv.maturity,
+               lv.contract.steps * lv.substeps, {}) {
+    model_.SetTally(&tally_);
+  }
+  ClassRecorder(const ClassRecorder&) = delete;
+  ClassRecorder& operator=(const ClassRecorder&) = delete;
+  ClassRecorder(ClassRecorder&&) = delete;
+  ClassRecorder& operator=(ClassRecorder&&) = delete;
+  ~ClassRecorder() = default;
+
+  [[nodiscard]] const double& Spot() const { return model_.Spot(); }
+  [[nodiscard]] const double& LogSpot() const { return model_.LogSpot(); }
+  [[nodiscard]] const double& Discount() const { return model_.Discount(); }
+  // The model's own Law; the class is read off the tally it adds to.
+  [[nodiscard]] pricer::StepLaw<double> Law(std::uint32_t step, double x) const {
+    const auto before = tally_.by_class;
+    const pricer::StepLaw<double> law = model_.Law(step, x);
+    for (std::size_t c = 0; c < before.size(); ++c) {
+      if (tally_.by_class[c] != before[c]) {
+        classes_.push_back(static_cast<svi::LocalVarianceClass>(c));
+      }
+    }
+    return law;
+  }
+
+  // The path's value and the class of each of its steps.
+  std::pair<double, std::vector<svi::LocalVarianceClass>> Run(const Contract& c, std::uint32_t n,
+                                                              const pricer::PathUniforms& u) {
+    classes_.clear();
+    const double value = pricer::EvaluateSubstepped<double>(c, n, *this, u).value;
+    return {value, classes_};
+  }
+
+ private:
+  pricer::LocalVolModel<double> model_;
+  mutable pricer::FloorTally tally_;
+  mutable std::vector<svi::LocalVarianceClass> classes_;
+};
+
+double& Parameter(Surface& s, std::size_t input) {
+  svi::RawSvi<double>& p = s.params[input / 5];
+  switch (input % 5) {
+    case 0:
+      return p.a;
+    case 1:
+      return p.b;
+    case 2:
+      return p.rho;
+    case 3:
+      return p.m;
+    default:
+      return p.sigma;
+  }
+}
+
+constexpr std::size_t kClasses = svi::kLocalVarianceClasses;
+
+struct FloorStats {
+  std::size_t compared = 0;
+  std::size_t class_changed = 0;
+  std::size_t payoff_not_positive = 0;
+  std::array<std::size_t, kClasses> crossing{};  // compared paths with a step in each class
+  std::array<std::size_t, kClasses> over{};      // ... and a derivative over the tolerance
+  std::size_t target_only = 0;                   // crossing the target and no other floored class
+  std::size_t target_only_over = 0;
+  std::size_t over_paths = 0;  // compared paths with any derivative over the tolerance
+  double worst = 0.0;          // max |tape - D_{h/2}| / tolerance
+  std::string first;           // the first comparison over the tolerance
+};
+
+// Per parameter i, models 4 i to 4 i + 3 at theta + h, theta - h, theta + h / 2, theta - h / 2,
+// and the widths (theta + h) - (theta - h) and the same at h / 2.
+struct Bumps {
+  std::vector<std::unique_ptr<ClassRecorder>> models;
+  std::vector<std::array<double, 2>> width;
+};
+
+void MakeBumps(const Surface& s, const pricer::LocalVolContract& lv, Bumps& out) {
+  for (std::size_t i = 0; i < 15; ++i) {
+    Surface probe = s;
+    const double theta = Parameter(probe, i);
+    const double h = 0x1p-20 * std::max(std::fabs(theta), 0x1p-7);
+    std::array<double, 2> w{};
+    for (std::size_t half = 0; half < 2; ++half) {
+      const double step = half == 0 ? h : 0.5 * h;
+      const double up = theta + step;
+      const double down = theta - step;
+      w[half] = up - down;
+      for (const double x : {up, down}) {
+        Parameter(probe, i) = x;
+        ASSERT_EQ(pricer::ValidateLocalVol(lv, probe.terms, probe.params, {}).code,
+                  pricer::LocalVolError::kNone);
+        out.models.push_back(std::make_unique<ClassRecorder>(probe, lv));
+      }
+    }
+    out.width.push_back(w);
+  }
+}
+
+// One compared path's 15 derivatives against the tolerance above. Returns whether any is over it.
+bool OverTolerance(const std::vector<double>& gradient, const std::vector<double>& bumped_value,
+                   const Bumps& bumps, const std::string& label, FloorStats& stats) {
+  std::array<double, 15> d_h{};
+  std::array<double, 15> d_half{};
+  double scale = 0.0;
+  for (std::size_t i = 0; i < 15; ++i) {
+    const double* v = &bumped_value[4 * i];
+    d_h[i] = (v[0] - v[1]) / bumps.width[i][0];
+    d_half[i] = (v[2] - v[3]) / bumps.width[i][1];
+    scale = std::max(scale, std::fabs(d_half[i]));
+  }
+  bool over = false;
+  for (std::size_t i = 0; i < 15; ++i) {
+    const double tolerance = (2.0 * std::fabs(d_h[i] - d_half[i])) + (0x1p-20 * scale);
+    const double diff = std::fabs(gradient[i] - d_half[i]);
+    if (!(diff <= tolerance)) {
+      if (stats.first.empty()) {
+        stats.first = label + ", parameter " + std::to_string(i) + ": tape " +
+                      std::to_string(gradient[i]) + ", D_h/2 " + std::to_string(d_half[i]) +
+                      ", D_h " + std::to_string(d_h[i]) + ", tolerance " +
+                      std::to_string(tolerance);
+      }
+      over = true;
+    }
+    if (tolerance > 0.0) stats.worst = std::max(stats.worst, diff / tolerance);
+  }
+  return over;
+}
+
+// Counts a compared path by the classes its steps crossed.
+void CountPath(const std::vector<svi::LocalVarianceClass>& classes, svi::LocalVarianceClass target,
+               bool over, FloorStats& stats) {
+  std::array<bool, kClasses> seen{};
+  for (const svi::LocalVarianceClass c : classes) seen[static_cast<std::size_t>(c)] = true;
+  const auto target_index = static_cast<std::size_t>(target);
+  bool other_floor = false;
+  for (std::size_t c = 0; c < kClasses; ++c) {
+    if (!seen[c]) continue;
+    stats.crossing[c] += 1;
+    if (over) stats.over[c] += 1;
+    other_floor = other_floor ||
+                  (c != target_index && svi::IsFloored(static_cast<svi::LocalVarianceClass>(c)));
+  }
+  stats.compared += 1;
+  if (over) stats.over_paths += 1;
+  if (seen[target_index] && !other_floor) {
+    stats.target_only += 1;
+    if (over) stats.target_only_over += 1;
+  }
+}
+
+void Report(const char* surface_name, const char* product_name, svi::LocalVarianceClass target,
+            std::uint64_t paths, const FloorStats& stats) {
+  std::string by_class;
+  for (std::size_t c = 0; c < kClasses; ++c) {
+    if (stats.crossing[c] == 0) continue;
+    by_class += std::string(" ") +
+                svi::LocalVarianceClassName(static_cast<svi::LocalVarianceClass>(c)) + " " +
+                std::to_string(stats.over[c]) + "/" + std::to_string(stats.crossing[c]);
+  }
+  std::printf(
+      "measured, floors %s, %s: %zu of %llu paths compared (%zu class changed, %zu payoff not "
+      "positive); over tolerance / crossing, by class:%s; %s only: %zu/%zu; worst |tape - D_h/2| "
+      "/ tolerance %.3g\n",
+      surface_name, product_name, stats.compared, static_cast<unsigned long long>(paths),
+      stats.class_changed, stats.payoff_not_positive, by_class.c_str(),
+      svi::LocalVarianceClassName(target), stats.target_only_over, stats.target_only, stats.worst);
+}
+
+void CompareFloors(const char* surface_name, const Surface& s, svi::LocalVarianceClass target) {
+  constexpr std::uint32_t kSubsteps = 4;
+  constexpr std::uint64_t kFloorPaths = 256;
+  for (const Product product : {Product::kEuropean, Product::kAsianArithmetic}) {
+    const char* product_name = product == Product::kEuropean ? "european" : "asian";
+    Contract contract = Plain(product);
+    contract.strike = 25.0;
+    const pricer::LocalVolContract lv{
+        .contract = contract, .maturity = svi::testing::kExpiries[2], .substeps = kSubsteps};
+    ASSERT_EQ(pricer::ValidateLocalVol(lv, s.terms, s.params, {}).code,
+              pricer::LocalVolError::kNone);
+    ClassRecorder base(s, lv);
+    Bumps bumps;
+    MakeBumps(s, lv, bumps);
+    if (::testing::Test::HasFatalFailure()) return;
+    LocalVolPathGradient tape(lv, s.terms, s.params, {});
+    const std::uint32_t steps = kDates * kSubsteps;
+    std::vector<double> normal(steps);
+    std::vector<double> crossing(steps);
+    const pricer::PathUniforms u{.normal = normal, .crossing = crossing};
+    std::vector<double> bumped_value(bumps.models.size());
+    FloorStats stats;
+    for (std::uint64_t path = 0; path < kFloorPaths; ++path) {
+      pricer::FillPath(kSeed, path, normal, crossing);
+      const auto [value, classes] = base.Run(contract, kSubsteps, u);
+      const LocalVolPathGradient::PathResult result = tape.Evaluate(u);
+      const std::string label =
+          std::string(surface_name) + ", " + product_name + ", path " + std::to_string(path);
+      ASSERT_EQ(Bits(result.value), Bits(value)) << label;
+      bool same_classes = true;
+      bool positive = value > 0.0;
+      for (std::size_t b = 0; b < bumps.models.size(); ++b) {
+        const auto [v, c] = bumps.models[b]->Run(contract, kSubsteps, u);
+        bumped_value[b] = v;
+        same_classes = same_classes && c == classes;
+        positive = positive && v > 0.0;
+      }
+      if (!same_classes) {
+        stats.class_changed += 1;
+      } else if (!positive) {
+        stats.payoff_not_positive += 1;
+      } else {
+        CountPath(classes, target,
+                  OverTolerance(result.gradient, bumped_value, bumps, label, stats), stats);
+      }
+    }
+    Report(surface_name, product_name, target, kFloorPaths, stats);
+    EXPECT_GE(stats.target_only, 64U) << surface_name << ", " << product_name;
+    EXPECT_LE(stats.class_changed + stats.payoff_not_positive, 32U)
+        << surface_name << ", " << product_name;
+    EXPECT_EQ(stats.over_paths, 0U) << stats.first;
+  }
+}
+
+// Surface A's slices, with one changed as the class needs.
+Surface FloorSurface(const std::array<svi::RawSvi<double>, 3>& params) {
+  return svi::testing::WithTerms(params, svi::testing::kForwards, svi::testing::kDiscounts);
+}
+
+constexpr svi::RawSvi<double> kA0 = svi::testing::kParamsA[0];
+constexpr svi::RawSvi<double> kA1 = svi::testing::kParamsA[1];
+constexpr svi::RawSvi<double> kA2 = svi::testing::kParamsA[2];
+
+constexpr svi::RawSvi<double> WithA(svi::RawSvi<double> p, double a) {
+  p.a = a;
+  return p;
+}
+
+// a_0 = -4e-4 puts w_0 below zero near the money, so every path's steps before the first slice
+// are floored there.
+TEST(LocalVolFloors, NonPositiveVarianceCarriesNoDerivative) {
+  CompareFloors("non-positive", FloorSurface({WithA(kA0, -4e-4), kA1, kA2}),
+                svi::LocalVarianceClass::kNonPositiveVariance);
+}
+
+// The second slice is the first lowered by 1e-4: dT w < 0 over the whole second segment.
+TEST(LocalVolFloors, CalendarFloorCarriesNoDerivative) {
+  CompareFloors("calendar", FloorSurface({kA0, WithA(kA0, kA0.a - 1e-4), kA2}),
+                svi::LocalVarianceClass::kCalendar);
+}
+
+// The money in a steep right wing on every slice, w' near b (1 + rho) = 0.4 against w near 0.01 at
+// k = 0 on the first: w' q / 4 = w'^2 / (4 w) passes 1, and g < 0 over a wide band of k.
+TEST(LocalVolFloors, ButterflyFloorCarriesNoDerivative) {
+  constexpr svi::RawSvi<double> kWing = {.a = 0.0, .b = 0.25, .rho = 0.6, .m = -0.1, .sigma = 0.01};
+  CompareFloors("butterfly",
+                FloorSurface({WithA(kWing, -0.03), WithA(kWing, -0.025), WithA(kWing, -0.015)}),
+                svi::LocalVarianceClass::kButterfly);
+}
+
+// The second slice is the first raised by 5e-7: dT w = 2.6e-5 per year, below 1e-4 g.
+TEST(LocalVolFloors, BelowFloorCarriesNoDerivative) {
+  CompareFloors("below-floor", FloorSurface({kA0, WithA(kA0, kA0.a + 5e-7), kA2}),
+                svi::LocalVarianceClass::kBelowFloor);
+}
+
+// The second slice raised by 0.1 and the third by 0.12: dT w near 5 per year, above 4 g.
+TEST(LocalVolFloors, CapCarriesNoDerivative) {
+  CompareFloors("capped", FloorSurface({kA0, WithA(kA1, 0.1), WithA(kA2, 0.12)}),
+                svi::LocalVarianceClass::kCapped);
 }
 
 }  // namespace
