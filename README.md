@@ -4,7 +4,7 @@ A C++23 Monte Carlo pricer for path-dependent options, with its own tape-based a
 
 ## Status
 
-Phase 3, the implementation, is under way. Stages 1a to 3b of twelve are done.
+Phase 3, the implementation, is under way. Of its twelve stages, 1 to 6 are done, and 7a and 7b of stage 7.
 
 The test and measurement harness was built first, in Phase 2, so that the oracles were proved before the code they judge existed. What is here today:
 
@@ -18,7 +18,7 @@ The test and measurement harness was built first, in Phase 2, so that the oracle
 - cp950 and TAIFEX file readers, and libFuzzer targets on every parser, decoder and pricer entry point, plus a tape fuzzer against finite differences.
 - A fault-injection runner that plants one bug at a time in a copy of the code, to show each oracle and check can fail.
 
-The first AAD and bump-and-revalue results are in `results/mac-m4max/` and `results/linux-zen1/`. They were measured on the scalar pricer and tape. Second-order Greeks (stage 4), the SIMD lanes and vector tape (stage 5) and the raw SVI fit to the TAIFEX chain (stage 6) are built and tested, with iteration-only timings so far; their measured runs come at stage 11. Pricing off the SVI surface, the GPU pricer and the QuantLib comparison are still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets with what has been measured against them, and `NOTES.md` the findings and decisions.
+The first AAD and bump-and-revalue results are in `results/mac-m4max/` and `results/linux-zen1/`. They were measured on the scalar pricer and tape. Second-order Greeks (stage 4), the SIMD lanes and vector tape (stage 5), the raw SVI fit to the TAIFEX settlements (stage 6), local volatility off that surface with an Asian and two barriers priced on it to 33 days (stage 7a), and their sensitivities to the 180 calibration settlements through the fit (stage 7b) are built and tested, with iteration-only numbers so far; their measured runs come at stage 11. Stage 7b's registered bump-and-recalibrate check fails on 20 of its 1,080 price comparisons, all on the barriers (`NOTES.md`, "Stage 7b results"). eSSVI, the GPU pricer and the QuantLib comparison are still to come. `TASKS.md` has the plan, `BENCHMARKS.md` the published targets with what has been measured against them, and `NOTES.md` the findings and decisions.
 
 ## Build and run
 
@@ -64,7 +64,7 @@ Other scripts:
 
 ## Fault injection
 
-A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 100 faults: 23 against the oracles, 64 against the checks and 13 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
+A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 258 faults: 58 against the oracles, 177 against the checks and 23 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
 
 ```sh
 python3 -I scripts/fault_injection.py --list                 # print the faults
@@ -74,7 +74,7 @@ python3 -I scripts/fault_injection.py --jobs 6 --output <file>   # run all of th
 
 It needs the toolchain in the environment, as the build does. `--kind` runs one kind, and `--source <dir>` mutates an export with no `.git`. The schema and the verdicts are described at the top of the script, and the runner's own tests are in `faults/test_fault_injection.py`. `scripts/check.sh` runs every fault as its last step.
 
-Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. Those committed reports are from Phase 2, when there were 41 faults. On the Mac all 41 were caught. On the Linux host 29 ran and all 29 were caught. The 9 fuzz faults and 3 sanitizer faults were left out there, because sanitizer and fuzz runs stay on the Mac. The latest full `scripts/check.sh` run, at 54933ed on the Mac, caught all 100. What the faults found is in `NOTES.md`, under "Fault injection results".
+Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. Those committed reports are from Phase 2, when there were 41 faults. On the Mac all 41 were caught. On the Linux host 29 ran and all 29 were caught. The 9 fuzz faults and 3 sanitizer faults were left out there, because sanitizer and fuzz runs stay on the Mac. The latest full `scripts/check.sh` run, at 54933ed on the Mac, caught all 100 faults the manifest held then. Later stages ran their own new faults, and `NOTES.md` gives their results. What the faults found is in `NOTES.md`, under "Fault injection results".
 
 ## Results
 
@@ -107,4 +107,4 @@ The raw files are never committed. `scripts/fetch_data.sh` downloads the Interne
 
 ## CI
 
-`.github/workflows/ci.yml` runs on GitHub. Its first run, at bc3e6d3, failed 9 of 17 jobs: actionlint, clang-tidy, the two GCC jobs, Linux TSan and the four macOS jobs. The fixes, and a second round after run 41884006533, are pushed, and CI has confirmed them: the last green run is 41902764987, at 9459507, with all 22 jobs passing. `NOTES.md` has the causes. The workflow covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy on libc++ and on libstdc++, format, a fuzz smoke, the repo scan, AVX2 and AVX-512 builds, and a SIMD lane matrix at 1, 2, 4 and 8 lanes. The 8-lane job always runs its tests: natively on a runner with every x86-64-v4 feature, and otherwise under Intel SDE as a Skylake-X (`-skx`), so a green run has tested 8 lanes either way. AVX-512 is build-only on the two measurement hosts, which cannot run it.
+`.github/workflows/ci.yml` runs on GitHub. Its first run, at bc3e6d3, failed 9 of 17 jobs: actionlint, clang-tidy, the two GCC jobs, Linux TSan and the four macOS jobs. The fixes for it, and for the later failed runs 41884006533, 41942650525 and 42018873540, are pushed, and CI has confirmed them: run 42732808933, at d3a0648, passed all 22 jobs. `NOTES.md` has the causes. The workflow covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy on libc++ and on libstdc++, format, a fuzz smoke, the repo scan, AVX2 and AVX-512 builds, and a SIMD lane matrix at 1, 2, 4 and 8 lanes. The 8-lane job always runs its tests: natively on a runner with every x86-64-v4 feature, and otherwise under Intel SDE as a Skylake-X (`-skx`), so a green run has tested 8 lanes either way. AVX-512 is build-only on the two measurement hosts, which cannot run it.
