@@ -6053,6 +6053,445 @@
       "reason": "invariant failed: Phi_j is stage 6b's Objective",
       "timeout_s": 180,
       "output_files": ["build/fuzz/fault-fuzz/essvi-fuzz-objective/*", "build/fuzz/fault-fuzz/essvi-fuzz-objective/corpus/*"]
+    },
+    {
+      "id": "ki-parity-sign",
+      "kind": "check",
+      "covers": "knock-in by parity in the production kernels",
+      "bug": "The knock-in returns vanilla plus the knock-out instead of vanilla minus it.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "      return {vanilla - out.value, out.weight};",
+          "replace": "      return {vanilla + out.value, out.weight};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_knock_in_rows_test"],
+      "command": ["{build}/bin/aadp_knock_in_rows_test"],
+      "detect": "test",
+      "reason": "P3\\.KID\\.value: estimate",
+      "timeout_s": 300
+    },
+    {
+      "id": "ki-leg-weighted",
+      "kind": "check",
+      "covers": "knock-in by parity, the vanilla leg",
+      "bug": "The vanilla leg is multiplied by the path's survival weight, which the bridge's knock-out already carries.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "      return {vanilla - out.value, out.weight};",
+          "replace": "      return {vanilla * out.weight - out.value, out.weight};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_knock_in_rows_test"],
+      "command": ["{build}/bin/aadp_knock_in_rows_test"],
+      "detect": "test",
+      "reason": "P3\\.KIC\\.value: estimate",
+      "timeout_s": 300
+    },
+    {
+      "id": "ki-knockout-leg-passive",
+      "kind": "check",
+      "covers": "knock-in by parity, the knock-out leg's derivative",
+      "bug": "The knock-out leg enters the subtraction as a passive copy of its value, so the value is unchanged and the Greeks are the vanilla's.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "      return {vanilla - out.value, out.weight};",
+          "replace": "      return {vanilla - Real(Value(out.value)), out.weight};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_knock_in_rows_test"],
+      "command": ["{build}/bin/aadp_knock_in_rows_test"],
+      "detect": "test",
+      "reason": "P3\\.KID\\.delta: estimate",
+      "timeout_s": 300
+    },
+    {
+      "id": "ki-closed-form-branch",
+      "kind": "oracle",
+      "covers": "Reiner-Rubinstein down-and-in call, P3.KIC",
+      "bug": "The down-and-in call with K >= H takes C(1, -1), the put's sign, in place of C(1, 1).",
+      "edits": [
+        {
+          "file": "src/oracle/barrier.hpp",
+          "find": "      return (strike_above ? t.C(1, 1) : t.A(1) - t.B(1) + t.D(1, 1)) + t.E(1);",
+          "replace": "      return (strike_above ? t.C(1, -1) : t.A(1) - t.B(1) + t.D(1, 1)) + t.E(1);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature_test"],
+      "command": ["{build}/bin/aadp_quadrature_test", "--gtest_filter=KnockInReferences.*"],
+      "detect": "test",
+      "reason": "P3\\.KIC\\.value parity, in \\+ out against Black-Scholes",
+      "timeout_s": 300
+    },
+    {
+      "id": "kid-gl-passive-discount",
+      "kind": "oracle",
+      "covers": "P3.KID, the Gauss-Legendre recursion over Dual",
+      "bug": "The Gauss-Legendre recursion builds its discount from the passive maturity, so its theta loses the discount's share and Simpson's does not.",
+      "edits": [
+        {
+          "file": "tools/quadrature/quadrature.cpp",
+          "find": "  const LogStep<Real> step = MakeLogStep(market, in.monitors);\n  const double log_barrier = std::log(in.barrier);",
+          "replace": "  LogStep<Real> step = MakeLogStep(market, in.monitors);\n  step.discount = exp(-market.r * Primal(market.maturity) / static_cast<double>(in.monitors));\n  const double log_barrier = std::log(in.barrier);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature_test"],
+      "command": ["{build}/bin/aadp_quadrature_test", "--gtest_filter=KnockInReferences.*"],
+      "detect": "test",
+      "reason": "P3\\.KID\\.theta fine GL against Simpson",
+      "timeout_s": 300
+    },
+    {
+      "id": "kid-simpson-drift-tangent",
+      "kind": "oracle",
+      "covers": "P3.KID, the Simpson cross-check over Dual",
+      "bug": "Simpson over Dual drops r from the drift's tangent; the double values keep their bits.",
+      "edits": [
+        {
+          "file": "tools/quadrature/quadrature.cpp",
+          "find": "  const LogStep<Real> step = MakeLogStep(market, in.monitors);\n  const double range =",
+          "replace": "  LogStep<Real> step = MakeLogStep(market, in.monitors);\n  step.drift = step.drift + (Primal(market.r) - market.r) * (market.maturity / static_cast<double>(in.monitors));\n  const double range ="
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature_test"],
+      "command": ["{build}/bin/aadp_quadrature_test", "--gtest_filter=KnockInReferences.*"],
+      "detect": "test",
+      "reason": "P3\\.KID\\.rho fine GL against Simpson",
+      "timeout_s": 300
+    },
+    {
+      "id": "kid-root-passive-spot",
+      "kind": "oracle",
+      "covers": "P3.KID, the Dual delta of the root step",
+      "bug": "The root step takes log spot as passive, so the Dual delta loses the first step's share.",
+      "edits": [
+        {
+          "file": "tools/quadrature/quadrature.cpp",
+          "find": "  const Real root = log(market.spot);",
+          "replace": "  const Real root = Real(std::log(Primal(market.spot)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_quadrature_test"],
+      "command": ["{build}/bin/aadp_quadrature_test", "--gtest_filter=KnockInReferences.*"],
+      "detect": "test",
+      "reason": "P3\\.KID GL Dual delta against the GL score delta",
+      "timeout_s": 300
+    },
+    {
+      "id": "ki-row-resolves-to-knock-out",
+      "kind": "check",
+      "covers": "plan catalog, knock-in-parity:discrete",
+      "bug": "The catalog maps knock-in-parity:discrete to the knock-out contract.",
+      "edits": [
+        {
+          "file": "src/oracle/catalog.hpp",
+          "find": "    {.instrument = \"knock-in-parity:discrete\", .contract = kOneStepH95, .knock_in = true},",
+          "replace": "    {.instrument = \"knock-in-parity:discrete\", .contract = kOneStepH95, .knock_in = false},"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_knock_in_rows_test"],
+      "command": ["{build}/bin/aadp_knock_in_rows_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] KnockInRows\\.TwelveRowsAgainstTheirReferences",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fd-neighbour-parameter",
+      "kind": "check",
+      "covers": "surface rows, the central difference's parameter",
+      "bug": "The central difference bumps parameter i + 1 of the slice in place of parameter i.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/production.cpp",
+          "find": "  const std::size_t parameter = input % ad::kParametersPerSlice;\n  if (slice >= params.size())",
+          "replace": "  const std::size_t parameter = (input + 1) % ad::kParametersPerSlice;\n  if (slice >= params.size())"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_rows_test"],
+      "command": ["{build}/bin/aadp_svi_rows_test", "--gtest_filter=SviRows.SurfaceA*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviRows\\.SurfaceAAllResolveAndPass",
+      "timeout_s": 600
+    },
+    {
+      "id": "svi-endblock-twice",
+      "kind": "check",
+      "covers": "surface rows, the tape's set-up sweep",
+      "bug": "The set-up sweep is added twice per block.",
+      "edits": [
+        {
+          "file": "src/ad/local_vol_gradient.cpp",
+          "find": "  for (std::size_t i = 0; i < path_.Inputs(); ++i) sum[1 + i] += gradient[i];",
+          "replace": "  for (std::size_t i = 0; i < path_.Inputs(); ++i) sum[1 + i] += 2.0 * gradient[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_rows_test"],
+      "command": ["{build}/bin/aadp_svi_rows_test", "--gtest_filter=SviRows.SurfaceA*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviRows\\.SurfaceAAllResolveAndPass",
+      "timeout_s": 600
+    },
+    {
+      "id": "svi-fd-uncoupled",
+      "kind": "check",
+      "covers": "surface rows, common random numbers",
+      "bug": "The plus side of the central difference runs on another seed.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/production.cpp",
+          "find": "  const auto plus = pricer::PriceLocalVol(contract, terms, up, config);",
+          "replace": "  pricer::RunConfig other = config;\n  other.seed += 1;\n  const auto plus = pricer::PriceLocalVol(contract, terms, up, other);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_rows_test"],
+      "command": ["{build}/bin/aadp_svi_rows_test", "--gtest_filter=SviRows.SurfaceA*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviRows\\.SurfaceAAllResolveAndPass",
+      "timeout_s": 600
+    },
+    {
+      "id": "fd-ladder-ratio",
+      "kind": "check",
+      "covers": "ladder rule, the h^2 consistency test",
+      "bug": "E_l takes Delta_l / 2, the ratio of a first-order truncation.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/ladder.cpp",
+          "find": "e[q] = delta[l + 1][q] - (delta[l][q] / 4.0);",
+          "replace": "e[q] = delta[l + 1][q] - (delta[l][q] / 2.0);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_fd_ladder_test"],
+      "command": ["{build}/bin/aadp_fd_ladder_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LadderRule\\.PureSquareTruncationWithNoiseChoosesTheFirstLevel",
+      "timeout_s": 120
+    },
+    {
+      "id": "fd-ladder-b-noise",
+      "kind": "check",
+      "covers": "ladder rule, b",
+      "bug": "b drops the c SE term and keeps only |mean Delta_l*|.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "  const double truncation = (std::fabs(two_h.mean) + critical * two_h.standard_error) / 3.0;",
+          "replace": "  const double truncation = (std::fabs(two_h.mean) + 0.0 * critical * two_h.standard_error) / 3.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_fd_ladder_test"],
+      "command": ["{build}/bin/aadp_fd_ladder_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LadderRule\\.NoiseOnlyChoosesTheFirstLevelWithBFromTheStandardError",
+      "timeout_s": 120
+    },
+    {
+      "id": "fd-ladder-single-pair",
+      "kind": "check",
+      "covers": "ladder rule, two consistent pairs",
+      "bug": "One consistent pair is enough to choose a level.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/ladder.cpp",
+          "find": "    if (out.levels[l].consistent && out.levels[l + 1].consistent) {",
+          "replace": "    if (out.levels[l].consistent) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_fd_ladder_test"],
+      "command": ["{build}/bin/aadp_fd_ladder_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LadderRule\\.OneConsistentPairWhereTheQuarticTermCrossesZeroIsNotChosen",
+      "timeout_s": 120
+    },
+    {
+      "id": "svi-h0-quoted-range",
+      "kind": "check",
+      "covers": "step rule, the grid of M",
+      "bug": "M is taken on k in [-0.1, 0.1], about the quoted range, not on [-0.5, 0.5] where the paths go.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/ladder.hpp",
+          "find": "inline constexpr double kStepGridHalfWidth = 0.5;",
+          "replace": "inline constexpr double kStepGridHalfWidth = 0.1;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_rows_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_rows_realdata_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviRowsRealData\\.FirstStepsMatchTheClosedFormAndStayInTheDomain",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "svi-tally-change-ignored",
+      "kind": "check",
+      "covers": "surface rows, the floor and cap tally changes",
+      "bug": "The tally changes of the bumped prices are computed and not recorded.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/production.cpp",
+          "find": "  out.tally = {.butterfly_plus = Change(Butterfly(plus->floors), Butterfly(base)),",
+          "replace": "  [[maybe_unused]] const TallyChange recorded = {.butterfly_plus = Change(Butterfly(plus->floors), Butterfly(base)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_fd_ladder_test"],
+      "command": ["{build}/bin/aadp_fd_ladder_test", "--gtest_filter=Tally.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tally\\.ABumpThatMovesGThroughZeroChangesTheButterflyCount",
+      "timeout_s": 120
+    },
+    {
+      "id": "plan-unresolved-passes",
+      "kind": "check",
+      "covers": "production runner, unresolved rows",
+      "bug": "An unresolved row is counted as passed.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/production.cpp",
+          "find": "    ++summary.unresolved;\n  } else {",
+          "replace": "    ++summary.passed;\n  } else {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.AnUnresolved*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.AnUnresolvedRowRoundTripsRunsAndFailsTheRun",
+      "timeout_s": 300
+    },
+    {
+      "id": "emit-plan-run1-factor",
+      "kind": "check",
+      "covers": "emit-plan, run 1's rows",
+      "bug": "Run 1's reference rows are recomputed with factor 3.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "          Ceiling(finite_difference ? kFdCeilingFactor : kCeilingFactor, result, row.paths);",
+          "replace": "          Ceiling(finite_difference ? kFdCeilingFactor : kFdCeilingFactor, result, row.paths);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.RunOneRows*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.RunOneRowsDirectivesAndCommentsKeepTheirBytes",
+      "timeout_s": 300
+    },
+    {
+      "id": "emit-plan-svi-factor",
+      "kind": "check",
+      "covers": "emit-plan, the surface rows' factor",
+      "bug": "The surface rows get factor 1.65 in place of 3.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "  out.se_ceiling = Ceiling(kFdCeilingFactor, *result, row.paths);",
+          "replace": "  out.se_ceiling = Ceiling(kCeilingFactor, *result, row.paths);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.KnockIns*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.KnockInsTakeTheirFactorAndSurfacesTheirsWithTheLaddersStep",
+      "timeout_s": 300
+    },
+    {
+      "id": "emit-plan-h0-not-hstar",
+      "kind": "check",
+      "covers": "emit-plan, the surface rows' step",
+      "bug": "The plan writes FD:<h0> in place of FD:<h*>.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "  out.reference = \"FD:\" + decode::FormatDouble(choice->h_star);",
+          "replace": "  out.reference = \"FD:\" + decode::FormatDouble(choice->h0);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.KnockIns*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.KnockInsTakeTheirFactorAndSurfacesTheirsWithTheLaddersStep",
+      "timeout_s": 300
+    },
+    {
+      "id": "pilot-measured-seed",
+      "kind": "check",
+      "covers": "stage 8 pilot, the measured seed",
+      "bug": "The pilot accepts the plan's measured seed.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "  if (seed == header.measured_seed) return",
+          "replace": "  if (seed == header.measured_seed && seed == 0) return"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.ThePilotRefuses*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.ThePilotRefusesTheMeasuredSeed",
+      "timeout_s": 120
+    },
+    {
+      "id": "reference-mode-runs-57",
+      "kind": "check",
+      "covers": "reference estimator, the rows of run 1",
+      "bug": "The reference estimator takes every run row as run 1's, so it tries the 57 rows the frozen kernels cannot price.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/runner.cpp",
+          "find": "  return instrument && instrument->kind == InstrumentKind::kGbm;",
+          "replace": "  return instrument.has_value();"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_stage8_plan_test"],
+      "command": ["{build}/bin/aadp_stage8_plan_test", "--gtest_filter=Stage8Plan.ReferenceMode*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Stage8Plan\\.ReferenceModeKeepsRunOnesLines",
+      "timeout_s": 600
+    },
+    {
+      "id": "run2-curation",
+      "kind": "check",
+      "covers": "run 2's curation, scripts/compare_measured.py",
+      "bug": "The curated rows drop the verdict column.",
+      "edits": [
+        {
+          "file": "scripts/compare_measured.py",
+          "find": "            rows.append(\",\".join(match[name] for name in match.groupdict()))",
+          "replace": "            rows.append(\",\".join(match[name] for name in match.groupdict() if name != \"verdict\"))"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/oracle/compare_measured_test.py"],
+      "detect": "test",
+      "reason": "compare_measured_test: the curated rows differ",
+      "timeout_s": 120,
+      "mutated_exit": 1
     }
   ]
 }
