@@ -235,7 +235,7 @@ Fixed before any Phase 3 code exists, so git history shows it came first.
 
 ## Phase 3 findings so far
 
-Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Stage 6a, e5d4cc5 to 6216fad, and stage 6b to 23936a9, with its CI fix in 2b6f343. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
+Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Stage 6a, e5d4cc5 to 6216fad, and stage 6b to 23936a9, with its CI fix in 2b6f343. Stage 7a, c1449fd to a4bb6ff, and stage 7b, bcdbc28 to d3a0648, with no CI fix. Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
 
 ### Math kernels
 
@@ -508,6 +508,7 @@ Rule slips: two zsh redirections on the Mac, both empty and both writing to `/tm
 - Run 41942650525 at a398d1f passed 16 of 22. Both tidy jobs failed on `tests/bench/platform_test.cpp`, whose x86-only CPUID test (8e8a464) the Mac's tidy cannot see: unchecked optional access, and `find` where tidy wants `contains`. The four lane jobs that ran tests counted `aadp_simd_fallback_cost_smoke_not_a_result` as skipped, because their build target list lacked that binary (added in 7b97155), and a skip fails a job. 1029047 fixes both. So 8e8a464 to a398d1f fail CI's tidy, and 7b97155 to a398d1f its lane jobs. Run 41953763165 at 1029047 passed 22 of 22, with the 8-lane job build-only again.
 - Stage 6a's run 41996756050 at 6216fad passed 22 of 22 on its first run.
 - Run 42018873540 at 23936a9, stage 6b's push, passed 21 of 22: `clang-tidy-libstdcxx` failed on two findings that only libstdc++ shows. In `src/data/forwards.cpp`, assigning `*row.settlement_price` to a `std::optional<double>` dereferences an optional only to rewrap it (`bugprone-optional-value-conversion`), and `tests/data/forwards_test.cpp` included `<cstddef>` without using it directly (`misc-include-cleaner`). The Mac's tidy, on libc++, reported 151 units clean at 8ae3239, and CI's `clang-tidy` job on libc++ passed in the same run. Both lines came in with 9328a13, so 9328a13 to 23936a9 fail that CI job. 2b6f343 assigns the optional as it is and drops the include. Run 42023625872 at 2b6f343 passed 22 of 22. Since then, the files a stage touches also go through tidy against libstdc++ on the Linux host before a push.
+- Stage 7a's run 42137605150 at a4bb6ff passed 22 of 22 on its first run. Stage 7b's pushes passed 22 of 22 each: 42721885949 at bcdbc28, 42728823678 at e1da8dc (352cf29 went up with it and had no run of its own) and 42732808933 at d3a0648.
 
 #### Intel SDE for the 8-lane job
 
