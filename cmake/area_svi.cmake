@@ -164,12 +164,15 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
       CORPUS fuzz/fuzz_calibration_adjoint_seeds)
   endif()
 
-  # Stage 7b on the fitted chain: the parity regression differentiated, both chains and the bump
-  # check's pieces. Needs the data area.
-  if(TARGET aadp_svi_adjoint AND TARGET aadp_svi_chain)
+  # Stage 7b on the fitted chain: the parity regression differentiated, both chains, the bump
+  # check's pieces, and the report tool, which prices off the surface. Needs the data area.
+  if(TARGET aadp_svi_adjoint AND TARGET aadp_svi_chain AND TARGET aadp_local_vol_ad)
     aadp_library(aadp_svi_chain_adjoint
       SOURCES src/svi/chain_adjoint.cpp
       LINK aadp_svi_chain aadp_svi_adjoint)
+    aadp_tool(aadp_quote_sensitivity_report
+      SOURCES tools/quote_sensitivity_report/main.cpp
+      LINK aadp_svi_chain_adjoint aadp_local_vol_ad)
     # The exact fit against G^-1, the tape against nested forward mode, the slope constraint
     # against the reduced problem, the refusals, the parity derivative, the halving rule, and a
     # small bump-and-refit check that the exact Hessian passes and Gauss-Newton does not.
@@ -177,6 +180,21 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
       SOURCES tests/svi/calibration_adjoint_test.cpp
       LINK aadp_svi_chain_adjoint aadp_test_support
       LABELS svi)
+    # Skips, visibly, when data/ has no capture. See scripts/fetch_data.sh.
+    aadp_test(aadp_svi_quote_sensitivity_realdata_test
+      SOURCES tests/svi/quote_sensitivity_realdata_test.cpp
+      LINK aadp_svi_chain_adjoint aadp_test_support
+      LABELS svi realdata)
+    aadp_test(aadp_svi_quote_sensitivity_report_tool_test
+      SOURCES tests/svi/quote_sensitivity_report_tool_test.cpp
+      LINK aadp_svi_chain
+      LABELS svi)
+    if(AADP_BUILD_TESTS AND TARGET aadp_svi_quote_sensitivity_report_tool_test)
+      add_dependencies(aadp_svi_quote_sensitivity_report_tool_test aadp_quote_sensitivity_report)
+      target_compile_definitions(aadp_svi_quote_sensitivity_report_tool_test PRIVATE
+        AADP_QUOTE_SENSITIVITY_REPORT_PATH="$<TARGET_FILE:aadp_quote_sensitivity_report>"
+        AADP_QUOTE_SENSITIVITY_REPORT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/quote_sensitivity_report")
+    endif()
   endif()
 
   # SVI-2, iteration only: no measurement plan or results file yet.

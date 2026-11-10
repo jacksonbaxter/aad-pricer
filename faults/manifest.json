@@ -4978,6 +4978,446 @@
       "reason": "invariant failed: local variance outside \\[floor, cap\\]",
       "timeout_s": 180,
       "output_files": ["build/fuzz/fault-fuzz/lv-fuzz-cap-dropped/*", "build/fuzz/fault-fuzz/lv-fuzz-cap-dropped/corpus/*"]
+    },
+    {
+      "id": "qs-hessian-gauss-newton",
+      "kind": "check",
+      "covers": "exact Hessian against forward mode",
+      "bug": "The exact Hessian is replaced by Gauss-Newton, dropping the residual curvature.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "      out.hessian[j][k] = 0.5 * (raw[j][k] + raw[k][j]);",
+          "replace": "      out.hessian[j][k] = gn[j][k];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.DerivativesMatchForwardMode"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.DerivativesMatchForwardMode",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-hessian-lane",
+      "kind": "check",
+      "covers": "Hessian lanes against forward mode",
+      "bug": "The Hessian reads each row from the next parameter's tangent lane.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "      raw[j][k] = adjoint.tangent[k];",
+          "replace": "      raw[j][k] = adjoint.tangent[(k + 1) % 5];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.DerivativesMatchForwardMode"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.DerivativesMatchForwardMode",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-quote-cross-sign",
+      "kind": "check",
+      "covers": "exact fit against G^-1",
+      "bug": "d2 Phi / d theta d V_i has the wrong sign, so every quote derivative flips.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "out.quote_cross[i][k] = adjoint.tangent[k];",
+          "replace": "out.quote_cross[i][k] = -adjoint.tangent[k];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.ExactFitEqualsTheDirectSolve"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.ExactFitEqualsTheDirectSolve",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-put-as-call",
+      "kind": "check",
+      "covers": "exact fit against G^-1, puts",
+      "bug": "Puts are priced as calls on the tape, which moves their F and D derivatives by parity.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": ": discount * ((q.strike * NormalCdf(-d2)) - (forward * NormalCdf(-d1)));",
+          "replace": ": discount * ((forward * NormalCdf(d1)) - (q.strike * NormalCdf(d2)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.ExactFitEqualsTheDirectSolve"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.ExactFitEqualsTheDirectSolve",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-slope-curvature-dropped",
+      "kind": "check",
+      "covers": "slope constraint against the reduced problem",
+      "bug": "H_L leaves out mu times the slope's Hessian, d2 c / db drho = sign(rho).",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "        c.hessian[1][2] = sign;\n        c.hessian[2][1] = sign;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.SlopeConstraintMatchesTheReducedProblem"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.SlopeConstraintMatchesTheReducedProblem",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-slope-gradient-sign",
+      "kind": "check",
+      "covers": "slope constraint against the reduced problem, manifold",
+      "bug": "The slope's gradient has the wrong sign in rho, so the derivative leaves the manifold.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "1.0 + std::abs(p.rho), p.b * sign, 0.0",
+          "replace": "1.0 + std::abs(p.rho), -p.b * sign, 0.0"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.SlopeConstraintMatchesTheReducedProblem"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.SlopeConstraintMatchesTheReducedProblem",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-condition-unchecked",
+      "kind": "check",
+      "covers": "ill-conditioned KKT refused",
+      "bug": "The condition limit is never reached, so an ill-conditioned system is solved.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "s.condition_ > options.max_condition) {",
+          "replace": "s.condition_ > options.max_condition * 0x1p200) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.RefusalsAreErrorValues"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.RefusalsAreErrorValues",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-multiplier-unchecked",
+      "kind": "check",
+      "covers": "strict complementarity refused when mu is degenerate",
+      "bug": "A zero or negative multiplier is accepted, so a one-sided derivative is returned.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "if (!(mu[k] > 0.0) || !(margin >= options.min_multiplier_margin)) {",
+          "replace": "if (std::isnan(mu[k]) && !(margin >= options.min_multiplier_margin)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.RefusalsAreErrorValues"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.RefusalsAreErrorValues",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-not-minimum-unchecked",
+      "kind": "check",
+      "covers": "reduced Hessian not positive definite refused",
+      "bug": "The reduced-Hessian test never fires, so a saddle or a flat direction is solved.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "if (!ReducedPositiveDefinite(scaled, NullSpace(s.rows_))) {",
+          "replace": "if (!ReducedPositiveDefinite(scaled, NullSpace(s.rows_)) && s.m_ > 5) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=CalibrationAdjoint.RefusalsAreErrorValues"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] CalibrationAdjoint\\.RefusalsAreErrorValues",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-parity-forward",
+      "kind": "check",
+      "covers": "parity derivative against differences, F",
+      "bug": "d F / d y_j adds F d D / d y_j instead of subtracting it.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": "(d_intercept - (fit->forward * d_discount))",
+          "replace": "(d_intercept + (fit->forward * d_discount))"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.ParityJacobianMatchesDifferences"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.ParityJacobianMatchesDifferences",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-parity-leg",
+      "kind": "check",
+      "covers": "parity derivative against differences, sigma_leg",
+      "bug": "d sigma_leg / d y_j forgets sigma_leg's division by sqrt 2.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": "(count * fit->rms_residual * std::numbers::sqrt2)",
+          "replace": "(count * fit->rms_residual)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.ParityJacobianMatchesDifferences"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.ParityJacobianMatchesDifferences",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-legs-sign",
+      "kind": "check",
+      "covers": "a quote's parity leg follows its right",
+      "bug": "Calls and puts get each other's sign in C - P.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": ".sign = row.right == taifex::OptionRight::kCall ? 1.0 : -1.0};",
+          "replace": ".sign = row.right == taifex::OptionRight::kCall ? -1.0 : 1.0};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.QuoteLegsFollowTheRight"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.QuoteLegsFollowTheRight",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-halving-neighbour",
+      "kind": "check",
+      "covers": "halving rule, a sequence that settles late",
+      "bug": "Truncation is judged against the next level only, so a coarse level is picked.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": "for (std::size_t m = l + 1; m < levels; ++m) {",
+          "replace": "for (std::size_t m = l + 1; m < std::min(levels, l + 2); ++m) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.HalvingRule"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.HalvingRule",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-halving-factor",
+      "kind": "check",
+      "covers": "halving rule, the factor on the error estimate",
+      "bug": "The factor 4 is 1, which an h^2 sequence's own truncation exceeds.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.hpp",
+          "find": "inline constexpr double kHalvingFactor = 4.0;",
+          "replace": "inline constexpr double kHalvingFactor = 1.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.HalvingRule"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.HalvingRule",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-bump-leg-sign",
+      "kind": "check",
+      "covers": "bump check, F, D and sigma_leg through parity",
+      "bug": "The bump moves the parity point against the quote's leg.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": "call_minus_put += legs[quote].sign * h;",
+          "replace": "call_minus_put -= legs[quote].sign * h;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.ShortCheckPassesAndSaysItIsShort"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.ShortCheckPassesAndSaysItIsShort",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-compose-sign",
+      "kind": "check",
+      "covers": "bump check, parameters through parity",
+      "bug": "The parity chain is subtracted from the market-fixed derivative instead of added.",
+      "edits": [
+        {
+          "file": "src/svi/chain_adjoint.cpp",
+          "find": "total[i][j] += s.market[p][j] * out.market[i][p];",
+          "replace": "total[i][j] -= s.market[p][j] * out.market[i][p];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.ShortCheckPassesAndSaysItIsShort"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.ShortCheckPassesAndSaysItIsShort",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-reference-gn",
+      "kind": "check",
+      "covers": "bump check, prices against the exact Hessian",
+      "bug": "The price check's reference composes the Gauss-Newton derivative.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "reference += dp * exact[p];",
+          "replace": "reference += (dp * gn[p]) + (0.0 * exact[p]);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.ShortCheckPassesAndSaysItIsShort"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.ShortCheckPassesAndSaysItIsShort",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-attribution",
+      "kind": "check",
+      "covers": "attribution on output, tools/quote_sensitivity_report",
+      "bug": "aadp_quote_sensitivity_report prints numbers off the chain without the attribution.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "void Header(const Options& o) {\n  aadp::write_attribution(std::cout);\n",
+          "replace": "void Header(const Options& o) {\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.ReportCovers*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.ReportCoversSlicesContractsAndSummaries",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-timing-unlabelled",
+      "kind": "check",
+      "covers": "timing labelled iteration only",
+      "bug": "The timing section does not say it is iteration only.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "  std::printf(\"\\n== timing: ITERATION ONLY, not a result ==\\n\");",
+          "replace": "  std::printf(\"\\n== timing ==\\n\");"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.Timing*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.TimingIsLabelledIterationOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-realdata-slope-dropped",
+      "kind": "check",
+      "covers": "real chain: one positive multiplier per active bound",
+      "bug": "The slope constraint is dropped, so the real slices are solved unconstrained.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "    out.push_back(c);\n",
+          "replace": "    if (bound != Bound::kSlope) out.push_back(c);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_realdata_test", "--gtest_filter=RealQuoteSensitivity.EverySlice*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealQuoteSensitivity\\.EverySliceHasItsAdjointOnTheManifold",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "qs-fuzz-cross-sign",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_calibration_adjoint, every solution solves its KKT system",
+      "bug": "The quote solves use +d2 Phi / d theta dV on the right-hand side, so they solve another system.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "Negated(quote_cross[i])",
+          "replace": "quote_cross[i]"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_calibration_adjoint"],
+      "command": ["{build}/bin/aadp_fuzz_calibration_adjoint", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/qs-fuzz-cross-sign/", "{build}/fault-fuzz/qs-fuzz-cross-sign/corpus", "fuzz/fuzz_calibration_adjoint_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: quote KKT residual",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/qs-fuzz-cross-sign/*", "build/fuzz/fault-fuzz/qs-fuzz-cross-sign/corpus/*"]
+    },
+    {
+      "id": "qs-bump-exact-is-gauss-newton",
+      "kind": "check",
+      "covers": "bump and refit against the exact Hessian (synthetic)",
+      "bug": "The exact sensitivities are solved with the Gauss-Newton Hessian, dropping the residual curvature from the KKT matrix.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "  auto kkt = KktSystem::Build(d.hessian, *constraints, mu, scale, options);",
+          "replace": "  auto kkt = KktSystem::Build(d.gauss_newton, *constraints, mu, scale, options);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_calibration_adjoint_test"],
+      "command": ["{build}/bin/aadp_svi_calibration_adjoint_test", "--gtest_filter=ChainAdjoint.BumpAndRefitAgreesWithTheExactHessianOnly"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ChainAdjoint\\.BumpAndRefitAgreesWithTheExactHessianOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "qs-realdata-bump-cross-sign",
+      "kind": "check",
+      "covers": "real chain: the middle quote's bump-and-refit check",
+      "bug": "d2 Phi / d theta d V_i has the wrong sign, so every quote derivative on the real chain flips.",
+      "edits": [
+        {
+          "file": "src/svi/calibration_adjoint.cpp",
+          "find": "out.quote_cross[i][k] = adjoint.tangent[k];",
+          "replace": "out.quote_cross[i][k] = -adjoint.tangent[k];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_realdata_test", "--gtest_filter=RealQuoteSensitivity.TheMiddle*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealQuoteSensitivity\\.TheMiddleQuotePassesTheBumpCheck",
+      "timeout_s": 300,
+      "data": true
     }
   ]
 }
