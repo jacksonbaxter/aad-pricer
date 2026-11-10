@@ -177,7 +177,8 @@ std::vector<EssviSlice<Real>> FromGlobal(std::span<const Real> x,
     std::size_t cap_slice = i;
     if (i > 0) {
       lower = out[i - 1].psi * p[i];
-      const Real ratio = out[i - 1].psi * theta[i] / theta[i - 1];
+      // theta's ratio first, so that no product of two small numbers underflows.
+      const Real ratio = out[i - 1].psi * (theta[i] / theta[i - 1]);
       if (Value(ratio) <= Value(upper)) {
         upper = ratio;
         cap = PsiCap::kThetaRatio;

@@ -101,7 +101,8 @@ EssviConstraintReport CheckEssviConstraints(std::span<const EssviSlice<double>> 
     const double up = (hi.psi * (1.0 + hi.rho)) / (lo.psi * (1.0 + lo.rho)) - 1.0;
     const double down = (hi.psi * (1.0 - hi.rho)) / (lo.psi * (1.0 - lo.rho)) - 1.0;
     Add(report, EssviConstraint::kPsiLower, i, std::min(up, down));
-    Add(report, EssviConstraint::kThetaRatio, i, 1.0 - ((hi.psi * lo.theta) / (lo.psi * hi.theta)));
+    // As two ratios, so that no product of two small numbers underflows.
+    Add(report, EssviConstraint::kThetaRatio, i, 1.0 - ((hi.psi / lo.psi) * (lo.theta / hi.theta)));
   }
   return report;
 }

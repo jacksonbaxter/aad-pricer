@@ -28,6 +28,7 @@ constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 constexpr std::size_t kMinStrikes = 5;
 constexpr double kStartsAtBest = 1e-8;
 constexpr double kLambdaFloor = 1e-12;
+constexpr double kMinTotalVariance = 0x1p-1000;
 
 bool Positive(double x) { return std::isfinite(x) && x > 0.0; }
 
@@ -103,7 +104,10 @@ std::expected<Prepared, FitError> Prepare(const FitSlice& slice) {
     }
     const double kk = std::log(q.strike / slice.forward);
     w[i] = iv.vol * iv.vol * slice.expiry;
-    if (!std::isfinite(kk) || !Positive(w[i])) {
+    // A total variance below 2^-1000 is refused with the non-positive ones: theta_1's box would
+    // reach the subnormals, where the constraints cannot be held to rounding (NOTES.md, "Stage 7c
+    // results", decisions after the pre-registration).
+    if (!std::isfinite(kk) || !(w[i] >= kMinTotalVariance)) {
       return std::unexpected(FitError{.code = FitErrorCode::kNoImpliedVol,
                                       .quote = i,
                                       .status = InversionStatus::kNotAttained});
