@@ -27,6 +27,10 @@ namespace {
 
 constexpr double kInverseSqrtTwoPi = 0.5 * std::numbers::sqrt2 * std::numbers::inv_sqrtpi;
 
+// The value a grid is built from: grids never move with a tangent.
+double Primal(double x) { return x; }
+double Primal(const test::Dual& x) { return x.value; }
+
 struct Rule {
   std::vector<double> nodes;
   std::vector<double> weights;
@@ -57,59 +61,76 @@ Rule GaussLegendre(int degree) {
   return rule;
 }
 
-// One discretised interval of the GBM log price.
+// One discretised interval of the GBM log price. Over Dual it carries the tangents of the
+// market inputs; the grids below never do.
+template <class Real>
 struct LogStep {
-  double drift;
-  double sd;
-  double discount;
-
-  explicit LogStep(const BarrierInputs& in) {
-    const double dt = in.maturity / in.monitors;
-    drift = (in.r - in.q - 0.5 * in.sigma * in.sigma) * dt;
-    sd = in.sigma * std::sqrt(dt);
-    discount = std::exp(-in.r * dt);
-  }
+  Real drift;
+  Real sd;
+  Real discount;
 };
 
+template <class Real>
+LogStep<Real> MakeLogStep(const MarketParams<Real>& m, std::uint32_t monitors) {
+  using std::exp;
+  using std::sqrt;
+  const Real dt = m.maturity / static_cast<double>(monitors);
+  return {.drift = (m.r - m.q - 0.5 * m.sigma * m.sigma) * dt,
+          .sd = m.sigma * sqrt(dt),
+          .discount = exp(-m.r * dt)};
+}
+
+MarketParams<double> MarketOf(const BarrierInputs& in) {
+  return {.spot = in.spot, .sigma = in.sigma, .r = in.r, .q = in.q, .maturity = in.maturity};
+}
+
+template <class Real>
 struct LastStepValues {
-  double payoff;  // E[e^{-r dt} (e^X - K)^+ ; X > log max(H, K) | x].
-  double share;   // E[e^{-r dt} e^X ; X > log max(H, K) | x], the naive-delta terminal term.
+  Real payoff;  // E[e^{-r dt} (e^X - K)^+ ; X > log max(H, K) | x].
+  Real share;   // E[e^{-r dt} e^X ; X > log max(H, K) | x], the naive-delta terminal term.
 };
 
-LastStepValues LastStep(double x, const LogStep& step, double log_floor, double strike) {
-  const double a = (x + step.drift - log_floor) / step.sd;
-  const double forward = std::exp(x + step.drift + 0.5 * step.sd * step.sd);
-  const double share = step.discount * forward * normal_cdf(a + step.sd);
+template <class Real>
+LastStepValues<Real> LastStep(double x, const LogStep<Real>& step, double log_floor,
+                              double strike) {
+  using std::exp;
+  const Real a = (x + step.drift - log_floor) / step.sd;
+  const Real forward = exp(x + step.drift + 0.5 * step.sd * step.sd);
+  const Real share = step.discount * forward * normal_cdf(a + step.sd);
   return {.payoff = share - step.discount * strike * normal_cdf(a), .share = share};
 }
 
-// Banded kernel on non-uniform nodes, stored row by row.
+// Banded kernel on non-uniform nodes, stored row by row. The band and the nodes are fixed by the
+// double values, so over Dual only the Gaussian's drift and sd carry tangents.
+template <class Real>
 class BandedKernel {
  public:
-  BandedKernel(const std::vector<double>& nodes, const std::vector<double>& weights, double drift,
-               double sd, double width) {
+  BandedKernel(const std::vector<double>& nodes, const std::vector<double>& weights,
+               const Real& drift, const Real& sd, double width) {
+    using std::exp;
     const std::size_t size = nodes.size();
     start_.resize(size + 1);
     first_.resize(size);
-    const double norm = kInverseSqrtTwoPi / sd;
+    const Real norm = kInverseSqrtTwoPi / sd;
+    const double band = width * Primal(sd);
     for (std::size_t i = 0; i < size; ++i) {
-      const double centre = nodes[i] + drift;
-      const auto lo = std::ranges::lower_bound(nodes, centre - width * sd);
-      const auto hi = std::upper_bound(lo, nodes.end(), centre + width * sd);
+      const Real centre = nodes[i] + drift;
+      const auto lo = std::ranges::lower_bound(nodes, Primal(centre) - band);
+      const auto hi = std::upper_bound(lo, nodes.end(), Primal(centre) + band);
       first_[i] = static_cast<std::size_t>(lo - nodes.begin());
       start_[i] = values_.size();
       for (auto it = lo; it != hi; ++it) {
-        const double z = (*it - centre) / sd;
+        const Real z = (*it - centre) / sd;
         values_.push_back(norm * weights[static_cast<std::size_t>(it - nodes.begin())] *
-                          std::exp(-0.5 * z * z));
+                          exp(-0.5 * z * z));
       }
     }
     start_[size] = values_.size();
   }
 
-  void Apply(const std::vector<double>& in, double scale, std::vector<double>& out) const {
+  void Apply(const std::vector<Real>& in, const Real& scale, std::vector<Real>& out) const {
     for (std::size_t i = 0; i < first_.size(); ++i) {
-      double sum = 0.0;
+      Real sum = 0.0;
       std::size_t column = first_[i];
       for (std::size_t k = start_[i]; k < start_[i + 1]; ++k) sum += values_[k] * in[column++];
       out[i] = scale * sum;
@@ -119,19 +140,21 @@ class BandedKernel {
  private:
   std::vector<std::size_t> start_;
   std::vector<std::size_t> first_;
-  std::vector<double> values_;
+  std::vector<Real> values_;
 };
 
-}  // namespace
-
-BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
-                                           const GaussLegendreResolution& resolution) {
-  const LogStep step(in);
+template <class Real>
+BarrierResultOf<Real> GaussLegendreRecursion(const BarrierInputs& in,
+                                             const MarketParams<Real>& market,
+                                             const GaussLegendreResolution& resolution) {
+  using std::exp;
+  using std::log;
+  const LogStep<Real> step = MakeLogStep(market, in.monitors);
   const double log_barrier = std::log(in.barrier);
   const double log_spot = std::log(in.spot);
   const double top = log_spot + resolution.top_sd * in.sigma * std::sqrt(in.maturity);
-  const auto panels =
-      static_cast<std::size_t>(std::ceil((top - log_barrier) * resolution.panels_per_sd / step.sd));
+  const auto panels = static_cast<std::size_t>(
+      std::ceil((top - log_barrier) * resolution.panels_per_sd / Primal(step.sd)));
   const double width = (top - log_barrier) / static_cast<double>(panels);
   const Rule rule = GaussLegendre(resolution.degree);
 
@@ -145,17 +168,17 @@ BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
     }
   }
   const std::size_t size = nodes.size();
-  const BandedKernel kernel(nodes, weights, step.drift, step.sd, resolution.kernel_sd);
+  const BandedKernel<Real> kernel(nodes, weights, step.drift, step.sd, resolution.kernel_sd);
 
   const double log_floor = std::log(std::max(in.barrier, in.strike));
-  std::vector<double> value(size);
-  std::vector<double> share(size);
+  std::vector<Real> value(size);
+  std::vector<Real> share(size);
   for (std::size_t i = 0; i < size; ++i) {
-    const LastStepValues last = LastStep(nodes[i], step, log_floor, in.strike);
+    const LastStepValues<Real> last = LastStep(nodes[i], step, log_floor, in.strike);
     value[i] = last.payoff;
     share[i] = last.share;
   }
-  std::vector<double> scratch(size);
+  std::vector<Real> scratch(size);
   for (std::uint32_t date = 2; date + 1 <= in.monitors; ++date) {
     kernel.Apply(value, step.discount, scratch);
     value.swap(scratch);
@@ -164,29 +187,32 @@ BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
   }
 
   // The root is off the grid, and the score of the first Gaussian step gives delta directly.
-  double price = 0.0;
-  double score = 0.0;
-  double naive = 0.0;
-  const double norm = kInverseSqrtTwoPi / step.sd;
+  // Over Dual the root's log spot carries the spot tangent, which gives delta a second way.
+  const Real root = log(market.spot);
+  Real price = 0.0;
+  Real score = 0.0;
+  Real naive = 0.0;
+  const Real norm = kInverseSqrtTwoPi / step.sd;
   for (std::size_t j = 0; j < size; ++j) {
-    const double offset = nodes[j] - log_spot - step.drift;
-    const double z = offset / step.sd;
-    const double density = norm * weights[j] * std::exp(-0.5 * z * z);
+    const Real offset = nodes[j] - root - step.drift;
+    const Real z = offset / step.sd;
+    const Real density = norm * weights[j] * exp(-0.5 * z * z);
     price += density * value[j];
     score += density * value[j] * offset / (step.sd * step.sd);
     naive += density * share[j];
   }
   return {.value = step.discount * price,
-          .delta = step.discount * score / in.spot,
-          .naive_delta = step.discount * naive / in.spot,
+          .delta = step.discount * score / market.spot,
+          .naive_delta = step.discount * naive / market.spot,
           .nodes = size};
 }
 
-namespace {
-
-BarrierResult SimpsonOnGrid(const BarrierInputs& in, const SimpsonResolution& resolution,
-                            std::size_t intervals) {
-  const LogStep step(in);
+template <class Real>
+BarrierResultOf<Real> SimpsonOnGrid(const BarrierInputs& in, const MarketParams<Real>& market,
+                                    const LogStep<Real>& step, const SimpsonResolution& resolution,
+                                    std::size_t intervals) {
+  using std::exp;
+  using std::log;
   const double log_barrier = std::log(in.barrier);
   const double top = std::log(in.spot) + resolution.top_sd * in.sigma * std::sqrt(in.maturity);
   const double dx = (top - log_barrier) / static_cast<double>(intervals);
@@ -197,30 +223,30 @@ BarrierResult SimpsonOnGrid(const BarrierInputs& in, const SimpsonResolution& re
   const auto node = [&](std::size_t i) { return log_barrier + static_cast<double>(i) * dx; };
 
   // The grid is uniform, so the kernel depends only on the index offset.
-  const auto band = static_cast<std::ptrdiff_t>(resolution.kernel_sd * step.sd / dx) + 2;
-  std::vector<double> shifted(static_cast<std::size_t>(2 * band + 1));
+  const auto band = static_cast<std::ptrdiff_t>(resolution.kernel_sd * Primal(step.sd) / dx) + 2;
+  std::vector<Real> shifted(static_cast<std::size_t>(2 * band + 1));
   for (std::ptrdiff_t d = -band; d <= band; ++d) {
-    const double z = (static_cast<double>(d) * dx - step.drift) / step.sd;
-    shifted[static_cast<std::size_t>(d + band)] = std::exp(-0.5 * z * z);
+    const Real z = (static_cast<double>(d) * dx - step.drift) / step.sd;
+    shifted[static_cast<std::size_t>(d + band)] = exp(-0.5 * z * z);
   }
-  const double norm = step.discount * kInverseSqrtTwoPi / step.sd;
+  const Real norm = step.discount * kInverseSqrtTwoPi / step.sd;
 
   const double log_floor = std::log(std::max(in.barrier, in.strike));
-  std::vector<double> value(size);
-  std::vector<double> share(size);
+  std::vector<Real> value(size);
+  std::vector<Real> share(size);
   for (std::size_t i = 0; i < size; ++i) {
-    const LastStepValues last = LastStep(node(i), step, log_floor, in.strike);
+    const LastStepValues<Real> last = LastStep(node(i), step, log_floor, in.strike);
     value[i] = last.payoff;
     share[i] = last.share;
   }
   const auto last_index = static_cast<std::ptrdiff_t>(intervals);
-  std::vector<double> scratch(size);
-  const auto backward = [&](std::vector<double>& field) {
+  std::vector<Real> scratch(size);
+  const auto backward = [&](std::vector<Real>& field) {
     for (std::ptrdiff_t i = 0; i <= last_index; ++i) {
-      double sum = 0.0;
+      Real sum = 0.0;
       const std::ptrdiff_t lo = std::max<std::ptrdiff_t>(0, i - band);
       const std::ptrdiff_t hi = std::min(last_index, i + band);
-      const double* kernel = shifted.data() + (lo - i + band);
+      const Real* kernel = shifted.data() + (lo - i + band);
       for (std::ptrdiff_t j = lo; j <= hi; ++j) {
         const auto index = static_cast<std::size_t>(j);
         sum += *kernel++ * weight[index] * field[index];
@@ -234,43 +260,67 @@ BarrierResult SimpsonOnGrid(const BarrierInputs& in, const SimpsonResolution& re
     backward(share);
   }
 
-  const auto at_spot = [&](const std::vector<double>& field, double spot) {
-    const double centre = std::log(spot) + step.drift;
-    double sum = 0.0;
+  const auto at_spot = [&](const std::vector<Real>& field, const Real& spot) {
+    const Real centre = log(spot) + step.drift;
+    Real sum = 0.0;
     for (std::size_t j = 0; j < size; ++j) {
-      const double z = (node(j) - centre) / step.sd;
-      sum += std::exp(-0.5 * z * z) * weight[j] * field[j];
+      const Real z = (node(j) - centre) / step.sd;
+      sum += exp(-0.5 * z * z) * weight[j] * field[j];
     }
-    return norm * sum;
+    return Real(norm * sum);
   };
   const double e = resolution.spot_stencil;
-  const double delta = (-at_spot(value, in.spot + 2 * e) + 8 * at_spot(value, in.spot + e) -
-                        8 * at_spot(value, in.spot - e) + at_spot(value, in.spot - 2 * e)) /
-                       (12 * e);
-  return {.value = at_spot(value, in.spot),
+  const Real delta = (-at_spot(value, market.spot + 2 * e) + 8 * at_spot(value, market.spot + e) -
+                      8 * at_spot(value, market.spot - e) + at_spot(value, market.spot - 2 * e)) /
+                     (12 * e);
+  return {.value = at_spot(value, market.spot),
           .delta = delta,
-          .naive_delta = at_spot(share, in.spot) / in.spot,
+          .naive_delta = at_spot(share, market.spot) / market.spot,
           .nodes = size};
 }
 
-}  // namespace
-
 // Simpson's error has a dx^4 leading term, so one extrapolation on a grid and its half removes
-// it at a quarter more work than the fine grid alone.
-BarrierResult DiscreteDownOutSimpson(const BarrierInputs& in, const SimpsonResolution& resolution) {
-  const LogStep step(in);
+// it at a quarter more work than the fine grid alone. Over Dual each tangent is extrapolated the
+// same way.
+template <class Real>
+BarrierResultOf<Real> SimpsonRecursion(const BarrierInputs& in, const MarketParams<Real>& market,
+                                       const SimpsonResolution& resolution) {
+  const LogStep<Real> step = MakeLogStep(market, in.monitors);
   const double range =
       std::log(in.spot / in.barrier) + resolution.top_sd * in.sigma * std::sqrt(in.maturity);
   auto intervals =
-      static_cast<std::size_t>(std::ceil(range * resolution.intervals_per_sd / step.sd));
+      static_cast<std::size_t>(std::ceil(range * resolution.intervals_per_sd / Primal(step.sd)));
   intervals += intervals % 2;
-  const BarrierResult coarse = SimpsonOnGrid(in, resolution, intervals);
-  const BarrierResult fine = SimpsonOnGrid(in, resolution, 2 * intervals);
-  const auto extrapolate = [](double c, double f) { return (16.0 * f - c) / 15.0; };
+  const BarrierResultOf<Real> coarse = SimpsonOnGrid(in, market, step, resolution, intervals);
+  const BarrierResultOf<Real> fine = SimpsonOnGrid(in, market, step, resolution, 2 * intervals);
+  const auto extrapolate = [](const Real& c, const Real& f) { return Real((16.0 * f - c) / 15.0); };
   return {.value = extrapolate(coarse.value, fine.value),
           .delta = extrapolate(coarse.delta, fine.delta),
           .naive_delta = extrapolate(coarse.naive_delta, fine.naive_delta),
           .nodes = fine.nodes};
+}
+
+}  // namespace
+
+BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
+                                           const GaussLegendreResolution& resolution) {
+  return GaussLegendreRecursion(in, MarketOf(in), resolution);
+}
+
+DualBarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
+                                               const MarketParams<test::Dual>& market,
+                                               const GaussLegendreResolution& resolution) {
+  return GaussLegendreRecursion(in, market, resolution);
+}
+
+BarrierResult DiscreteDownOutSimpson(const BarrierInputs& in, const SimpsonResolution& resolution) {
+  return SimpsonRecursion(in, MarketOf(in), resolution);
+}
+
+DualBarrierResult DiscreteDownOutSimpson(const BarrierInputs& in,
+                                         const MarketParams<test::Dual>& market,
+                                         const SimpsonResolution& resolution) {
+  return SimpsonRecursion(in, market, resolution);
 }
 
 AsianResult ArithmeticAsianCall(const AsianInputs& in, const AsianResolution& resolution) {
@@ -560,6 +610,90 @@ void AddAsian(std::vector<ReferenceRow>& rows, std::vector<std::string>& failure
                   .source = kFusaiMeucci});
 }
 
+MarketParams<double> KnockInMarket() { return MarketOf(kKnockInTerms); }
+
+double KnockInB(Greek greek) {
+  return greek == Greek::kValue || greek == Greek::kDelta ? kKnockInValueB : kKnockInGreekB;
+}
+
+// P3.KID: Black-Scholes minus the discrete down-and-out by the GL recursion over Dual, at the
+// fine resolution, with the coarse recursion and Simpson as checks on every tangent and the score
+// delta (O6) as a second delta.
+void AddDiscreteKnockIn(std::vector<ReferenceRow>& rows, std::vector<std::string>& failures) {
+  const MarketParams<test::Dual> active = test::ActiveMarket(KnockInMarket());
+  const test::Dual vanilla = BlackScholes(OptionType::kCall, kKnockInTerms.strike, active).value;
+  const DualBarrierResult coarse =
+      DiscreteDownOutGaussLegendre(kKnockInTerms, active, GaussLegendreResolution{});
+  const DualBarrierResult fine =
+      DiscreteDownOutGaussLegendre(kKnockInTerms, active, kFineGaussLegendre);
+  const DualBarrierResult simpson =
+      DiscreteDownOutSimpson(kKnockInTerms, active, SimpsonResolution{});
+  const BarrierResult score = DiscreteDownOutGaussLegendre(kKnockInTerms, kFineGaussLegendre);
+  const auto check = [&](const std::string& label, double a, double b, double limit) {
+    Require(std::fabs(a - b) <= limit, Describe(label.c_str(), a, b), failures);
+  };
+  check("P3.KID GL Dual delta against the GL score delta (O6)", fine.value.tangent[test::kSlotSpot],
+        score.delta, kKnockInValueB);
+  const std::string parameters = StripKind(catalog::kOneStepH95);
+  for (const GreekColumn& column : kGreekColumns) {
+    const std::string id = std::string("P3.KID.") + column.suffix;
+    const double b = KnockInB(column.greek);
+    const double reference = test::ReadGreek(vanilla - fine.value, column.greek);
+    check(id + " coarse GL against fine GL", test::ReadGreek(vanilla - coarse.value, column.greek),
+          reference, b);
+    check(id + " fine GL against Simpson", reference,
+          test::ReadGreek(vanilla - simpson.value, column.greek), b);
+    rows.push_back({.id = id,
+                    .parameters = parameters,
+                    .value = reference,
+                    .b = b,
+                    .method = "parity: Black-Scholes minus the backward GL recursion over Dual;"
+                              " Simpson cross-check",
+                    .source = kDerived});
+  }
+}
+
+// P3.KIC: the Reiner-Rubinstein down-and-in over Dual (Haug's C term, K >= H), guarded by parity
+// with the CB095 down-and-out, by BGK's identity, which shares no code with it, and by E31.
+void AddContinuousKnockIn(std::vector<ReferenceRow>& rows, std::vector<std::string>& failures) {
+  const MarketParams<double> m = KnockInMarket();
+  const MarketParams<test::Dual> active = test::ActiveMarket(m);
+  const double strike = kKnockInTerms.strike;
+  const double barrier = kKnockInTerms.barrier;
+  const test::Dual in =
+      BarrierOptionValue(BarrierType::kDownIn, OptionType::kCall, strike, barrier, 0.0, active);
+  const test::Dual out =
+      BarrierOptionValue(BarrierType::kDownOut, OptionType::kCall, strike, barrier, 0.0, active);
+  const test::Dual vanilla = BlackScholes(OptionType::kCall, strike, active).value;
+  const std::string parameters = StripKind(catalog::kBridgeO7);
+  for (const GreekColumn& column : kGreekColumns) {
+    const std::string id = std::string("P3.KIC.") + column.suffix;
+    const double sum = test::ReadGreek(in + out, column.greek);
+    const double bs = test::ReadGreek(vanilla, column.greek);
+    Require(std::fabs(sum - bs) <= kKnockInIdentity,
+            id + " " + Describe("parity, in + out against Black-Scholes", sum, bs), failures);
+    rows.push_back({.id = id,
+                    .parameters = parameters,
+                    .value = test::ReadGreek(in, column.greek),
+                    .b = 0.0,
+                    .method = "Reiner-Rubinstein closed form over Dual",
+                    .source = "Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1"});
+  }
+  const double bgk =
+      BlackScholes(OptionType::kCall, strike, m).value -
+      ContinuousDownOutCallBgk(m.spot, strike, barrier, m.r, m.q, m.sigma, m.maturity);
+  Require(std::fabs(in.value - bgk) <= kKnockInIdentity,
+          "P3.KIC " + Describe("BGK, down-and-in against Black-Scholes minus BGK", in.value, bgk),
+          failures);
+  for (const BabsiriRow& row : kBabsiriDownIn) {
+    const double value = BarrierOptionValue(
+        BarrierType::kDownIn, OptionType::kCall, 100.0, 90.0, 0.0,
+        MarketParams<double>{.spot = 100, .sigma = row.sigma, .r = 0.05, .q = 0.02, .maturity = 1});
+    Require(std::fabs(value - row.value) <= kBabsiriTolerance,
+            "E31 " + Describe("El Babsiri-Noel down-and-in", value, row.value), failures);
+  }
+}
+
 }  // namespace
 
 std::vector<ReferenceRow> GenerateReferences(std::vector<std::string>& failures) {
@@ -721,6 +855,10 @@ std::vector<ReferenceRow> GenerateReferences(std::vector<std::string>& failures)
                   .b = 0.0,
                   .method = "identity: half a vanilla put at K=84",
                   .source = "corrects QuantLib 5d6defcc test-suite/asianoptions.cpp Levy value"});
+
+  // Stage 8's knock-in rows, appended so every earlier row keeps its bytes.
+  AddDiscreteKnockIn(rows, failures);
+  AddContinuousKnockIn(rows, failures);
   return rows;
 }
 

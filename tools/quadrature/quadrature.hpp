@@ -9,10 +9,14 @@
 #ifndef AADP_TOOLS_QUADRATURE_QUADRATURE_HPP_
 #define AADP_TOOLS_QUADRATURE_QUADRATURE_HPP_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
+
+#include "oracle/black_scholes.hpp"
+#include "support/dual.hpp"
 
 namespace aadp::quadrature {
 
@@ -27,12 +31,15 @@ struct BarrierInputs {
   std::uint32_t monitors;  // Two or more. Dates i T / m, i = 1..m.
 };
 
-struct BarrierResult {
-  double value;
-  double delta;
-  double naive_delta;  // Limit of the pathwise delta that ignores the survival indicator.
+template <class Real>
+struct BarrierResultOf {
+  Real value;
+  Real delta;
+  Real naive_delta;  // Limit of the pathwise delta that ignores the survival indicator.
   std::size_t nodes;
 };
+using BarrierResult = BarrierResultOf<double>;
+using DualBarrierResult = BarrierResultOf<test::Dual>;
 
 struct GaussLegendreResolution {
   double panels_per_sd = 2.0;
@@ -48,9 +55,56 @@ struct SimpsonResolution {
   double spot_stencil = 0.02;  // Five-point delta at spot +- this and twice this.
 };
 
+// The resolution of every published discrete row and of the knock-in references.
+inline constexpr GaussLegendreResolution kFineGaussLegendre{
+    .panels_per_sd = 3.0, .degree = 10, .top_sd = 14.0, .kernel_sd = 15.0};
+
 BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
                                            const GaussLegendreResolution& resolution);
 BarrierResult DiscreteDownOutSimpson(const BarrierInputs& in, const SimpsonResolution& resolution);
+
+// The same recursions over Dual (NOTES.md, "Stage 8"). The grids are those of the double call on
+// `in`: nodes, weights, panel and interval counts, top and band. Only each step's drift, sd and
+// discount, the closed-form last step and the root's log spot carry the tangents of `market`,
+// whose values must be in's. The double functions are these at double, so their bits stand.
+DualBarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
+                                               const MarketParams<test::Dual>& market,
+                                               const GaussLegendreResolution& resolution);
+DualBarrierResult DiscreteDownOutSimpson(const BarrierInputs& in,
+                                         const MarketParams<test::Dual>& market,
+                                         const SimpsonResolution& resolution);
+
+// The knock-in rows' terms, DB095's and CB095's: S0 = K = 100, H = 95, sigma = 0.3, r = 0.1,
+// q = 0, T = 0.2, m = 50.
+inline constexpr BarrierInputs kKnockInTerms{.spot = 100,
+                                             .strike = 100,
+                                             .barrier = 95,
+                                             .r = 0.10,
+                                             .q = 0.0,
+                                             .sigma = 0.30,
+                                             .maturity = 0.2,
+                                             .monitors = 50};
+// The b of the discrete knock-in rows: O5's and O6's for value and delta, 1e-8 for the Greeks
+// whose integrands carry polynomial factors (NOTES.md, "Stage 8"). The continuous rows have 0.
+inline constexpr double kKnockInValueB = 1e-9;
+inline constexpr double kKnockInGreekB = 1e-8;
+// Parity and the BGK identity, both closed forms in double.
+inline constexpr double kKnockInIdentity = 1e-11;
+
+// El Babsiri and Noel's down-and-in calls via QuantLib (EVIDENCE E31): S = K = 100, H = 90,
+// r = 0.05, q = 0.02, T = 1, no rebate. A guard on the closed form's knock-in branch, within
+// QuantLib's own analytic tolerance.
+struct BabsiriRow {
+  double sigma;
+  double value;
+};
+inline constexpr auto kBabsiriDownIn =
+    std::to_array<BabsiriRow>({{.sigma = 0.10, .value = 0.07187},
+                               {.sigma = 0.15, .value = 0.60638},
+                               {.sigma = 0.20, .value = 1.64005},
+                               {.sigma = 0.25, .value = 2.98495},
+                               {.sigma = 0.30, .value = 4.50952}});
+inline constexpr double kBabsiriTolerance = 1e-5;
 
 struct AsianInputs {
   double spot;

@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -14,6 +15,8 @@
 
 #include "oracle/black_scholes.hpp"
 #include "oracle/geometric_asian.hpp"
+#include "support/dual.hpp"
+#include "support/mc_support.hpp"
 
 namespace aadp::quadrature {
 namespace {
@@ -350,6 +353,102 @@ TEST(GeneratedReferences, IdsAreUniqueAndCsvIsWellFormed) {
       EXPECT_EQ(field->find(','), std::string::npos) << *field;
     }
   }
+}
+
+// Stage 8: the recursions over Dual (NOTES.md, "Stage 8").
+MarketParams<test::Dual> KnockInActive() {
+  return test::ActiveMarket({.spot = kKnockInTerms.spot,
+                             .sigma = kKnockInTerms.sigma,
+                             .r = kKnockInTerms.r,
+                             .q = kKnockInTerms.q,
+                             .maturity = kKnockInTerms.maturity});
+}
+
+// Dual's values are the double operations, so a template that changed the double path would
+// show here as well as in the regenerated file.
+TEST(DualRecursion, ValuesKeepTheDoubleBits) {
+  const MarketParams<test::Dual> active = KnockInActive();
+  for (const GaussLegendreResolution& resolution :
+       {GaussLegendreResolution{}, kFineGaussLegendre}) {
+    const BarrierResult plain = DiscreteDownOutGaussLegendre(kKnockInTerms, resolution);
+    const DualBarrierResult dual = DiscreteDownOutGaussLegendre(kKnockInTerms, active, resolution);
+    EXPECT_EQ(std::bit_cast<std::uint64_t>(plain.value),
+              std::bit_cast<std::uint64_t>(dual.value.value));
+    EXPECT_EQ(std::bit_cast<std::uint64_t>(plain.delta),
+              std::bit_cast<std::uint64_t>(dual.delta.value));
+    EXPECT_EQ(plain.nodes, dual.nodes);
+  }
+  const BarrierResult plain = DiscreteDownOutSimpson(kKnockInTerms, {});
+  const DualBarrierResult dual = DiscreteDownOutSimpson(kKnockInTerms, active, {});
+  EXPECT_EQ(std::bit_cast<std::uint64_t>(plain.value),
+            std::bit_cast<std::uint64_t>(dual.value.value));
+}
+
+// The root's log spot carries the spot tangent, so the value's spot tangent is a second delta.
+// Bound: kKnockInValueB, O6's b, as registered.
+TEST(DualRecursion, SpotTangentIsTheScoreDelta) {
+  const DualBarrierResult dual =
+      DiscreteDownOutGaussLegendre(kKnockInTerms, KnockInActive(), kFineGaussLegendre);
+  EXPECT_NEAR(dual.value.tangent[test::kSlotSpot], 0.7978141916, kPin);  // O6, pinned above.
+  EXPECT_NEAR(dual.value.tangent[test::kSlotSpot], dual.delta.value, kKnockInValueB);
+}
+
+// A check the registration does not need, written apart from the tool: each tangent against a
+// central difference of the double recursion, whose grid moves with the bump. Step 1e-4 of each
+// input (2e-4 of spot's scale is 1e-2): truncation ~ h^2 times third derivatives of order 10^3 is
+// below 1e-5, and the recursion's own error of 1e-12 over 2h adds 1e-8. So 1e-5 catches a wrong
+// sign or a dropped tangent (each Greek here is above 0.1), not an error in the tenth digit.
+TEST(DualRecursion, TangentsAgreeWithDifferencesOfTheDoubleRecursion) {
+  const DualBarrierResult dual =
+      DiscreteDownOutGaussLegendre(kKnockInTerms, KnockInActive(), kFineGaussLegendre);
+  const auto value = [](BarrierInputs in) {
+    return DiscreteDownOutGaussLegendre(in, kFineGaussLegendre).value;
+  };
+  const auto difference = [&](double BarrierInputs::* field, double h) {
+    BarrierInputs up = kKnockInTerms;
+    BarrierInputs down = kKnockInTerms;
+    up.*field += h;
+    down.*field -= h;
+    return (value(up) - value(down)) / (2.0 * h);
+  };
+  EXPECT_NEAR(dual.value.tangent[test::kSlotSpot], difference(&BarrierInputs::spot, 1e-2), 1e-5);
+  EXPECT_NEAR(dual.value.tangent[test::kSlotSigma], difference(&BarrierInputs::sigma, 1e-4), 1e-5);
+  EXPECT_NEAR(dual.value.tangent[test::kSlotR], difference(&BarrierInputs::r, 1e-4), 1e-5);
+  EXPECT_NEAR(dual.value.tangent[test::kSlotQ], difference(&BarrierInputs::q, 1e-4), 1e-5);
+  EXPECT_NEAR(dual.value.tangent[test::kSlotMaturity], difference(&BarrierInputs::maturity, 1e-4),
+              1e-5);
+}
+
+TEST(KnockInReferences, TwelveRowsAppendedWithTheirB) {
+  std::vector<std::string> failures;
+  const std::vector<ReferenceRow> rows = GenerateReferences(failures);
+  EXPECT_TRUE(failures.empty());
+  for (const std::string& failure : failures) ADD_FAILURE() << failure;
+  ASSERT_GE(rows.size(), 12U);
+  const std::string parameters =
+      "S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0";
+  std::size_t i = rows.size() - 12;
+  EXPECT_EQ(rows[i - 1].id, "O11");
+  for (const char* kind : {"KID", "KIC"}) {
+    for (const char* greek : {"value", "delta", "vega", "rho", "divrho", "theta"}) {
+      const ReferenceRow& row = rows[i++];
+      EXPECT_EQ(row.id, std::string("P3.") + kind + "." + greek);
+      EXPECT_EQ(row.parameters, parameters) << row.id;
+      const bool discrete = std::string(kind) == "KID";
+      const bool first_two = std::string(greek) == "value" || std::string(greek) == "delta";
+      EXPECT_EQ(row.b, discrete ? (first_two ? 1e-9 : 1e-8) : 0.0) << row.id;
+    }
+  }
+  // The knock-in is vanilla minus the knock-out on the same terms, whose values are pinned above.
+  const double vanilla =
+      BlackScholes(
+          OptionType::kCall, 100.0,
+          MarketParams<double>{.spot = 100, .sigma = 0.3, .r = 0.1, .q = 0.0, .maturity = 0.2})
+          .value;
+  EXPECT_NEAR(Find(rows, "P3.KID.value")->value, vanilla - 4.9067890354, kPin);
+  EXPECT_NEAR(Find(rows, "P3.KIC.value")->value, vanilla - 4.3975025600, kPin);
+  // Discrete monitoring knocks in less often than continuous.
+  EXPECT_LT(Find(rows, "P3.KID.value")->value, Find(rows, "P3.KIC.value")->value);
 }
 
 }  // namespace

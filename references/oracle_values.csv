@@ -69,3 +69,15 @@ O9,S0=100;K=100;H=0;sigma=0.17801;r=0.0367;q=0;T=1;m=50;type=call;spot=1,4.93720
 AA50K110,S0=100;K=110;H=0;sigma=0.17801;r=0.0367;q=0;T=1;m=50;type=call;spot=1,1.402515514505,1e-09,convolution recursion,Fusai and Meucci Table 6 (JBF 2008)
 O10,continuous average;S0=2;K=2;sigma=0.5;r=0.05;q=0;T=1;type=call,0.246415690500,1e-10,published; Richardson limit check,Linetsky 2004 Table 3 p. 866
 O11,S0=90;K=87;H=0;sigma=0.13;r=0.025;q=0.06;T=0.91666666666666663;m=1;type=put;spot=1,1.393980936750,0e+00,identity: half a vanilla put at K=84,corrects QuantLib 5d6defcc test-suite/asianoptions.cpp Levy value
+P3.KID.value,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,1.437324427882,1e-09,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KID.delta,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-0.212248342948,1e-09,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KID.vega,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,11.148075640558,1e-08,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KID.rho,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,1.613561641175,1e-08,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KID.divrho,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-1.901026526751,1e-08,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KID.theta,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-9.167837551006,1e-08,parity: Black-Scholes minus the backward GL recursion over Dual; Simpson cross-check,derived; see tools/quadrature
+P3.KIC.value,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,1.946610903330,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1
+P3.KIC.delta,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-0.271037109227,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1
+P3.KIC.vega,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,14.490528482458,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1
+P3.KIC.rho,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,2.336735424783,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1
+P3.KIC.divrho,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-2.726057605449,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1
+P3.KIC.theta,S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0,-12.036264074235,0e+00,Reiner-Rubinstein closed form over Dual,Haug 1998 p. 72 down-and-in term C; BGK 1997 Prop. 3.1

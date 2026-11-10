@@ -66,8 +66,8 @@
       "edits": [
         {
           "file": "tools/quadrature/quadrature.cpp",
-          "find": "    drift = (in.r - in.q - 0.5 * in.sigma * in.sigma) * dt;\n    sd = in.sigma * std::sqrt(dt);\n    discount = std::exp(-in.r * dt);",
-          "replace": "    drift = (in.r - 0.5 * in.sigma * in.sigma) * dt;\n    sd = in.sigma * std::sqrt(dt);\n    discount = std::exp(-in.r * dt);"
+          "find": "  return {.drift = (m.r - m.q - 0.5 * m.sigma * m.sigma) * dt,\n          .sd = m.sigma * sqrt(dt),\n          .discount = exp(-m.r * dt)};",
+          "replace": "  return {.drift = (m.r - 0.5 * m.sigma * m.sigma) * dt,\n          .sd = m.sigma * sqrt(dt),\n          .discount = exp(-m.r * dt)};"
         }
       ],
       "preset": "release",
