@@ -1019,6 +1019,281 @@ Faults: 33 in `faults/manifest.json` (`evidence/stage7c/add_faults.py`), coverin
 
 Fuzz (`aadp_fuzz_essvi_fit`, ASan and UBSan, macOS, seed 20261123, from 17 hand-written synthetic seeds): the 60 s trial and the 300 s runs at ae72e4c and 3f0e5a9 found the three inputs above (after 128,369, 810,574 and 790,309 executions). The final 300 s run, on b8a67a0's tree, executed 775,484 inputs with no failure (`evidence/stage7c/fuzz-300s-mac-b8a67a0.txt`), from the 17 hand-written seeds (`evidence/stage7c/gen_fuzz_essvi_fit_seeds.py`) and the three regression seeds.
 
+### Stage 8: references for the 57 awaiting rows
+
+The 45 `svi-surface` rows use the stage 6b fit to TAIFEX settlements of one day, 2024-11-15, which are not tradable quotes, and the surface reaches 33 days only. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
+
+#### Pre-registration, stated before any code or pilot
+
+This was committed alone, at the commit after 8cbaaf3, before any stage 8 code had been written or drafted, before any pilot, and before any run on seed 1729 or 271828. The only numbers used to write it are those already printed in this file ("Stage 6b results", "Stage 7a results", "Stage 7b results") and in `references/`. Anything decided later is recorded in the results as such.
+
+What does not change. The plan keeps K = 147, B = 64, α_F = 0.01 and the critical value 4.2662177494486286, and every `#!` directive. The 57 rows keep their `id`, `instrument` and `greek` fields byte for byte, and their order. The 90 run-1 rows and their N, seed, ceiling and b do not change in any byte. What stage 8a fills in on the 57 rows, through `aadp_run_oracles emit-plan` and nothing else: `reference` (now the placeholder `phase3`), N, seed, `se_ceiling`, b and `status`. `references/measured_results.csv` (run 1) and `references/pilot_results.csv` (the Phase 2 pilot) never change.
+
+##### The estimator of run 2, for all 147 rows
+
+Run 2 judges the production pricer and tape, as the oracle policy says. For every row the estimate is the batch mean of the production code: `ad::PriceWithGradient` (`src/pricer/` and `src/ad/`) for the 102 GBM rows, with the value and the five tape Greeks, theta = −dV/dT as `src/ad/gradient.cpp` gives it; and `ad::PriceLocalVolWithGradient` for the 45 surface rows, component 5 j + i for slice j and parameter i. A finite-difference reference is a central difference of the production price, `pricer::Price` or `pricer::PriceLocalVol`, on the same uniforms. The frozen kernels of `src/mc/` and the forward-mode `Dual` play no part in run 2; they keep reproducing run 1 (below).
+
+##### Knock-in rows, 12
+
+Contracts. A knock-in pays (S_T − K)^+ at T if the barrier was hit, with no rebate. Dates t_i = i T / m, i = 1..m, as every plan contract; they scale with T.
+
+| rows | instrument (unchanged) | product | terms | monitoring, treatment of the knock-out leg | the same terms as |
+|---|---|---|---|---|---|
+| `P3.KID.*` | `knock-in-parity:discrete` | down-and-in call | S0 = K = 100, H = 95, σ = 0.30, r = 0.10, q = 0, T = 0.2, m = 50 | at the 50 dates, one-step survival | `DB095` (O5, O6) |
+| `P3.KIC.*` | `knock-in-parity:continuous` | down-and-in call | the same | continuous, the bridge on the 50 steps | `CB095` (O7) |
+
+Why these terms:
+- Parity makes the knock-in exactly vanilla minus the knock-out with the same monitoring. On these terms the knock-out leg is already judged, in run 1 and again in run 2: its value and discrete delta against BGK's published O5, O6 and O7, and its other Greeks by DB095's finite-difference rows and CB095's Reiner-Rubinstein rows. So if a knock-in row fails while its knock-out row passes, the fault is in what the knock-in adds: the vanilla leg on an m-step path, the subtraction, and the tape through two kernels.
+- Both rows have one contract under two monitorings. Their gap is BGK's discrete-continuous gap (O5 against O7) with its sign reversed, and the pricer must never use the bridge on the discrete one.
+- The discrete reference needs no new quadrature contract. The O5 and O6 recursions, already cross-checked by two methods, carry over unchanged.
+- The published knock-ins found in Phase 1 are El Babsiri-Noel's (oracles E31): S = K = 100, H = 90, r = 0.05, q = 0.02, T = 1. They are on other terms and have no Greeks. They are used below as a guard on the closed-form code, not as a row.
+
+Estimator. The production pricer's knock-in, `Knock::kIn` (`src/pricer/kernels.hpp`): on each path, the European payoff on the unconditioned normals minus the knock-out leg, which under one-step survival runs on its own conditioned path. Greeks come from the tape, one record per path through both kernels. N = 2^22, the plan's barrier count, so at seed 271828 a knock-in row reads the same uniforms as its knock-out row. That correlation is allowed: Bonferroni needs no independence. The ceiling factor is 1.65, the existing rule for reference rows.
+
+Greeks, as `src/oracle/black_scholes.hpp` and every existing row define them. Value is in units of S0, discounted at e^{−rT}. Delta is ∂V/∂S0. Vega is ∂V/∂σ per 1.00 of annual volatility. Rho is ∂V/∂r per 1.00 of the continuously compounded annual rate, which enters both the drift and the discount. Dividend rho is ∂V/∂q per 1.00, and q enters only the drift (r − q). Theta is −∂V/∂T per year, with m fixed and the dates moving with T. Nothing is scaled to 1% or to a day.
+
+References, one id per row in `references/oracle_values.csv`, generated by `tools/quadrature`. The new rows are appended after `O11`, and every existing row stays byte-identical, which the regenerate-and-compare ctest shows. Each row's `parameters` field is DB095's (or CB095's) text, `S0=100;K=100;H=95;sigma=0.3;r=0.1;q=0;T=0.2;m=50;type=call;spot=0`. Each plan row's `reference` is its own id, as `CB085.value` is.
+
+| rows | reference | b |
+|---|---|---|
+| `P3.KID.value`, `.delta` | `BlackScholes` over `test::Dual` (closed form) minus the backward GL recursion over `test::Dual`, at the fine resolution of `AddDiscreteBarrier` | 1e-9 |
+| `P3.KID.vega`, `.rho`, `.divrho`, `.theta` | the same, other tangents | 1e-8 |
+| `P3.KIC.*`, all six | `BarrierOptionValue(kDownIn, kCall, K = 100, H = 95, rebate 0)` over `test::Dual`: Haug's C(1, 1) term, since K ≥ H | 0 |
+
+The discrete quadrature over `Dual`:
+- `DiscreteDownOutGaussLegendre` and `DiscreteDownOutSimpson` become templates on `Real`. The double functions are their double instantiations, so O5, O6 and the naive rows keep their bits.
+- The grid is fixed at the base point's double values: the nodes, weights, panel and interval counts, the top, and the kernel band. Only each step's drift, sd and discount carry tangents, and so does the last step's closed form, through `test::ActiveMarket` with spot, σ, r, q and T seeded. The reason: the node counts change in steps with σ and T (`ceil`), so a grid that moved with the tangent would add a term that is not differentiable. With the grid fixed, the tangent is the fixed rule applied to the derivative of the integrand. That derivative is a Gaussian times polynomials of degree at most 2 in each step's z, so it converges as the value does, and its tail beyond 12 sd is below e^{−65}.
+- Simpson's two grids are extrapolated, (16 f − c) / 15, tangent by tangent. Its delta for this purpose is the spot tangent at the root. The existing five-point stencil stays for O6.
+
+Checks in the tool. Each failure is a `DISAGREEMENT` and fails the tool and its ctest:
+1. Coarse against fine GL, tangent by tangent, within that row's b.
+2. Fine GL against Simpson, the same.
+3. The GL `Dual` delta against the GL score delta (O6) within 1e-9.
+4. For KIC, (DI + DO)(Dual), with DO the closed form of the CB095 rows, against `BlackScholes`(Dual), value and five Greeks, within 1e-11 absolute.
+5. For KIC, the DI value against BS minus `ContinuousDownOutCallBgk` (BGK Proposition 3.1, the tool's own formula) within 1e-11. Those two formulas share no code.
+6. The E31 guard: `BarrierOptionValue(kDownIn)` at the five El Babsiri-Noel rows (σ = 0.10 to 0.30) within 1e-5 of 0.07187, 0.60638, 1.64005, 2.98495 and 4.50952. 1e-5 is QuantLib's own analytic tolerance for that table. Half a unit in the fifth decimal would claim more than the source checks.
+
+Why each b:
+- KIC is closed form, as CB095 is, so b is 0. Double rounding is near 1e-14, far below any SE.
+- KID value and delta inherit O5's and O6's 1e-9, since the Black-Scholes leg is exact.
+- The other four KID Greeks get 1e-8. Their integrands carry the polynomial factors above, and 1e-9 has been shown only for the value and delta. The checks above enforce the b that is used. At an SE of order 1e-3 to 1e-2, either value is invisible in the bound.
+
+What the knock-in rows prove:
+- The vanilla leg is right on an m-step path.
+- The parity subtraction has the right signs.
+- The knock-out leg's adjoint enters the knock-in's Greeks with a minus sign.
+- Under one-step survival, the vanilla leg reads the unconditioned draws while the knock-out leg conditions its own.
+
+What they do not prove: anything about the knock-out leg beyond its own rows, since its error enters both.
+
+##### SVI-surface rows, 45
+
+A row is d P_c / d θ_{j,i}, for the three 7a contracts c (arithmetic Asian call; discrete down-and-out call, one-step survival; continuous down-and-out call, bridge; K = 22,800, H = 21,500, T = T₃, m = 33, n = 4). The 15 parameters are (a, b, ρ, m, σ) of slices j = d05, d12, d33, that is 202411, 202411W4 and 202412 at 5, 12 and 33 days, in the order of `runner.cpp`. The model is stage 7a's: raw SVI as fitted by stage 6b's code from the captured chain, violations and all, linear total variance in t, Dupire with 7a's floor rule, and log-Euler with the coefficient frozen per step. The derivative is the partial derivative of the Monte Carlo price with F, D, T and S0 held fixed, with no refit, as 7a registered. The unit is index points per unit of the parameter: a and b in total variance, ρ dimensionless, m and σ in log-moneyness.
+
+Options weighed. The reference must not depend on the tape.
+
+(a) A central difference, on common random numbers, of the same production price estimator.
+- What it is: `PriceLocalVol` at θ ± h, one parameter moved, on the run's own uniforms, paired batch by batch with the tape.
+- What it proves: the tape's 15 numbers are the derivatives of the very function the pricer computes. That covers:
+  - the whole surface pipeline on the tape, from θ to w, w′ and w″ per slice, through the interpolation weights, ∂T w and g, to σ²_loc;
+  - the floor rule's branches, where a floored or capped point carries no derivative;
+  - the frozen-coefficient law, and one-step survival and the bridge on the sub-steps;
+  - the order in which the 15 inputs are registered, and the set-up records σ² and b σ²;
+  - the per-block set-up sweep and its allocation to batches.
+- Beyond what 7a's per-path tape-against-`Dual` check shows, it also catches:
+  - a partial or a branch that the tape and the `Dual` share through the template code, which only a difference of the primal can expose;
+  - in expectation, the boundary term that the pathwise derivative misses where g crosses 0 and σ²_loc jumps from the cap to the floor (7a, floor rule, "Consequences"). A difference straddling the jump on a path-step adds J / 2h with probability of order h, so its mean keeps the term while the pathwise derivative drops it.
+- The Euler bias cancels, since both sides differentiate the same n = 4 scheme. So the rows check the pathwise estimator, the surface pipeline and the set-up sweep.
+- What it does not prove:
+  - That the price is right. An error common to the primal and the tape passes: a wrong Dupire denominator such as VW4's displayed sign, a wrong interpolation, curve or floor rule. Those are 7a's flat-surface oracle and Dupire checks.
+  - Anything about the continuous local-volatility model's sensitivities, or the Euler bias of the gradient. That is 7a's bias study, which covers prices only.
+  - Anything about the fit or the quote sensitivities. That is 7b.
+  - A boundary term at g = 0 where no path-step lies within a bump of it. The tallies below say whether any did.
+  - Independence from `EvaluateSubstepped`, which both sides run.
+
+(b) A PDE solution of the continuous local-volatility model for the two barriers.
+- What it is: one dimension in log S, absorbing at H for the continuous contract, zeroed below H at the 33 dates for the discrete one, the 15 derivatives by bumps or a tangent PDE, and some other method for the Asian, whose average needs a second state dimension.
+- What it proves: it is an independent implementation of the model, so it would catch an error common to the Monte Carlo primal and its tape.
+- What it does not prove, at a b we could honestly state:
+  - Its b must hold the derivative of the n = 4 Euler bias in each parameter, which nothing has measured. 7a measured the price bias only: +0.33 ± 0.11 for the bridge, and unresolved for the discrete barrier at 2^20. It could be estimated only by coupled Monte Carlo levels, which reuse the code under test, and only with a noise we cannot bound before running it.
+  - Near the floors σ_loc has kinks in x, so the PDE's grid convergence there is first order too: the same slow convergence 7b saw.
+  - It judges a different quantity from the one the rows define, the continuous model's derivative rather than the Monte Carlo price's.
+  - It covers 30 rows, not 45, and needs a new solver with its own oracles.
+
+(c) The forward-mode `Dual` through the same kernels.
+- What it is: independent of the tape, and 7a already checks it path by path.
+- Why it is not the row's reference: it shares every partial and branch with the tape through the template, so it misses what both AD modes would miss.
+
+Choice: (a), for all 45 rows. It is the only option that judges the quantity the rows define, at a b that the pilot estimates rather than assumes. The model-level check (b) would add stays an open question for the lead (below). It is not part of stage 8.
+
+The step rule.
+- For row (j, i): h0 = 2^-8 w_j(0) / M_{j,i}.
+  - w_j(0) is the fitted at-the-money total variance, a + b (−ρ m + √(m² + σ²)), about 5.3e-4, 1.5e-3 and 4.4e-3.
+  - M_{j,i} is the largest |∂w_j / ∂θ_i (k)| on the grid k = −0.5, −0.499, ..., 0.5, from the closed forms ∂w/∂a = 1, ∂w/∂b = ρ (k − m) + r, ∂w/∂ρ = b (k − m), ∂w/∂m = −b (ρ + (k − m) / r) and ∂w/∂σ = b σ / r, with r = √((k − m)² + σ²).
+- So the first move changes the slice's total variance by at most 2^-8 of its at-the-money value anywhere a path goes.
+- The grid is not the quoted range, which is where 7b's trouble came from. ∂w/∂m and ∂w/∂b are largest to the right of the vertex m, beyond every quote, where the floored path-steps are (k from 0.071 to 0.134). ±0.5 is about ±8 standard deviations of the 33-day log return and holds every floored point 7a found. The 52 capped path-steps at k near −1.1 lie outside it.
+- Levels: h_ℓ = 2^-ℓ h0, ℓ = 0..8.
+- The step must stay inside the validated domain on both sides: |ρ ± h0| ≤ 1, σ − h0 ≥ 1e-8, b − h0 ≥ 0. Otherwise the row is refused as unresolved, never clipped. From the 6b parameters:
+  - the ρ steps are at most about 8e-6, against margins 1 − |ρ| of at least 0.0085;
+  - the σ steps are at most about 1e-5, against σ ≥ 0.011;
+  - the largest step of all, about 2e-4 for 202412's b, is far below b ≈ 2.
+- Example: for 202411W4's m, h0 ≈ 1.5e-6 and h_8 ≈ 6e-9. 7b's finest parameter move was 1e-6 of m, about 1.5e-7.
+
+The ladder and the level, on the pilot only, from finite differences alone, never the tape.
+- Seed 1729, N_p = 2^20, 64 batches, the run's contract and threads.
+- Per batch q: D_{ℓ,q} = (V_q(θ + h_ℓ) − V_q(θ − h_ℓ)) / (2 h_ℓ), with V_q the batch mean of `PriceLocalVol`, every level and both sides on the same uniforms.
+- Δ_ℓ = D_ℓ − D_{ℓ+1}, ℓ = 0..7, and E_ℓ = Δ_{ℓ+1} − Δ_ℓ / 4, ℓ = 0..6. Each is formed per batch, with mean and SE from the 64 values (`BatchMeansStatistics`). c is the plan's critical value.
+- Pair ℓ is consistent with h² truncation when |mean E_ℓ| ≤ c SE(E_ℓ) + |mean Δ_ℓ| / 16. Under D(h) = D + A h² + B h⁴, E_ℓ = −(45/256) B h_ℓ⁴. So the slack admits the level only while the h⁴ term is at most about a quarter of the h² term there.
+- The chosen level ℓ* is the smallest ℓ in 0..5 with pairs ℓ and ℓ + 1 both consistent, so h² is seen over two further halvings. One consistent pair alone can be a truncation that passes through zero, and two in a row cannot.
+- The reference step is h* = h_{ℓ*+1}, and the plan's reference field is `FD:<h*>`, printed with 17 significant digits.
+- b = RoundUp3(2 (|mean Δ_ℓ*| + c SE(Δ_ℓ*)) / 3). That is BuildPlan's existing FD formula, with FD(2h) − FD(h) = Δ_ℓ*, so `two_h_mean` and `two_h_se` are those of Δ_ℓ*.
+- Why the coarsest such level: the paired SE against the tape comes from the paths whose floor or cap kink lies within ±h. A per-path difference there is bounded by the slope jump, so its variance grows like h, while the truncation is A h² in expectation. A larger h keeps more such paths in each batch, so the SE that sets the ceiling rests on more of them. The h² behaviour is shown, not assumed. Round-off differs path by path, so it sits in the paired SE, not in b.
+- No ℓ ≤ 5 qualifies: the row's reference is unresolved (below).
+
+Stage 7b's slow convergence, accounted for. 7b's check differenced quote bumps through refits. Each bump moved all five parameters of a slice by up to min(σ_i, V_i / 2), and it judged six absolute halvings on 2^16 paths without an SE, so a sequence still moving at h_5 was taken as settled. Its probe of 202411W4's parameters found ρ and m still 0.6% to 4% from the tape at 1e-6 of the parameter. Here:
+- each row moves one parameter, scaled to where the paths go rather than the quotes;
+- the ladder reaches about 25 times below 7b's finest move;
+- every level is a paired batch statistic with its SE;
+- h² must be seen over two halvings;
+- a sequence that never settles is reported, not passed.
+
+The rows most at risk, from 7b's probe, are `P3.DB.d12.{rho,m}` and `P3.CB.d12.{rho,m}`, and plausibly their d05 counterparts. Their ladders are printed in full.
+
+Floor tallies, a disclosure with no pass mark:
+- For every bumped price the pilot records the FloorTally's butterfly-floored and capped counts against the base run's. A change in the butterfly count means some path-step crossed g = 0 inside the bump, and so the cap-to-floor jump, inside it. The changes are written to the ladder file per row and level, and reported.
+- Run 2 reports the same at h*.
+- 7a found no butterfly-floored point and 52 capped path-steps at 2^20.
+
+The estimate and the comparison. The tape's batch means at N = 2^22, seed 271828, against D_{h*} on the same uniforms, by the existing `CheckPaired`: |mean(tape − D)| ≤ c SE_paired + b, and SE_paired ≤ the ceiling. The ceiling is 3 × SE_pilot × √(2^20 / 2^22), the existing factor for FD rows: their paired differences are mostly zero, with spikes at the kinks, which is the case that factor was set for. The brief named 1.65, and the reason for 3 is above; see the open questions. N = 2^22 is the plan's barrier count. The number of spikes in each batch grows with N, and 2^22 runs in minutes per contract.
+
+Rows that cannot be judged:
+- None is known to be unjudgeable in advance.
+- A row with no resolved level gets plan status `unresolved`. It counts in K. It is run in run 2 at the finest level h_8, with its estimate, D_8 and paired SE printed. Its verdict is `UNRESOLVED`, it counts as not passed, and the run exits non-zero. The critical value is unchanged.
+- The g = 0 boundary term, for every row, is judged only to the extent that path-steps lie within the bumps. The tallies say how far that is.
+- No row is dropped, and K stays 147.
+
+##### The plan, the runner and the files
+
+- Instruments.
+  - `knock-in-parity:discrete` and `knock-in-parity:continuous` resolve, through a fixed table in `src/oracle/catalog.hpp`, to the two contracts above, with DB095's and CB095's parameter text. The runner's check that a reference quotes its instrument's parameters uses the resolved text.
+  - `svi-surface:arithmetic`, `svi-surface:discrete-barrier` and `svi-surface:continuous-barrier` resolve to 7a's three contracts on the fit of the captured chain under `--data` (default `data/`).
+  - Greek `d_<p>_<dNN>` decodes to the parameter index p in (a, b, rho, m, sigma) and the slice index d05, d12, d33 → 0, 1, 2.
+- `aadp_run_oracles run --estimator reference` is the default and what the ctest `aadp_oracle_plan_measured` and `check.sh`'s measured-plan step call.
+  - It judges only the rows the frozen kernels can price, the 90 of run 1.
+  - It prints each of the 57 as `<id> not-in-run-1`, a line `scripts/compare_measured.py` does not read, and counts them as `run2_only` in the summary.
+  - So run 1 keeps coming back byte for byte, and those tests keep their scope and time limit.
+- `--estimator production` judges all 147 rows as above. It refuses a plan with any `awaiting-phase3` row. Without `data/` the 45 surface rows are `SKIPPED: no data`, which fails the run as any skip does.
+- Every other consumer of the plan's run rows (`tests/ad/oracle_equivalence_test.cpp`, `tests/pricer/path_agreement_test.cpp`, `tests/oracle/runner_test.cpp`) keeps its scope to the GBM rows by instrument kind, and says so. The runner test's count changes from 90 run and 57 awaiting to 102 GBM rows and 45 surface rows, with `unresolved` counted apart.
+- The plan decoder accepts the status `unresolved`. Such a row has N, seed and `FD:<h_8>`, and writes `-` for `se_ceiling` and b.
+- `aadp_run_oracles pilot --rows stage8 --estimator production --plan references/comparison_plan.csv --seed 1729 --divisor 4 --threads 8 --data data --references references/oracle_values.csv --out references/pilot_results_stage8.csv --ladder references/svi_fd_ladder.csv`.
+  - It refuses a seed equal to the plan's `measured_seed`.
+  - `pilot_results_stage8.csv` has the 57 rows in `pilot_results.csv`'s seven columns, under the same directives (seed 1729, 64 batches, divisor 4) and a comment naming the estimator. For a knock-in row, `estimate` is the tape mean, `reference` the reference value, `se` the estimator's SE, and the two-h columns 0. For a surface row, `estimate` is the tape mean, `reference` the mean of D_{h*}, `se` the paired SE, and the two-h columns those of Δ_ℓ*.
+  - `svi_fd_ladder.csv` has, per row and level: h_ℓ, the mean and SE of D_ℓ, Δ_ℓ and E_ℓ, the consistency verdict, and the tally changes. Per row it gives ℓ*, h* and b, or `unresolved` with its reason.
+- `emit-plan` gains `--pilot-stage8` and `--ladder`. It writes the 57 rows by the rules above:
+  - 1.65 on the 12 knock-in rows, with b the reference's;
+  - 3 on the 45 surface rows, with b and `FD:<h*>` from the ladder.
+  - The 90 run-1 rows, every directive and every existing comment line come out byte-identical to 5993b4a's. One comment line is appended for each new row kind, giving its estimator, reference and factor.
+
+##### The pilot
+
+- Seed 1729, divisor 4: N_p = 2^20 for all 57 rows, 64 batches, 8 threads. The run goes through `heavy.sh` with `/usr/bin/time -l`, with the captures checked first by `scripts/fetch_data.sh --verify`.
+  - Knock-ins: one tape run per contract.
+  - Surfaces, per contract: one tape run and the full ladder, 15 × 9 × 2 = 270 prices.
+- Ceilings by the existing rule, `factor × SE_pilot × √(N_p / N)`, rounded up to 3 figures: factor 1.65 on the 12 reference rows, 3 on the 45 finite-difference rows.
+- Disclosed with the pilot and used for nothing: each row's distance / SE, as Phase 2's pilot printed it. For each surface row: b / (c SE_paired), the bound's resolution relative to |estimate|, and the tally changes.
+  - Also the SE at a second development seed, 20261129, at N_p and at h*. Its ratio to the 1729 SE tests the basis of factors 1.65 and 3 on these rows. A ratio above 2.9 (or above 1.62 on a knock-in row) is reported before run 2 as a risk to that row's ceiling. Nothing changes because of it.
+- A pilot distance beyond c is a pilot finding, investigated before run 2. If it shows a bug, the fix gets its own commit and the pilot is repeated on 1729 at the fixed commit. Both pilots are reported. No ceiling or b is ever set from a measured result.
+
+Commit order:
+1. this registration, alone;
+2. the code, in small commits, each through the full gate: the quadrature templates, references and checks; the plan and runner modes; the ladder, the rule and the tests below; the faults;
+3. the pilot's two files, alone, with the raw logs in the research cache;
+4. the plan from `emit-plan`, alone;
+5. the fingerprint file and its test (below);
+6. NOTES "Stage 8a results".
+
+Then push, confirm that CI is green at 6, and only then run on 271828. No seed 1729 or 271828 run happens before its step.
+
+##### Measured run 2, stage 8b
+
+- Once, at commit 6 (docs-only after 5, so the code under test is 5's), all 147 rows, seed 271828.
+- Preconditions: a clean tree; CI green on it; `fetch_data.sh --verify` passes; the fingerprint test passes on the Mac.
+- `aadp_run_oracles run --estimator production --plan references/comparison_plan.csv --references references/oracle_values.csv --data data --threads 8`, through `heavy.sh`. It is a correctness run, not a timing, so it goes through `heavy.sh`, not `measure.sh`. Host: `mac-m4max`, macOS. The thread count changes no bit.
+- If the run dies before it prints a judged row, it may be restarted at the same commit, and the partial log is kept and reported. Once a row is judged, the run is done, and nothing is rerun or re-seeded.
+- The raw output goes to `phase3/evidence/stage8b/` in the research cache. `references/measured_results_run2.csv` holds it in run 1's columns, and `compare_measured.py` must rebuild it byte for byte from the raw output. Its header names run 2, the plan commit, the code commit, the seed, B, K, the critical value, the estimator, the host, and the summary (run, passed, failed, unresolved, skipped). It also carries the TAIFEX attribution and the statement that the 45 surface rows rest on settlements of one day, not tradable quotes, reaching 33 days.
+- Which run-1 rows it repeats: all 90, at the same N, seed, ceilings and b, with the production estimator in place of the frozen kernels and the `Dual`.
+  - The production pricer matches the frozen kernels path by path within 0.047 of its bound, and the tape matches the `Dual` within round-off (check 7). So run 2 re-reads the same paths with other code; it is not a second independent look at these 90 rows.
+  - A verdict that changes points to the code, not to chance. A run-2 failure is a failure even where run 1 passed.
+- NOTES "Stage 8b results" reports run 2 beside run 1, never instead of it:
+  - for the 90 rows, the run-1 estimate, the run-2 estimate, the difference, and both verdicts;
+  - the 57 alone, with every failure and every unresolved row named;
+  - the surface rows' tally changes.
+- `references/measured_results.csv` stays as it is. README and `BENCHMARKS.md` show both runs.
+
+Later stages, the fingerprint:
+- `references/run2_fingerprint.txt` holds the production-mode output of all 147 rows at the development seed 20261128, N / 1024 paths per row, 64 batches, surface rows at their plan h*. Every estimate, reference and SE is a hex float.
+- The ctest `aadp_run2_fingerprint` (release presets) compares it bit for bit. The 102 GBM rows run on every host. The 45 surface rows run only with the captures and otherwise skip visibly, with the named skip of the other real-data tests. The GCC pre-commit and CI run it.
+- If any host's bits differ from the Mac's, stage 8a stops and reports to the lead before run 2. It does not keep one file per host.
+- A later stage that changes the pricer or the tape either keeps this test passing, or says in its report and its commit that run 2 applies to commit 6 only, and re-pins the file in a commit that says so. Run 2 is never repeated on 271828.
+
+##### Tests at development seeds
+
+Seeds 20261128 (tests) and 20261129 (the pilot's second seed); neither is 1729 or 271828.
+- `aadp_knock_in_rows_test`: the 12 comparisons at N = 2^18, 64 batches, seed 20261128, through `CheckAgainstReference` with c and b and no ceiling. It is deterministic. Builds other than release use 2^12 and check finiteness only.
+- `aadp_svi_rows_test`: 7a's synthetic surfaces A and B, the three products with the terms 7a's synthetic tape-against-`Dual` tests use, N = 2^14, 64 batches, seed 20261128, the full ladder, rule and paired comparison.
+  - On A, which has no floors, all 45 must resolve and pass, with the paired SE below 0.1 of the tape's own SE.
+  - On B, where floors occur, every resolved row must pass, and the unresolved count is printed.
+  - Builds other than release use 2^10 and check that the ladder runs.
+- `aadp_fd_ladder_test` runs the rule on hand-made batch tables with known answers:
+  - pure h² plus noise: ℓ* = 0, and b by the formula;
+  - first-order truncation: unresolved;
+  - late settling: ℓ* is the first level with two consistent pairs;
+  - one consistent pair that crosses zero: not chosen there;
+  - noise only: ℓ* = 0, with b from the SE.
+  - It also checks h0 on a hand-made slice whose maximum is known in closed form, the domain refusal for ρ + h0 > 1, and a constructed bump that moves g through 0 on a path-step and must change the tally.
+- A real-data test, with the captures: the 15 h0 against the closed form, all inside the domain.
+- Plan tests:
+  - the emitted plan's 90 rows and directives are 5993b4a's bytes;
+  - the 12 knock-in ceilings use 1.65, and the 45 surface ceilings use 3 with `FD:<h*>` equal to the ladder's;
+  - an `unresolved` row round-trips, is run, prints `UNRESOLVED`, and makes the run exit non-zero;
+  - reference mode leaves run 1's bytes unchanged.
+
+##### Faults
+
+One per new reference and comparison in `faults/manifest.json`, each with the test that must catch it:
+- `ki-parity-sign`: the knock-in returns vanilla + knock-out. Caught by `aadp_knock_in_rows_test`, value rows.
+- `ki-leg-weighted`: the vanilla leg is multiplied by the path's survival weight. Caught there, KIC value.
+- `ki-knockout-leg-passive`: the knock-out leg enters the subtraction as a passive copy of its value. The value is unchanged and the Greeks are the vanilla's. Caught there, the five Greek rows.
+- `ki-closed-form-branch`: `kDownIn` with K ≥ H uses C(1, −1). Caught by the tool's parity, BGK and E31 checks.
+- `kid-gl-passive-discount`: the GL recursion over `Dual` builds its discount from the passive T. Caught by GL against Simpson, theta and rho.
+- `kid-simpson-drift-tangent`: Simpson over `Dual` drops r from the drift's tangent. Caught by GL against Simpson, rho.
+- `kid-root-passive-spot`: the root step takes log spot as passive. Caught by the `Dual` delta against the score delta.
+- `ki-row-resolves-to-knock-out`: the catalog maps `knock-in-parity:discrete` to the knock-out contract. Caught by `aadp_knock_in_rows_test`.
+- `svi-fd-neighbour-parameter`: the ladder bumps parameter i + 1. Caught by `aadp_svi_rows_test` on A.
+- `svi-endblock-twice`: the set-up sweep is added twice per block. Caught there.
+- `svi-floor-carries-derivative`: a floored point takes floor + (x − Value(x)), so the primal is unchanged and the tape and the `Dual` both get a derivative. Caught by `aadp_svi_rows_test` on B. 7a's tape-against-`Dual` check passes under it, which is what this comparison adds.
+- `svi-fd-uncoupled`: the + side uses another seed. Caught by the paired-SE requirement on A.
+- `fd-ladder-ratio`: the consistency test uses Δ / 2. Caught by `aadp_fd_ladder_test`.
+- `fd-ladder-b-noise`: b drops c SE. Caught there.
+- `fd-ladder-single-pair`: one consistent pair is accepted. Caught there, the zero-crossing case.
+- `svi-h0-quoted-range`: M is taken over the quoted range. Caught by the h0 test.
+- `svi-tally-change-ignored`: the tally comparison is not recorded. Caught by the constructed g = 0 bump.
+- `plan-unresolved-passes`: an unresolved row is counted as passed. Caught by the plan test.
+- `emit-plan-run1-factor`: run-1 rows are recomputed with factor 3. Caught by the 5993b4a byte test.
+- `emit-plan-svi-factor`: surface rows get 1.65. Caught by the plan test.
+- `emit-plan-h0-not-hstar`: the plan writes `FD:<h0>`. Caught by the plan test.
+- `pilot-measured-seed`: the pilot accepts 271828. Caught by the refusal test.
+- `reference-mode-runs-57`: reference mode tries the 57 rows. Caught by `aadp_oracle_plan_measured`.
+- `fingerprint-one-ulp`: the GBM discount is multiplied by 1 + 2^-52. Caught by `aadp_run2_fingerprint`.
+- `run2-curation`: the curated file drops the verdict column. Caught by a test of the curation on a synthetic runner output.
+
+Open for the lead, none of which changes the rules above unless the lead decides so before the pilot:
+- The 45 surface rows take the finite-difference factor 3, which is the existing rule for paired finite-difference rows. The brief named 1.65.
+- Filling `reference` (now the placeholder `phase3`) is read here as filling in the rows, not changing them.
+- Whether a model-level check of the barrier sensitivities, option (b), belongs in a later stage.
+
+Out of scope: a PDE or other model-level reference for the surface sensitivities; quote sensitivities through eSSVI; any change to run 1.
+
 ### Rule slips
 
 None affected a number.
