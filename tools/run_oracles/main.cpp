@@ -42,6 +42,14 @@ namespace {
 
 using Arguments = std::map<std::string, std::string, std::less<>>;
 
+// The surface rows' lines rest on the chain, so the file carries its attribution.
+constexpr std::string_view kFingerprintHeader =
+    "# Run 2's development-seed fingerprint, from aadp_run_oracles fingerprint: every plan row\n"
+    "# through the production estimator at seed 20261128 and N / 1024 paths, as hex floats.\n"
+    "# NOTES.md, \"Stage 8\", registers it; each host keeps its own file. The surface rows rest\n"
+    "# on TAIFEX settlements of trade date 2024-11-15, not tradable quotes, reaching 33 days.\n"
+    "# Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).\n";
+
 Arguments ParseArguments(int argc, char** argv) {
   Arguments arguments;
   for (int i = 2; i < argc; ++i) {
@@ -253,8 +261,9 @@ int main(int argc, char** argv) try {
   if (command == "fingerprint") {
     const auto surface = LoadSurface(arguments);
     WriteFile(Required(arguments, "out"),
-              Fingerprint(LoadPlan(arguments), LoadReferences(arguments),
-                          surface ? &*surface : nullptr, threads));
+              std::string(kFingerprintHeader) +
+                  Fingerprint(LoadPlan(arguments), LoadReferences(arguments),
+                              surface ? &*surface : nullptr, threads));
     return 0;
   }
   std::fprintf(stderr, "unknown command %s\n", argv[1]);

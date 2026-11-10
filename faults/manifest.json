@@ -6492,6 +6492,25 @@
       "reason": "compare_measured_test: the curated rows differ",
       "timeout_s": 120,
       "mutated_exit": 1
+    },
+    {
+      "id": "fingerprint-one-ulp",
+      "kind": "check",
+      "covers": "run 2's fingerprint, the production estimator's bits at the development seed",
+      "bug": "The GBM discount is multiplied by 1 + 2^-52.",
+      "edits": [
+        {
+          "file": "src/pricer/model.hpp",
+          "find": "        discount_(Exp(-m.r * m.maturity)),",
+          "replace": "        discount_(Exp(-m.r * m.maturity) * (1.0 + 0x1p-52)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run2_fingerprint"],
+      "command": ["{build}/bin/aadp_run2_fingerprint"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Run2Fingerprint\\.CommittedBitsOnThisHost",
+      "timeout_s": 900
     }
   ]
 }

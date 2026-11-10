@@ -216,6 +216,13 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
           AADP_SMOKE_SIZE=$<IF:$<CONFIG:Release>,0,1>)
       endif()
     endforeach()
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND TARGET aadp_platform)
+      # Run 2's code at the development seed, bit for bit against this host's file.
+      aadp_test(aadp_run2_fingerprint
+        SOURCES tests/oracle/run2_fingerprint_test.cpp
+        LINK aadp_run_oracles_stage8 aadp_platform
+        LABELS oracle)
+    endif()
   endif()
 
   # Stage 7b: quote sensitivities through the fit by the implicit function theorem, on the
