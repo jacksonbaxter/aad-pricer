@@ -5418,6 +5418,641 @@
       "reason": "\\[  FAILED  \\] RealQuoteSensitivity\\.TheMiddleQuotePassesTheBumpCheck",
       "timeout_s": 300,
       "data": true
+    },
+    {
+      "id": "essvi-convert-m-sign",
+      "kind": "check",
+      "covers": "conversion to raw SVI, m",
+      "bug": "m = +theta rho / psi: the converted slice is the eSSVI slice reflected.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "          .m = -(s.theta * s.rho) / s.psi,",
+          "replace": "          .m = (s.theta * s.rho) / s.psi,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.RawConversionGivesTheSameTotalVariance"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.RawConversionGivesTheSameTotalVariance",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-convert-sigma",
+      "kind": "check",
+      "covers": "conversion to raw SVI, sigma",
+      "bug": "sigma takes 1 - rho^2 for its square root.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "          .sigma = s.theta * Sqrt(q) / s.psi};",
+          "replace": "          .sigma = s.theta * q / s.psi};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.RawConversionGivesTheSameTotalVariance"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.RawConversionGivesTheSameTotalVariance",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-p-branch",
+      "kind": "check",
+      "covers": "the map, N's lower bound on psi takes both branches",
+      "bug": "p_i keeps only the (1 + rho) branch, so a slice whose rho rises can break N.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "    p[i] = Max((1.0 + rho[i - 1]) / (1.0 + rho[i]), (1.0 - rho[i - 1]) / (1.0 - rho[i]));",
+          "replace": "    p[i] = (1.0 + rho[i - 1]) / (1.0 + rho[i]);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-lee-margin",
+      "kind": "check",
+      "covers": "the map, B1 strict through its margin",
+      "bug": "The B1 cap drops its margin, so c = 1 puts psi (1 + |rho|) at 4, which B1 excludes.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "    const Real lee = (4.0 * (1.0 - kLeeMargin)) / one_plus;",
+          "replace": "    const Real lee = 4.0 / one_plus;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.CheckerHoldsB1StrictAndB2AtEqualityActive"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.CheckerHoldsB1StrictAndB2AtEqualityActive",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-gj",
+      "kind": "check",
+      "covers": "the map, B2's cap",
+      "bug": "The B2 cap drops 1 + |rho|, so psi can pass psi^2 (1 + |rho|) <= 4 theta.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "    const Real gj = Sqrt(4.0 * theta[i] / one_plus);",
+          "replace": "    const Real gj = Sqrt(4.0 * theta[i]);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-theta-ratio",
+      "kind": "check",
+      "covers": "the map, S's cap",
+      "bug": "S's cap psi_{i-1} theta_i / theta_{i-1} is never applied.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "      if (Value(ratio) <= Value(upper)) {",
+          "replace": "      if (false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-room",
+      "kind": "check",
+      "covers": "the map, room for the later slices",
+      "bug": "psi_i is not capped by the room the later slices need, so their lower bound can pass their cap.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "    if (room_slice[i] < n && Value(room[i]) < Value(upper)) {",
+          "replace": "    if (false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-psi-lower",
+      "kind": "check",
+      "covers": "the map, N's lower bound",
+      "bug": "psi_i's lower end is psi_{i-1}, without p_i.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "      lower = out[i - 1].psi * p[i];",
+          "replace": "      lower = out[i - 1].psi;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.EveryBoxPointSatisfiesTheConstraintsAndStage6aChecks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-map-cap-name",
+      "kind": "check",
+      "covers": "the map, the binding cap recorded",
+      "bug": "S's cap is recorded as B1's.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "        cap = PsiCap::kThetaRatio;",
+          "replace": "        cap = PsiCap::kLee;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.HandMadeSurfaceIsInsideEveryConstraintWithSlackAtLeast034"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.HandMadeSurfaceIsInsideEveryConstraintWithSlackAtLeast034",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-check-strict",
+      "kind": "check",
+      "covers": "checker, B1 strict",
+      "bug": "B1 is checked as non-strict, so psi (1 + |rho|) = 4 passes.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "      !(slack >= (strict ? kEssviConstraintTolerance : -kEssviConstraintTolerance));",
+          "replace": "      !(slack >= (strict ? -kEssviConstraintTolerance : -kEssviConstraintTolerance));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.CheckerHoldsB1StrictAndB2AtEqualityActive"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.CheckerHoldsB1StrictAndB2AtEqualityActive",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-check-gj",
+      "kind": "check",
+      "covers": "checker, B2",
+      "bug": "The checker's B2 drops 1 + |rho|.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "        1.0 - (s.psi * s.psi * one_plus / (4.0 * s.theta)));",
+          "replace": "        1.0 - (s.psi * s.psi / (4.0 * s.theta)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-check-theta-order",
+      "kind": "check",
+      "covers": "checker, N on theta",
+      "bug": "The checker's theta order is inverted.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    Add(report, EssviConstraint::kThetaOrder, i, (hi.theta / lo.theta) - 1.0);",
+          "replace": "    Add(report, EssviConstraint::kThetaOrder, i, (lo.theta / hi.theta) - 1.0);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.HandMadeSurfaceIsInsideEveryConstraintWithSlackAtLeast034"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.HandMadeSurfaceIsInsideEveryConstraintWithSlackAtLeast034",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-check-psi-lower",
+      "kind": "check",
+      "covers": "checker, N on psi",
+      "bug": "The checker's N on psi takes the looser branch.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    Add(report, EssviConstraint::kPsiLower, i, std::min(up, down));",
+          "replace": "    Add(report, EssviConstraint::kPsiLower, i, std::max(up, down));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-check-theta-ratio",
+      "kind": "check",
+      "covers": "checker, S",
+      "bug": "The checker's S compares psi_i / psi_{i-1} with theta_{i-1} / theta_i.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    Add(report, EssviConstraint::kThetaRatio, i, 1.0 - ((hi.psi / lo.psi) * (lo.theta / hi.theta)));",
+          "replace": "    Add(report, EssviConstraint::kThetaRatio, i, 1.0 - ((hi.psi / lo.psi) * (hi.theta / lo.theta)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-clamp-unrecorded",
+      "kind": "check",
+      "covers": "clamps recorded",
+      "bug": "A clamp moves the coordinate but is not recorded.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    if (v != value) {",
+          "replace": "    if (false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-clamp-rho",
+      "kind": "check",
+      "covers": "rho clamped to the box",
+      "bug": "rho is clamped to |rho| <= 1 instead of the box's 1 - 1e-6.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    x[i] = clamp(EssviCoordinate::kRho, i, slices[i].rho, -kRhoBound, kRhoBound);",
+          "replace": "    x[i] = clamp(EssviCoordinate::kRho, i, slices[i].rho, -1.0, 1.0);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.RhoBeyondTheBoxIsClampedAndRecordedThoughNoConstraintBreaks"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.RhoBeyondTheBoxIsClampedAndRecordedThoughNoConstraintBreaks",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-clamp-a",
+      "kind": "check",
+      "covers": "a_i clamped at 0",
+      "bug": "a_i is not clamped, so theta_i below theta_{i-1} p_i maps to a negative a_i.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.cpp",
+          "find": "    const double a = clamp(EssviCoordinate::kA, i, slices[i].theta - (theta * p), 0.0,",
+          "replace": "    const double a = clamp(EssviCoordinate::kA, i, slices[i].theta - (theta * p), -1.0,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_test", "--gtest_filter=Essvi.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Essvi\\.JustOutsideAConstraintIsRejectedAndClampedWithTheClampRecorded",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-fit-weights",
+      "kind": "check",
+      "covers": "the fit's objective, weights 1 / sigma_i",
+      "bug": "The reported Phi_j drops the 1 / sigma_i weights, so it is not stage 6b's Objective.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "      const double r = (v - p.price[i]) * p.inv_noise[i];",
+          "replace": "      const double r = v - p.price[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_fit_test", "--gtest_filter=EssviFit.RecoversTheHandMadeSurfaceWithinFourStandardErrorsOfNoise"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFit\\.RecoversTheHandMadeSurfaceWithinFourStandardErrorsOfNoise",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-fit-jacobian",
+      "kind": "check",
+      "covers": "the fit's Jacobian, dV/dw",
+      "bug": "The Jacobian drops dV/dw / sigma_i, so the steps are not Levenberg-Marquardt's on Phi.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "        jac[(row * nc) + c] = slope[row] * w.tangent[0];",
+          "replace": "        jac[(row * nc) + c] = w.tangent[0] + (0.0 * slope[row]);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_fit_test", "--gtest_filter=EssviFit.RecoversTheHandMadeSurfaceFromExactPrices"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFit\\.RecoversTheHandMadeSurfaceFromExactPrices",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-fit-box-end",
+      "kind": "check",
+      "covers": "the fit, a coordinate at its box end",
+      "bug": "No coordinate is ever reported at its upper end.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "                               .at_upper = pb.upper[j] - m.x[j] <= kActiveTolerance * width});",
+          "replace": "                               .at_upper = false});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_fit_test", "--gtest_filter=EssviFit.RecoversASurfaceOnTheB2CapWithTheCapAtItsEnd"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFit\\.RecoversASurfaceOnTheB2CapWithTheCapAtItsEnd",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-fit-slice-index",
+      "kind": "check",
+      "covers": "fit errors, the slice index",
+      "bug": "A bad slice is reported at slice 0 wherever it is.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "          EssviFitError{.code = EssviFitErrorCode::kSlice, .slice = j, .fit = p.error()});",
+          "replace": "          EssviFitError{.code = EssviFitErrorCode::kSlice, .slice = 0, .fit = p.error()});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_fit_test", "--gtest_filter=EssviFit.ErrorsAreValues"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFit\\.ErrorsAreValues",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-fit-expiry-order",
+      "kind": "check",
+      "covers": "fit errors, expiry order",
+      "bug": "Slices out of expiry order are fitted.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "    if (j > 0 && !(p->expiry > pb.slices.back().expiry)) {",
+          "replace": "    if (false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_fit_test", "--gtest_filter=EssviFit.ErrorsAreValues"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFit\\.ErrorsAreValues",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-tool-paired-sign",
+      "kind": "check",
+      "covers": "tool, the paired difference",
+      "bug": "The paired difference adds the batch means instead of subtracting them.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "      diff.push_back(pe->value.batch_means[b] - pr->value.batch_means[b]);",
+          "replace": "      diff.push_back(pe->value.batch_means[b] + pr->value.batch_means[b]);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.PriceGivesBothLinesThePairedDifferenceAndBothFloorReports"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.PriceGivesBothLinesThePairedDifferenceAndBothFloorReports",
+      "timeout_s": 600
+    },
+    {
+      "id": "essvi-tool-floor-steps",
+      "kind": "check",
+      "covers": "tool, the floor report",
+      "bug": "The floor report prints the path count as the path-step count.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "              static_cast<unsigned long long>(t.path_steps),",
+          "replace": "              static_cast<unsigned long long>(t.paths),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.PriceGivesBothLinesThePairedDifferenceAndBothFloorReports"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.PriceGivesBothLinesThePairedDifferenceAndBothFloorReports",
+      "timeout_s": 600
+    },
+    {
+      "id": "essvi-tool-attribution",
+      "kind": "check",
+      "covers": "tool, attribution first",
+      "bug": "The report does not open with the attribution.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "  aadp::write_attribution(std::cout);",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.FitOpensWithTheAttributionAndReportsBothFits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.FitOpensWithTheAttributionAndReportsBothFits",
+      "timeout_s": 600
+    },
+    {
+      "id": "essvi-realdata-converged",
+      "kind": "check",
+      "covers": "real data, the fit converges",
+      "bug": "The fit is never reported converged.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "  out.converged = m.stop != EssviStop::kIterations;",
+          "replace": "  out.converged = false;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_realdata_test", "--gtest_filter=RealEssvi.TheSurfaceFitsConvergesAndHoldsEveryConstraint"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealEssvi\\.TheSurfaceFitsConvergesAndHoldsEveryConstraint",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "essvi-realdata-objective",
+      "kind": "check",
+      "covers": "real data, Phi_j is stage 6b's Objective",
+      "bug": "The reported Phi_j drops the 1 / sigma_i weights.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "      const double r = (v - p.price[i]) * p.inv_noise[i];",
+          "replace": "      const double r = v - p.price[i];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_realdata_test", "--gtest_filter=RealEssvi.TheSurfaceFitsConvergesAndHoldsEveryConstraint"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealEssvi\\.TheSurfaceFitsConvergesAndHoldsEveryConstraint",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "essvi-realdata-checks-run",
+      "kind": "check",
+      "covers": "real data, stage 6a's checks run",
+      "bug": "The converted slices' butterfly check is never run.",
+      "edits": [
+        {
+          "file": "src/svi/chain_essvi.cpp",
+          "find": "    s.butterfly = CheckButterfly(f.raw);",
+          "replace": "    s.butterfly = {};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_realdata_test", "--gtest_filter=RealEssvi.TheSurfaceFitsConvergesAndHoldsEveryConstraint"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealEssvi\\.TheSurfaceFitsConvergesAndHoldsEveryConstraint",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "essvi-realdata-surface",
+      "kind": "check",
+      "covers": "real data, the eSSVI surface validates and prices",
+      "bug": "The pricing surface takes default parameters instead of the converted slices.",
+      "edits": [
+        {
+          "file": "src/svi/chain_essvi.cpp",
+          "find": "    out.params.push_back(fit.fit->slices[j].raw);",
+          "replace": "    out.params.push_back({});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_realdata_test"],
+      "command": ["{build}/bin/aadp_svi_essvi_realdata_test", "--gtest_filter=RealEssvi.TheContractsValidateAndPriceToFiniteValuesOnTheEssviSurface"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RealEssvi\\.TheContractsValidateAndPriceToFiniteValuesOnTheEssviSurface",
+      "timeout_s": 300,
+      "data": true
+    },
+    {
+      "id": "essvi-fuzz-box-point",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_essvi_fit, a box point is arbitrage-free",
+      "bug": "S's cap is never applied in the map.",
+      "edits": [
+        {
+          "file": "src/svi/essvi.hpp",
+          "find": "      if (Value(ratio) <= Value(upper)) {",
+          "replace": "      if (false) {"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_essvi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_essvi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/essvi-fuzz-box-point/", "{build}/fault-fuzz/essvi-fuzz-box-point/corpus", "fuzz/fuzz_essvi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: a box point is arbitrage-free",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/essvi-fuzz-box-point/*", "build/fuzz/fault-fuzz/essvi-fuzz-box-point/corpus/*"]
+    },
+    {
+      "id": "essvi-fuzz-error-slice",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_essvi_fit, an error says what the input shows",
+      "bug": "A bad slice is reported at slice 0 wherever it is.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "          EssviFitError{.code = EssviFitErrorCode::kSlice, .slice = j, .fit = p.error()});",
+          "replace": "          EssviFitError{.code = EssviFitErrorCode::kSlice, .slice = 0, .fit = p.error()});"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_essvi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_essvi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/essvi-fuzz-error-slice/", "{build}/fault-fuzz/essvi-fuzz-error-slice/corpus", "fuzz/fuzz_essvi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: (bad slice when it is|slices before the error are good|bad quote is bad|too few strikes when there are)",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/essvi-fuzz-error-slice/*", "build/fuzz/fault-fuzz/essvi-fuzz-error-slice/corpus/*"]
+    },
+    {
+      "id": "essvi-fuzz-order",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_essvi_fit, a fit's slices are in order",
+      "bug": "Slices out of expiry order are fitted.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "    if (j > 0 && !(p->expiry > pb.slices.back().expiry)) {",
+          "replace": "    if (false) {"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_essvi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_essvi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/essvi-fuzz-order/", "{build}/fault-fuzz/essvi-fuzz-order/corpus", "fuzz/fuzz_essvi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: a fit's slices are in order",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/essvi-fuzz-order/*", "build/fuzz/fault-fuzz/essvi-fuzz-order/corpus/*"]
+    },
+    {
+      "id": "essvi-fuzz-objective",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_essvi_fit, Phi_j is stage 6b's Objective",
+      "bug": "The reported Phi_j drops the 1 / sigma_i weights.",
+      "edits": [
+        {
+          "file": "src/svi/essvi_fit.cpp",
+          "find": "      const double r = (v - p.price[i]) * p.inv_noise[i];",
+          "replace": "      const double r = v - p.price[i];"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_essvi_fit"],
+      "command": ["{build}/bin/aadp_fuzz_essvi_fit", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/essvi-fuzz-objective/", "{build}/fault-fuzz/essvi-fuzz-objective/corpus", "fuzz/fuzz_essvi_fit_seeds"],
+      "detect": "test",
+      "reason": "invariant failed: Phi_j is stage 6b's Objective",
+      "timeout_s": 180,
+      "output_files": ["build/fuzz/fault-fuzz/essvi-fuzz-objective/*", "build/fuzz/fault-fuzz/essvi-fuzz-objective/corpus/*"]
     }
   ]
 }
