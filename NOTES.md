@@ -1670,6 +1670,127 @@ Changes to the protocol, decided now and not after seeing a number:
 - R3's regression-coefficient variant, which the protocol allows as a separate labelled row, is not run.
 - QuantLib's `withSamples(n)` counts samples. With antithetic off, a sample is a path, the same count as ours (E4).
 
+#### Stage 10 results
+
+Iteration only: nothing here is stamped into `results/`. Apple M4 Max, macOS 27.2 (26B123), LLVM 23.1.4, the `quantlib` preset, and `quantlib-lto` for the tuned column. The code is 9180dc3, the faults e62141c and the ceilings 01f467d. The raw files are in the research cache, under `phase3/evidence/stage10/`.
+
+Build and version record.
+- QuantLib v1.44 (`QL_HEX_VERSION` 0x014400f0) and Boost 1.92.0 (`BOOST_VERSION` 109200) come from their release archives, pinned by SHA-256 in `cmake/AadpDependencies.cmake`. Both are static libraries.
+- `ql/config.hpp`: `QL_FASTER_LAZY_OBJECTS` is defined. Sessions, the thread-safe observer, extra safety checks, high-resolution dates, null-as-functions, `std::shared_ptr` and tracing are undefined. Every `QL_*` cache value, the compiler, the flags, the link mode and LTO are in each output's header.
+- The tuned column links with ThinLTO over QuantLib and the bench. Apple's `ar` cannot index LLVM bitcode, and CMake's platform files set `CMAKE_AR` as a normal variable that hides the cache. So `CMakeLists.txt` sets `CMAKE_AR` and `CMAKE_RANLIB` to LLVM's tools when `CMAKE_CXX_FLAGS` has `-flto`. Nothing was dropped from the tuned column: `IncrementalStatistics`, extrapolation on every term structure and ThinLTO all built and linked.
+- The flag check passes on both compile databases. QuantLib's `mcbarrierengine.cpp` has `-ffp-contract=off -O3 -DNDEBUG -arch arm64`, plus `-flto=thin` in the LTO build. So do the bench's four units, `pricer.cpp` and `simd_pricer.cpp`.
+
+The pilot ran at 9180dc3: N_pilot = 2^20, seed 20261111, 111 s. Its 42 ceilings were committed in 01f467d, before the accuracy run.
+
+Accuracy, `QL-2`. N = 2^22 per comparison, seed 20261112, at 01f467d, through `heavy.sh`, 819 s.
+- **All 42 comparisons pass both conditions** of the section 10 rule, with critical value 3.8975749765, and every SE is under its ceiling.
+- Every check held:
+  - tuned equals default, with a gap of exactly 0, on all 18 QuantLib comparisons;
+  - the lanes give the scalar bits on all 23 of ours that have a lane form;
+  - the grid rule equals `FixedLocalVolSurface`, with a largest relative difference of 0 at 10,000 points.
+- z is (x̄ − ref) / SE. The verdict also allows b: for R9b's QuantLib bump, b is 0.000510, the truncation of CD(1.0) of the recursion (0.7983237) against O6. R9a's reference is CD(0.01) of the quadrature, 0.5764557354, with b 1.55e-7.
+
+| Case | Reference | QuantLib estimate (SE) | z | ours estimate (SE) | z | verdicts |
+|---|---|---|---|---|---|---|
+| R1 | 5.342560663 | 5.353618118 (0.00383) | +2.89 | 5.342995366 (0.00356) | +0.12 | pass, pass |
+| R2.K090 | 11.90491575 | 11.91253571 (0.00509) | +1.50 | 11.90506555 (0.00436) | +0.03 | pass, pass |
+| R2.K100 | 4.881961617 | 4.887607197 (0.00368) | +1.53 | 4.882090916 (0.00309) | +0.04 | pass, pass |
+| R2.K110 | 1.363037953 | 1.36444064 (0.00201) | +0.70 | 1.363176811 (0.0019) | +0.07 | pass, pass |
+| R3 | 4.881961617 | 4.882228294 (0.000161) | +1.65 | 4.881972016 (0.000139) | +0.07 | pass, pass |
+| R4 | 4.937202814 | 4.942235935 (0.00342) | +1.47 | 4.935214824 (0.00329) | -0.60 | pass, pass |
+| R5.H085 | 6.307574932 | 6.306541078 (0.00446) | -0.23 | 6.301505442 (0.00436) | -1.39 | pass, pass |
+| R5.H090 | 5.977241996 | 5.976650848 (0.00447) | -0.13 | 5.971668072 (0.0044) | -1.27 | pass, pass |
+| R5.H095 | 4.39750256 | 4.396665526 (0.00425) | -0.20 | 4.3964999 (0.00431) | -0.23 | pass, pass |
+| R5.H097 | 3.059563305 | 3.056216389 (0.00379) | -0.88 | 3.057226106 (0.00409) | -0.57 | pass, pass |
+| R5.H099 | 1.170793035 | 1.169145941 (0.00254) | -0.65 | 1.170788188 (0.00265) | -0.00 | pass, pass |
+| R6.H085 | 6.307574932 | none (R5's run) |  | 6.301502548 (0.00435) | -1.39 | pass |
+| R6.H090 | 5.977241996 | none (R5's run) |  | 5.972091898 (0.00436) | -1.18 | pass |
+| R6.H095 | 4.39750256 | none (R5's run) |  | 4.39562019 (0.00432) | -0.44 | pass |
+| R6.H097 | 3.059563305 | none (R5's run) |  | 3.058645862 (0.0038) | -0.24 | pass |
+| R6.H099 | 1.170793035 | none (R5's run) |  | 1.172495124 (0.00245) | +0.69 | pass |
+| R7.H085 | 6.322240141 | 6.327426711 (0.00499) | +1.04 | 6.316027298 (0.00434) | -1.43 | pass, pass |
+| R7.H090 | 6.098196143 | 6.104207967 (0.00483) | +1.24 | 6.093088818 (0.00448) | -1.14 | pass, pass |
+| R7.H095 | 4.906789035 | 4.910370047 (0.0044) | +0.81 | 4.904065068 (0.00441) | -0.62 | pass, pass |
+| R7.H097 | 3.833977705 | 3.835204673 (0.00366) | +0.34 | 3.831927992 (0.00409) | -0.50 | pass, pass |
+| R7.H099 | 2.336386896 | 2.339216907 (0.00309) | +0.92 | 2.33656961 (0.00358) | +0.05 | pass, pass |
+| R9a | 0.5764557354 | 0.5767583091 (0.000287) | +1.05 | 0.5765086022 (0.000242) | +0.22 | pass, pass |
+| R9b | 0.7978141916 | 0.7990566154 (0.00103) | +1.20 | one-step 0.7971675021 (0.000466); smoothed 0.7984335422 (0.00115) | -1.39; +0.54 | pass, pass, pass |
+
+- **The QuantLib rows lean the same way together.** Here every Asian, R7 and R9 QuantLib estimate is above its reference, R1 the furthest at +2.89. In the 2^16 smoke on seed 20261114 they were all below, down to −3.45 on R7.H085.
+- Every QuantLib comparison but R5 draws its batches from the same seeds, 100 × base + 1 + b. A row's error is driven mostly by the sum of its stream's leading normals, whatever the dimension, so the rows' errors are strongly correlated.
+- Ours share one seed too, and R5 to R7 lean negative together.
+- The Bonferroni critical value does not assume independence, so the family-wise rate stays at most 0.01. The 42 z-values are not 42 independent draws, though, and should not be read as a distribution.
+- Post-registration diagnostic, which changed nothing:
+  - After the smoke and before the pilot, a scratch probe (`build/s10/probe.cpp`, not committed) ran QuantLib's R2.K100 and R7.H085, batched and single-run, on eight unregistered bases, 31000001 to 31000008. That is seeds 3100000100 to 3100000864, at 2^16 per run, and R7.H085 at 2^20 per run on four of them.
+  - R2.K100's mean z was +0.23 batched and +0.18 single. The R7.H085 runs at 2^20 average 6.3233, against 6.3222.
+  - It found no bias. No protocol, code or seed changed after it. QuantLib's biased path pricer was read as well: it checks every one of the 50 grid points (i = 1..n − 1, n = 51), as DB0xx does.
+
+Speed, `QL-1`, iteration only. Run through `measure.sh` at 01f467d, nice 0, with load 3.81, 1.28 and 1.12 at the starts of the three runs. Single thread on both sides, 1 warm-up and 3 repetitions, medians with the minimum and maximum in the evidence. The maximum was within 1.4% of the minimum in every cell. N = 2^20 on R1 to R9 and 2^18 on R10 to R12, seed 20261113.
+
+The table gives paths/s in millions. "default / scalar" is QuantLib's default column over ours, scalar; "fastest" is the faster of scalar and lanes. RMSE² × time uses the accuracy run's SE and distance at 2^22 and the median time scaled to 2^22. For the two R9b lines, QuantLib's bump is set against each of our estimators.
+
+| Row | ours scalar | ours lanes | QL default | QL tuned, no LTO | QL tuned (ThinLTO) | default / scalar | default / fastest | tuned / scalar | tuned / fastest | RMSE² × time: ours fastest, QL default, QL tuned |
+|---|---|---|---|---|---|---|---|---|---|---|
+| R1 | 4.528 | 5.800 | 1.032 | 1.132 | 1.140 | 0.228 | 0.178 | 0.252 | 0.197 | 9.143e-06, 0.0004968, 0.0004499 |
+| R2.K100 | 2.674 | 3.657 | 1.049 | 1.190 | 1.183 | 0.392 | 0.287 | 0.443 | 0.324 | 1.097e-05, 0.0001275, 0.000113 |
+| R3 | 2.716 | none | 1.036 | 1.167 | 1.160 | 0.381 | 0.381 | 0.427 | 0.427 | 2.992e-08, 2.879e-07, 2.571e-07 |
+| R4 | 0.693 | 0.921 | 0.253 | 0.288 | 0.286 | 0.366 | 0.275 | 0.413 | 0.31 | 4.936e-05, 0.0004192, 0.0003716 |
+| R5.H095 | 0.601 | 0.825 | 0.212 | 0.237 | 0.234 | 0.353 | 0.257 | 0.39 | 0.284 | 9.427e-05, 0.0003565, 0.0003229 |
+| R6.H095 | 0.632 | 0.884 | none | none | none |  |  |  |  | 8.869e-05 |
+| R7.H095 | 1.019 | 1.247 | 0.252 | 0.287 | 0.284 | 0.247 | 0.202 | 0.278 | 0.228 | 6.538e-05, 0.0003227, 0.0002861 |
+| R9a | 1.066 | 1.987 | 0.520 | 0.597 | 0.590 | 0.487 | 0.261 | 0.553 | 0.297 | 1.241e-07, 7.391e-07, 6.513e-07 |
+| R9b (one-step) | 0.120 | 0.192 | 0.125 | 0.144 | 0.142 | 1.04 | 0.652 | 1.18 | 0.738 | 9.128e-06, 5.169e-05, 4.566e-05 |
+| R9b (smoothed) | 0.234 | 0.444 | 0.125 | 0.144 | 0.142 | 0.535 | 0.282 | 0.605 | 0.319 | 1.256e-05, 5.169e-05, 4.566e-05 |
+| R10 | 0.337 | none | 0.111 | 0.112 | 0.113 | 0.331 | 0.331 | 0.337 | 0.337 | none (no reference) |
+| R11 | 0.371 | none | 0.114 | 0.115 | 0.116 | 0.308 | 0.308 | 0.313 | 0.313 | none (no reference) |
+| R12 | 0.425 | none | 0.045 | 0.046 | 0.046 | 0.107 | 0.107 | 0.109 | 0.109 | none (no reference) |
+
+- **QuantLib's default column runs at 0.23 to 0.49 of our scalar paths/s on R1 to R9a, and at 0.18 to 0.38 of our fastest.** Per path-step it spends 79 to 97 ns, and 160 ns on R9a's two `NPV()`s. Ours spends 20 to 33 ns scalar on R1 to R7, and 78 ns on R9a's tape.
+- The tuned column gains 10 to 14% over the default on R1 to R9, and the tuned line without LTO gains 10 to 15%. ThinLTO adds nothing measurable: tuned with and without it differ by −1.2% to +1.2% on every row. One column holds both `IncrementalStatistics` and the extrapolation, so their shares of the gain are not separated.
+- **R9b is the one row where QuantLib's paths/s beats ours, scalar.** Its two-`NPV()` bump runs at 1.04 (default) to 1.18 (tuned) times the one-step tape on one scalar thread, and at 0.65 to 0.74 times its lane form. By RMSE² × time, the one-step tape on lanes is still 5.0 to 5.7 times better than the bump. Against the smoothed tape, the bump runs at 0.54 to 0.61 of scalar.
+- **RMSE² × time: QuantLib is 3.4 to 54 times ours, fastest.**
+  - R1's 54 and R2.K100's 11.6 come from distances of +2.89 and +1.53 SE. Above one SE, the registered max(SE², d²) takes d², which there carries the correlated luck above. With SE² alone the ratios would be 6.5 and 4.9.
+  - On R3 the control variate makes both sides' RMSE² × time about 400 times smaller than R2.K100's, and QuantLib stays 8.5 to 9.6 times ours.
+- R10 and R11: QuantLib runs at 0.31 to 0.34 of ours, and its three columns are within 2% of one another. The local-volatility lookup dominates there, and `IncrementalStatistics` and extrapolation barely matter.
+- R12: QuantLib runs at 0.11 of ours. `NoExceptLocalVolSurface` takes Dupire by bumping the Black surface at every step (E19), while ours reads the SVI slices in closed form.
+
+Sanity lines, at N = 2^18 on seed 20261112, not judged.
+- R10: ours 4.1420 ± 0.0120 against QuantLib's 4.1710 ± 0.0112. R11: 5.6100 ± 0.0153 against 5.6521 ± 0.0138. The differences are 1.8 and 2.0 combined SE, in the same direction as the QuantLib rows above. On the smoke seed they were −0.4 and −0.3.
+- R12, against the Black price at the SVI implied volatility, 13.8627: ours 13.9003 ± 0.0305 (+1.23 SE), QuantLib 13.9638 ± 0.0284 (+3.56 SE). There is no pass mark: as registered, the two local volatilities differ by construction and both carry Euler bias.
+
+R8 is not a comparison: QuantLib has no exact deterministic engine for a barrier monitored at m = 50 (E14 to E16). R10 and R11 are speed only and R12 sanity only, as registered.
+
+The LTO build's smoke (2^16, seed 20261114) gives the default build's estimates and SEs on every line. That is QuantLib's default and tuned columns, and ours, the same in every printed digit, so ThinLTO changed no result.
+
+debian, `linux-zen1`. The `quantlib` preset was built at 9180dc3 through `heavy.sh` at `-j2`, pinned to cpus 6 and 7, with LLVM 23.1.4 from the toolchain.
+- Configure took 50 s. QuantLib, Boost's headers and the bench took 2,094 s.
+- The flag check passes there: QuantLib's unit and the bench's all have `-ffp-contract=off -O3 -DNDEBUG`.
+- `aadp_qlcompare_test` passes 12 of 12.
+- The smoke (2^16, seed 20261114, SSE2 at 2 double lanes) passes all 42 comparisons and every check.
+- Every accuracy line, on both engines, equals the Mac's in all ten printed digits. Among the sanity lines only R12's QuantLib estimate differs, by 1e-7 (13.8618331 against 13.861833), which comes from QuantLib's own SVI and Dupire code.
+- Between steps, the run waited about 9.5 hours in `heavy.sh` on another project's measurements. The build itself ran on cpus 6 and 7 while that project measured on cpu 4, as `taskset` keeps them apart there.
+
+Faults: 12 new, all caught at 9180dc3 on the Mac (350 in the manifest).
+- 6 on `aadp_qlcompare_test`, in the release preset:
+  - `ql-r6-quantlib-comparison`: R6 is given a QuantLib comparison;
+  - `ql-r7-continuous`: R7 is continuous on our side;
+  - `ql-cv-control-dropped`: R3's control is dropped from the path;
+  - `ql-r9b-bump-allowance`: R9b's allowance lacks the bump's truncation;
+  - `ql-grid-node-held`: the grid rule holds the spot at a grid time;
+  - `ql-ceiling-no-sqrt`: a ceiling is scaled without the square root.
+- 1 on the flag check's self-test: `ql-flag-check-ignores-o`.
+- 5 in the `quantlib` preset:
+  - `ql-bench-flags-differ`: the bench is built at `-O1`, and the build stops at the flag check with `flag mismatch bench/quantlib/main.cpp`;
+  - `ql-r7-unbiased`: without `withBias(true)`, the smoke fails R7.H099 at z = −66;
+  - `ql-tuned-differs`: tuned-equals-default;
+  - `ql-lanes-seed`: lanes-equal-scalar;
+  - `ql-grid-time-variance`: the grid check against `FixedLocalVolSurface`.
+
+CI: run 43107078217, at 01f467d, passed all 23 jobs.
+- The new library, its 12 tests and the flag check's self-test ran in every build job. The release jobs went from 720 to 733 tests on Linux and from 732 to 745 on macOS.
+- The Linux jobs keep their one allowed, named skip from before. macOS had none.
+- CI builds no QuantLib: the option stays off there, and the `quantlib` presets are not in its lists, as registered.
+
 ### Rule slips
 
 None affected a number.
@@ -1691,6 +1812,7 @@ None affected a number.
 - Stage 8a: outside `heavy.sh` on the Mac: the quadrature tool's targeted builds and its `--write` and `--check` runs, a quadrature test run while drafting, two scratch probes (`build/s8a/probe_bits`, `probe_ki`: compiles and runs of seconds), one targeted build of the tool before the pilot, and `emit-plan` runs of under a second. The gates, tidy, faults, pilot and fingerprints went through it. Waits on another project's measurement lock: one Mac gate call hit its 590 s timeout in the fuzz build, and its remaining steps (fuzz 19 of 19, format, scan) were run by hand; two GCC pre-commit wrappers hit the tool's background limit, and their Linux runs finished and passed and were read over SSH; the Linux fingerprint's first call ran past its 600 s foreground timeout and then the background limit before it started, and was rerun detached on the host, a second time after the first rerun called a `/usr/bin/time` the host does not have. One Mac gate was stopped and rerun after a test file changed under it; the rerun found a format violation in `main.cpp`, fixed before the commit.
 - Stage 8b: outside `heavy.sh` on the Mac, the curation and analysis scripts (`build/s8b/`, runs of under a second). The curation script's import wrote `scripts/__pycache__/` into the working tree; it was untracked, and was deleted before anything was staged. The run, the gates and the investigation went through `heavy.sh`. The first GCC pre-commit wrapper (the run-2 file) hit the tool's background limit while the Linux host's `heavy.sh` waited on another project's measurement lock, about 7 hours in all; the remote run finished and passed (708 of 708), and its status and logs were read over SSH. One wait on CI ran past 600 s and the tool moved it to the background. One sentence of "Stage 8b: measured run 2" (the host line, on where run 1 was recorded) was edited after the second GCC pre-commit had shipped its tree: the tree the Linux host built and tested (708 of 708) differs from 22e9d3d's in that one line of `NOTES.md` and nowhere else.
 - Stage 9: `aadp_metal_info` ran once directly on the Mac, outside `heavy.sh`: one device creation and library compile, under a second. Two waits ran past the tool's 600 s foreground limit and the tool moved them to the background: the libstdc++ clang-tidy pre-commit wrapper (838 s on the Linux host, PASS) and one wait on CI, which was stopped and replaced by waits bounded under 600 s. The tool keeps an output file in the system temporary directory for each background command, including the fault run and the `GPU-1` run, whose output went to `build/s9/`. One `python3 -I -` read its script from stdin, and two `cat` commands redirected only from `/dev/null`; none was a heredoc. The GCC pre-commit and the libstdc++ tidy for d65b8e5 shipped a tree that differs from d65b8e5 only in `README.md`, then uncommitted.
+- Stage 10: two Mac jobs were started with a bare zsh `&`, so at nice 5: the first full clang-tidy run and the first gate of 9180dc3's tree. The gate's ctest failed on `aadp_run_bench_script`, which refuses nice 5. Both were rerun from the tool's background mode at nice 0, and nothing from the niced runs is used (the tidy findings were fixed and the clean rerun is the one recorded). Running the flag check's self-test while drafting wrote `scripts/__pycache__/`, untracked; it was deleted before anything was staged, and the test now sets `sys.dont_write_bytecode`. One `python3 -I -` read nothing from `/dev/null`, a no-op; it was no heredoc. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s10/` and the research cache. Outside `heavy.sh` on the Mac: the release preset's configure (under a second), single-target runs of `aadp_qlcompare_test` of a few seconds, `clang-format`, the flag check script and the scratch table scripts. The first GCC pre-commit of 9180dc3's tree failed on `-Werror=dangling-reference` in the new test, fixed before the commit. e62141c and 01f467d were gated once, on the tree that held both. The scratch probe of QuantLib on unregistered seeds is recorded above, under "Stage 10 results". The libstdc++ clang-tidy pre-commit wrapper hit the tool's two-hour background limit while the Linux host's `heavy.sh` waited on another project's measurements; the remote run finished and passed (176 units clean), and its status and logs were read over SSH.
 
 ## Option chain
 
