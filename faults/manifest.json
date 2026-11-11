@@ -6950,6 +6950,237 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] F32Params\\.RoundsEachInputOnceAndRefusesWhatItCannotPrice",
       "timeout_s": 300
+    },
+    {
+      "id": "ql-r6-quantlib-comparison",
+      "kind": "check",
+      "covers": "the 42 comparisons as pre-registered",
+      "bug": "R6 gets a QuantLib comparison, which QuantLib has no estimator for (it would be R5's again).",
+      "edits": [
+        {
+          "file": "bench/quantlib/compare.cpp",
+          "find": "    if (c.row != Row::kR6) out.push_back({.contract = c, .engine = Engine::kQuantLib});",
+          "replace": "    out.push_back({.contract = c, .engine = Engine::kQuantLib});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareRows.FortyTwoComparisonsAsRegistered"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareRows\\.FortyTwoComparisonsAsRegistered",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-r7-continuous",
+      "kind": "check",
+      "covers": "our contract for each comparison",
+      "bug": "R7's discrete barrier is priced as continuous on our side.",
+      "edits": [
+        {
+          "file": "bench/quantlib/compare.cpp",
+          "find": "  out.barrier.monitoring = pricer::Monitoring::kDiscrete;",
+          "replace": "  out.barrier.monitoring = pricer::Monitoring::kContinuous;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareRows.ContractsMapOntoThePricer"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareRows\\.ContractsMapOntoThePricer",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-cv-control-dropped",
+      "kind": "check",
+      "covers": "R3's control variate on our side",
+      "bug": "The geometric payoff is not subtracted on the path, so the closed form is added to the plain estimator.",
+      "edits": [
+        {
+          "file": "bench/quantlib/ours.cpp",
+          "find": "      out[0] = model.Discount() * (arithmetic_payoff - geometric_payoff) + control;",
+          "replace": "      out[0] = model.Discount() * arithmetic_payoff + control + 0.0 * geometric_payoff;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareOurs.ControlVariateFindsTheReferenceWithLessNoise"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareOurs\\.ControlVariateFindsTheReferenceWithLessNoise",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-r9b-bump-allowance",
+      "kind": "check",
+      "covers": "R9b's allowance for QuantLib's bump",
+      "bug": "The allowance on QuantLib's barrier delta leaves out the bump's own truncation |CD(h) - O6|.",
+      "edits": [
+        {
+          "file": "bench/quantlib/compare.cpp",
+          "find": "      r.barrier_b + std::fabs(r.barrier_cd - r.barrier_delta) + 2.0 * kQuadratureB / (2.0 * hb);",
+          "replace": "      r.barrier_b + 2.0 * kQuadratureB / (2.0 * hb);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareReferences.EveryComparisonHasItsReference"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareReferences\\.EveryComparisonHasItsReference",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-grid-node-held",
+      "kind": "check",
+      "covers": "FixedLocalVolSurface's rule restated in GridModel",
+      "bug": "At a grid time the spot is held inside the grid, where QuantLib extrapolates linearly.",
+      "edits": [
+        {
+          "file": "bench/quantlib/local_vol_rows.cpp",
+          "find": "  if (CloseEnough(t, times[idx])) return LinearInSpot(*this, idx, s);\n",
+          "replace": "  if (idx == 0) return LinearInSpot(*this, idx, std::clamp(s, spots.front(), spots.back()));\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareGrid.FollowsFixedLocalVolSurfacesRule"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareGrid\\.FollowsFixedLocalVolSurfacesRule",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-ceiling-no-sqrt",
+      "kind": "check",
+      "covers": "the SE ceilings from the pilot",
+      "bug": "The pilot's SE is scaled by N_pilot / N, not its square root, so every ceiling is half what it should be.",
+      "edits": [
+        {
+          "file": "bench/quantlib/compare.cpp",
+          "find": "  return RoundUpThreeFigures(factor * se_pilot *\n                             std::sqrt(static_cast<double>(n_pilot) / static_cast<double>(n)));",
+          "replace": "  return RoundUpThreeFigures(factor * se_pilot *\n                             (static_cast<double>(n_pilot) / static_cast<double>(n)));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareCeilings.RuleAndFile"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareCeilings\\.RuleAndFile",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-flag-check-ignores-o",
+      "kind": "check",
+      "covers": "scripts/check_quantlib_flags.py",
+      "bug": "The flag check no longer reads the optimisation level, so a bench at -O2 against QuantLib at -O3 passes.",
+      "edits": [
+        {
+          "file": "scripts/check_quantlib_flags.py",
+          "find": "    r\"^(-O.*|-m.+|",
+          "replace": "    r\"^(-m.+|"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_flags_test.py"],
+      "detect": "test",
+      "reason": "^FAILED bench at -O2: exit 0, expected 1$",
+      "timeout_s": 120
+    },
+    {
+      "id": "ql-bench-flags-differ",
+      "kind": "check",
+      "covers": "the flag check in the bench's build",
+      "bug": "The bench target is compiled at -O1 while QuantLib is at -O3.",
+      "edits": [
+        {
+          "file": "cmake/area_quantlib.cmake",
+          "find": "add_dependencies(aadp_bench_quantlib aadp_quantlib_flag_check)\n",
+          "replace": "add_dependencies(aadp_bench_quantlib aadp_quantlib_flag_check)\ntarget_compile_options(aadp_bench_quantlib PRIVATE -O1)\n"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib"],
+      "detect": "build",
+      "reason": "^flag mismatch bench/quantlib/main\\.cpp: .*-O1",
+      "timeout_s": 600
+    },
+    {
+      "id": "ql-r7-unbiased",
+      "kind": "check",
+      "covers": "QuantLib's engine for each row",
+      "bug": "R7 runs MCBarrierEngine without withBias(true), so QuantLib prices the continuous barrier.",
+      "edits": [
+        {
+          "file": "bench/quantlib/quantlib_side.cpp",
+          "find": "      const bool biased = c.row == Row::kR7 || c.row == Row::kR9b;",
+          "replace": "      const bool biased = c.row == Row::kR9b;"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib"],
+      "command": ["{build}/bin/aadp_bench_quantlib", "smoke"],
+      "detect": "test",
+      "reason": "^accuracy,R7\\.H099/quantlib,.*,FAIL ",
+      "timeout_s": 900,
+      "mutated_exit": 3
+    },
+    {
+      "id": "ql-tuned-differs",
+      "kind": "check",
+      "covers": "the tuned column gives the default's estimate",
+      "bug": "The tuned column's arithmetic engines draw one more path per NPV than the default's.",
+      "edits": [
+        {
+          "file": "bench/quantlib/quantlib_side.cpp",
+          "find": "  return {.kind = EngineKind::kArithmetic,\n          .process = std::move(p),\n          .samples = n,",
+          "replace": "  return {.kind = EngineKind::kArithmetic,\n          .process = std::move(p),\n          .samples = s.tuned ? n + 1 : n,"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib"],
+      "command": ["{build}/bin/aadp_bench_quantlib", "smoke"],
+      "detect": "test",
+      "reason": "^accuracy,R2\\.K100/quantlib,.*tuned-equals-default DIFFER",
+      "timeout_s": 900,
+      "mutated_exit": 4
+    },
+    {
+      "id": "ql-lanes-seed",
+      "kind": "check",
+      "covers": "our lanes give the scalar bits in the bench",
+      "bug": "The lane form runs one seed over, so the fastest column prices other paths than the scalar one.",
+      "edits": [
+        {
+          "file": "bench/quantlib/ours.cpp",
+          "find": "    const auto result = simd::PriceLanes(contract, market, config, simd::MaxLanes());",
+          "replace": "    pricer::RunConfig shifted = config;\n    shifted.seed += 1;\n    const auto result = simd::PriceLanes(contract, market, shifted, simd::MaxLanes());"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib"],
+      "command": ["{build}/bin/aadp_bench_quantlib", "smoke"],
+      "detect": "test",
+      "reason": "^accuracy,R1/ours,.*lanes-equal-scalar DIFFER",
+      "timeout_s": 900,
+      "mutated_exit": 4
+    },
+    {
+      "id": "ql-grid-time-variance",
+      "kind": "check",
+      "covers": "the grid check against FixedLocalVolSurface in the bench",
+      "bug": "Between grid times the rule interpolates the local variance, where QuantLib interpolates the volatility.",
+      "edits": [
+        {
+          "file": "bench/quantlib/local_vol_rows.cpp",
+          "find": "  return early + (later - early) / (times[idx] - times[idx - 1]) * (t - times[idx - 1]);",
+          "replace": "  return std::sqrt(early * early + (later * later - early * early) /\n                                       (times[idx] - times[idx - 1]) * (t - times[idx - 1]));"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib"],
+      "command": ["{build}/bin/aadp_bench_quantlib", "smoke"],
+      "detect": "test",
+      "reason": "^check,grid-rule-equals-FixedLocalVolSurface,FAILED,",
+      "timeout_s": 900,
+      "mutated_exit": 4
     }
   ]
 }
