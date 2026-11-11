@@ -96,6 +96,24 @@ jobs:
         if: runner.os == 'macOS'
         run: sysctl kern.hv_vmm_present hw.model
 
+      # The Metal backend (stage 9) is built on every macOS job. Whether a GitHub macOS runner, a
+      # virtual machine, has a Metal device is found out here, on every run, by the backend's own
+      # probe: "metal: device <name>" or "metal: none". Only "none" lets the Test step allow the
+      # GPU tests' skip, by name, with a warning and a line in the job summary; with a device they
+      # run and must pass. A device the backend cannot set up on fails here. NOTES.md, "Stage 9".
+      - name: Show whether Metal has a device
+        id: metal
+        if: runner.os == 'macOS'
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: |
+          line=$("build/$PRESET/bin/aadp_metal_info") || { echo "$line"; exit 1; }
+          echo "$line"
+          if [[ $line == "metal: none"* ]]; then
+            echo "none=true" >> "$GITHUB_OUTPUT"
+            echo "why=$line" >> "$GITHUB_OUTPUT"
+          fi
+
       # The macOS runners start a job at nice -10, and the stamp tool refuses any level but 0, as
       # its tests check. Raising niceness needs no privilege, so the tests go up by the measured
       # offset; a job above 0 could only come down with privilege, so it fails instead.
@@ -103,7 +121,16 @@ jobs:
         if: matrix.test
         env:
           PRESET: ${{ matrix.preset }}
+          METAL_NONE: ${{ steps.metal.outputs.none }}
+          METAL_WHY: ${{ steps.metal.outputs.why }}
         run: |
+          allowed=$ALLOWED_SKIPS
+          if [[ $METAL_NONE == true ]]; then
+            allowed="$allowed|^Gpu\."
+            message="the GPU tests (Gpu.*) skip: $METAL_WHY"
+            echo "::warning title=No Metal device::$message"
+            printf '### Metal\n\n%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+          fi
           level=$(ps -o ni= -p $$)
           level=${level//[[:space:]]/}
           if ((level > 0)); then
@@ -116,7 +143,7 @@ jobs:
             "$level" "$offset" "$now"
           [[ $now == 0 ]] || exit 1
           nice -n "$offset" python3 -I scripts/run_tests.py ctest "$PRESET" --jobs "$AADP_JOBS" \
-            --allow-skipped "$ALLOWED_SKIPS"
+            --allow-skipped "$allowed"
 
   # The lane matrix: one job per SIMD lane width, each running the simd-labelled tests (the lane
   # kernels, Philox lanes, paths and prices against the scalar ones, bit for bit, the vector tape's
