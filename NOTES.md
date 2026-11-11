@@ -1334,6 +1334,100 @@ The miss, closed after stage 8a: `svi-floor-carries-derivative` is now caught, w
 
 Gates: every commit through the release and fuzz ctest runs (0 failed, 0 skipped), the format check, the repository scan, clang-tidy on the touched files and the GCC pre-commit on the Linux host.
 
+#### Stage 8b: measured run 2
+
+Run 2 is the one measured run of all 147 rows of the plan on the production pricer and tape, seed 271828, run once. It is reported beside run 1, never instead of it. The 45 surface rows rest on the stage 6b fit to TAIFEX settlements of 2024-11-15, which are not tradable quotes, and the surface reaches 33 days only. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE). The curated output is `references/measured_results_run2.csv` (d70a1d4, alone). `scripts/compare_measured.py` rebuilds its 147 rows byte for byte from the raw output. `references/measured_results.csv` (run 1) is unchanged, as `git diff` shows.
+
+The run:
+- Commit 4398aee, pushed, with CI green (run 42897836941). Registered for commit 6 (a418764), but the commits between differ from it only in `tests/ad/local_vol_gradient_test.cpp`, `faults/manifest.json` and this file. `src/`, `tools/`, `cmake/` and `references/` are those of bf484f3, the code commit the registration names.
+- Checks before the run, all passed: a clean tree; `git diff a977c5f -- references/comparison_plan.csv` empty; `aadp_run2_fingerprint` (`Run2Fingerprint.CommittedBitsOnThisHost`) passed on the Mac, comparing its file bit for bit; `scripts/fetch_data.sh --verify` passed on both captures. The release build had nothing left to build at that commit.
+- Host `mac-m4max`, macOS 27.2 (26B123), Apple M4 Max, clang 23.1.4, CMake 4.4.5, the `release` preset. As the registration fixes, this is a correctness run, so it ran through `heavy.sh`, not `measure.sh`, at nice 0, with `/usr/bin/time -l`. Run 1 (32dd5e1) was recorded on the Mac too: no Linux build passed until 89dbee8, which came after it.
+- Command: `aadp_run_oracles run --estimator production --plan references/comparison_plan.csv --references references/oracle_values.csv --data data --threads 8`.
+- Wall time 623 s (2026-11-10, 21:28:24 to 21:38:47 UTC), 4,976 s of user time, peak RSS 11.7 MiB. Exit 1, because two rows failed.
+- One attempt, complete. Nothing was lost or rerun.
+- Raw output in the research cache, `phase3/evidence/stage8b/` (`run2_271828.log`, `.stderr`, `.meta`).
+
+Result: 145 of 147 pass, 2 fail, 0 unresolved, 0 skipped. The critical value is c = 4.266218.
+
+| group | rows | passed | largest abs(z), run 2 | largest SE / ceiling |
+|---|---|---|---|---|
+| European (VA, VB, VC) | 18 | 18 | 1.60 (VC.value) | 0.643 |
+| geometric Asian (GA) | 6 | 6 | 0.92 (GA.delta, rho, divrho) | 0.599 |
+| arithmetic Asian (AA) | 12 | 12 | 2.50 (AA50K100.delta) | 0.710 |
+| discrete barrier, one-step survival (DB, DBS) | 36 | 36 | 2.59 (DB090.vega) | 0.842 (DB099.vega) |
+| continuous barrier, bridge (CB, CBK90) | 18 | 18 | 0.82 (CBK90.value) | 0.843 (CB085.theta) |
+| P3.KID | 6 | 6 | 2.00 (rho) | 0.644 |
+| P3.KIC | 6 | 6 | 0.68 (value) | 0.643 |
+| P3.AS | 15 | 15 | 1.63 (d05.b) | 0.783 (d12.rho) |
+| P3.DB | 15 | 14 | 1.76 (d33.sigma) | 1.385 (d12.rho) |
+| P3.CB | 15 | 14 | 1.82 (d33.sigma) | 1.565 (d12.rho) |
+
+z is (estimate − reference) / SE. On FD rows, SE is the paired SE.
+
+The failures. Both fail the SE ceiling only. Their distances are small: 0.13 and 0.15 of the bound.
+
+| row | estimate (tape) | reference D_{h*} | z | bound, c SE + b | SE | ceiling | SE / ceiling |
+|---|---|---|---|---|---|---|---|
+| P3.DB.d12.rho | −50.303 | −59.953 | +0.854 | 71.92 (b 23.7) | 11.30 | 8.16 | 1.385 |
+| P3.CB.d12.rho | 940.520 | 929.857 | +0.942 | 72.28 (b 24.0) | 11.32 | 7.23 | 1.565 |
+
+- These are two of the rows the registration named as most at risk: `P3.DB.d12.{rho,m}` and `P3.CB.d12.{rho,m}`.
+- Their pilot paired SEs at 2^20 were 5.44 and 4.82. The ceiling is 3 times that, scaled by √(2^20 / 2^22). Run 2's SE is 4.16 and 4.70 times the scaled pilot SE.
+- At stage 8a the second seed's SE ratios on these rows were 1.138 and 1.321, under the 2.9 that would have flagged them.
+- The two `d12.sigma` rows came next: 0.837 and 0.951 of their ceilings.
+- By the rule both rows fail, and they stay failures. No ceiling, b, step or seed changes, and nothing is rerun on 271828.
+
+Run 1 beside run 2, the 90 shared rows:
+- All 90 pass in both runs. No verdict changes.
+- Every row prints the same estimate (10 decimals), reference and SE (5 significant figures) in both files. So the run-2 minus run-1 difference is 0 at printed precision on every row, and the largest abs(z) per group is the same in both runs (the first five rows of the table above).
+- 89 rows are byte-identical, bound and verdict included. On DBS.rho the bound differs in its last printed figure (run 1 6.8029e-06, run 2 6.8028e-06), so its SE differs beyond the printed figures.
+- As the registration says, this is a re-reading of the same paths by other code, not a second independent look. It shows that the production pricer and tape reproduce the frozen kernels and the `Dual` on all 90 rows, at the precision printed.
+- The full per-row comparison is the two committed files, row for row.
+
+The 57 new rows: 55 pass. The two failures are above. No row is unresolved.
+
+Floor tallies, a disclosure with no pass mark. Path-steps per contract: 2^22 × 33 × 4 = 553,648,128.
+- Base runs: the Asian 0 butterfly-floored and 292 capped; the discrete barrier 0 and 0; the continuous barrier 0 and 292.
+- At h*, the butterfly count changes on no row. So, as in the pilot, no path-step crosses g = 0 inside any bump, and the g = 0 boundary term is not exercised by these rows.
+- The capped count changes on 10 rows, all of them Asian or continuous-barrier rows:
+  - by one path-step on one side on AS.d05.a, AS.d12.rho, AS.d33.a, AS.d33.b, CB.d05.a, CB.d12.rho, CB.d33.a and CB.d33.b;
+  - on AS.d33.rho and CB.d33.rho, by −1 at +h and +2 at −h.
+- P3.CB.d12.rho, one of the failures, is among them: −1 at −h. P3.DB.d12.rho has no capped step at all.
+
+The weak barrier rows 8a flagged, where the bound is wider than the estimate. The resolution is (c SE + b) / abs(estimate).
+
+| row | resolution, pilot | resolution, run 2 | z, run 2 |
+|---|---|---|---|
+| P3.CB.d05.rho | 54.1 | 1.47 | −0.58 |
+| P3.CB.d05.a | 25.6 | 10.4 | +1.04 |
+| P3.CB.d05.sigma | 5.97 | 2.60 | −0.00 |
+| P3.DB.d05.a | 2.34 | 1.16 | +1.01 |
+| P3.CB.d12.a | 2.31 | 1.39 | −1.26 |
+| P3.DB.d05.rho | 2.04 | 1.61 | −0.56 |
+| P3.DB.d05.sigma | 1.66 | 0.755 | −0.02 |
+
+- All seven pass. Six still have a bound wider than the estimate, so only a gross error would fail them.
+- P3.DB.d12.rho joins them in run 2 (1.43) because its SE grew.
+
+Investigation, not part of run 2 and not a result. It ran on development seeds, after run 2, through `heavy.sh` at the same commit. The plans were copies of the five `d12` rows (`P3.AS.d12.rho`, `P3.DB.d12.{rho,sigma}`, `P3.CB.d12.{rho,sigma}`) with h*, ceiling and b unchanged, and only N and seed changed. Only the SEs are read; the verdicts in those logs use a K of 5 and unscaled ceilings and mean nothing. Raw logs and plans: `evidence/stage8b/investigation/`.
+
+The paired SE on the d12 rho rows, DB / CB, against N and seed. The 1729 and 20261129 SEs are the stage 8a pilot's.
+
+| N | 1729 | 20261129 | 20261130 | 20261131 | 271828 (run 2) |
+|---|---|---|---|---|---|
+| 2^20 | 5.44 / 4.82 | 6.19 / 6.37 | 7.39 / 7.37 | 3.77 / 3.88 | |
+| 2^22 | | | 3.30 / 3.35 | 7.17 / 7.12 | 11.30 / 11.32 |
+| 2^24 | | | 1.66 / 1.66 | | |
+
+What the table shows:
+- On one seed, 20261130, the SE falls as N^-1/2 (7.39, 3.30, 1.66). So the SE does scale; it is not stuck.
+- At a fixed N it spreads by a factor of about 2 across four seeds at 2^20, and about 3.4 across three seeds at 2^22. The 8a rule, factor 3 on one pilot, allows about 2.9 in the ratio of two SEs.
+- 20261131 at 2^22 comes to 0.88 and 0.98 of the two ceilings, and run 2's seed to 1.39 and 1.57.
+- This fits paired differences that are mostly zero with rare large spikes: the SE then rests on a few paths. It is the case the factor 3 was set for, but with a wider tail than the Phase 2 FD rows that set it.
+- The DB and CB SEs agree within 3% on every seed but the pilot's (5.44 against 4.82 on 1729), though the discrete barrier has no capped path-step and the continuous one has 292. So the spikes are not the caps, and not the barrier treatment. Their source was not traced.
+- The tape agrees with the difference on every seed and size: abs(z) is at most 1.28 on the two rho rows, and at most 1.81 on all five rows.
+- No check here changes run 2's verdicts.
+
 ### Rule slips
 
 None affected a number.
@@ -1353,6 +1447,7 @@ None affected a number.
 - Stage 7b, the drafting session (from its build tree and command history): two `python3 -I - <<< ""` here-strings, written to `/tmp`; six runs of the report tool on synthetic chains outside `heavy.sh`, three of them checks of 2 min 20 s at 8 threads and the rest under 30 s. Its 300 s fuzz runs, gate and tidy went through `heavy.sh`. Stage 7b, the continuing session: three runs of the tool's short synthetic check (about 22 s each, 8 threads) and a few seconds of diagnostics ran outside `heavy.sh`. The registered check on the real chain (production refits) and the N = 2^20 report ran on the uncommitted tree just before `--refit` was added, which changes neither the report nor the production refits; the polished check and the timing ran on e1da8dc's code. The first GCC pre-commit of 352cf29's tree failed on a range-for copy that clang accepts (`-Werror=range-loop-construct`), fixed before the commit.
 - Stage 7c: one empty `<<'EOF'` heredoc, which ran nothing. Two background jobs through `heavy.sh` (the pre-registration gate and a build) hit the tool's 30-minute background limit while waiting on another project's measurement lock, before they started, and were restarted with a longer limit; one foreground wait ran past its 600 s tool timeout and was moved to the background, then waited for. Outside `heavy.sh` on the Mac: the scratch probes (`build/s7c/probe*.cpp`, two-file clang compiles of under a minute, and runs of seconds: the synthetic fits and box points before the pre-registration, and the replays of the three fuzz findings), and `clang-format`. The code commits' GCC pre-commit and libstdc++ tidy ran on the Linux host.
 - Stage 8a: outside `heavy.sh` on the Mac: the quadrature tool's targeted builds and its `--write` and `--check` runs, a quadrature test run while drafting, two scratch probes (`build/s8a/probe_bits`, `probe_ki`: compiles and runs of seconds), one targeted build of the tool before the pilot, and `emit-plan` runs of under a second. The gates, tidy, faults, pilot and fingerprints went through it. Waits on another project's measurement lock: one Mac gate call hit its 590 s timeout in the fuzz build, and its remaining steps (fuzz 19 of 19, format, scan) were run by hand; two GCC pre-commit wrappers hit the tool's background limit, and their Linux runs finished and passed and were read over SSH; the Linux fingerprint's first call ran past its 600 s foreground timeout and then the background limit before it started, and was rerun detached on the host, a second time after the first rerun called a `/usr/bin/time` the host does not have. One Mac gate was stopped and rerun after a test file changed under it; the rerun found a format violation in `main.cpp`, fixed before the commit.
+- Stage 8b: outside `heavy.sh` on the Mac, the curation and analysis scripts (`build/s8b/`, runs of under a second). The curation script's import wrote `scripts/__pycache__/` into the working tree; it was untracked, and was deleted before anything was staged. The run, the gates and the investigation went through `heavy.sh`. The first GCC pre-commit wrapper (the run-2 file) hit the tool's background limit while the Linux host's `heavy.sh` waited on another project's measurement lock, about 7 hours in all; the remote run finished and passed (708 of 708), and its status and logs were read over SSH.
 
 ## Option chain
 
