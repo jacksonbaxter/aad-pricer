@@ -6530,6 +6530,426 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] Run2Fingerprint\\.CommittedBitsOnThisHost",
       "timeout_s": 900
+    },
+    {
+      "id": "metal-philox-mulhi",
+      "kind": "check",
+      "covers": "Philox known answers on the GPU",
+      "bug": "The GPU's mulhi flips its low bit when a is odd, so only the Metal Philox is wrong.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "inline Word MulHi(Word a, Word b) { return metal::mulhi(a, b); }",
+          "replace": "inline Word MulHi(Word a, Word b) { return metal::mulhi(a, b) ^ (a & 1U); }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.PhiloxKnownAnswersTenAndSevenRounds"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.PhiloxKnownAnswersTenAndSevenRounds",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-philox-key-swap",
+      "kind": "check",
+      "covers": "the GPU's draw stream against the production DrawStep",
+      "bug": "DrawBlock keys Philox with the seed's words swapped.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "  return PhiloxRounds(10, counter, seed_lo, seed_hi);",
+          "replace": "  return PhiloxRounds(10, counter, seed_hi, seed_lo);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.PhiloxStreamIsDrawStepsStream"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.PhiloxStreamIsDrawStepsStream",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-uniform-one",
+      "kind": "check",
+      "covers": "the GPU's 23-bit uniform, exact and never 0 or 1",
+      "bug": "The uniform is float(w) 2^-32, which rounds to 1.0 for the top 128 words.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "  return static_cast<float>(((w >> 9U) << 1U) | 1U) * 5.9604644775390625e-8F;",
+          "replace": "  return static_cast<float>(w) * 2.3283064365386963e-10F;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.Uniform23IsExactAndNeverZeroOrOne"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.Uniform23IsExactAndNeverZeroOrOne",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-fast-math",
+      "kind": "check",
+      "covers": "the library's compile options, safe math and precise functions",
+      "bug": "The library is compiled in fast math mode with fast functions.",
+      "edits": [
+        {
+          "file": "src/metal/metal_backend.mm",
+          "find": "    options.mathMode = MTLMathModeSafe;\n    options.mathFloatingPointFunctions = MTLMathFloatingPointFunctionsPrecise;",
+          "replace": "    options.mathMode = MTLMathModeFast;\n    options.mathFloatingPointFunctions = MTLMathFloatingPointFunctionsFast;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.ArithmeticRoundsAsTheCpuDoes"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.ArithmeticRoundsAsTheCpuDoes",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-contract-on",
+      "kind": "check",
+      "covers": "no contraction in the GPU library",
+      "bug": "The library source lets the compiler contract a * b + c into a fused multiply-add.",
+      "edits": [
+        {
+          "file": "src/metal/library_source.cpp.in",
+          "find": "#pragma METAL fp contract(off)",
+          "replace": "#pragma METAL fp contract(fast)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.NoContraction"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.NoContraction",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-exp-via-exp2",
+      "kind": "check",
+      "covers": "the GPU exp the kernels use, within 4 ULP",
+      "bug": "exp(x) is computed as exp2(x log2 e), whose rounded product loses accuracy as |x| grows.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "inline float ExpF(float x) { return metal::precise::exp(x); }",
+          "replace": "inline float ExpF(float x) { return metal::precise::exp2(x * 1.44269504F); }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.ExpWithinFourUlp"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.ExpWithinFourUlp",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-log-via-shift",
+      "kind": "check",
+      "covers": "the GPU log the kernels use, within 4 ULP",
+      "bug": "log(x) is computed as log(1 + (x - 1)), which cancels for x near 0 and near 1.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "inline float LogF(float x) { return metal::precise::log(x); }",
+          "replace": "inline float LogF(float x) { return metal::precise::log(1.0F + (x - 1.0F)); }"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.LogWithinFourUlp"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.LogWithinFourUlp",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-compensation-dropped",
+      "kind": "check",
+      "covers": "the compensated span sum, as the GPU compiles it",
+      "bug": "The carry is set to zero, as a compiler that reassociated (t - sum) - y would leave it.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "  s.carry = (t - s.sum) - y;",
+          "replace": "  s.carry = (t - s.sum) - (t - s.sum);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.CompensationSurvivesCompilation"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.CompensationSurvivesCompilation",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-denormal-probe-normal",
+      "kind": "check",
+      "covers": "the measured denormal behaviour, as the test pins it",
+      "bug": "The smallest denormal input becomes the smallest normal plus one ULP.",
+      "edits": [
+        {
+          "file": "src/metal/probes.cpp",
+          "find": "{0x00000001U, 0x00000200U,",
+          "replace": "{0x00800001U, 0x00000200U,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.DenormalsFlushToZeroAsMeasured"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.DenormalsFlushToZeroAsMeasured",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-uint-probe-truncates",
+      "kind": "check",
+      "covers": "uint to float on the GPU, round to nearest even",
+      "bug": "The probe converts with the low 8 bits truncated, as round toward zero would.",
+      "edits": [
+        {
+          "file": "src/metal/kernels.metal",
+          "find": "  const float f = float(in[gid]);",
+          "replace": "  const float f = float(in[gid] >> 8) * 256.0F;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.UintToFloatRoundsToNearestEvenAsMeasured"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.UintToFloatRoundsToNearestEvenAsMeasured",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-buffer-offset",
+      "kind": "check",
+      "covers": "the command buffer split",
+      "bug": "Every command buffer writes its span sums from the start of the output buffer.",
+      "edits": [
+        {
+          "file": "src/metal/metal_backend.mm",
+          "find": "[encoder setBuffer:out offset:first * sizeof(f32::SpanSum) atIndex:2];",
+          "replace": "[encoder setBuffer:out offset:0 atIndex:2];"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.CommandBufferSplitChangesNoBit"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.CommandBufferSplitChangesNoBit",
+      "timeout_s": 300
+    },
+    {
+      "id": "metal-draw-second-word",
+      "kind": "check",
+      "covers": "GPU-2 on asian12",
+      "bug": "The Asian kernel's uniform comes from the block's second word, not the production first.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "    const float u = Uniform23(DrawBlock(p.seed_lo, p.seed_hi, path_lo, path_hi, step).w0);\n    x = (x + p.drift)",
+          "replace": "    const float u = Uniform23(DrawBlock(p.seed_lo, p.seed_hi, path_lo, path_hi, step).w1);\n    x = (x + p.drift)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.Gpu2Asian12"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.Gpu2Asian12",
+      "timeout_s": 600
+    },
+    {
+      "id": "metal-onestep-weight",
+      "kind": "check",
+      "covers": "GPU-2 on barrier156",
+      "bug": "The one-step weight ignores the survival probability, so every path survives.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "    weight = weight * (alive ? survive : 0.0F);",
+          "replace": "    weight = weight * (alive ? 1.0F : 0.0F);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_test"],
+      "command": ["{build}/bin/aadp_metal_test", "--gtest_filter=Gpu.Gpu2Barrier156"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Gpu\\.Gpu2Barrier156",
+      "timeout_s": 600
+    },
+    {
+      "id": "metal-no-device-skip",
+      "kind": "check",
+      "covers": "a GPU test skipped on a Mac with a Metal device",
+      "bug": "HasDevice says there is no device, so every Gpu test skips with its reason.",
+      "edits": [
+        {
+          "file": "src/metal/metal_backend.mm",
+          "find": "    return MTLCreateSystemDefaultDevice() != nil;",
+          "replace": "    return MTLCreateSystemDefaultDevice() == nil;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "ctest", "release", "--jobs", "{jobs}"],
+      "detect": "test",
+      "reason": "run_tests: skipped, not allowed: Gpu\\.PhiloxKnownAnswersTenAndSevenRounds",
+      "timeout_s": 1200,
+      "mutated_exit": 1,
+      "data": true
+    },
+    {
+      "id": "f32-reduce-float",
+      "kind": "check",
+      "covers": "the host reduction in double",
+      "bug": "The span sums are accumulated in float.",
+      "edits": [
+        {
+          "file": "src/f32/cpu_pricer.cpp",
+          "find": "    m.sum += static_cast<double>(s.sum);",
+          "replace": "    m.sum = static_cast<float>(m.sum) + s.sum;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32Reduce.DoesNotStallWhereAFloatSumWould"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32Reduce\\.DoesNotStallWhereAFloatSumWould",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-inverse-normal-coefficient",
+      "kind": "check",
+      "covers": "the float inverse normal against AS241",
+      "bug": "One of Giles's central coefficients has two digits transposed.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "    p = 0.246640727F + p * w;",
+          "replace": "    p = 0.264640727F + p * w;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32InverseNormal.SymmetricAndWithinBoundOnTheWholeGrid"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32InverseNormal\\.SymmetricAndWithinBoundOnTheWholeGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-symmetry-broken",
+      "kind": "check",
+      "covers": "the float inverse normal's symmetry",
+      "bug": "w is computed from 4q - 4q^2, which is not the same float for q and 1 - q.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "  float w = -LogF(4.0F * q * (1.0F - q));",
+          "replace": "  float w = -LogF(4.0F * q - 4.0F * q * q);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32InverseNormal.SymmetricAndWithinBoundOnTheWholeGrid"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32InverseNormal\\.SymmetricAndWithinBoundOnTheWholeGrid",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-normal-cdf-coefficient",
+      "kind": "check",
+      "covers": "the float normal CDF against the double",
+      "bug": "One of Cody's C coefficients has its exponent off by one.",
+      "edits": [
+        {
+          "file": "src/f32/float_kernels.hpp",
+          "find": "  num = (num + 8.88314979438837594e00F) * mt;",
+          "replace": "  num = (num + 8.88314979438837594e01F) * mt;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32NormalCdf.WithinBoundWherePhiIsANormalFloat"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32NormalCdf\\.WithinBoundWherePhiIsANormalFloat",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-cpu-span-stride",
+      "kind": "check",
+      "covers": "the CPU float32 line's span starts",
+      "bug": "Span s starts at path s instead of s times the span.",
+      "edits": [
+        {
+          "file": "src/f32/cpu_pricer.cpp",
+          "find": "        const std::uint64_t first = first_path + s * params.span;",
+          "replace": "        const std::uint64_t first = first_path + s;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32CpuLine.SameBitsOnAnyThreadCountAndSpanByHand"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32CpuLine\\.SameBitsOnAnyThreadCountAndSpanByHand",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-paired-se",
+      "kind": "check",
+      "covers": "the paired difference's standard error",
+      "bug": "The SE of the per-span mean difference is not divided by the span.",
+      "edits": [
+        {
+          "file": "src/f32/paired.cpp",
+          "find": "  return {.mean = mean_span / span, .standard_error = sd_span / (span * std::sqrt(k))};",
+          "replace": "  return {.mean = mean_span / span, .standard_error = sd_span / std::sqrt(k)};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32Paired.DifferenceAndItsStandardError"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32Paired\\.DifferenceAndItsStandardError",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-double-column-bits",
+      "kind": "check",
+      "covers": "column B's 23-bit uniform",
+      "bug": "Column B keeps 24 bits of the word, not 23, so it is no longer the GPU's uniform.",
+      "edits": [
+        {
+          "file": "src/f32/paired.cpp",
+          "find": "  return (static_cast<double>(word >> 9U) + 0.5) * 0x1p-23;",
+          "replace": "  return (static_cast<double>(word >> 8U) + 0.5) * 0x1p-24;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32DoubleColumn.IsTheProductionKernelOnTheTruncatedUniforms"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32DoubleColumn\\.IsTheProductionKernelOnTheTruncatedUniforms",
+      "timeout_s": 300
+    },
+    {
+      "id": "f32-params-strike",
+      "kind": "check",
+      "covers": "the float32 parameters",
+      "bug": "The strike is passed in currency, not as a fraction of the spot.",
+      "edits": [
+        {
+          "file": "src/f32/cpu_pricer.cpp",
+          "find": "  p.strike = static_cast<float>(contract.strike / market.spot);",
+          "replace": "  p.strike = static_cast<float>(contract.strike);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_f32_test"],
+      "command": ["{build}/bin/aadp_f32_test", "--gtest_filter=F32Params.RoundsEachInputOnceAndRefusesWhatItCannotPrice"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] F32Params\\.RoundsEachInputOnceAndRefusesWhatItCannotPrice",
+      "timeout_s": 300
     }
   ]
 }
