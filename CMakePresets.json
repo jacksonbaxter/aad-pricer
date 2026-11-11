@@ -96,6 +96,23 @@
       }
     },
     {
+      "name": "quantlib",
+      "displayName": "Release with QuantLib 1.44 and Boost 1.92.0 for the comparison bench",
+      "description": "QuantLib inherits the flags of CMAKE_CXX_FLAGS and CMAKE_CXX_FLAGS_RELEASE; scripts/check_quantlib_flags.py fails the bench's build if they differ.",
+      "inherits": "optimised",
+      "cacheVariables": { "AAD_PRICER_BUILD_QUANTLIB_COMPARE": "ON" }
+    },
+    {
+      "name": "quantlib-lto",
+      "displayName": "The quantlib preset with ThinLTO over QuantLib and the bench (the tuned column)",
+      "inherits": "quantlib",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-ffp-contract=off -flto=thin",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off -flto=thin",
+        "AADP_BUILD_TESTS": "OFF"
+      }
+    },
+    {
       "name": "release-avx2",
       "displayName": "Release, AVX2 with FMA (x86-64)",
       "inherits": "optimised",
@@ -118,7 +135,9 @@
     { "name": "fuzz-avx2", "configurePreset": "fuzz-avx2" },
     { "name": "release-gcc", "configurePreset": "release-gcc" },
     { "name": "release-avx2", "configurePreset": "release-avx2" },
-    { "name": "release-avx512", "configurePreset": "release-avx512" }
+    { "name": "release-avx512", "configurePreset": "release-avx512" },
+    { "name": "quantlib", "configurePreset": "quantlib" },
+    { "name": "quantlib-lto", "configurePreset": "quantlib-lto" }
   ],
   "testPresets": [
     {
@@ -134,6 +153,7 @@
     { "name": "fuzz", "inherits": "test-base", "configurePreset": "fuzz" },
     { "name": "fuzz-avx2", "inherits": "test-base", "configurePreset": "fuzz-avx2" },
     { "name": "release-gcc", "inherits": "test-base", "configurePreset": "release-gcc" },
-    { "name": "release-avx2", "inherits": "test-base", "configurePreset": "release-avx2" }
+    { "name": "release-avx2", "inherits": "test-base", "configurePreset": "release-avx2" },
+    { "name": "quantlib", "inherits": "test-base", "configurePreset": "quantlib" }
   ]
 }

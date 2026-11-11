@@ -91,7 +91,8 @@ if(NOT DEFINED AADP_AREA_SVI OR AADP_AREA_SVI)
 endif()
 
 # 985 translation units, so optional. QuantLib tag v1.44 peels to commit
-# ab4cb476d35f7275834bc05b47d1324403d1823b. Nothing links ql_library yet.
+# ab4cb476d35f7275834bc05b47d1324403d1823b. Only aadp_bench_quantlib links ql_library
+# (cmake/area_quantlib.cmake).
 option(AAD_PRICER_BUILD_QUANTLIB_COMPARE "Fetch Boost and QuantLib for the comparison bench" OFF)
 if(AAD_PRICER_BUILD_QUANTLIB_COMPARE)
   FetchContent_Declare(boost_headers

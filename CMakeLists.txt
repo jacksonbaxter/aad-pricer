@@ -31,6 +31,14 @@ else()
   set(AADP_TSAN OFF)
 endif()
 
+# ThinLTO objects are LLVM bitcode, which only LLVM's archiver can index (the quantlib-lto preset).
+# The normal variables, which the platform files set and which hide the cache, are what the
+# archive rules read.
+if(CMAKE_CXX_FLAGS MATCHES "-flto" AND CMAKE_CXX_COMPILER_AR AND CMAKE_CXX_COMPILER_RANLIB)
+  set(CMAKE_AR "${CMAKE_CXX_COMPILER_AR}")
+  set(CMAKE_RANLIB "${CMAKE_CXX_COMPILER_RANLIB}")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(AadpSimd)
 include(AadpWarnings)
@@ -46,7 +54,7 @@ include(AadpSmoke)
 
 # Each area file adds its own targets. Nothing else in the build system changes
 # when an area grows.
-foreach(_aadp_area IN ITEMS bench oracle data pricer simd aad_bench svi metal)
+foreach(_aadp_area IN ITEMS bench oracle data pricer simd aad_bench svi metal quantlib)
   string(TOUPPER "${_aadp_area}" _aadp_area_upper)
   option(AADP_AREA_${_aadp_area_upper} "Build the ${_aadp_area} area" ON)
   if(AADP_AREA_${_aadp_area_upper})
