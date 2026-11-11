@@ -1428,6 +1428,76 @@ What the table shows:
 - The tape agrees with the difference on every seed and size: abs(z) is at most 1.28 on the two rho rows, and at most 1.81 on all five rows.
 - No check here changes run 2's verdicts.
 
+### Stage 9: Metal GPU backend, prices only
+
+AAD does not run on the GPU. Greeks come from the double-precision CPU tape, and the GPU backend prices only, in float32 ("Decisions", "GPU: price only"). Every GPU number in this stage is iteration only: nothing is stamped into `results/`, and the reported `GPU-1` run comes at stage 11, through `measure.sh`.
+
+#### Pre-registration, stated before any GPU number
+
+Committed alone, before any kernel of this stage ran on the GPU. The only GPU facts known at this commit are Phase 1's probe (`metal-gpu/EVIDENCE.md`, E22 to E32: Apple M4 Max, Apple9 family, no `double`, a 32-bit `mulhi` and a 64-bit `ulong` product correct on one input) and the specification's guarantees.
+
+Contracts: the existing GBM workloads of `bench/aad_workloads.cpp`, all with S0 100, σ 0.2, r 0.03 and q 0.
+- `asian12`, the contract of `aad4-asian12`: arithmetic Asian call, K 100, 12 fixings, T 1, S0 not in the average.
+- `asian252`, the contract of `mc-asian252`: the same at 252 fixings.
+- `barrier156`, the contract of `aad8-barrier`: up-and-out call, K 120, H 150, discrete at 156 dates, T 3, by one-step survival (Gerstner, Harrach, Roth, arXiv 1804.03975v3).
+
+Uniforms. One Philox4x32-10 block per (path, step), with the counter (path low word, path high word, step, 0) and the key (seed low word, seed high word) of `src/pricer/draws.hpp`, and only the block's first word w. That word is the top 32 bits of the production pricer's 52-bit normal uniform, so every column below draws from the production stream, truncated.
+- 32-bit: u = (w + 1/2) 2^-32, in double.
+- 23-bit: u = (⌊w / 2^9⌋ + 1/2) 2^-23. In float32 it is computed as float(2⌊w / 2^9⌋ + 1) × 2^-24: an odd integer below 2^24 times a power of two, exact under either rounding mode the specification allows (E9, E10). So u runs from 2^-24 to 1 − 2^-24, never reaches 0 or 1, and 1 − u is on the same grid. No `float(uint)` conversion touches a uniform, so the u = 1.0 hazard of E43 cannot arise.
+
+The four columns (TASKS "Metal"; du Toit's and NAG's table, E57):
+- A, double with 32-bit uniforms, and B, double with 23-bit uniforms: the production double kernels, `pricer::EvaluatePath<double>` on `GbmModel<double>` (this project's exp, log, AS241 and Cody normal CDF), fed these uniforms in place of the 52-bit ones. Nothing in `src/pricer/` changes, so run 2's code is untouched.
+- C, CPU float32, and D, GPU float32: one float32 kernel source, compiled as C++ for the CPU, and embedded as a string and compiled at run time by Metal for the GPU.
+  - Host: the step drift μ = (r − q − σ²/2) T/m, the step sd s = σ √(T/m), k = K/S0 and b = log(H/S0) are computed in double and rounded once to float. The kernel works in units of S0, and the host multiplies the reduced double mean by S0 e^(−rT) in double.
+  - State: log-moneyness x = log(S/S0), from x = 0, with x ← (x + μ) + s z in the double kernel's order. No `log` is taken of the state anywhere; the barrier enters as the precomputed b. The only `log` in the kernel is the inverse normal's.
+  - Asian: A = (Σ e^(x_i)) / m, the sum compensated (Kahan), payoff max(A − k, 0).
+  - Barrier, per step: m = x + μ, a = (b − m) / s, p = Φ(a), weight ← weight × p, q = p u, z = Φ^-1(q′), x = m + s z, where q′ = max(q, 2^-24) when p > 0, and q′ = u when p = 0 (the double kernel's dead path, which draws from u). Payoff weight × max(e^x − k, 0) at the last date. The floor at 2^-24 keeps q′ inside the range the float32 inverse normal was fitted on. It binds only where p u < 2^-24, which the double kernel does not floor, so it is part of the float32 kernel's difference from B and is counted in it, not removed.
+  - Φ: Cody's erfc, with the regions, coefficients and exp split of `src/pricer/normal_cdf.hpp`, in float32 with the coefficients rounded to float.
+  - Φ^-1: Giles' single-precision erfinv ("Approximating the erfinv function", GPU Computing Gems Jade Edition, 2011, Table 5; E47): z = √2 x P(w), x = 2q′ − 1, w = −log(4 q′ (1 − q′)). That w equals Giles' −log((1 − x)(1 + x)) for q′ on the 23-bit grid, and keeps its relative accuracy for a q′ off it. P(w) depends on x only through x², so z(1 − u) = −z(u) exactly on the grid: the inverse normal is symmetric.
+  - exp, log and sqrt: `metal::precise::exp`, `precise::log` and `precise::sqrt` on the GPU; `std::exp`, `std::log` and `std::sqrt` on float, the host's libm, on the CPU.
+  - GPU compile options: `MTLMathModeSafe` and `MTLMathFloatingPointFunctionsPrecise`, with `#pragma METAL fp contract(off)`. The C++ builds already have `-ffp-contract=off`. So C and D run the same operations in the same order, and can differ only through exp, log and sqrt, the GPU's rounding of + − × ÷, and denormals, each measured by a property kernel below.
+  - Reduction: each GPU thread, and the CPU line likewise, prices a span of S = 16 consecutive paths and writes a compensated float32 sum of their payoffs and a float32 sum of their squares. The host sums the spans in double, in span order. S above 64 is refused, so no float32 sum runs over more than 64 terms, and nothing is summed across threads on the GPU.
+- Paired differences B − A, C − B, D − B and D − C, each with its SE from the N/S per-span differences of the same paths: SE = sd(d_span) / (S √(N/S)). Each column's own SE is the per-path sample SE.
+
+`GPU-2`, the check, as `BENCHMARKS.md` states it: |D − B| ≤ 0.01 SE_B on each contract, SE_B the Monte Carlo SE of B. The factor is BENCHMARKS', and nothing is loosened after a result. A contract that misses it is reported as a failure at that N, with its measured ratio |D − B| / SE_B. C − B is reported beside it, not judged.
+
+`GPU-3`, reported, not judged: (D − B) / B per contract, with its SE, beside NAG's "around 1e-7" and its published 4.08e-7 (Table 3), which are context, not pass marks. The barrier caveat, stated before measuring (BENCHMARKS `GPU-3`; E55): `barrier156` may land above 1e-7 with no fault, because its weight is a product of 156 float32 survival probabilities, each rounded, and its near-barrier steps carry the float32 rounding of a, p and q. Also reported: (C − B) / B, (D − C) / C, and (B − A) / A, the effect of the uniforms' resolution alone.
+
+N and seeds, all development seeds, never 1729 or 271828:
+- The test, under ctest: N = 2^20 per contract, seed 20261201, in Release builds. Every other build runs a smoke size, N = 2^16, with the same bound, as the repo's other sized tests do.
+- The table: N = 2^24 per contract, seed 20261202, one run.
+- `GPU-1` timing: N = 2^24 per contract, seed 20261203.
+- Property-kernel inputs: seed 20261204.
+
+`GPU-1` scope, iteration only in this stage:
+- GPU: wall clock from before the buffers are allocated to after the host reduction, across all command buffers. That covers allocation, encoding, the commits, the wait, a status and error check on every command buffer, and the reduction in double. Device creation, the run-time compile of the library and pipeline creation are timed separately and reported apart. Each command buffer's `GPUStartTime` to `GPUEndTime` is a breakdown under the wall clock, never the headline (E64).
+- SIMD CPU: `simd::PriceLanes` at 2 lanes on NEON, in double, on the production 52-bit uniforms from the same Philox blocks, 64 batches. Ceiling: 2 double lanes on NEON (`SIMD-1`). The ratio is the SIMD CPU's wall clock over the GPU's, at the same N.
+- CPU float32 line: kernel C on the same uniforms and span layout, with the same reduction, so that a GPU ratio does not mix hardware with precision (BENCHMARKS `GPU-1`).
+- Both CPU lines on 1 thread and on 16 (the M4 Max's 12 performance and 4 efficiency cores). Five repetitions each after one warm-up; median and minimum. Run through `measure.sh` on macOS, and not stamped.
+
+Command-buffer batch size, by experiment, because Apple's time limit is unpublished in what Phase 1 opened (E66). On `asian252`, the slowest contract, the paths per command buffer double from 2^14, one buffer at a time, each checked for status and error, stopping at the first error or after the first buffer whose GPU time exceeds 2 s. The safe batch is the largest power of two whose buffer takes at most 50 ms of GPU time and is at least 16 times shorter than the longest buffer that completed. Every size tried, its GPU time and any error are reported.
+
+Property kernels on this GPU, compiled with the production options above unless named otherwise. Their results go into this section.
+- Arithmetic: +, −, ×, ÷ and sqrt on 2^20 operand pairs against the CPU's IEEE round-to-nearest-even results, bit for bit. Bit patterns from Philox, seed 20261204: random sign and mantissa, exponents from −30 to 30, so every result is normal. Plus constructed ties and near-ties around 1 and 2^24, which say which rounding mode the GPU uses. Mismatches are counted per operation.
+- Contraction: a × b + c on 2^20 triples against the unfused CPU result, bit for bit.
+- Denormals: the smallest denormal and three others as inputs to x × 1, x + 0 and x > 0, and denormal results from normal inputs (2^-126 × 2^-k): flushed or kept, on input and on output.
+- `uint` to `float`: 2^24 + 1, 2^24 + 3, 2^32 − 129, 2^32 − 128, 2^32 − 1 and 2^20 random words against the CPU's round-to-nearest-even conversion, and whether float(2^32 − 1) × 2^-32 is 1.0 on this GPU.
+- exp on x = float(−87 + 175 i / 2^22), i = 0 to 2^22, and on the pricer's range, x = float(−3 + 6 i / 2^22): the error in float ULPs of the exact value, against the host's double `exp` of the same float x. `precise` and `fast`, with the host's float `exp` beside them.
+- log on x = float(2^t), t = −126 + 254 i / 2^22, and on x = float(0.5 + 1.5 i / 2^22): ULPs of the exact value, and the absolute error on [0.5, 2]. `precise` and `fast`, with the host's float `log` beside them.
+- Compensation: the Kahan sum of 1 followed by 2^16 terms of 0.75 × 2^-24, whose plain float32 sum stays at 1, through the production kernel's own compensated add.
+
+Checks, as tests, each with a fault in `faults/manifest.json` that makes it fail for its named reason:
+- `GPU-2` on the three contracts, at the test's N and seed.
+- Philox4x32-10 known answers on the GPU (TASKS "Pricer"): Random123's vectors at 10 and 7 rounds, those of `tests/oracle/philox_test.cpp`. And the GPU's four words equal `pricer::DrawStep`'s Philox words on 2^16 (seed, path, step) triples, including paths across 2^32 and seeds with a high word.
+- The 23-bit uniform on the GPU equals B's double uniform exactly, on the constructed words above and on 2^20 random ones, and lies in [2^-24, 1 − 2^-24].
+- Arithmetic and contraction: 0 mismatches under the production options.
+- exp and log, `precise`, within the specification's 4 ULP (MSL Table 8.1, E3) on both grids. Stated before measuring: if this GPU exceeds it, the test fails and the gap is reported, with the bound unchanged.
+- Denormals and `uint` to `float`: the behaviour measured here is then asserted, so that a change of device or driver shows. These two assert a fact found, not a bound set in advance.
+- Compensation: the GPU's compensated sum equals the CPU's bit for bit and the exact 1 + 0.75 × 2^-8, while the plain sum of the same terms stays at 1.
+- Reduction: the host reduction of 2^25 span sums of 1 gives exactly 2^25, where a float32 running sum stalls at 2^24.
+
+CI. GitHub's macOS runners are virtual machines (`ci.yml`, "Show whether the runner is a virtual machine"), and whether Metal has a device there is not known. A CI step prints the device, or that there is none. With a device, the GPU tests run and must pass like any other. With none, they skip with the reason, that skip is allowed by name in that job only, and the job summary says so; it is never silent. On this Mac they run, with 0 skips in the gate. Non-Apple builds have no Metal backend (`AAD_PRICER_ENABLE_METAL` off) and run the CPU float32 tests only.
+
 ### Rule slips
 
 None affected a number.
