@@ -1498,6 +1498,98 @@ Checks, as tests, each with a fault in `faults/manifest.json` that makes it fail
 
 CI. GitHub's macOS runners are virtual machines (`ci.yml`, "Show whether the runner is a virtual machine"), and whether Metal has a device there is not known. A CI step prints the device, or that there is none. With a device, the GPU tests run and must pass like any other. With none, they skip with the reason, that skip is allowed by name in that job only, and the job summary says so; it is never silent. On this Mac they run, with 0 skips in the gate. Non-Apple builds have no Metal backend (`AAD_PRICER_ENABLE_METAL` off) and run the CPU float32 tests only.
 
+#### Stage 9 results
+
+Iteration only: nothing here is stamped into `results/`. Apple M4 Max, macOS 27.2 (26B123), the release preset, LLVM 23.1.4. The property run and the table first ran on the uncommitted stage 9 tree over 4aa7925, and ran again at d65b8e5, after the clang-tidy fixes, which changed no kernel operation. Every number came out identical, digit for digit. The code is 25db19f. The faults are d65b8e5.
+
+Properties, with the production options and seed 20261204:
+- Arithmetic: +, −, ×, ÷ and sqrt give 0 mismatches against the CPU's round-to-nearest-even on 1,048,576 random pairs. Every constructed tie and near-tie agrees too: 1 + 2^-24 gives 1, 1 + 3 × 2^-24 gives 1 + 2^-22, and 2^24 + 3 gives 2^24 + 4. So this GPU rounds to nearest even.
+- Contraction: 0 of 1,048,576 a × b + c results differ from two roundings. A fused multiply-add would have changed 395,276 of them. The pragma carries this, as a one-off probe shows (`fault_injection.py` on a scratch manifest; not a manifest fault). With `#pragma METAL fp contract(off)` removed and `MTLMathModeSafe` kept, exactly those 395,276 differ, so safe math alone fuses every a × b + c here.
+- Denormals are flushed both ways:
+  - as inputs: x × 1 = 0, x + 0 = 0, x > 0 is false and x ≠ 0 is false for 2^-149, 2^-140, 2^-127 and the largest denormal;
+  - as results: 2^-126 × 2^-k = 0 for k = 1, 10 and 23, and 1.5 × 2^-126 − 2^-126 = 0.
+  The CPU keeps all of them. The test asserts this table.
+- `uint` to `float` rounds to nearest even, with 0 of 1,048,581 words different from the CPU. float(2^32 − 128) × 2^-32 and float(2^32 − 1) × 2^-32 are both exactly 1.0. So E43's u = 1.0 hazard is real on this GPU. The kernels never convert a whole word.
+- exp and log errors, in float ULPs of the exact value:
+
+  | Function | Grid | `precise` | `fast` | Host float |
+  |---|---|---|---|---|
+  | exp | x from −87 to 88 | 1.448 | 63.79, at x = −86.64 | 0.514 |
+  | exp | x from −3 to 3 | 1.491 | 4.24 | 0.513 |
+  | log | x from 2^-126 to 2^128 | 2.446 | 3.457 | 0.545 |
+  | log | x from 0.5 to 2 | 2.600, max abs 7.86e-8 | 4.000 | 0.560 |
+
+  `precise` is within MSL's 4 ULP on all four grids. It differs from the host's float result at 36 to 45% of the points, which is one reason C and D differ at all. The wide log grid's last point, float(2^128), is infinite and is left out, so that grid has 4,194,304 points, not 4,194,305.
+- Compensation: the GPU's compensated sum of 1 and then 2^16 terms of 0.75 × 2^-24 is 1.002929688, the exact value. It equals the CPU's bit for bit. The plain float sum stays at 1.
+- Fast math, a one-off probe like the contraction one (`MTLMathModeFast` with fast functions, the pragma kept):
+  - ÷ mismatches 299,095 of the 2^20 pairs;
+  - the compensated sum collapses to 1, because the Kahan carry is reassociated away;
+  - there is still no contraction;
+  - GPU-2 at the test's 2^20 paths still passes. On asian252 the ratio is 0.00058 and (D − B) / B is 8.3e-7, against 0.00015 and 2.2e-7 in safe mode.
+  GPU-2's 0.01 SE cannot see fast math. The property tests can, and the faults `metal-fast-math` and `metal-compensation-dropped` show it.
+- Setup: device 0.0007 s. In the first process, the library compiled in 0.125 s and the pipelines took 0.071 s. In later processes they took 0.0025 s and 0.0016 s, because Metal caches the compiled source. On CI's paravirtual device, compile took 0.24 to 0.65 s and pipelines 0.14 to 0.41 s.
+
+Batch size, on asian252 with one command buffer at a time:
+- The batches had no error up to 2^29 paths, a buffer of 3.540 s of GPU time. The run stopped there, as registered, because 3.54 s is over 2 s. Apple's limit was not reached.
+- 2^22 paths took 0.0284 s. 2^23 took 0.0565 s, over the 50 ms rule.
+- The safe batch is **4,194,304 paths (2^22)** per command buffer, 125 times shorter than the longest buffer that completed.
+
+Philox on the GPU:
+- Random123's known answers at 10 and 7 rounds pass (`Gpu.PhiloxKnownAnswersTenAndSevenRounds`).
+- The four words equal `pricer::DrawStep`'s on 2^16 (seed, path, step) triples, including paths across 2^32 and seeds with a high word.
+
+The table: N = 2^24 per contract, seed 20261202, span 16, CPU columns on 16 threads. Rel. is the difference over its base column, with that ratio's SE.
+
+| Contract | A | B | C | D | SE_B |
+|---|---|---|---|---|---|
+| asian12 | 5.631797137 | 5.631795589 | 5.631795172 | 5.631794979 | 2.0103e-3 |
+| asian252 | 5.298645396 | 5.298644896 | 5.298646267 | 5.298646065 | 1.8916e-3 |
+| barrier156 | 1.053313784 | 1.053314198 | 1.053314074 | 1.053314084 | 7.7632e-4 |
+
+| Contract | (B − A) / A | (C − B) / B | (D − B) / B, GPU-3 | (D − C) / C | Spans with C = D in bits |
+|---|---|---|---|---|---|
+| asian12 | −2.75e-7 (1.05e-7) | −7.40e-8 (1.4e-10) | **−1.083e-7** (1.4e-10) | −3.43e-8 (1.2e-10) | 431,551 of 1,048,576 |
+| asian252 | −9.43e-8 (4.05e-8) | +2.586e-7 (8.8e-10) | **+2.206e-7** (8.8e-10) | −3.80e-8 (1.1e-10) | 548,097 |
+| barrier156 | +3.93e-7 (2.96e-7) | −1.175e-7 (7.6e-9) | **−1.081e-7** (7.5e-9) | +9.4e-9 (4.9e-10) | 211,804 |
+
+GPU-2, |D − B| ≤ 0.01 SE_B, passes on all three contracts:
+
+| Contract | \|D − B\| / SE_B at N = 2^24 | At the test's N = 2^20 (seed 20261201) |
+|---|---|---|
+| asian12 | 0.00030 | 0.00008 |
+| asian252 | 0.00062 | 0.00015 |
+| barrier156 | 0.00015 | 0.00004 |
+
+|C − B| / SE_B, reported and not judged, is 0.00021, 0.00072 and 0.00016.
+
+GPU-3 is reported, not judged:
+- (D − B) / B is −1.08e-7, +2.21e-7 and −1.08e-7.
+- NAG's "around 1e-7", and its 4.08e-7, are context. Two contracts sit at about that, and asian252 sits at about twice it.
+- asian252's gap comes from the float32 kernel, not from the GPU. C − B is +2.59e-7, while D − C is only −3.8e-8. Its 252 exps per path compound the rounding in x.
+- The registered barrier caveat did not bite. barrier156 lands at 1.08e-7, with D − C at 9.4e-9.
+- The uniforms' resolution alone, B − A, is of the same order or larger: −2.7e-7, −9.4e-8 and +3.9e-7. It is significant (2.6 and 2.3 SE) on the two Asians, and within 1.3 SE on the barrier.
+
+`GPU-1`, iteration only, run through `measure.sh` at d65b8e5, with nice 0 and load 2.52 at the start. The settings were N = 2^24, seed 20261203, and 2^22 paths per command buffer (4 buffers). Wall-clock medians are over 5 repetitions after 1 warm-up; the minimums are in the evidence. The GPU is timed from allocation to the host reduction, and its setup is reported apart. SIMD CPU is `simd::PriceLanes` on NEON at 2 double lanes, the ceiling on this host, in double on the 52-bit uniforms. CPU float32 is kernel C.
+
+| Contract | GPU | SIMD, 1 thread | SIMD, 16 threads | float32, 1 thread | float32, 16 threads |
+|---|---|---|---|---|---|
+| asian12 | 0.00665 s | 4.724 s (711×) | 0.401 s (60.3×) | 2.631 s (396×) | 0.215 s (32.3×) |
+| asian252 | 0.1149 s | 94.93 s (826×) | 7.428 s (64.6×) | 52.51 s (457×) | 4.258 s (37.0×) |
+| barrier156 | 0.1364 s | 130.7 s (959×) | 11.33 s (83.1×) | 141.3 s (1036×) | 10.89 s (79.9×) |
+
+The ratios are each CPU line's wall clock over the GPU's at the same N. Against the float32 line, which has the same precision, the same kernel and the same uniforms, the GPU is 32 to 80 times faster than 16 threads. About half of the asians' ratio against SIMD is precision and lanes: there the SIMD CPU is 1.7 to 1.9 times slower than the float32 line on 16 threads. On the barrier the two CPU lines are within 4%. The summed GPUStartTime-to-GPUEndTime per run was 0.0055 s, 0.1136 s and 0.1380 s; the barrier's sum exceeds its wall clock because the buffers overlap. The reported `GPU-1` comes at stage 11.
+
+CI: GitHub's macOS runners have a Metal device.
+- At d65b8e5 (run 42983993850), the probe printed `metal: device Apple Paravirtual device` on all four macOS jobs (clang release and debug, ASan with UBSan, TSan).
+- On each of them all 14 `Gpu` tests ran and passed, with 0 skipped: the rounding, denormal and `uint` tables, the exp and log bounds and GPU-2 hold on that device as on this Mac.
+- No skip was allowed, so none happened. The conditional skip in `ci.yml` stays for a runner with no device.
+- The Linux jobs build with the Metal backend off and run the CPU float32 tests.
+
+Faults: 22 new, all caught at 25db19f on the Mac (338 in the manifest).
+- 14 on the Metal checks: `metal-philox-mulhi`, `metal-philox-key-swap`, `metal-uniform-one`, `metal-fast-math`, `metal-contract-on`, `metal-exp-via-exp2`, `metal-log-via-shift`, `metal-compensation-dropped`, `metal-denormal-probe-normal`, `metal-uint-probe-truncates`, `metal-buffer-offset`, `metal-draw-second-word`, `metal-onestep-weight`, and `metal-no-device-skip`, under which every `Gpu` test skips on this Mac and `run_tests.py` refuses the skip.
+- 8 on the CPU float32 line: `f32-reduce-float`, `f32-inverse-normal-coefficient`, `f32-symmetry-broken`, `f32-normal-cdf-coefficient`, `f32-cpu-span-stride`, `f32-paired-se`, `f32-double-column-bits` and `f32-params-strike`.
+- The 14 Metal faults need a Metal device, so a Linux fault run leaves them out.
+
 ### Rule slips
 
 None affected a number.
@@ -1518,6 +1610,7 @@ None affected a number.
 - Stage 7c: one empty `<<'EOF'` heredoc, which ran nothing. Two background jobs through `heavy.sh` (the pre-registration gate and a build) hit the tool's 30-minute background limit while waiting on another project's measurement lock, before they started, and were restarted with a longer limit; one foreground wait ran past its 600 s tool timeout and was moved to the background, then waited for. Outside `heavy.sh` on the Mac: the scratch probes (`build/s7c/probe*.cpp`, two-file clang compiles of under a minute, and runs of seconds: the synthetic fits and box points before the pre-registration, and the replays of the three fuzz findings), and `clang-format`. The code commits' GCC pre-commit and libstdc++ tidy ran on the Linux host.
 - Stage 8a: outside `heavy.sh` on the Mac: the quadrature tool's targeted builds and its `--write` and `--check` runs, a quadrature test run while drafting, two scratch probes (`build/s8a/probe_bits`, `probe_ki`: compiles and runs of seconds), one targeted build of the tool before the pilot, and `emit-plan` runs of under a second. The gates, tidy, faults, pilot and fingerprints went through it. Waits on another project's measurement lock: one Mac gate call hit its 590 s timeout in the fuzz build, and its remaining steps (fuzz 19 of 19, format, scan) were run by hand; two GCC pre-commit wrappers hit the tool's background limit, and their Linux runs finished and passed and were read over SSH; the Linux fingerprint's first call ran past its 600 s foreground timeout and then the background limit before it started, and was rerun detached on the host, a second time after the first rerun called a `/usr/bin/time` the host does not have. One Mac gate was stopped and rerun after a test file changed under it; the rerun found a format violation in `main.cpp`, fixed before the commit.
 - Stage 8b: outside `heavy.sh` on the Mac, the curation and analysis scripts (`build/s8b/`, runs of under a second). The curation script's import wrote `scripts/__pycache__/` into the working tree; it was untracked, and was deleted before anything was staged. The run, the gates and the investigation went through `heavy.sh`. The first GCC pre-commit wrapper (the run-2 file) hit the tool's background limit while the Linux host's `heavy.sh` waited on another project's measurement lock, about 7 hours in all; the remote run finished and passed (708 of 708), and its status and logs were read over SSH. One wait on CI ran past 600 s and the tool moved it to the background. One sentence of "Stage 8b: measured run 2" (the host line, on where run 1 was recorded) was edited after the second GCC pre-commit had shipped its tree: the tree the Linux host built and tested (708 of 708) differs from 22e9d3d's in that one line of `NOTES.md` and nowhere else.
+- Stage 9: `aadp_metal_info` ran once directly on the Mac, outside `heavy.sh`: one device creation and library compile, under a second. Two waits ran past the tool's 600 s foreground limit and the tool moved them to the background: the libstdc++ clang-tidy pre-commit wrapper (838 s on the Linux host, PASS) and one wait on CI, which was stopped and replaced by waits bounded under 600 s. The tool keeps an output file in the system temporary directory for each background command, including the fault run and the `GPU-1` run, whose output went to `build/s9/`. One `python3 -I -` read its script from stdin, and two `cat` commands redirected only from `/dev/null`; none was a heredoc. The GCC pre-commit and the libstdc++ tidy for d65b8e5 shipped a tree that differs from d65b8e5 only in `README.md`, then uncommitted.
 
 ## Option chain
 
@@ -1658,6 +1751,6 @@ v1.44 and Boost 1.92.0 through FetchContent, behind an option. QuantLib's `withB
 ## Open questions for later phases
 
 - Whether upstream LLVM 23 with libc++, C++23 and Boost 1.92 compiles QuantLib on macOS is unverified, because Phase 1 forbids building. `cmake` is available. Boost is not installed, and comes through FetchContent.
-- Rounding mode, denormals and real `exp` and `log` error on this GPU are unknown, and need short kernels.
-- Whether Apple's command-buffer limit bites at useful batch sizes is unknown.
+- Rounding mode, denormals and real `exp` and `log` error on this GPU are unknown, and need short kernels. Resolved at stage 9: round to nearest even, denormals flushed on input and output, `precise` exp within 1.5 ULP and log within 2.6 ULP ("Stage 9 results").
+- Whether Apple's command-buffer limit bites at useful batch sizes is unknown. Resolved at stage 9: no buffer failed up to 3.54 s of GPU time, and the batch is 2^22 paths, 28 ms ("Stage 9 results").
 - `actionlint` is not installed. Phase 2 needs it from repo tooling. Resolved in Phase 2: `scripts/fetch_tools.sh` installs actionlint 1.7.12 into `build/tools/`, pinned by sha256 (fbb1135).
