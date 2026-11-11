@@ -1590,6 +1590,86 @@ Faults: 22 new, all caught at 25db19f on the Mac (338 in the manifest).
 - 8 on the CPU float32 line: `f32-reduce-float`, `f32-inverse-normal-coefficient`, `f32-symmetry-broken`, `f32-normal-cdf-coefficient`, `f32-cpu-span-stride`, `f32-paired-se`, `f32-double-column-bits` and `f32-params-strike`.
 - The 14 Metal faults need a Metal device, so a Linux fault run leaves them out.
 
+### Stage 10: QuantLib comparison
+
+QuantLib v1.44 and Boost 1.92.0, fetched as pinned archives with their hashes and built behind `AAD_PRICER_BUILD_QUANTLIB_COMPARE`, which stays off by default and in CI. QuantLib is linked, never copied: no QuantLib source enters this repo, and the bench uses its public headers only. Every number of this stage is iteration only: nothing is stamped into `results/`, and the reported runs come at stage 11.
+
+#### Pre-registration, stated before any QuantLib number
+
+Committed alone, before any QuantLib engine has priced anything here. What is known at this commit: Phase 1's reading of the v1.44 source (`quantlib-compare/EVIDENCE.md`, E1 to E59; nothing there was compiled or run), and that `ql_library` compiles with this toolchain, with no warning, in a scratch build of 107 s at 6 jobs that priced nothing. The rows are the protocol's (`quantlib-compare/EVIDENCE.md`, "Comparison protocol"), and that file is data.
+
+Common to every row.
+- QuantLib side: a fixed evaluation date; `FlatForward` continuous rates and `BlackConstantVol` on one day counter; `BlackScholesMertonProcess` with default arguments, so the exact log step at constant volatility (E7, E8); `PseudoRandom` (Mersenne Twister with Acklam's inverse, E9); `withBrownianBridge(false)`, antithetic off, `withSamples(n)` with no tolerance and no `maxSamples` (E6); a nonzero seed always (E5). Control variate off except on R3.
+- Our side: the production pricer, `pricer::Price` on one thread ("ours, scalar"), and the fastest primal, the faster of that and `simd::PriceLanes` at the build's widest lanes on one thread ("ours, fastest"; NEON, 2 double lanes on `mac-m4max`), as in the AAD bench. `PriceLanes` returns `Price`'s bits (stage 5a), so the two have one accuracy verdict; the bench checks that the bits agree and marks the run INVALID if they do not. Rows with no lane form say so and their fastest column is the scalar one. Neither side exits early on a knock-out: QuantLib's barrier pricers run every step (E40), and our kernels carry a killed path to the end with weight zero (`src/pricer/kernels.hpp`).
+- The RNG streams cannot match (E9), so every row is a statistical comparison of each engine with the row's reference, never of one engine with the other.
+
+The rows. References are those of `BENCHMARKS.md` section 9 and `references/oracle_values.csv`, with their b.
+
+| Row | Contract | QuantLib | Ours | Reference, b |
+|---|---|---|---|---|
+| R1 | Geometric Asian call, S 100, K 100, q 0.03, r 0.06, σ 0.20, T 360 days Actual360, 10 fixings at t_i = 0.1 i, no t = 0 fixing | `MCDiscreteGeometricAPEngine` | `kAsianGeometric`, 10 steps | O4, 5.3425606635, b 0 |
+| R2 | Arithmetic Asian call, S 100, r 0.0367, σ 0.17801, q 0, T 360 days Actual360, fixings every 30 days from the evaluation date, k = 0..12 (13 points, S0 among them), K 90, 100, 110 | `MCDiscreteArithmeticAPEngine`, control variate off | `kAsianArithmetic`, 12 steps, S0 in the average | AA12K090, AA12K100, AA12K110: 11.904915748797, 4.881961616712, 1.363037952856, b 1e-9 |
+| R3 | R2 at K 100 | as R2, `withControlVariate(true)`: QuantLib's geometric control, coefficient 1 (E4) | the same control with coefficient 1: per path, arithmetic payoff − geometric payoff on the same path + the geometric closed form (`src/oracle/geometric_asian.hpp`, 13 points); no lane form | AA12K100, b 1e-9 |
+| R4 | R2 at K 100 with n = 50: fixings every 60 days, k = 0..50, on a bench-only `DayCounter` subclass with year fraction days / 3000 (E17); QuantLib unmodified | as R2 | `kAsianArithmetic`, 50 steps, S0 in the average | O9, 4.937202814482, b 1e-9 |
+| R5 | Down-and-out call, S0 = K = 100, H 85, 90, 95, 97, 99, σ 0.30, r 0.10, q 0, T 73 days Actual365Fixed, rebate 0, continuous monitoring | `MCBarrierEngine`, `withBias(false)`, `withSteps(50)`: the extremum sampled per step (E11) | `kHard` on the continuous contract, 50 steps: the same crossing law sampled against each step's second uniform, hard indicator | the closed form (`src/oracle/barrier.hpp`), b 0: O7 and CB085 from the file, and H 90, 97, 99 computed in double (Phase 1's E32: 5.9772419956, 3.0595633046, 1.1707930349) |
+| R6 | R5 | R5's QuantLib run: QuantLib has no survival-weight mode, so it adds no QuantLib comparison | `kBridge`, 50 steps: the product of bridge survival weights | as R5 |
+| R7 | R5 with discrete monitoring at t_i = i T / 50, i = 1..50, knock-out on `<=` | `MCBarrierEngine`, `withBias(true)`, `withSteps(50)` (E13) | `kHard` on the discrete contract, 50 steps | DB085.value, DB090.value, O5, DB097.value, DB099.value: 6.3222401405, 6.0981961431, 4.9067890354, 3.8339777052, 2.3363868958, b 1e-9 |
+| R9a | Delta of R2 at K 100 | central bump of the spot quote, h = 0.01, two `NPV()`s on the same seed (common random numbers, E28) | the tape's pathwise delta (`ad::PriceWithGradient`), and on lanes `simd::PriceWithGradientLanes`, which gives the tape's bits | below |
+| R9b | Delta of R7 at H 95 | central bump, h = 1.0 (1% of S0), two `NPV()`s on the same seed, `withBias(true)` | two estimators, each its own comparison: the protocol's, the tape on Savine's smoothed barrier with half-width 0.005 S0, the narrowest of stage 2's bias study (`NOTES.md`, "Pricer"); and the production one for this contract, the tape on one-step survival, whose delta is run 2's DB095.delta | O6, 0.7978141916, b 1e-9 |
+
+R9's references and b, by the section 10 rule ("b is the reference or finite-difference truncation allowance"), computed in the bench from `tools/quadrature` before any Monte Carlo runs, and printed:
+- R9a has no published reference (E29: "central bump of E29 is derivable"). Δ_ref = (V(S0 + h) − V(S0 − h)) / 2h with h = 0.01, V the arithmetic Asian quadrature at its fine resolution (the one behind AA12K100). b = 2 × 1e-9 / 2h + |CD(2h) − CD(h)|: the quadrature's b carried through the difference, plus three times the leading truncation term as estimated by the two steps. QuantLib's bump has the same h, so its expectation differs from Δ_ref only by the quadrature's error in V, which that b covers. The same b for both engines.
+- R9b, QuantLib: its bump estimates CD_h(V) of the discrete contract, not the delta. So b = 1e-9 + |CD_h(V) − O6| + 2 × 1e-9 / 2h, with V the Gauss-Legendre recursion at `kFineGaussLegendre` at S0 ± h: the reference's own b, the bump's truncation computed exactly from the quadrature, and the quadrature's error carried through the difference. Ours: O6's b, 1e-9; the smoothed estimator's bias is not an allowance, it is what the comparison measures.
+
+R8, a recorded non-comparison: a discretely monitored barrier at m = 50 has no exact deterministic engine in QuantLib. `AnalyticBarrierEngine` is continuous (E14), the BGK shift is not in the library (E16) and is an approximation in any case, and `BinomialBarrierEngine` ties monitoring to tree steps (E15). So R8 is reported as impossible, with that reason, and nothing stands in for it.
+
+R10 to R12, labelled, never judged for accuracy:
+- R10, speed only. R7's contract at H 95 on one local-vol grid. The grid: σ_loc from this project's Dupire (`svi/local_vol.hpp`) on a synthetic raw SVI surface written in the bench (no market data), at the 51 times t = 0, 0.02, ..., 1 and 111 spots 30, 32, ..., 250, exported once. QuantLib reads it through `FixedLocalVolSurface` (linear in spot per time, linear in local vol in time, flat outside, E21) in the 5-argument `BlackScholesMertonProcess`, `MCBarrierEngine` `withBias(true)`, `withSteps(50)`. Ours reads the same matrix with the same rule in a bench-only model behind the pricer's model interface (`Law(i, x)`: left-point σ, log-Euler), through `pricer::EvaluatePath` and the runner; it has no lane form. Strict for speed. There is no reference for the discrete contract under local vol, so no accuracy.
+- R11, speed only. R4's arithmetic Asian, 51 points, on R10's grid and process, control variate off (E24). QuantLib cannot sub-step between fixings (E23), so both run one log-Euler step per fixing, with a shared Euler bias nobody measures. No reference exists, so no accuracy.
+- R12, sanity only. A European call on a synthetic raw SVI surface: QuantLib's `SviSmileSection` per slice, `PiecewiseBlackVarianceSurface` and `NoExceptLocalVolSurface` (its own Dupire by bumps, E19), priced by `MCEuropeanEngine` with 50 steps; ours by `pricer::PriceLocalVol` with 50 sub-steps. Each against the Black price at the SVI implied volatility at (K, T), T a slice expiry, reported as a distance in its own SE with no pass mark: the two local volatilities differ by construction (E19, E22, E25), and both carry Euler bias.
+- For R10 and R11, each engine's mean and SE are printed beside each other as a check that both price the same contract. That is a sanity line, not an accuracy measure.
+
+Accuracy, `QL-2`. Distance from the row's reference by the section 10 rule, never the distance between engines.
+1. |x̄ − ref| ≤ t(1 − α_F / (2K), B − 1) SE + b, with α_F = 0.01 and B = 64. K = 42 comparisons: R1 2, R2 6, R3 2, R4 2, R5 10, R6 5, R7 10, R9a 2, R9b 3. Critical value 3.8975749765 (`CriticalValue(0.01, 42, 64)`).
+2. SE ≤ a ceiling fixed before the run. The ceilings come from a pilot after this commit, on its own seed, and are committed before the accuracy run: ceiling = factor × SE_pilot × √(N_pilot / N), rounded up to 3 figures, factor 1.65 against a reference and 3 on QuantLib's two bumps (R9a and R9b), the factors of the plan header and their reasons (`references/comparison_plan.csv`).
+
+The SE.
+- Ours: 64 batch means from the runner, as for every row of run 2.
+- QuantLib, every row but R5: 64 batches, each its own `NPV()` of N / 64 samples on seed 100 × base + 1 + b, b = 0..63. A bump row runs the two bumped `NPV()`s of a batch on the batch's seed and takes their difference as the batch's value.
+- QuantLib, R5: one `NPV()` of N samples on seed 100 × base, with QuantLib's own `errorEstimate()` as the SE. The extremum uniforms come from a Mersenne Twister rebuilt on seed 5 at every `calculate()` (E12), so 64 separate `NPV()`s would share them and their batch means would not be independent. Within one run every path draws fresh uniforms, so the sample SE is valid there. The same critical value is used, which is conservative for a sample SE with about 4 million degrees of freedom.
+- The default and tuned columns run the same paths. The tuned column's estimate is checked against the default's, which it must match to rounding (|difference| ≤ 1e-12 × |value| + 1e-15); it is not a second comparison.
+
+N and seeds, all development seeds, never 1729 or 271828.
+- Pilot: N_pilot = 2^20, seed 20261111.
+- Accuracy run: N = 2^22 per comparison, seed 20261112, through `heavy.sh`.
+- Speed: seed 20261113. N = 2^20 paths per timed call on R1 to R9, and 2^18 on R10 to R12, where QuantLib's local-vol steps cost far more (E25). The R10 and R11 sanity lines and R12's distances run at N = 2^18 on seed 20261112.
+- ctest smoke checks of the QuantLib rows: seed 20261114.
+
+Speed, `QL-1`, iteration only at this stage, through `measure.sh` on `mac-m4max`, single thread on both sides (E42). One timed call is one `NPV()` for QuantLib, construction of the instrument and engine outside it, and one `Price` or `PriceLanes` call for ours, accumulation included on both sides. One warm-up call, then 3 repetitions; the median is reported with the minimum and maximum. Metrics:
+- paths/s = N / t;
+- ns per path-step = t / (N × steps), where steps is the row's date count; a bump row counts its two `NPV()`s in t;
+- RMSE² × time, from the accuracy run and the timing: RMSE² = max(SE², d²) at the accuracy run's N, d = x̄ − ref, which is the variance when the distance is within one SE and the squared distance otherwise; time = the per-path time × that N. This is the work-normalised error, the same for any N when the estimator is unbiased, so a cheaper but noisier estimator cannot look better than it is (R6 against R5, R9b's bump against the tape).
+- Each QuantLib column is reported against ours, scalar and fastest, as a ratio of paths/s and of RMSE² × time.
+
+The two QuantLib columns, fixed now.
+- Default: QuantLib's v1.44 configuration defaults (E47), recorded from the cache, `Statistics` (`GenericRiskStatistics`, which stores every sample, E41), no call to `enableExtrapolation()`, and no LTO. It is built with exactly our flags, so it is default QuantLib, not a careless build.
+- Tuned: everything a fair user could do without patching QuantLib. `enableExtrapolation()` on every term structure the engine reads (the volatility, risk-free and dividend curves, and the local-volatility surfaces on R10 to R12), which skips the range checks and the `maxTime()` day counting on every step (E38); `IncrementalStatistics` in place of `Statistics` (E41); and link-time optimisation, ThinLTO over QuantLib and the bench in a separate build (`-flto=thin` in `CMAKE_CXX_FLAGS`, so QuantLib inherits it). If a piece does not compile or link with this toolchain, the tuned column goes without it and says so; nothing else replaces it. A third line, tuned without LTO, from the default build, separates LTO's share.
+- QuantLib's `QL_REQUIRE` checks cannot be switched off (E48) and stay on: QuantLib without them would need patching, and would no longer be QuantLib.
+- Our two columns come from the default build, the project's own release flags, without LTO.
+
+Build, version record and the flag check.
+- One configure preset, `quantlib`, the release preset with the option on, and `quantlib-lto` for the tuned column. Flags stay in `CMAKE_CXX_FLAGS` and `CMAKE_CXX_FLAGS_RELEASE`, which QuantLib inherits (E49): `-ffp-contract=off -O3 -DNDEBUG`, static libraries, position-independent code on for both.
+- The bench step fails unless a sampled QuantLib translation unit (`ql/pricingengines/barrier/mcbarrierengine.cpp`) and the bench's own translation unit show the same optimisation and architecture flags, read from `compile_commands.json`: every `-O`, `-march`, `-mcpu`, `-mtune`, `-m` ISA flag, `-ffp-contract`, `-ffast-math` and its parts, `-flto` and `-DNDEBUG`. The check has a fault.
+- The results header records the QuantLib version and its hex (`QL_VERSION`, `QL_HEX_VERSION` from `ql/version.hpp`), the generated `ql/config.hpp`'s settings, the Boost version from `boost/version.hpp`, every `QL_*` cache value, the compiler, the flags, the link mode (static) and LTO.
+
+The checks this stage adds, each with a fault in `faults/manifest.json` that makes it fail for its named reason: the flag check; R3's control-variate estimator and R9's references; the grid local-volatility model against QuantLib's interpolation rule; the lanes-equal-scalar and default-equals-tuned checks in the bench; and a ctest smoke run of every QuantLib row at N = 2^16 against its reference, in the `quantlib` preset, which catches a wrong engine setting such as `withBias(false)` on R7.
+
+Changes to the protocol, decided now and not after seeing a number:
+- The protocol's R = 32 seeds of N each becomes the section 10 rule's B = 64 batches summing to N = 2^22, so QuantLib is judged by the same rule as every oracle row.
+- R9b runs the protocol's smoothed estimator and, beside it, one-step survival, the production estimator for this contract since stage 2.
+- R3's regression-coefficient variant, which the protocol allows as a separate labelled row, is not run.
+- QuantLib's `withSamples(n)` counts samples. With antithetic off, a sample is a path, the same count as ours (E4).
+
 ### Rule slips
 
 None affected a number.
