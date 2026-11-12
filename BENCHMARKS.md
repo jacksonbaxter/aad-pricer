@@ -326,17 +326,31 @@ Metal is an additional backend, float32 only, on `mac-m4max`. AAD does not run o
 
 ## 7. QuantLib comparison
 
-QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mode with the same flags. Protocol and row definitions are in `docs/TASKS.md`.
+QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mode with the same flags. Protocol and row definitions are in `docs/NOTES.md`, "Stage 10: QuantLib comparison", pre-registered before any QuantLib number; `docs/TASKS.md` has only the task list.
 
 ### QL-1: speed
 
 - Target: faster than QuantLib's tuned configuration in paths/s and in RMSE² × time, on every strictly like-for-like row. The size of the gap is not a target.
 - Class: `UNCONFIRMED` as a number. This target is relative and comes from our own run. No published figure states the full setup. The nearest are `QL-3` and `QL-4`, and neither supports a ratio. `quantlib-benchmark` reports tasks/s and has no Asian or barrier Monte Carlo case.
+- No reported run yet. Iteration only, macOS, not a result (`docs/NOTES.md`, "Stage 10 results"): `aadp_bench_quantlib speed` through `measure.sh` on `mac-m4max` at 01f467d, with 9180dc3's code. Single thread on both sides; N = 2^20 paths per timed call on R1 to R9 and 2^18 on R10 to R12; seed 20261113; medians of 3 repetitions after 1 warm-up.
+- What "ours" means. "Ours, scalar" is the production scalar pricer, `pricer::Price`, on one thread. "Ours, fastest" is the faster of that and `simd::PriceLanes` at the build's widest lanes, which give the scalar pricer's bits: on `mac-m4max`, NEON at 2 double lanes, a ceiling of 2 lanes. Rows with no lane form (R3, R10 to R12) have only the scalar column. Each ratio below names which it uses.
+- Same flags, checked. The bench step fails unless a sampled QuantLib unit (`mcbarrierengine.cpp`) and the bench's units show the same optimisation and architecture flags (`scripts/check_quantlib_flags.py`, with a fault). On the Mac they are `-ffp-contract=off -O3 -DNDEBUG -arch arm64`, plus `-flto=thin` in the LTO build. QuantLib's tuned column (extrapolation on every term structure, `IncrementalStatistics` and ThinLTO) gives the default column's estimates exactly. ThinLTO adds nothing measurable: tuned with and without it differ by −1.2% to +1.2% on every row.
+- Paths/s on the strictly like-for-like rows, R1, R2.K100, R3, R4, R5.H095 and R7.H095. QuantLib's default column runs at 0.23 to 0.39 of ours, scalar, and at 0.18 to 0.38 of ours, fastest. Its tuned column runs at 0.25 to 0.44 of ours, scalar, and at 0.20 to 0.43 of ours, fastest.
+- RMSE² × time on the same rows, QuantLib over ours, fastest: 54.3, 11.6, 9.62, 8.49, 3.78 and 4.94 for the default column, and 49.2, 10.3, 8.59, 7.53, 3.43 and 4.38 for tuned. RMSE² is the registered max(SE², d²) at the accuracy run's 2^22 paths, and time is that of 2^22 paths. R1's and R2.K100's ratios take d², from QuantLib distances of +2.89 and +1.53 SE; with SE² alone they would be 6.5 and 4.9.
+- R10 and R11 are strict for speed only, with no reference: QuantLib runs at 0.31 to 0.34 of ours, scalar, the only column there. R12 is a sanity row, not like-for-like: 0.11.
+- So the iteration figures would meet `QL-1` on every strictly like-for-like row, in paths/s and in RMSE² × time. `QL-1` has no verdict until the reported run is stamped.
+- R9a and R9b, the deltas, set QuantLib's central bump of two `NPV()`s against our tape. R9a: QuantLib's default column at 0.49 of ours, scalar, and 0.26 of ours, fastest; 5.96 times ours, fastest, by RMSE² × time.
+- R9b is not a like-for-like row, as `docs/NOTES.md`, "Stage 10", defines it. QuantLib's bump estimates the central difference of the discrete price, not the delta, and its allowance b, 0.000510, carries that truncation. The pre-registration names R9b's bump against the tape as a case where a cheaper but noisier estimator must be judged by RMSE² × time. It is also the one row where QuantLib's paths/s beats ours, scalar: the bump runs at 1.04 (default) to 1.18 (tuned) times our one-step tape on one scalar thread, and at 0.65 to 0.74 of the tape on lanes. By RMSE² × time, the one-step tape on lanes is still 5.0 (tuned) to 5.7 (default) times better. Against the smoothed tape, the bump runs at 0.54 to 0.61 of ours, scalar.
+- Missing for a reported result: a report kind the stamp accepts, and an in-repo summary tool for RMSE² × time. The ratios above were joined by a scratch script outside the repo (`docs/TASKS.md`, "Iterate").
 
 ### QL-2: accuracy
 
 - Target: on each row, distance from the stated high-precision reference (section 9) within the tolerance rule (section 10). Distance between the two engines is never the measure.
 - Class: `STRUCTURAL`.
+- No reported run yet. Iteration only, macOS, not a result (`docs/NOTES.md`, "Stage 10 results"): `aadp_bench_quantlib accuracy` at 01f467d through `heavy.sh`, as registered. N = 2^22 per comparison, seed 20261112, 64 batches, K = 42, critical value 3.8975749765. The ceilings come from a pilot on seed 20261111, committed before the run (01f467d, `bench/quantlib/ceilings.csv`).
+- All 42 comparisons pass both conditions of the section 10 rule, 18 for QuantLib and 24 for ours, and every SE is under its ceiling. QuantLib's largest |z| is 2.89 (R1); ours is at most 1.43 (R7.H085).
+- The QuantLib rows lean the same way together: every row but R5 draws its batches from the same seeds, 100 × base + 1 + b, so their errors are correlated. The Bonferroni bound still holds, but the 42 z-values are not independent draws.
+- The raw file is in the research cache. Committing it needs a curation step or a report kind (`docs/TASKS.md`, "Iterate").
 
 ### QL-3: QuantLib Asian Monte Carlo: about 115,400 samples/s
 
@@ -344,6 +358,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "Table 3 shows the performance improvement in comparison with CPU-based Quantlib result (Tolerance = 0.02)", with rows `SampNum 25951 33642 46805` and `CPU Execution time (us) 224911 310856 601068`.
 - Source measured: hardware, compiler, QuantLib version, steps and threads not stated | McAsianAPEngine column, 25,951 samples | CPU time in µs. Derived: 25,951 / 0.224911 s = 115,383 samples/s.
 - Class: `CONTEXT`. A vendor baseline for its own FPGA. The CPU and FPGA prices in that column differ by 0.093 (1.98441 against 1.89144), above the page's own tolerance, so the two sides may not be pricing the same thing. Lead check: done.
+- Context, iteration only, macOS, not a result (`QL-1`'s run): QuantLib's `MCDiscreteArithmeticAPEngine`, control variate off, default column, on one thread, prices R2.K100 (12 steps, 2^20 paths) at 1.049 million paths/s, 9.1 times the vendor's 115,383 samples/s, and R4 (50 steps) at 0.253 million. Not like-for-like: the vendor's hardware, compiler, QuantLib version, steps and threads are not stated, and its sample counts come from a tolerance of 0.02.
 
 ### QL-4: QuantLib European Monte Carlo, one step: about 2.33 million paths/s
 
@@ -351,6 +366,7 @@ QuantLib v1.44 and Boost 1.92.0, built through pinned FetchContent in release mo
 - Quote: "Baseline is Quantlib, a Widely Used C++ Open Source Library, running on platform with 2 Intel(R) Xeon(R) CPU E5-2690 v4 @3.20GHz, 8 cores per processor and 2 threads per core.", with `Baseline 20.155ms` and "workload 1 steps, 47000 paths".
 - Source measured: 2 × Xeon E5-2690 v4, compiler, QuantLib version and thread count for the run not stated | put K=40, S=36, r 6%, vol 20%, dividend 0, T=1, 1 step, 47,000 paths, tolerance 0.02 | execution time, what it includes not stated. Derived: 47,000 / 0.020155 s = 2.33 million paths/s.
 - Class: `CONTEXT`. Vendor baseline. One step says little about cost per path on an Asian or barrier. The page's prose says 488X and 1954X while its table says 380X and 1521X, and the table's own times give the latter. Lead check: done.
+- Not attempted. No row of the registered protocol, R1 to R12 (`docs/NOTES.md`, "Stage 10"), is a European with one step, so no QuantLib run can be set beside this figure. Adding such a row is decided against for this phase (`docs/TASKS.md`, "Iterate").
 
 ## 8. SVI
 
