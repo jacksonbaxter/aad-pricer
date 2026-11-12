@@ -244,7 +244,7 @@ Build only behind an option, because 985 source files make it a long build.
 - [x] Fix the failures of run 41942650525 at a398d1f, which passed 16 of 22 jobs: 1029047. Both tidy jobs flagged an x86-only test branch the Mac's tidy cannot see, and four lane jobs lacked the fallback-cost binary, so its smoke test was skipped. Run 41953763165 at 1029047 passed 22 of 22
 - [x] Run the 8-lane tests on every CI run: Intel SDE 10.13.1 `-skx` where the runner lacks AVX-512, at a pinned URL and sha256 (36d701d), with the fault `check-actionlint-sde-launcher` (a6be05a). Run 41957624701 at a6be05a passed 22 of 22
 - [x] Fix the failure of run 42018873540 at 23936a9, which failed only `clang-tidy-libstdcxx`, on two findings that only libstdc++ shows: 2b6f343. Run 42023625872 at 2b6f343 passed 22 of 22
-- [ ] `scripts/verify_commits.sh` needs rsync, which the Linux host lacks. Fix before stage 12
+- [x] `scripts/verify_commits.sh` needs rsync, which the Linux host lacks. Fix before stage 12. 67e340e syncs with `scripts/sync_tree.py` instead, tested by `data_verify_commits_script`, with the faults `check-verify-sync-rewrites-all` and `check-verify-commits-replaces-data-link` caught
 
 ## Phase 4: Final review and Done
 
