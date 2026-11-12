@@ -1,4 +1,4 @@
-// aadp_bench_quantlib: QuantLib v1.44 against this project's pricer (NOTES.md, "Stage 10").
+// aadp_bench_quantlib: QuantLib v1.44 against this project's pricer (docs/NOTES.md, "Stage 10").
 //
 //   aadp_bench_quantlib smoke [--out <file>]
 //       every comparison at N = 2^16 on seed 20261114 against its reference, condition 1 only,
@@ -110,7 +110,8 @@ bool Lto() { return build_info::cxx_flags.contains("-flto"); }
 std::string Header(const Options& o) {
   std::ostringstream h;
   const platform::CpuInfo cpu = platform::read_cpu_info();
-  h << "# aadp_bench_quantlib " << o.mode << " (NOTES.md, Stage 10). ITERATION ONLY, not a result\n"
+  h << "# aadp_bench_quantlib " << o.mode
+    << " (docs/NOTES.md, Stage 10). ITERATION ONLY, not a result\n"
     << "# commit: " << o.commit << "\n"
     << "# host: " << platform::detect_host_label() << "\n"
     << "# cpu: " << cpu.cpu_model << "\n"
@@ -445,7 +446,8 @@ int RunPilot(const Options& o) {
               << std::flush;
   }
   const std::string header =
-      "SE ceilings for the stage 10 accuracy run (NOTES.md, \"Stage 10\"), committed before it.\n"
+      "SE ceilings for the stage 10 accuracy run (docs/NOTES.md, \"Stage 10\"), "
+      "committed before it.\n"
       "Pilot: aadp_bench_quantlib pilot, seed 20261111, N_pilot = 2^20 per comparison, commit " +
       o.commit +
       ".\nceiling = factor * se_pilot * sqrt(N_pilot / 2^22), rounded up to 3 figures; factor "

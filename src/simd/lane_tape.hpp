@@ -1,6 +1,6 @@
-// The vector tape: one tape per group of N lanes, namespace aadp::simd (NOTES.md, "Vector tape:
-// design and oracle"). Statements and operand indices are recorded once per group; each lane has
-// its own values, partials and adjoints, and the reverse sweep runs across the lanes.
+// The vector tape: one tape per group of N lanes, namespace aadp::simd (docs/NOTES.md, "Vector
+// tape: design and oracle"). Statements and operand indices are recorded once per group; each lane
+// has its own values, partials and adjoints, and the reverse sweep runs across the lanes.
 //
 // Layout, per entry, for N = MaxLanes(D):
 //   LaneTapeReal  the N values as one vector, a 4-byte index and a 1-byte lane mask, padded to
@@ -119,7 +119,7 @@ class LaneTape {
   using Real = LaneTapeReal<D>;
   static_assert(std::is_trivially_copyable_v<Real>);
   // The values, index and mask, padded to the vector: 16 bytes per lane, except one lane on x86,
-  // where Highway keeps a lane in a 16-byte register (NOTES.md).
+  // where Highway keeps a lane in a 16-byte register (docs/NOTES.md).
   static_assert(sizeof(Real) <= 16 * kLanes || (kLanes == 1 && sizeof(Real) <= 32),
                 "the lane active type is at most 16 bytes per lane");
 

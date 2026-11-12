@@ -831,7 +831,7 @@ std::string files_table(std::string_view label, const HostFiles& host) {
   }
   out +=
       "\n### Fault-injection reports\n\nEach plants one bug at a time and records whether its "
-      "check caught it. The manifest has grown since; `NOTES.md` has the later runs.\n\n"
+      "check caught it. The manifest has grown since; `docs/NOTES.md` has the later runs.\n\n"
       "| file | commit | time (UTC) | faults run | scope | summary |\n|---|---|---|---|---|---|\n";
   for (const FaultEntry& e : host.faults) {
     const auto& h = e.report.header;
@@ -870,7 +870,7 @@ constexpr std::string_view kResultsIntro =
     "each stamped by `aadp_results_stamp`, and the measured oracle runs in `references/`. "
     "No table holds two hosts. The targets and their sources are in "
     "[BENCHMARKS.md](BENCHMARKS.md), and the findings behind the numbers in "
-    "[NOTES.md](NOTES.md).\n\n"
+    "[docs/NOTES.md](docs/NOTES.md).\n\n"
     "## Headline\n\n"
     "The README's headline rows, chosen in `results/headline.csv`, with how each value is "
     "computed. A row's target is its heading in `BENCHMARKS.md`.\n\n";

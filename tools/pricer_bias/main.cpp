@@ -7,7 +7,7 @@
 // Reiner-Rubinstein closed form for continuous monitoring and the BGK recursion for discrete
 // (references/oracle_values.csv). Delta is the pathwise derivative through the forward-mode Dual,
 // so the hard indicator shows the naive failure. The bridge is also run against the discrete
-// reference, which is the misuse the pricer refuses (NOTES.md: never on a discrete contract).
+// reference, which is the misuse the pricer refuses (docs/NOTES.md: never on a discrete contract).
 //
 // Expectations, stated before the first run, each judged by |bias| against t SE with t the
 // Bonferroni critical value over the expectation rows (alpha_F 0.01, B 64):

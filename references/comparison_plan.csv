@@ -5,7 +5,7 @@
 # b, reference rows: the reference's own b. b, FD rows: fd_b_factor * (|mean(FD(2h) - FD(h))| + critical * SE of that mean) / 3, from the pilot's two-h check. fd_b_factor 2: higher-order terms and one more pilot's worth of noise.
 # FD rows compare the Dual estimate with FD(h) on the same paths, and SE is that of the paired batch difference. The step h is in the reference field.
 # Awaiting rows fix nothing yet. They get a ceiling from their own pilot before their first measured run, and they already count in K.
-# Stage 8 knock-in rows (P3.KID, P3.KIC; NOTES.md, "Stage 8"): the production pricer's tape against the reference in references/oracle_values.csv. Ceilings from references/pilot_results_stage8.csv with ceiling_factor, b the reference's.
+# Stage 8 knock-in rows (P3.KID, P3.KIC; docs/NOTES.md, "Stage 8"): the production pricer's tape against the reference in references/oracle_values.csv. Ceilings from references/pilot_results_stage8.csv with ceiling_factor, b the reference's.
 # Stage 8 surface rows (P3.AS, P3.DB, P3.CB): the production tape against the central difference of PriceLocalVol at FD:<h*> on the same paths, h* and b from the ladder in references/svi_fd_ladder.csv, ceilings with fd_ceiling_factor. An unresolved row runs at FD:<h_8> and never passes. The surface is the fit to TAIFEX settlements of 2024-11-15, not tradable quotes, reaching 33 days (NOTICE).
 #! K=147
 #! alpha_F=0.01

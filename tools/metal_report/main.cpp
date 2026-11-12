@@ -1,5 +1,5 @@
-// aadp_metal_report: the stage 9 measurements of NOTES.md, "Stage 9". Iteration only: it prints,
-// and stamps nothing. AAD does not run on the GPU; every price here is a price.
+// aadp_metal_report: the stage 9 measurements of docs/NOTES.md, "Stage 9". Iteration only: it
+// prints, and stamps nothing. AAD does not run on the GPU; every price here is a price.
 //
 //   aadp_metal_report --mode=properties
 //       the property kernels: arithmetic and the constructed ties, contraction, denormals,

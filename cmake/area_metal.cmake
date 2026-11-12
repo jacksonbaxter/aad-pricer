@@ -1,6 +1,6 @@
 # Targets for the metal area (Phase 3, stage 9): the float32 line on the CPU, built everywhere,
 # and the Metal GPU backend, built only with AAD_PRICER_ENABLE_METAL. Prices only: AAD does not run
-# on the GPU. See NOTES.md, "Stage 9", and cmake/AadpTargets.cmake for the helpers.
+# on the GPU. See docs/NOTES.md, "Stage 9", and cmake/AadpTargets.cmake for the helpers.
 #
 # AAD_PRICER_ENABLE_METAL defaults to ON when the platform is Apple and an Objective-C++ compiler
 # and the Metal and Foundation frameworks are found, and to OFF otherwise. Asking for it where they

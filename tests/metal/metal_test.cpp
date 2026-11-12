@@ -1,6 +1,6 @@
-// The GPU checks of stage 9, as NOTES.md, "Stage 9", registers them: Philox known answers and the
-// production stream on the GPU, the 23-bit uniform, the property kernels, the command-buffer split,
-// and GPU-2 on the three contracts.
+// The GPU checks of stage 9, as docs/NOTES.md, "Stage 9", registers them: Philox known answers and
+// the production stream on the GPU, the 23-bit uniform, the property kernels, the command-buffer
+// split, and GPU-2 on the three contracts.
 //
 // Every test needs a Metal device. Without one (MTLCreateSystemDefaultDevice gives nil, as on a CI
 // virtual machine) each skips with that reason; .github/workflows/ci.yml allows the skip by name,
@@ -192,7 +192,7 @@ TEST_F(Gpu, NoContraction) {
 }
 
 // Measured on the Apple M4 Max at stage 9 and asserted since, so that a change of device or
-// driver shows (NOTES.md, "Stage 9 results"): float denormals are flushed to zero as inputs
+// driver shows (docs/NOTES.md, "Stage 9 results"): float denormals are flushed to zero as inputs
 // (x * 1, x + 0, x > 0 and x != 0 all see zero) and as results (2^-126 * 2^-k and a difference
 // that lands below 2^-126 give zero). The words are a * b, a + b, a > 0, a != 0 for the pairs of
 // probes::DenormalInputs, in order.

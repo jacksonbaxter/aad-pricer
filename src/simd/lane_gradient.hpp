@@ -7,8 +7,8 @@
 //   MeasureLaneTape(contract, market, config, lanes)
 //       -> what the vector tape holds per group on the first block's paths, for the benchmark
 //
-// How: src/simd/lane_path_gradient.hpp. Why the bits are the scalar gradient's: NOTES.md, "Vector
-// tape: design and oracle".
+// How: src/simd/lane_path_gradient.hpp. Why the bits are the scalar gradient's: docs/NOTES.md,
+// "Vector tape: design and oracle".
 #ifndef AADP_SIMD_LANE_GRADIENT_HPP_
 #define AADP_SIMD_LANE_GRADIENT_HPP_
 

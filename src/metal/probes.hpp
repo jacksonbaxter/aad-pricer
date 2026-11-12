@@ -1,5 +1,6 @@
-// Inputs and CPU references for the property kernels of NOTES.md, "Stage 9", shared by the checks
-// (tests/metal/) and the report (tools/metal_report/). Pure C++: the GPU side is Context::Probe.
+// Inputs and CPU references for the property kernels of docs/NOTES.md, "Stage 9", shared by the
+// checks (tests/metal/) and the report (tools/metal_report/). Pure C++: the GPU side is
+// Context::Probe.
 //
 // Every grid and operand set here is the pre-registered one. Random operands come from Philox,
 // keyed on the property seed, so a run is reproducible.

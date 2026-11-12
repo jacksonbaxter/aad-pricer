@@ -1,8 +1,8 @@
-// Stage 8's plan rules (NOTES.md, "Stage 8"): emit-plan keeps run 1's rows, directives and comment
-// lines byte for byte; the knock-in rows take 1.65 and their reference's b; the surface rows take
-// 3, b by the FD formula from the ladder, and FD:<h*>; an unresolved row round-trips, runs, prints
-// UNRESOLVED and fails the run; the reference estimator's run-1 lines do not change; and the pilot
-// refuses the measured seed.
+// Stage 8's plan rules (docs/NOTES.md, "Stage 8"): emit-plan keeps run 1's rows, directives and
+// comment lines byte for byte; the knock-in rows take 1.65 and their reference's b; the surface
+// rows take 3, b by the FD formula from the ladder, and FD:<h*>; an unresolved row round-trips,
+// runs, prints UNRESOLVED and fails the run; the reference estimator's run-1 lines do not change;
+// and the pilot refuses the measured seed.
 #include <gtest/gtest.h>
 
 #include <cmath>

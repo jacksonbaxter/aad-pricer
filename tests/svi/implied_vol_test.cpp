@@ -1,14 +1,14 @@
 // SVI-1: Black-76 implied volatility through Let's Be Rational, at the precision IEEE double can
 // attain for each quote.
 //
-// The tolerance was stated in NOTES.md ("Stage 6a", "SVI-1 tolerance") before this test first
+// The tolerance was stated in docs/NOTES.md ("Stage 6a", "SVI-1 tolerance") before this test first
 // ran, with its reason. For a quote priced at sigma and inverted to sigma-hat:
 //   vol    |sigma-hat / sigma - 1|   <= 8 eta (1 + C)
 //   price  |V(sigma-hat) / V - 1|    <= 8 eta (1 + 1 / C)
 // with C = V / (sigma dV/dsigma), eta = eps + 2^-1074 / V. Where 8 eta (1 + C) >= 1 no digit of
 // sigma is attainable, and those points are counted, not hidden. A point at its intrinsic value in
 // double must return at-intrinsic with vol 0 and is judged by that and the price bound (JudgeVol
-// says why; NOTES.md has the first run, which applied the vol bound there too).
+// says why; docs/NOTES.md has the first run, which applied the vol bound there too).
 //
 // The grid: T in {0.0137, 0.0274, 0.0833, 0.25, 0.5, 1, 2, 5}, sigma in {0.01, 0.03, 0.1, 0.2,
 // 0.4, 0.8, 1.6, 3.2}, z = ln(K/F) / (sigma sqrt(T)) from -36 to 36 by 0.5, calls and puts,
@@ -46,7 +46,7 @@ constexpr std::array<double, 8> kVols{0.01, 0.03, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2};
 constexpr double kZMax = 36.0;
 constexpr double kZStep = 0.5;
 constexpr int kZCount = 145;
-// The oracle comparison: 2^-36 of the terms' magnitude, on |z| <= 6 and s <= 3 (NOTES.md).
+// The oracle comparison: 2^-36 of the terms' magnitude, on |z| <= 6 and s <= 3 (docs/NOTES.md).
 constexpr double kOracleRelative = 0x1p-36;
 constexpr double kOracleZ = 6.0;
 constexpr double kOracleS = 3.0;

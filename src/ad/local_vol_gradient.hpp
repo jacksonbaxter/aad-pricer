@@ -1,5 +1,5 @@
 // The local-volatility price and its derivative with respect to every raw SVI parameter of
-// every slice, from one backward pass per path (NOTES.md, "Stage 7a").
+// every slice, from one backward pass per path (docs/NOTES.md, "Stage 7a").
 //
 //   PriceLocalVolWithGradient(contract, terms, params, config, rule)
 //       -> {value, gradient[5 j + i] for slice j and parameter i in (a, b, rho, m, sigma),

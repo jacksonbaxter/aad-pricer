@@ -1,6 +1,6 @@
 // The TAIFEX chain into the eSSVI surface fit, with stage 6a's checks on the converted slices and
-// stage 6b's metrics, as NOTES.md, "Stage 7c", pre-registers them; and the converted surface as a
-// pricing surface for 7a's local-volatility pricer. The inputs are settlements, not tradable
+// stage 6b's metrics, as docs/NOTES.md, "Stage 7c", pre-registers them; and the converted surface
+// as a pricing surface for 7a's local-volatility pricer. The inputs are settlements, not tradable
 // quotes, and the surface reaches 33 days only.
 #ifndef AADP_SVI_CHAIN_ESSVI_HPP_
 #define AADP_SVI_CHAIN_ESSVI_HPP_

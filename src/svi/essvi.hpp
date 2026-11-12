@@ -1,7 +1,7 @@
 // eSSVI: SSVI slices with their own correlation (Hendriks and Martini, "The Extended SSVI
 // Volatility Surface", 2017), the arbitrage-free comparison to the raw SVI fit (BENCHMARKS.md
-// SVI-9; NOTES.md, "Stage 7c"). Templated on Real, so that the slice parameters can be the tape's
-// or a Dual's inputs; nothing here branches on anything but the values.
+// SVI-9; docs/NOTES.md, "Stage 7c"). Templated on Real, so that the slice parameters can be the
+// tape's or a Dual's inputs; nothing here branches on anything but the values.
 //
 // A slice, in the (theta, rho, psi) form of Mingone, arXiv 2204.00312, section 2, with psi =
 // theta phi (Corbetta et al., arXiv 1804.04924, section 2.1, eq. (1)):
@@ -13,7 +13,7 @@
 //   sigma = theta sqrt(1 - rho^2) / psi,
 // defined for theta > 0, psi > 0 and |rho| < 1.
 //
-// The constraints, for slices i = 1..N at increasing expiries (NOTES.md, "Stage 7c"):
+// The constraints, for slices i = 1..N at increasing expiries (docs/NOTES.md, "Stage 7c"):
 //   butterfly, each slice (Gatheral and Jacquier, arXiv 1204.0646, Theorem 4.2; Corbetta eqs.
 //   (2), (3)):   B1  psi (1 + |rho|) < 4      B2  psi^2 (1 + |rho|) <= 4 theta
 //   calendar, each adjacent pair (Hendriks and Martini, Proposition 3.5, as Mingone section 2.1
@@ -22,7 +22,7 @@
 //                                                   (1 - rho_1) / (1 - rho_2))
 //     S  psi_2 / psi_1 <= theta_2 / theta_1
 // Corbetta's section 2.2 states N alone as necessary and sufficient; Mingone and Pasquazzi
-// disagree, and S is what they add (NOTES.md, "SVI").
+// disagree, and S is what they add (docs/NOTES.md, "SVI").
 //
 // The global parametrisation of Mingone, section 3.2, eqs. (4) to (6), with f = f_GJ, maps every
 // point of a box onto slices that satisfy all of the above:
@@ -60,8 +60,8 @@ inline constexpr double kLeeMargin = 1e-9;
 
 // The root is taken as hypot takes it, scaled by the larger of |u| and theta, so that neither
 // square underflows where w itself is representable: unscaled, (theta rho)^2 is 0 below
-// theta = 1e-154, and w(0) came out as theta / 2 (NOTES.md, "Stage 7c results", decisions after
-// the pre-registration). theta must be positive.
+// theta = 1e-154, and w(0) came out as theta / 2 (docs/NOTES.md, "Stage 7c results", decisions
+// after the pre-registration). theta must be positive.
 template <class Real>
 Real EssviTotalVariance(const EssviSlice<Real>& s, const Real& k) {
   const Real u = s.psi * k + s.theta * s.rho;
@@ -237,7 +237,7 @@ struct EssviConstraintReport {
 [[nodiscard]] EssviConstraintReport CheckEssviConstraints(
     std::span<const EssviSlice<double>> slices);
 
-// The box of the fit, per coordinate of x (NOTES.md, "Stage 7c"). rho within kRhoBound of +-1
+// The box of the fit, per coordinate of x (docs/NOTES.md, "Stage 7c"). rho within kRhoBound of +-1
 // keeps the converted sigma = theta sqrt(1 - rho^2) / psi above 1e-8 for theta >= 1e-6 (psi <=
 // 2 sqrt(theta) by B2), inside stage 6a's and 7a's validation; c_1 >= kC1Lower keeps psi_1 away
 // from 0, where m and sigma of the converted slice grow without bound.

@@ -1,5 +1,5 @@
 # Stage 8 finite-difference ladder of the 45 surface rows, from aadp_run_oracles pilot
-# --rows stage8. NOTES.md, "Stage 8", registers the step rule and the level rule.
+# --rows stage8. docs/NOTES.md, "Stage 8", registers the step rule and the level rule.
 # level rows: h_l, the mean and SE of D_l, Delta_l = D_l - D_{l+1}, E_l = Delta_{l+1} -
 # Delta_l / 4, whether pair l is consistent with h^2 truncation, and the change of the
 # butterfly-floored and capped path-step counts at theta + h and theta - h against the

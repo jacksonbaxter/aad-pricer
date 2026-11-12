@@ -1,5 +1,5 @@
 // The local-volatility pricer on the surface fitted to the pinned captures. Asserts only what
-// NOTES.md, "Stage 7a", fixed before the first price: the surface builds from the fit,
+// docs/NOTES.md, "Stage 7a", fixed before the first price: the surface builds from the fit,
 // S0 = D_1 F_1, the three contracts validate, a maturity one second past T_3 is refused, prices
 // and tallies are finite and consistent, and tape against Dual holds on 64 paths per contract.
 // Prices, Greeks and floors are reported by aadp_local_vol_report, not asserted here. The files
@@ -49,7 +49,7 @@ namespace fs = std::filesystem;
 constexpr std::uint64_t kSeed = 20261118;
 constexpr std::uint64_t kCheckedPaths = 64;
 // The second, empirical check of tests/ad/local_vol_gradient_test.cpp, because AgreementBound is
-// vacuous here (NOTES.md, "Stage 7a", decisions after the pre-registration).
+// vacuous here (docs/NOTES.md, "Stage 7a", decisions after the pre-registration).
 constexpr double kScaledAgreement = 0x1p-26;
 
 // Tests run with the repo root as working directory.

@@ -1,6 +1,6 @@
 // Market-quote sensitivities through the raw SVI fit to the TAIFEX captures, by the implicit
 // function theorem at the fit's constrained optimum, and their bump-and-recalibrate check
-// (NOTES.md, "Stage 7b"). Every number it prints is iteration only.
+// (docs/NOTES.md, "Stage 7b"). Every number it prints is iteration only.
 //
 //   aadp_quote_sensitivity_report [--options <file>] [--futures <file>]
 //                                 [--mode report|check|timing] [--paths <N>] [--threads <T>]
@@ -19,8 +19,8 @@
 //         slice is refitted by the production fit from the same start; --refit polished (the
 //         default) then moves each refit by one Newton step on its own KKT system, to the exact
 //         KKT point, and --refit production keeps the refit as it stopped, as pre-registered
-//         (NOTES.md, "Stage 7b": the fit stops on its simplex tolerance, and at small h the two
-//         refits' stopping errors do not cancel).
+//         (docs/NOTES.md, "Stage 7b": the fit stops on its simplex tolerance, and at small h the
+//         two refits' stopping errors do not cancel).
 // timing  wall time per contract of the price with its 15 sensitivities, and of the quote
 //         sensitivities on top, single thread, N = 2^16, 5 repetitions: run it through
 //         measure.sh.
@@ -86,7 +86,7 @@ constexpr std::uint32_t kBatches = 64;
 constexpr std::size_t kLevels = 6;
 // d P / d F_j and d P / d D_j: h_0 = 2^-12 F_j and 2^-12 D_j.
 constexpr double kMarketStep = 0x1p-12;
-// The price's own rounding, as a refit error: 2^-44 |P| (NOTES.md, "Stage 7b").
+// The price's own rounding, as a refit error: 2^-44 |P| (docs/NOTES.md, "Stage 7b").
 constexpr double kPriceRounding = 0x1p-44;
 // The adjoint's rounding: kappa 2^-52 of the slice's largest derivative in that component.
 constexpr double kUnitRoundoff = 0x1p-52;
@@ -191,8 +191,8 @@ void Header(const Options& o) {
          "the raw SVI fit to TAIFEX TXO settlements of trade date 2024-11-15.\n"
          "These are daily settlement prices set by the exchange's rules, not tradable quotes.\n"
          "Maturity reaches 33 days only: nothing is extrapolated past the 202412 expiry.\n"
-         "ITERATION ONLY, not a result. Method, chains, KKT treatment and the check: NOTES.md, "
-         "\"Stage 7b\".\n";
+         "ITERATION ONLY, not a result. Method, chains, KKT treatment and the check: "
+         "docs/NOTES.md, \"Stage 7b\".\n";
   std::cout << "compiler: " << aadp::build_info::compiler_id << ' '
             << aadp::build_info::compiler_version << ", " << aadp::build_info::build_type << ", "
             << aadp::build_info::cxx_flags << '\n';

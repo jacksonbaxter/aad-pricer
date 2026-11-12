@@ -35,8 +35,8 @@
 //                    tape-lanes's value and five Greeks (mean, SE and every batch mean) are the
 //                    tape's, bit for bit: the vector tape forms each lane's partials and sweep in
 //                    the scalar tape's order and adds the set-up contributions in path order
-//                    (NOTES.md, "Vector tape: design and oracle"). price-lanes's and tape-lanes's
-//                    values are in value-bits.
+//                    (docs/NOTES.md, "Vector tape: design and oracle"). price-lanes's and
+//                    tape-lanes's values are in value-bits.
 //   lanes-fallback-zero
 //                    no group of tape-lanes fell back to the scalar tape: every Select in the
 //                    pricer's kernels picks between an active Real and a constant. A fallback

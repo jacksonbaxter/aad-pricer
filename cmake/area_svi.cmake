@@ -83,7 +83,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   endif()
 
   # Stage 7a: the slices joined in time, Dupire local variance with the floor rule, the
-  # local-volatility pricer and its gradient in the slice parameters (NOTES.md, "Stage 7a").
+  # local-volatility pricer and its gradient in the slice parameters (docs/NOTES.md, "Stage 7a").
   # Header-only templates on Real, with their double parts here; no Let's Be Rational needed.
   aadp_library(aadp_svi_surface
     SOURCES src/svi/surface.cpp src/svi/local_vol.cpp
@@ -150,7 +150,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   endif()
 
   # Stage 8: the comparison plan's runner with the production estimator beside the reference one,
-  # the finite-difference ladder of the surface rows, and the run-2 fingerprint (NOTES.md,
+  # the finite-difference ladder of the surface rows, and the run-2 fingerprint (docs/NOTES.md,
   # "Stage 8").
   if(TARGET aadp_svi_chain AND TARGET aadp_local_vol_ad AND TARGET aadp_run_oracles_lib)
     aadp_library(aadp_run_oracles_stage8
@@ -226,7 +226,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   endif()
 
   # Stage 7b: quote sensitivities through the fit by the implicit function theorem, on the
-  # second-order tape (NOTES.md, "Stage 7b").
+  # second-order tape (docs/NOTES.md, "Stage 7b").
   if(TARGET aadp_ad)
     aadp_library(aadp_svi_adjoint
       SOURCES src/svi/calibration_adjoint.cpp
@@ -274,7 +274,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   endif()
 
   # Stage 7c: the arbitrage-free eSSVI surface, Mingone's global parametrisation, fitted to all
-  # slices at once, beside the raw SVI fit (NOTES.md, "Stage 7c").
+  # slices at once, beside the raw SVI fit (docs/NOTES.md, "Stage 7c").
   if(TARGET aadp_ad)
     aadp_library(aadp_svi_essvi
       SOURCES src/svi/essvi.cpp src/svi/essvi_fit.cpp

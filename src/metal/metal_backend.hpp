@@ -50,7 +50,7 @@ struct PriceRun {
   std::vector<f32::SpanSum> spans;  // Copied after the clock stops, when asked for.
 };
 
-// The property kernels of NOTES.md, "Stage 9". Each reads and writes 32-bit words; see
+// The property kernels of docs/NOTES.md, "Stage 9". Each reads and writes 32-bit words; see
 // src/metal/kernels.metal for each one's layout.
 enum class ProbeKernel : std::uint8_t {
   kArithmetic,   // (a, b) -> a + b, a - b, a * b, a / b, sqrt(|a|)

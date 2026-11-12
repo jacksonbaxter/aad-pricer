@@ -1,4 +1,4 @@
-// The raw SVI fit report on the TAIFEX captures (NOTES.md, "Stage 6b").
+// The raw SVI fit report on the TAIFEX captures (docs/NOTES.md, "Stage 6b").
 //
 //   aadp_svi_fit [--options <file>] [--futures <file>] [--timing <repetitions>]
 //
@@ -65,7 +65,7 @@ void Header() {
          "quotes.\n"
          "Maturity reaches 33 days only: expiries 202411, 202411W4 and 202412 (5, 12 and 33 "
          "days).\n"
-         "Method, weights, bounds and metrics: NOTES.md, \"Stage 6b\". Nothing is repaired.\n";
+         "Method, weights, bounds and metrics: docs/NOTES.md, \"Stage 6b\". Nothing is repaired.\n";
   std::cout << "compiler: " << aadp::build_info::compiler_id << ' '
             << aadp::build_info::compiler_version << ", " << aadp::build_info::build_type << ", "
             << aadp::build_info::cxx_flags << '\n';

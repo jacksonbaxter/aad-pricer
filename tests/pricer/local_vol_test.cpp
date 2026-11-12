@@ -1,4 +1,4 @@
-// The local-volatility pricer (pricer/local_vol.hpp) against NOTES.md, "Stage 7a", whose
+// The local-volatility pricer (pricer/local_vol.hpp) against docs/NOTES.md, "Stage 7a", whose
 // pre-registration states every tolerance here before this test existed.
 //
 // 1. The sub-stepped kernels at n = 1 on the GBM model give EvaluatePath's bits, for every product
@@ -9,7 +9,7 @@
 //    floor and no cap. On the same uniforms the local-volatility model equals the GBM model in the
 //    same kernel, path by path, within 2^-30 D(T) max(S0, K): log-Euler with a constant volatility
 //    is exact GBM, and the two differ only by the roundings of their drift, variance and
-//    discount, about 1e-11 of that scale at most (NOTES.md gives the derivation).
+//    discount, about 1e-11 of that scale at most (docs/NOTES.md gives the derivation).
 // 4. Validation names each refusal; a maturity one second past the last slice is refused.
 // 5. Price, SE, batch means and the floor tally are the same bits for 1, 2, 3 and 8 threads, and
 //    the tally adds up.

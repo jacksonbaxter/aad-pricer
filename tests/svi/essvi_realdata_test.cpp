@@ -1,4 +1,4 @@
-// The eSSVI surface fit on the pinned captures. Asserts only what NOTES.md, "Stage 7c", fixed
+// The eSSVI surface fit on the pinned captures. Asserts only what docs/NOTES.md, "Stage 7c", fixed
 // before the first eSSVI fit on the real chain: the fit returns for all three slices and
 // converges, the constraint checker finds no violation, each converted slice passes
 // CheckParameters and the converted surface passes ValidateSurface, each Phi_j is stage 6b's
@@ -85,7 +85,7 @@ std::optional<std::vector<ChainSlice>> Slices(const std::string& option_bytes,
 }
 
 // The rounding that separates Phi_j from stage 6b's Objective at the converted parameters, added to
-// the registered 1e-9 relative (NOTES.md, "Stage 7c results", decisions after the
+// the registered 1e-9 relative (docs/NOTES.md, "Stage 7c results", decisions after the
 // pre-registration): the two paths to w differ by rounding (64 eps S), which moves each price by
 // rounding at its own scale. A rounding scale, not a proof: each residual is allowed to move by
 // d_i = 1024 eps V_i / sigma_i, V_i the quoted price, so r_i^2 by d_i (2 |r_i| + d_i). It

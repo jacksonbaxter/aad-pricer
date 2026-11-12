@@ -1,6 +1,6 @@
 // The eSSVI surface fit (src/svi/essvi_fit.hpp) on hand-made parameters only, never chain data.
-// Every surface, seed and tolerance here was stated in NOTES.md, "Stage 7c", before any of these
-// tests ran.
+// Every surface, seed and tolerance here was stated in docs/NOTES.md, "Stage 7c", before any of
+// these tests ran.
 #include "svi/essvi_fit.hpp"
 
 #include <gtest/gtest.h>
@@ -99,7 +99,7 @@ Surface Fitted(const EssviFitResult& r) {
 }
 
 // The rounding that separates Phi_j from stage 6b's Objective at the converted parameters, added to
-// the registered 1e-9 relative (NOTES.md, "Stage 7c results", decisions after the
+// the registered 1e-9 relative (docs/NOTES.md, "Stage 7c results", decisions after the
 // pre-registration): the two paths to w differ by rounding (64 eps S), which moves each price by
 // rounding at its own scale. A rounding scale, not a proof: each residual is allowed to move by
 // d_i = 1024 eps V_i / sigma_i, V_i the quoted price, so r_i^2 by d_i (2 |r_i| + d_i). It

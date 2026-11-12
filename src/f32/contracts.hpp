@@ -1,4 +1,4 @@
-// The three contracts stage 9 pre-registered (NOTES.md, "Stage 9"): the terms of the GBM
+// The three contracts stage 9 pre-registered (docs/NOTES.md, "Stage 9"): the terms of the GBM
 // workloads in bench/aad_workloads.cpp, restated here so that the tests and the report do not
 // reach into bench/.
 #ifndef AADP_F32_CONTRACTS_HPP_

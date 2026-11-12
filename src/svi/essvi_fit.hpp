@@ -1,5 +1,5 @@
 // The eSSVI surface fit to the same quotes, weights and objective as the raw SVI fit of stage 6b,
-// all slices at once (BENCHMARKS.md SVI-9; NOTES.md, "Stage 7c", pre-registered before any fit
+// all slices at once (BENCHMARKS.md SVI-9; docs/NOTES.md, "Stage 7c", pre-registered before any fit
 // on the real chain).
 //
 // Objective: Phi = sum over slices j and quotes i of r_ji^2, r_ji = (V_model,ji - V_ji) / noise_ji,

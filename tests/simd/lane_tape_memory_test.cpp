@@ -5,7 +5,7 @@
 // over its lanes; the adjoints apart.
 //
 // Expectations, stated before measuring:
-//   layout   operand bytes are 12 at one lane and 5 + 8 N above it (lane_tape.hpp, NOTES.md);
+//   layout   operand bytes are 12 at one lane and 5 + 8 N above it (lane_tape.hpp, docs/NOTES.md);
 //   union    a group records the union of its lanes' statements and operands, so it holds at
 //            least as many as its largest lane does on the scalar tape;
 //   bound    the tape never holds more than one group: after many groups the allocated bytes are

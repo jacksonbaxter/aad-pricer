@@ -1,6 +1,6 @@
-// Stage 8's first steps on the fitted chain (NOTES.md, "Stage 8"): each of the 15 h0 against the
-// closed form, M taken on k = -0.5, -0.499, ..., 0.5 and not over the quoted range, and each step
-// inside the validated domain on both sides. Skips, visibly, without the captures.
+// Stage 8's first steps on the fitted chain (docs/NOTES.md, "Stage 8"): each of the 15 h0 against
+// the closed form, M taken on k = -0.5, -0.499, ..., 0.5 and not over the quoted range, and each
+// step inside the validated domain on both sides. Skips, visibly, without the captures.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -27,7 +27,7 @@ fs::path DataDir() {
   return override_dir != nullptr ? fs::path(override_dir) : fs::path("data");
 }
 
-// The closed forms of NOTES.md, "Stage 8", written out again here.
+// The closed forms of docs/NOTES.md, "Stage 8", written out again here.
 double Slope(const svi::RawSvi<double>& p, std::size_t parameter, double k) {
   const double x = k - p.m;
   const double r = std::hypot(x, p.sigma);

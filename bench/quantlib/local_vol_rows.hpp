@@ -1,5 +1,5 @@
 // R10 to R12 of the QuantLib comparison: speed and sanity rows under local volatility, never
-// judged for accuracy (NOTES.md, "Stage 10").
+// judged for accuracy (docs/NOTES.md, "Stage 10").
 //
 // The surface is synthetic and written here, so no market data is involved: raw SVI slices at
 // T = 0.25, 0.5 and 1 with w_j(k) = T_j (0.02 + 0.1 (rho (k - m) + sqrt((k - m)^2 + s^2))),

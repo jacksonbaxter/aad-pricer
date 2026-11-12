@@ -1,5 +1,5 @@
-// QuantLib's side of the comparison (NOTES.md, "Stage 10"). QuantLib v1.44 is linked, through its
-// public headers, and never copied or patched; only this file's .cpp includes it.
+// QuantLib's side of the comparison (docs/NOTES.md, "Stage 10"). QuantLib v1.44 is linked, through
+// its public headers, and never copied or patched; only this file's .cpp includes it.
 //
 // Every engine runs PseudoRandom (Mersenne Twister and Acklam's inverse), no Brownian bridge, no
 // antithetic paths, a fixed sample count and a nonzero seed, on a fixed evaluation date with flat

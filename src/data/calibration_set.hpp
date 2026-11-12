@@ -10,7 +10,8 @@
 
 #include "data/taifex_options.hpp"
 
-// The row filter from NOTES.md, "Recommended calibration set". This selects rows and fits nothing.
+// The row filter from docs/NOTES.md, "Recommended calibration set". This selects rows and fits
+// nothing.
 namespace aadp {
 
 inline constexpr std::string_view kCalibrationContract = "TXO";
@@ -41,7 +42,8 @@ enum class CalibrationError : std::uint8_t {
 // - volume > 0
 // - settlement_price == last_trade_price
 // - settlement_price >= kMinSettlementPoints
-// Which expiries to use is the caller's choice: the set in NOTES.md is 202411, 202411W4, 202412.
+// Which expiries to use is the caller's choice: the set in docs/NOTES.md is 202411, 202411W4,
+// 202412.
 std::expected<std::vector<CalibrationSlice>, CalibrationError> select_calibration_set(
     std::span<const taifex::OptionRow> rows, std::span<const ExpiryForward> forwards);
 
@@ -63,11 +65,11 @@ struct ButterflyCounts {
 };
 
 // Phase 1's input butterfly count (chain-verify/scripts/profile_recommended.py), stated in
-// NOTES.md, "Stage 6b". For each right, strikes in increasing order, every three adjacent points:
-// with w = (K3 - K2) / (K3 - K1), the excess is P2 - (w P1 + (1 - w) P3). Non-convex: excess above
-// kButterflyGuard. Beyond half a tick: above w h1 + h2 + (1 - w) h3 + kButterflyGuard, h being half
-// of settlement_tick at each price. The guard keeps a difference that is only decimal rounding
-// from counting; the smallest half-tick is 0.05.
+// docs/NOTES.md, "Stage 6b". For each right, strikes in increasing order, every three adjacent
+// points: with w = (K3 - K2) / (K3 - K1), the excess is P2 - (w P1 + (1 - w) P3). Non-convex:
+// excess above kButterflyGuard. Beyond half a tick: above w h1 + h2 + (1 - w) h3 + kButterflyGuard,
+// h being half of settlement_tick at each price. The guard keeps a difference that is only decimal
+// rounding from counting; the smallest half-tick is 0.05.
 inline constexpr double kButterflyGuard = 1e-9;
 ButterflyCounts count_butterflies(std::span<const StrikePrice> points);
 

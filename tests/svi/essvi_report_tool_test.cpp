@@ -1,6 +1,6 @@
 // Runs the real aadp_essvi_report binary on synthetic files made from hand-written eSSVI
-// parameters (NOTES.md, "Stage 7c": H, converted to raw SVI), at reduced path counts. Nothing here
-// comes from a TAIFEX file, and no number it prints is a result.
+// parameters (docs/NOTES.md, "Stage 7c": H, converted to raw SVI), at reduced path counts. Nothing
+// here comes from a TAIFEX file, and no number it prints is a result.
 
 #include <gtest/gtest.h>
 

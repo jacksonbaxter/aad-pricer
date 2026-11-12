@@ -1,5 +1,5 @@
 // Quote sensitivities of the fitted TAIFEX chain, and the pieces of the bump-and-recalibrate check
-// (NOTES.md, "Stage 7b"). The inputs are settlements, not tradable quotes.
+// (docs/NOTES.md, "Stage 7b"). The inputs are settlements, not tradable quotes.
 //
 // Two chains from a settlement V_i of a calibration quote to the fitted parameters:
 //   market fixed    F, D and sigma_leg held at the parity regression's values: d theta* / d V_i

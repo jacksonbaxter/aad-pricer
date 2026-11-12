@@ -1,4 +1,4 @@
-// The ladder rule of the 45 surface rows (NOTES.md, "Stage 8") on hand-made batch tables whose
+// The ladder rule of the 45 surface rows (docs/NOTES.md, "Stage 8") on hand-made batch tables whose
 // answer is known, the first step h0 on a slice whose maximum slope is known in closed form, the
 // domain refusal, and a bump that moves g through 0 on a path-step and so must change the tally.
 #include <gtest/gtest.h>

@@ -1,7 +1,8 @@
 // Hand-made raw SVI surfaces for the stage 7a tests. Nothing here comes from market data.
 //
 // Three expiries at 5, 12 and 33 days, as in the calibration set.
-//   A  free of static arbitrage: stage 6b's synthetic slices A, B and C (NOTES.md, "Stage 6b").
+//   A  free of static arbitrage: stage 6b's synthetic slices A, B and C (docs/NOTES.md,
+//      "Stage 6b").
 //   B  shaped like a raw SVI fit with rho near +1 and the vertex to the right of the money, so
 //      that adjacent slices cross on the right and each slice has a density violation there: the
 //      floors fire, as they are expected to on the fitted surface.

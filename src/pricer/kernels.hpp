@@ -188,7 +188,7 @@ PathValue<Real> OutOneStep(const Contract& c, const Model& model, std::span<cons
 }
 
 // Discrete, hard indicator at the dates. The indicator carries no derivative, which is what makes
-// the pathwise Greeks of this estimator wrong (the naive failure, NOTES.md).
+// the pathwise Greeks of this estimator wrong (the naive failure, docs/NOTES.md).
 template <class Real, class Model>
 PathValue<Real> OutHard(const Contract& c, const Model& model, std::span<const double> u) {
   const bool down = c.barrier.direction == Direction::kDown;

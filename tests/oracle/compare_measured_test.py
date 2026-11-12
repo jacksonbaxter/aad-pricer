@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run 2's curation (NOTES.md, "Stage 8") on a synthetic runner output.
+"""Run 2's curation (docs/NOTES.md, "Stage 8") on a synthetic runner output.
 
     python3 -I tests/oracle/compare_measured_test.py
 

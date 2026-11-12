@@ -12,7 +12,7 @@
 // the conditioning of the quote, C = V / (sigma dV/dsigma): a relative error e in V moves sigma by
 // about C e. VolConditionNumber returns C, from Jäckel's BlackAccuracyFactor, which evaluates it in
 // scaled form so that it does not underflow in the wings. The tolerance and its reason are in
-// NOTES.md, "Stage 6a", and tests/svi/implied_vol_test.cpp measures it.
+// docs/NOTES.md, "Stage 6a", and tests/svi/implied_vol_test.cpp measures it.
 #ifndef AADP_SVI_IMPLIED_VOL_HPP_
 #define AADP_SVI_IMPLIED_VOL_HPP_
 

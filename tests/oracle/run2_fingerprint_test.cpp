@@ -1,4 +1,4 @@
-// Run 2's code at the development seed (NOTES.md, "Stage 8", and the lead's answer recorded in
+// Run 2's code at the development seed (docs/NOTES.md, "Stage 8", and the lead's answer recorded in
 // "Stage 8a results"): every row of the committed plan through the production estimator at seed
 // 20261128 and N / 1024, as hex floats, bit for bit against references/run2_fingerprint_<host>.txt
 // on the two reportable hosts. Each host keeps its own file; on any other host, CI's included,

@@ -14,8 +14,8 @@
 // The search is smaller than the pre-registered one (2 random starts, 60 iterations), through the
 // same code, so an input runs in milliseconds.
 //
-// Properties (NOTES.md, "Stage 7c"). Nothing throws, crashes or trips a sanitizer, and the result
-// is either a fit or an explicit error:
+// Properties (docs/NOTES.md, "Stage 7c"). Nothing throws, crashes or trips a sanitizer, and the
+// result is either a fit or an explicit error:
 // - an error has a name and says what the input shows: a bad slice, quote or expiry order at a
 //   slice index inside the input, every slice before it good and in order; a bad slice exactly when
 //   that slice's F, D or T is not finite and positive; a bad quote at an index inside the slice
@@ -179,7 +179,7 @@ void CheckFit(const std::vector<FitSlice>& slices, const EssviFitResult& r) {
     for (const double x : s.residual) sum += x * x;
     AADP_FUZZ_REQUIRE(Close(sum, s.objective), "Phi_j is the sum of its squared residuals");
     // Within 1e-9 relatively plus the rounding scale of tests/svi/essvi_fit_test.cpp: each residual
-    // may move by d_i = 1024 eps V_i / sigma_i (NOTES.md, "Stage 7c results").
+    // may move by d_i = 1024 eps V_i / sigma_i (docs/NOTES.md, "Stage 7c results").
     double rounding = 0.0;
     for (std::size_t i = 0; i < q; ++i) {
       const FitQuote& quote = slices[j].quotes[i];

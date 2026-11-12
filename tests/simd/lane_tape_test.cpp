@@ -1,4 +1,4 @@
-// The vector tape on its own, at every lane width this build can run (NOTES.md, "Vector tape:
+// The vector tape on its own, at every lane width this build can run (docs/NOTES.md, "Vector tape:
 // design and oracle", oracle items 3 and 4):
 // - B16: on random straight-line programs (tests/ad/random_program.hpp) with each lane at its own
 //   inputs, every lane's value and input adjoints are those of the scalar tape on the same program

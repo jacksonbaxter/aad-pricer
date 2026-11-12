@@ -29,7 +29,7 @@ using aadp::taifex::OptionRow;
 using aadp::taifex::ReadError;
 using aadp::taifex::Session;
 
-// Published in NOTES.md, "Recommended calibration set". The regression behind them is Phase 3.
+// Published in docs/NOTES.md, "Recommended calibration set". The regression behind them is Phase 3.
 std::vector<aadp::ExpiryForward> published_forwards() {
   return {{.expiry = "202411", .forward = 22761.47},
           {.expiry = "202411W4", .forward = 22786.07},

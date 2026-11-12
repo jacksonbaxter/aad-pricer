@@ -2,7 +2,7 @@
 
 # Results
 
-Every number here comes from a committed file: the results files in `results/<host>/`, each stamped by `aadp_results_stamp`, and the measured oracle runs in `references/`. No table holds two hosts. The targets and their sources are in [BENCHMARKS.md](BENCHMARKS.md), and the findings behind the numbers in [NOTES.md](NOTES.md).
+Every number here comes from a committed file: the results files in `results/<host>/`, each stamped by `aadp_results_stamp`, and the measured oracle runs in `references/`. No table holds two hosts. The targets and their sources are in [BENCHMARKS.md](BENCHMARKS.md), and the findings behind the numbers in [docs/NOTES.md](docs/NOTES.md).
 
 ## Headline
 
@@ -37,7 +37,7 @@ The header of run 1, `references/measured_results.csv`:
 
 The header of run 2, `references/measured_results_run2.csv`:
 
-    Measured run 2, curated from the runner's output (NOTES.md, "Stage 8b: measured run 2").
+    Measured run 2, curated from the runner's output (docs/NOTES.md, "Stage 8b: measured run 2").
     Plan commit a977c5f, code of bf484f3 run at commit 4398aee, seed 271828, B=64, K=147, critical=4.266218, alpha_F=0.01.
     Estimator: production, ad::PriceWithGradient and ad::PriceLocalVolWithGradient; FD rows
     against pricer::Price and pricer::PriceLocalVol on the same paths. Host mac-m4max, macOS.
@@ -214,7 +214,7 @@ The header of run 2, `references/measured_results_run2.csv`:
 
 ### Fault-injection reports
 
-Each plants one bug at a time and records whether its check caught it. The manifest has grown since; `NOTES.md` has the later runs.
+Each plants one bug at a time and records whether its check caught it. The manifest has grown since; `docs/NOTES.md` has the later runs.
 
 | file | commit | time (UTC) | faults run | scope | summary |
 |---|---|---|---|---|---|
@@ -585,7 +585,7 @@ Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound)
 
 ### Fault-injection reports
 
-Each plants one bug at a time and records whether its check caught it. The manifest has grown since; `NOTES.md` has the later runs.
+Each plants one bug at a time and records whether its check caught it. The manifest has grown since; `docs/NOTES.md` has the later runs.
 
 | file | commit | time (UTC) | faults run | scope | summary |
 |---|---|---|---|---|---|

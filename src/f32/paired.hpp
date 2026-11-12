@@ -10,7 +10,7 @@
 //   PairedDifference(a, b)     mean of a - b per path, with its SE from the per-span differences
 //                              of the same paths: sd(d_span) / (S sqrt(N / S))
 //
-// NOTES.md, "Stage 9", pre-registers the columns, the uniforms and the SEs.
+// docs/NOTES.md, "Stage 9", pre-registers the columns, the uniforms and the SEs.
 #ifndef AADP_F32_PAIRED_HPP_
 #define AADP_F32_PAIRED_HPP_
 

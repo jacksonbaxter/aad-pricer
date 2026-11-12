@@ -659,6 +659,26 @@
       "data": true
     },
     {
+      "id": "check-repo-scan-notes-file",
+      "kind": "check",
+      "covers": "scripts/scan_repo.py: a tracked agent notes file",
+      "bug": "The scan's list of agent notes files loses the root one the repo keeps on disk, untracked and ignored, so tracking it by mistake would pass the scan.",
+      "edits": [
+        {
+          "file": "scripts/scan_repo.py",
+          "find": "    r\"(?:^|/)(?:CLAUDE(?:\\.local)?\\.md|AGENTS\\.md|",
+          "replace": "    r\"(?:^|/)(?:AGENTS\\.md|"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/scan_repo_test.py", "{build}/data_test_scratch/scan_repo"],
+      "detect": "test",
+      "reason": "^FAILED tracked root notes file fails the scan: 0, expected 1$",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
       "id": "check-wall",
       "kind": "check",
       "covers": "-Wall in cmake/AadpWarnings.cmake",

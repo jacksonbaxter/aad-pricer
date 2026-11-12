@@ -1,7 +1,7 @@
 // The vector tape against the scalar tape on arbitrary contracts and markets (EVIDENCE B23, and
-// NOTES.md, "Vector tape: design and oracle"), at every lane width the build can run. It shares
-// fuzz_pricer.cpp's input layout and seed corpus: 88 bytes decode to a contract, a market, a seed
-// and a thread count.
+// docs/NOTES.md, "Vector tape: design and oracle"), at every lane width the build can run. It
+// shares fuzz_pricer.cpp's input layout and seed corpus: 88 bytes decode to a contract, a market, a
+// seed and a thread count.
 //
 // Properties, every one bit for bit:
 // - an invalid contract: PriceWithGradientLanes refuses it for the reason PriceWithGradient does;

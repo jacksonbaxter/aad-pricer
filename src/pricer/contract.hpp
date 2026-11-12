@@ -4,7 +4,7 @@
 // reference kernels in src/mc/. Asians fix there, discrete barriers monitor there, and a
 // continuous barrier is bridged between them. The dates scale with T, as theta = -dV/dT needs.
 //
-// Barrier treatments (NOTES.md, "Barrier treatment"):
+// Barrier treatments (docs/NOTES.md, "Barrier treatment"):
 //   continuous  kBridge    log-space Brownian-bridge survival weight, prod (1 - p_n)
 //               kHard      a sampled crossing per step against a second uniform, then a hard
 //                          indicator: the QuantLib MCBarrierEngine estimator of row R5

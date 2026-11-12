@@ -6,7 +6,7 @@
 // libm on float. Everything else is +, -, *, / and comparisons on float, with no contraction on
 // either side (-ffp-contract=off, and `#pragma METAL fp contract(off)` in the library), so the two
 // lines can differ only through those three functions, the GPU's rounding and its denormals, which
-// the property kernels in tests/metal/ measure. The plan is NOTES.md, "Stage 9".
+// the property kernels in tests/metal/ measure. The plan is docs/NOTES.md, "Stage 9".
 //
 // What both compilers accept: no pointers or references (Metal would want an address space), no
 // namespace-scope variables (Metal would want them in `constant`), float literals with an F
@@ -263,7 +263,7 @@ inline float AsianPayoff(Params p, Word path_lo, Word path_hi) {
 // from its law conditioned on the live side, z = -Phi^-1(p (1 - u)) down and Phi^-1(p u) up. A
 // dead step (p = 0) draws from v, as the double kernel does. The draw is floored at 2^-24, the
 // bottom of the range InverseNormalF is fitted on; the double kernel has no floor, so where it
-// binds it is part of this kernel's difference from double, not hidden (NOTES.md, "Stage 9").
+// binds it is part of this kernel's difference from double, not hidden (docs/NOTES.md, "Stage 9").
 inline float OneStepPayoff(Params p, Word path_lo, Word path_hi) {
   const bool down = p.product == static_cast<Word>(Product::kDownOutOneStep);
   float x = 0.0F;

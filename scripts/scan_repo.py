@@ -27,11 +27,8 @@ Exceptions, each counted in the output so that none is silent:
   - User and host: a name that identifies nobody, such as the CI account or a host named after
     its distribution, or a name under three characters, is not searched for, and the output
     says so. A scan on such a machine is weaker than one on a personal machine.
-  - Private note: the one .gitignore line that keeps the local settings file out.
-  - Private note, by digest: the notes file at the repo root, tracked since the first commit,
-    while its sha256 equals PINNED_NOTE_SHA256. Only that path, and only private-note: every
-    other kind still applies to it. Any edit to the file changes the digest, and then each of
-    its private-note findings fires again until someone reviews it and pins the new digest.
+  - Private note: the two .gitignore lines that keep the local settings file and the root notes
+    file out, exact to the file. A notes file that git tracks is always a finding, at any path.
   - A mention of the research folder is not a note: docs and scripts name it on purpose.
   - TAIFEX: the first line of each file, the column header, is not a data row. A row with a
     changed field is not caught, only a whole one. With no data/ this check cannot run, and
@@ -39,7 +36,6 @@ Exceptions, each counted in the output so that none is silent:
 """
 
 import argparse
-import hashlib
 import os
 import re
 import socket
@@ -62,7 +58,7 @@ NUMBERING_CONTEXT = re.compile(rb"(?:section|version|\bv)[\s:=]*$", re.IGNORECAS
 DOCUMENTATION_RANGES = ((192, 0, 2), (198, 51, 100), (203, 0, 113))
 
 # A test of the privacy filter has to feed it these. Made up, and exact to the file. Literals
-# here and in ALLOWED_NOTE_LINE are split so that this file does not match itself.
+# here and in ALLOWED_NOTE_LINES are split so that this file does not match itself.
 SYNTHETIC_ADDRESSES = {("tests/bench/privacy_test.cpp", (10, 1, 2, 3))}
 SYNTHETIC_HOME_PATHS = {("tests/bench/privacy_test.cpp", b"C:" + rb"\\Users\\bob")}
 
@@ -80,9 +76,10 @@ NOTE_MARKERS = re.compile(
     rb"CLAUDE[.]md|[.]claude/|claude[-]opus-|Co-Authored-By[:]|Generated with \[?Claude",
     re.IGNORECASE,
 )
-ALLOWED_NOTE_LINE = (".gitignore", b"/." + b"claude/settings.local.json")
-PINNED_NOTE_PATH = "CLAUDE" + ".md"
-PINNED_NOTE_SHA256 = "0e778692af5ffc985e596f88bf2fd76bd52665f5f1b30bc2f508e6ac290ceeef"
+ALLOWED_NOTE_LINES = {
+    (".gitignore", b"/." + b"claude/settings.local.json"),
+    (".gitignore", b"/CLAUDE" + b".md"),
+}
 
 KINDS = (
     "home-path",
@@ -229,14 +226,6 @@ def read_tracked(root, path):
         raise CannotRun(f"cannot read a tracked file: {path}: {error}") from error
 
 
-def is_pinned_note_file(path, content):
-    return (
-        path == PINNED_NOTE_PATH
-        and content is not None
-        and hashlib.sha256(content).hexdigest() == PINNED_NOTE_SHA256
-    )
-
-
 def ipv4_verdict(path, octets, before):
     """Returns None for a true hit, or the name of the exception that covers it."""
     if max(octets) > 255:
@@ -294,14 +283,11 @@ class Scan:
                 self.hit("host", path, line_for(match.start()))
 
     def scan_notes(self, path, content):
-        pinned = is_pinned_note_file(path, content)
         for match in NOTE_MARKERS.finditer(content):
             line_number = line_of(content, match.start())
             line = content.split(b"\n")[line_number - 1].strip()
-            if (path, line) == ALLOWED_NOTE_LINE:
+            if (path, line) in ALLOWED_NOTE_LINES:
                 self.excuse("note-gitignore-line")
-            elif pinned:
-                self.excuse("note-pinned-file")
             else:
                 self.hit("private-note", path, line_number)
 
@@ -313,14 +299,11 @@ class Scan:
                 if self.rows.holds(line):
                     self.hit("taifex-row", path, number)
 
-    def scan_path(self, path, content):
+    def scan_path(self, path):
         # Line 0 says the path itself matched.
         self.scan_text(path, os.fsencode(path), lambda offset: 0)
         if NOTE_FILES.search(path):
-            if is_pinned_note_file(path, content):
-                self.excuse("note-pinned-file")
-            else:
-                self.hit("private-note", path, 0)
+            self.hit("private-note", path, 0)
         if path == "data" or path.startswith("data/"):
             self.hit("tracked-data", path, 0)
 
@@ -338,7 +321,7 @@ def run(root):
     missing = 0
     for path in paths:
         content = read_tracked(root, path)
-        scan.scan_path(path, content)
+        scan.scan_path(path)
         if content is None:
             missing += 1
             continue

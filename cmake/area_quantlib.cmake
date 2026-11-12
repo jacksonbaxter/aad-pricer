@@ -1,4 +1,4 @@
-# Targets for the QuantLib comparison (Phase 3, stage 10; NOTES.md, "Stage 10"). The rows, the
+# Targets for the QuantLib comparison (Phase 3, stage 10; docs/NOTES.md, "Stage 10"). The rows, the
 # references, the tolerance and our side build everywhere, with no QuantLib, and so do their tests
 # and the flag check's self-test. The bench that links QuantLib builds only with
 # AAD_PRICER_BUILD_QUANTLIB_COMPARE (cmake/AadpDependencies.cmake), in the quantlib and

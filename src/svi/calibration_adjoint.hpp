@@ -1,5 +1,5 @@
 // Sensitivities of a fitted raw SVI slice to its market quotes, by the implicit function theorem
-// at the constrained optimum of the fit (BENCHMARKS.md SVI-10; NOTES.md, "Stage 7b").
+// at the constrained optimum of the fit (BENCHMARKS.md SVI-10; docs/NOTES.md, "Stage 7b").
 //
 // The fit (fit.hpp) minimises Phi(theta; V, F, D, s) = sum_i r_i^2, r_i = (B_i(theta) - V_i) /
 // noise_i, over theta = (a, b, rho, m, sigma), with B_i the Black-76 price at the raw SVI total
@@ -93,7 +93,7 @@ struct AdjointError {
 [[nodiscard]] std::expected<ObjectiveDerivatives, AdjointError> DifferentiateObjective(
     const FitSlice& slice, const SviParams& params, double sigma_leg = 0.0);
 
-// The defaults are NOTES.md, "Stage 7b".
+// The defaults are docs/NOTES.md, "Stage 7b".
 struct AdjointOptions {
   // Above this, the scaled KKT matrix loses more than about 2^-52 kappa of relative accuracy.
   double max_condition = 0x1p40;

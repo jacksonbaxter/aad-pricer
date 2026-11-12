@@ -5,8 +5,8 @@
 // points, two of them dummies for the boundary, 2000 time steps. A tape's cost against this primal
 // is the worst Hogan measured (Adept 32 to 33 times, ADOL-C 106, CppAD 214), because the primal
 // loop is a few multiplies and adds that the compiler optimises freely, while every one of them
-// becomes a statement on the tape (NOTES.md, "AAD"; EVIDENCE B34). Written here from the scheme
-// as the paper states it, not from its listing's code:
+// becomes a statement on the tape (docs/NOTES.md, "AAD"; EVIDENCE B34). Written here from the
+// scheme as the paper states it, not from its listing's code:
 //   flux_i = (c / 2) ((q_i + q_{i+1}) + c (q_i - q_{i+1})),  i = 0..n-2,
 //   q_i   += flux_{i-1} - flux_i,                            i = 1..n-2,
 //   q_0 = q_{n-2}, q_{n-1} = q_1.

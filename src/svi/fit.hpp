@@ -1,5 +1,5 @@
 // Raw SVI fit to one slice of option prices (BENCHMARKS.md SVI-6, SVI-7, SVI-9, SVI-11), as
-// pre-registered in NOTES.md, "Stage 6b".
+// pre-registered in docs/NOTES.md, "Stage 6b".
 //
 // Objective: Phi = sum r_i^2, r_i = (V_model,i - V_i) / noise_i, V_model the Black-76 price at the
 // total variance w(k_i) of raw SVI, k_i = ln(K_i / F).
@@ -85,7 +85,7 @@ inline constexpr std::size_t kBoundCount = 10;
 
 [[nodiscard]] const char* BoundName(Bound bound) noexcept;
 
-// A constraint is active when its slack is at most kActiveTolerance of its scale (NOTES.md,
+// A constraint is active when its slack is at most kActiveTolerance of its scale (docs/NOTES.md,
 // "Stage 6b"). The slack is in natural units: 1 + rho, 1 - rho, b, slope_bound - b (1 + |rho|),
 // a_max - a, m - m_lo, m_hi - m, ln(sigma / sigma_lo), ln(sigma_hi / sigma), and the minimum
 // variance.

@@ -53,7 +53,7 @@ constexpr std::array<Greek, kFirstOrderGreeks> kGreeks = {Greek::kDelta, Greek::
                                                           Greek::kDividendRho, Greek::kTheta};
 constexpr double kNoCeiling = std::numeric_limits<double>::infinity();
 // A knock-in SE ratio above exp(critical sqrt(2 / 126)) = 1.62, or a surface one above 2.9, is a
-// risk to that row's ceiling (NOTES.md, "Stage 8"); reported, never acted on.
+// risk to that row's ceiling (docs/NOTES.md, "Stage 8"); reported, never acted on.
 constexpr double kKnockInRatioRisk = 1.62;
 constexpr double kSurfaceRatioRisk = 2.9;
 
@@ -781,7 +781,7 @@ std::string ChoiceRecord(const std::string& id, const SurfaceLadder& row) {
 std::string EncodeLadder(const std::vector<std::pair<std::string, SurfaceLadder>>& ladders) {
   std::string out =
       "# Stage 8 finite-difference ladder of the 45 surface rows, from aadp_run_oracles pilot\n"
-      "# --rows stage8. NOTES.md, \"Stage 8\", registers the step rule and the level rule.\n"
+      "# --rows stage8. docs/NOTES.md, \"Stage 8\", registers the step rule and the level rule.\n"
       "# level rows: h_l, the mean and SE of D_l, Delta_l = D_l - D_{l+1}, E_l = Delta_{l+1} -\n"
       "# Delta_l / 4, whether pair l is consistent with h^2 truncation, and the change of the\n"
       "# butterfly-floored and capped path-step counts at theta + h and theta - h against the\n"

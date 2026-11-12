@@ -38,7 +38,7 @@ struct RunSummary {
   std::size_t failed = 0;
   std::size_t skipped = 0;
   std::size_t awaiting = 0;
-  // Run, never passed: a surface row whose ladder did not settle (NOTES.md, "Stage 8").
+  // Run, never passed: a surface row whose ladder did not settle (docs/NOTES.md, "Stage 8").
   std::size_t unresolved = 0;
   // Rows the frozen kernels cannot price, which the reference estimator lists and leaves to run 2.
   std::size_t run2_only = 0;
@@ -147,8 +147,8 @@ double LadderB(const BatchStatistics& two_h, double critical);
 // Central differences have truncation c h^2, so FD(2h) - FD(h) = 3 c h^2 and a third of it is the
 // truncation at h. t is the plan's critical value, so noise in the pilot widens b, not narrows it.
 //
-// Stage 8's rows (NOTES.md, "Stage 8"), from its own pilot and ladder: ceiling_factor on the 12
-// knock-in rows, with the reference's b; fd_ceiling_factor on the 45 surface rows, with b by the
+// Stage 8's rows (docs/NOTES.md, "Stage 8"), from its own pilot and ladder: ceiling_factor on the
+// 12 knock-in rows, with the reference's b; fd_ceiling_factor on the 45 surface rows, with b by the
 // FD formula from Delta_l* and the reference "FD:<h*>". A row whose ladder did not settle is
 // unresolved, at "FD:<h_8>". Without stage8 those rows stay awaiting-phase3.
 Plan BuildPlan(const std::vector<PlanTemplateRow>& rows, const ReferenceTable& references,

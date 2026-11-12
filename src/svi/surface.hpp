@@ -1,6 +1,6 @@
 // Raw SVI slices joined in time, with the forward and discount curves that come with them, as
-// NOTES.md, "Stage 7a", pre-registers. Templated on Real, so that the 15 slice parameters can be
-// the tape's inputs; the times, forwards and discounts are passive doubles.
+// docs/NOTES.md, "Stage 7a", pre-registers. Templated on Real, so that the 15 slice parameters can
+// be the tape's inputs; the times, forwards and discounts are passive doubles.
 //
 // Time. Slices j = 0..n-1 at expiries T_0 < ... < T_{n-1}. Total variance is linear in t at fixed
 // k between adjacent slices, and (t / T_0) w_0(k) before the first:
@@ -33,8 +33,8 @@ namespace aadp::svi {
 inline double Value(double x) { return x; }
 
 // Validation limits. Inside them every value and every recorded partial of the surface and of
-// local_vol.hpp is finite (NOTES.md, "Stage 7a", floor rule). Total variance of 1e4 is an implied
-// volatility of 100 at T = 1, and 1e-6 years is 32 seconds.
+// local_vol.hpp is finite (docs/NOTES.md, "Stage 7a", floor rule). Total variance of 1e4 is an
+// implied volatility of 100 at T = 1, and 1e-6 years is 32 seconds.
 inline constexpr std::size_t kMaxSurfaceSlices = 8;
 inline constexpr double kMinSurfaceTime = 1e-6;  // the first expiry, and each gap between two
 inline constexpr double kMaxSurfaceExpiry = 100.0;

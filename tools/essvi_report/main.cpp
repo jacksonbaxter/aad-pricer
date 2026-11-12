@@ -1,4 +1,4 @@
-// The eSSVI surface beside the raw SVI fit on the TAIFEX captures (NOTES.md, "Stage 7c"): the
+// The eSSVI surface beside the raw SVI fit on the TAIFEX captures (docs/NOTES.md, "Stage 7c"): the
 // arbitrage-free comparison of BENCHMARKS.md SVI-9, and its prices as a second line beside 7a's.
 // Every number it prints is iteration only.
 //
@@ -148,7 +148,7 @@ void Header(const Options& o) {
                "quotes.\n"
                "Maturity reaches 33 days only: expiries 202411, 202411W4 and 202412 (5, 12 and "
                "33 days).\n"
-               "ITERATION ONLY, not a result. Method, constraints and tolerances: NOTES.md, "
+               "ITERATION ONLY, not a result. Method, constraints and tolerances: docs/NOTES.md, "
                "\"Stage 7c\". Nothing is repaired.\n";
   std::cout << "compiler: " << aadp::build_info::compiler_id << ' '
             << aadp::build_info::compiler_version << ", " << aadp::build_info::build_type << ", "

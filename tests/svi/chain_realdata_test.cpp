@@ -1,4 +1,4 @@
-// The chain into the fit on the pinned captures. Asserts only what NOTES.md, "Stage 6b", fixed
+// The chain into the fit on the pinned captures. Asserts only what docs/NOTES.md, "Stage 6b", fixed
 // before the first fit: the slices, their sizes and input counts, that every fit returns, and that
 // the checks ran. The fitted values are reported by aadp_svi_fit, not asserted here. The files are
 // never committed. With no file the tests skip, visibly, and say how to get it.
@@ -56,7 +56,7 @@ std::optional<std::string> load(std::string_view name) {
 constexpr std::string_view kOptionsFile = "DailyMarketReportOpt.csv";
 constexpr std::string_view kFuturesFile = "DailyMarketReportFut.csv";
 
-// NOTES.md, "Recommended calibration set" and the stage 6b pre-registration.
+// docs/NOTES.md, "Recommended calibration set" and the stage 6b pre-registration.
 constexpr std::array<std::size_t, 3> kRows = {65, 51, 64};
 constexpr std::array<std::size_t, 3> kTriples = {61, 47, 60};
 constexpr std::array<std::size_t, 3> kNonConvex = {15, 19, 17};

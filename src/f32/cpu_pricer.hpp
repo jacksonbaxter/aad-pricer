@@ -13,7 +13,7 @@
 //   ToEstimate(moments, scale)                  mean and per-path sample SE, in currency
 //
 // The kernels are float_kernels.hpp's, run on the host's float with libm's exp, log and sqrt.
-// NOTES.md, "Stage 9", is the plan.
+// docs/NOTES.md, "Stage 9", is the plan.
 #ifndef AADP_F32_CPU_PRICER_HPP_
 #define AADP_F32_CPU_PRICER_HPP_
 

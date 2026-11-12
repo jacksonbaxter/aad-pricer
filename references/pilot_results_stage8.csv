@@ -1,5 +1,5 @@
 # Stage 8 pilot, from aadp_run_oracles pilot --rows stage8 --estimator production. Seed
-# differs from any measured seed. NOTES.md, "Stage 8", registers the rule.
+# differs from any measured seed. docs/NOTES.md, "Stage 8", registers the rule.
 # Estimator: the production pricer's tape, ad::PriceWithGradient on the 12 knock-in rows
 # and ad::PriceLocalVolWithGradient on the 45 surface rows.
 # Knock-in rows: reference is the value in references/oracle_values.csv, se the tape's,

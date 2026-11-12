@@ -12,7 +12,7 @@
 #include "data/taifex_futures.hpp"
 #include "data/taifex_options.hpp"
 
-// Forward, discount factor and time to expiry for each TXO expiry, as NOTES.md, "Stage 6b",
+// Forward, discount factor and time to expiry for each TXO expiry, as docs/NOTES.md, "Stage 6b",
 // defines them, after Phase 1's chain profile. Everything here is computed from settlements,
 // which are not tradable prices.
 namespace aadp {

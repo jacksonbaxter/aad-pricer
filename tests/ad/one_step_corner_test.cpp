@@ -1,4 +1,4 @@
-// Check 6: the one-step survival adjoint at p near 1 (NOTES.md, "Barrier treatment"), where
+// Check 6: the one-step survival adjoint at p near 1 (docs/NOTES.md, "Barrier treatment"), where
 // dPhi^-1(p v)/dp = v / phi(Phi^-1(p v)) is unbounded as p v -> 1.
 //
 // One step of a down-and-out call, S0 = 100, with the barrier placed a standard deviations below

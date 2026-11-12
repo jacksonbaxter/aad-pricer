@@ -1,4 +1,4 @@
-// Dupire local variance and the floor rule (svi/local_vol.hpp) against NOTES.md, "Stage 7a",
+// Dupire local variance and the floor rule (svi/local_vol.hpp) against docs/NOTES.md, "Stage 7a",
 // whose pre-registration states every tolerance here before this test existed.
 //
 // The Dupire check has two parts.
@@ -9,7 +9,7 @@
 //    first slice: w is linear in t inside a segment, so the difference has no truncation. g from
 //    w and central differences w', w'' in k, h_k = 2^-10 min sigma of the slices involved,
 //    through raw_svi.hpp's own form of GJ eq. (2.1), within 1e-6 S_g, S_g the sum of the four
-//    terms' magnitudes, plus the differences' own rounding R (NOTES.md, "Stage 7a", decisions
+//    terms' magnitudes, plus the differences' own rounding R (docs/NOTES.md, "Stage 7a", decisions
 //    after the pre-registration): E = 2^-51 S_w bounds each evaluation of w, S_w the magnitudes
 //    of its terms, |a| + b (|rho x| + r) per slice, weighted as w is; then w' errs by E / h_k
 //    and w'' by 4 E / h_k^2, so R = E (|dg/dw| + |dg/dw'| / h_k + 2 / h_k^2). The bound as

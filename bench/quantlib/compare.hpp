@@ -1,5 +1,5 @@
-// The QuantLib comparison's rows, references, tolerance and metrics (NOTES.md, "Stage 10"), with
-// no QuantLib in it, so every build compiles and tests it.
+// The QuantLib comparison's rows, references, tolerance and metrics (docs/NOTES.md, "Stage 10"),
+// with no QuantLib in it, so every build compiles and tests it.
 //
 // A case is one contract of a protocol row (quantlib-compare/EVIDENCE.md, "Comparison
 // protocol"); a comparison is one engine on one case, judged against the case's reference by the
@@ -77,7 +77,7 @@ double CeilingFactor(const Comparison& comparison);
 pricer::Market<double> OurMarket(const Case& c);
 pricer::Contract OurContract(const Case& c, Engine engine);
 
-// R9's references, from tools/quadrature, before any Monte Carlo (NOTES.md, "Stage 10").
+// R9's references, from tools/quadrature, before any Monte Carlo (docs/NOTES.md, "Stage 10").
 struct R9References {
   double asian_delta = 0.0;  // CD(h) of the n = 12 quadrature, h = kAsianBumpStep
   double asian_b = 0.0;      // 2 * 1e-9 / 2h + |CD(2h) - CD(h)|
@@ -116,7 +116,7 @@ std::string RenderCeilings(const std::vector<CeilingRow>& rows, std::string_view
 // Every comparison exactly once, or why not.
 std::expected<std::vector<CeilingRow>, std::string> DecodeCeilings(std::string_view text);
 
-// Metrics (NOTES.md, "Stage 10", QL-1).
+// Metrics (docs/NOTES.md, "Stage 10", QL-1).
 struct Timing {
   double median_s = 0.0;
   double min_s = 0.0;

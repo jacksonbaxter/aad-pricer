@@ -50,8 +50,8 @@ inline constexpr const char* kBridgeH85 =
 inline constexpr const char* kBridgeK90 =
     "bridge:S0=100;K=90;H=95;sigma=0.25;r=0.08;q=0.04;T=0.5;m=25;type=call;spot=0";
 
-// Stage 8's knock-in rows (NOTES.md, "Stage 8"): a down-and-in call by parity, vanilla minus the
-// knock-out with the same monitoring, on DB095's and CB095's terms. A row names the alias; the
+// Stage 8's knock-in rows (docs/NOTES.md, "Stage 8"): a down-and-in call by parity, vanilla minus
+// the knock-out with the same monitoring, on DB095's and CB095's terms. A row names the alias; the
 // text it resolves to is the knock-out leg's contract, which its reference must quote, and the
 // flag is what makes the priced contract the knock-in.
 struct KnockInEntry {

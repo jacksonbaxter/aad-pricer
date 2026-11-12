@@ -1,4 +1,4 @@
-# SE ceilings for the stage 10 accuracy run (NOTES.md, "Stage 10"), committed before it.
+# SE ceilings for the stage 10 accuracy run (docs/NOTES.md, "Stage 10"), committed before it.
 # Pilot: aadp_bench_quantlib pilot, seed 20261111, N_pilot = 2^20 per comparison, commit 9180dc3.
 # ceiling = factor * se_pilot * sqrt(N_pilot / 2^22), rounded up to 3 figures; factor 1.65 against a reference, 3 on QuantLib's two bumps (references/comparison_plan.csv).
 name,se_pilot,n_pilot,factor,ceiling

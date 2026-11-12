@@ -1,4 +1,4 @@
-// The surface of svi/surface.hpp against NOTES.md, "Stage 7a": validation, where a time sits,
+// The surface of svi/surface.hpp against docs/NOTES.md, "Stage 7a": validation, where a time sits,
 // interpolation linear in T at fixed k, (t / T_0) w_0 before the first slice, the slices
 // themselves at their own times, and the forward and discount curves. Then the same on the tape:
 // its values must be the double's bits.

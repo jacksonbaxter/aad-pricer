@@ -1,7 +1,7 @@
 // The surface and local-variance entry point, and short local-volatility paths on the tape, from
-// raw bytes (NOTES.md, "Stage 7a"). 272 bytes: the low bit of byte 1 picks scaled mode, in which
-// 16-bit fields map onto synthetic parameter ranges that mostly validate, or raw mode, in which
-// the slices' numbers are raw doubles, to drive validation and the floor rule's edges.
+// raw bytes (docs/NOTES.md, "Stage 7a"). 272 bytes: the low bit of byte 1 picks scaled mode, in
+// which 16-bit fields map onto synthetic parameter ranges that mostly validate, or raw mode, in
+// which the slices' numbers are raw doubles, to drive validation and the floor rule's edges.
 //
 // Properties:
 // - ValidateSurface and ValidateLocalVol return errors as values, and PriceLocalVol refuses

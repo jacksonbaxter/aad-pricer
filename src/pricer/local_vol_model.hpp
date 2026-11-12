@@ -1,5 +1,5 @@
 // The local-volatility model behind model.hpp's Law seam, and the tally of its floored and
-// capped local variances (NOTES.md, "Stage 7a").
+// capped local variances (docs/NOTES.md, "Stage 7a").
 //
 // Log-Euler with the local volatility frozen at the start of each step: over step s, from
 // t_s = s dt to t_{s+1}, dt = T / steps,

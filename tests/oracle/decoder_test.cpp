@@ -137,7 +137,7 @@ TEST(DecodePlan, KeepsADeclaredKThatDiffersFromTheRows) {
   EXPECT_EQ(plan->rows.size(), 1U);
 }
 
-// Stage 8's row kinds (NOTES.md, "Stage 8").
+// Stage 8's row kinds (docs/NOTES.md, "Stage 8").
 TEST(DecodePlan, SurfaceAndUnresolvedRows) {
   const std::string run = "s,svi-surface:continuous-barrier,d_rho_d12,FD:1e-06,400,4,2,0.1,0,run\n";
   const std::string unresolved =

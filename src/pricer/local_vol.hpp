@@ -1,4 +1,4 @@
-// Monte Carlo prices off a raw SVI surface under local volatility (NOTES.md, "Stage 7a").
+// Monte Carlo prices off a raw SVI surface under local volatility (docs/NOTES.md, "Stage 7a").
 //
 //   ValidateLocalVol(contract, terms, params, rule)       kNone or why not
 //   PriceLocalVol(contract, terms, params, config, rule)

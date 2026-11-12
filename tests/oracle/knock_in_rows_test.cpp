@@ -1,4 +1,4 @@
-// The 12 knock-in rows of stage 8 (NOTES.md, "Stage 8") at a development seed: the production
+// The 12 knock-in rows of stage 8 (docs/NOTES.md, "Stage 8") at a development seed: the production
 // tape against references/oracle_values.csv by CheckAgainstReference with the plan's c and the
 // reference's b, and no ceiling. Deterministic. Builds other than release run a few paths and only
 // check that every row is finite.

@@ -13,7 +13,7 @@
 // adjoints add into the set-up's, and rewound. At the end of each block of paths (runner.hpp,
 // EndBlock), one sweep from the mark to the start turns the set-up adjoints into the block's sum
 // of dV/d(input), and clears them. So set-up costs one sweep per block, not one per path, and a
-// larger set-up (the SVI surface) does not change the per-path cost (NOTES.md, "AAD"). Batch
+// larger set-up (the SVI surface) does not change the per-path cost (docs/NOTES.md, "AAD"). Batch
 // statistics come from the block sums as they do for the price.
 //
 // Threads. One tape per worker, each recording its own set-up. RunBatches calls make_path_fn on

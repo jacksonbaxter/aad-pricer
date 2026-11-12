@@ -1,5 +1,6 @@
 // The finite-difference ladder of the 45 surface rows and the rule that picks its level, as
-// NOTES.md, "Stage 8", registers them. The rule judges from the differences alone, never the tape.
+// docs/NOTES.md, "Stage 8", registers them. The rule judges from the differences alone, never the
+// tape.
 //
 // Step rule. For slice j's parameter i, h0 = 2^-8 w_j(0) / M, with w_j(0) the fitted
 // at-the-money total variance and M the largest |dw_j / dtheta_i (k)| on k = -0.5, -0.499, ...,
@@ -60,7 +61,7 @@ LadderOutcome ApplyLadderRule(const std::array<double, kLadderLevels>& h,
                               const std::array<std::vector<double>, kLadderLevels>& d,
                               double critical);
 
-// dw / dtheta_i at k, the closed forms of NOTES.md, "Stage 8": parameter i in (a, b, rho, m,
+// dw / dtheta_i at k, the closed forms of docs/NOTES.md, "Stage 8": parameter i in (a, b, rho, m,
 // sigma).
 double TotalVarianceSlope(const svi::RawSvi<double>& p, std::size_t parameter, double k);
 double AtTheMoneyTotalVariance(const svi::RawSvi<double>& p);

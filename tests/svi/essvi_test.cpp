@@ -1,6 +1,6 @@
 // eSSVI slices, their raw SVI conversion, Mingone's global map, the constraint checker and the
 // clamps (src/svi/essvi.hpp), on hand-made parameters only. Every slice, seed and tolerance here
-// was stated in NOTES.md, "Stage 7c", before any of these tests ran.
+// was stated in docs/NOTES.md, "Stage 7c", before any of these tests ran.
 #include "svi/essvi.hpp"
 
 #include <gtest/gtest.h>

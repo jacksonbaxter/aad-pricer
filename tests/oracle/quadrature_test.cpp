@@ -355,7 +355,7 @@ TEST(GeneratedReferences, IdsAreUniqueAndCsvIsWellFormed) {
   }
 }
 
-// Stage 8: the recursions over Dual (NOTES.md, "Stage 8").
+// Stage 8: the recursions over Dual (docs/NOTES.md, "Stage 8").
 MarketParams<test::Dual> KnockInActive() {
   return test::ActiveMarket({.spot = kKnockInTerms.spot,
                              .sigma = kKnockInTerms.sigma,

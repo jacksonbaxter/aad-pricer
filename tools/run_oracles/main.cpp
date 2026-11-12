@@ -46,7 +46,8 @@ using Arguments = std::map<std::string, std::string, std::less<>>;
 constexpr std::string_view kFingerprintHeader =
     "# Run 2's development-seed fingerprint, from aadp_run_oracles fingerprint: every plan row\n"
     "# through the production estimator at seed 20261128 and N / 1024 paths, as hex floats.\n"
-    "# NOTES.md, \"Stage 8\", registers it; each host keeps its own file. The surface rows rest\n"
+    "# docs/NOTES.md, \"Stage 8\", registers it; each host keeps its own file. "
+    "The surface rows rest\n"
     "# on TAIFEX settlements of trade date 2024-11-15, not tradable quotes, reaching 33 days.\n"
     "# Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).\n";
 

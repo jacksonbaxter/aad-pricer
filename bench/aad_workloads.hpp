@@ -16,10 +16,10 @@
 //                 vector tape, the tape's bits, with any group that fell back to the scalar tape
 //                 counted (never in a pricer kernel).
 // The lane variants run on the first-order pricer workloads, whose kernels are all branch-free on
-// lanes (NOTES.md, "Vector tape"). The second-order workloads and Lax-Wendroff have none: no lane
-// form exists of the conditional kernels, forward over reverse, or the advection.
-// The Lax-Wendroff worst case (lax_wendroff.hpp) has the same variants on its 100 inputs, so its
-// bumps cost 201 and 101 primal runs.
+// lanes (docs/NOTES.md, "Vector tape"). The second-order workloads and Lax-Wendroff have none: no
+// lane form exists of the conditional kernels, forward over reverse, or the advection. The
+// Lax-Wendroff worst case (lax_wendroff.hpp) has the same variants on its 100 inputs, so its bumps
+// cost 201 and 101 primal runs.
 //
 // The second-order workloads (aad8-*) run price and tape, and these, on the conditional kernels
 // of src/pricer/conditional_kernels.hpp (the last step's expectation in closed form):

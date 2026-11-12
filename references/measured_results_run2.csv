@@ -1,4 +1,4 @@
-# Measured run 2, curated from the runner's output (NOTES.md, "Stage 8b: measured run 2").
+# Measured run 2, curated from the runner's output (docs/NOTES.md, "Stage 8b: measured run 2").
 # Plan commit a977c5f, code of bf484f3 run at commit 4398aee, seed 271828, B=64, K=147, critical=4.266218, alpha_F=0.01.
 # Estimator: production, ad::PriceWithGradient and ad::PriceLocalVolWithGradient; FD rows
 # against pricer::Price and pricer::PriceLocalVol on the same paths. Host mac-m4max, macOS.

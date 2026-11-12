@@ -106,7 +106,7 @@ std::expected<Prepared, FitError> Prepare(const FitSlice& slice) {
     }
     const double kk = std::log(q.strike / slice.forward);
     w[i] = iv.vol * iv.vol * slice.expiry;
-    // Refused with the non-positive ones (NOTES.md, "Stage 7c results", decisions after the
+    // Refused with the non-positive ones (docs/NOTES.md, "Stage 7c results", decisions after the
     // pre-registration): a total variance below 2^-1000, where theta_1's box would reach the
     // subnormals and the constraints cannot be held to rounding; one above 2^100, or a volatility
     // above 2^500, where the box or the model's w / T comes within a factor of overflowing.

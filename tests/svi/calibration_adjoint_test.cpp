@@ -1,6 +1,6 @@
 // The calibration adjoint (src/svi/calibration_adjoint.hpp) and the pieces of the bump check
 // (src/svi/chain_adjoint.hpp), on hand-made slices only, never chain data. Every tolerance here
-// is stated in NOTES.md, "Stage 7b". The tests ran while the code was written, on these
+// is stated in docs/NOTES.md, "Stage 7b". The tests ran while the code was written, on these
 // synthetic slices only, and no tolerance was changed after a test of it failed.
 //
 // The references are independent of the second-order tape: a closed-form Jacobian of Black-76 in

@@ -1,7 +1,7 @@
 // The TAIFEX chain into the raw SVI fit: parity forward, discount and sigma_leg per expiry, time to
 // expiry, the calibration set, the noise weights, the fit, and the arbitrage checks on the fitted
-// slices, as NOTES.md, "Stage 6b", pre-registers them. The inputs are settlements, not tradable
-// quotes, and the usable surface reaches 33 days only.
+// slices, as docs/NOTES.md, "Stage 6b", pre-registers them. The inputs are settlements, not
+// tradable quotes, and the usable surface reaches 33 days only.
 #ifndef AADP_SVI_CHAIN_FIT_HPP_
 #define AADP_SVI_CHAIN_FIT_HPP_
 
@@ -23,7 +23,8 @@
 
 namespace aadp::svi {
 
-// NOTES.md, "Recommended calibration set": the three expiries with market-anchored settlements.
+// docs/NOTES.md, "Recommended calibration set": the three expiries with market-anchored
+// settlements.
 inline constexpr std::array<std::string_view, 3> kCalibrationExpiries = {"202411", "202411W4",
                                                                          "202412"};
 

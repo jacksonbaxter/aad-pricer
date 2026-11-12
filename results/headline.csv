@@ -7,7 +7,7 @@
 # Rows: AAD-1 and AAD-4 against the scalar primal; AAD-5, tape over the hand-written adjoint,
 # missed; MC-1, missed; MEM-4, the largest tape of any workload; and measured run 2, with its two
 # failures. Both oracle runs were recorded on mac-m4max: run 2's file says so, and run 1's host
-# is in NOTES.md, "Stage 8b: measured run 2".
+# is in docs/NOTES.md, "Stage 8b: measured run 2".
 kind,id,host,source,detail,target,target_text,better,scale,unit,label
 measured_run,run 1,mac-m4max,references/measured_results.csv,,,,,,,
 measured_run,run 2,mac-m4max,references/measured_results_run2.csv,,,,,,,

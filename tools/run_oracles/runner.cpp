@@ -350,7 +350,7 @@ std::vector<PlanTemplateRow> PlanTemplate() {
   AddRows(rows, "CBK90", cat::kBridgeK90, kBarrierPaths, AllClosedForm("CBK90", "", ""));
 
   // Every SVI parameter of every slice of the three usable expiries, on each path product. N is
-  // the barrier count, and the reference step comes from the ladder (NOTES.md, "Stage 8").
+  // the barrier count, and the reference step comes from the ladder (docs/NOTES.md, "Stage 8").
   for (const auto& [code, surface] :
        {std::pair{"AS", "svi-surface:arithmetic"}, std::pair{"DB", "svi-surface:discrete-barrier"},
         std::pair{"CB", "svi-surface:continuous-barrier"}}) {
@@ -540,7 +540,7 @@ std::string EncodeStage8Pilot(const std::vector<PilotRow>& rows, const PilotConf
   using decode::FormatDouble;
   std::string out =
       "# Stage 8 pilot, from aadp_run_oracles pilot --rows stage8 --estimator production. Seed\n"
-      "# differs from any measured seed. NOTES.md, \"Stage 8\", registers the rule.\n"
+      "# differs from any measured seed. docs/NOTES.md, \"Stage 8\", registers the rule.\n"
       "# Estimator: the production pricer's tape, ad::PriceWithGradient on the 12 knock-in rows\n"
       "# and ad::PriceLocalVolWithGradient on the 45 surface rows.\n"
       "# Knock-in rows: reference is the value in references/oracle_values.csv, se the tape's,\n"
@@ -642,8 +642,8 @@ constexpr std::array<std::string_view, 7> kRunOneComments = {
     " measured run, and they already count in K.",
 };
 constexpr std::array<std::string_view, 2> kStage8Comments = {
-    "# Stage 8 knock-in rows (P3.KID, P3.KIC; NOTES.md, \"Stage 8\"): the production pricer's tape"
-    " against the reference in references/oracle_values.csv. Ceilings from"
+    "# Stage 8 knock-in rows (P3.KID, P3.KIC; docs/NOTES.md, \"Stage 8\"): the production"
+    " pricer's tape against the reference in references/oracle_values.csv. Ceilings from"
     " references/pilot_results_stage8.csv with ceiling_factor, b the reference's.",
     "# Stage 8 surface rows (P3.AS, P3.DB, P3.CB): the production tape against the central"
     " difference of PriceLocalVol at FD:<h*> on the same paths, h* and b from the ladder in"

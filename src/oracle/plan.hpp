@@ -8,7 +8,7 @@
 //   knock-in-parity:discrete|continuous        catalog.hpp: a knock-in on a catalog contract
 //   svi-surface:<product>                      catalog.hpp: a contract on the fitted chain, whose
 //                                              Greek is d_<p>_<dNN> and reference "FD:<h>"
-// An unresolved row is a surface row whose finite-difference ladder never settled (NOTES.md,
+// An unresolved row is a surface row whose finite-difference ladder never settled (docs/NOTES.md,
 // "Stage 8"): it has N, seed and "FD:<h>", writes "-" for se_ceiling and b, is run and is never
 // passed. An awaiting-phase3 row counts toward K and writes "-" for what cannot be fixed until
 // the code exists: N, seed, se_ceiling and b.

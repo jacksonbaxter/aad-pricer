@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fails unless QuantLib and the comparison bench were compiled with the same optimisation and
-architecture flags (NOTES.md, "Stage 10").
+architecture flags (docs/NOTES.md, "Stage 10").
 
     python3 -I scripts/check_quantlib_flags.py <build>/compile_commands.json <quantlib source dir>
 

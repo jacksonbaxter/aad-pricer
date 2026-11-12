@@ -1,5 +1,5 @@
 // The tape's derivative of the local-volatility price in every raw SVI parameter, against the
-// forward-mode Dual of tests/support/, path by path (NOTES.md, "Stage 7a").
+// forward-mode Dual of tests/support/, path by path (docs/NOTES.md, "Stage 7a").
 //
 // Bound, stated before the comparison ran: bounds.hpp's AgreementBound, the existing tape bound,
 //   |tape - dual| <= 2 gamma_n A (1 + 2 gamma_n) + 2^-1074 W (1 + 2 gamma_n) + 2^-1072,
@@ -135,7 +135,7 @@ struct Worst {
   std::size_t statements = 0;
 };
 
-// The second, empirical check (NOTES.md, "Stage 7a", decisions after the pre-registration):
+// The second, empirical check (docs/NOTES.md, "Stage 7a", decisions after the pre-registration):
 // AgreementBound sums absolute partials, which grow geometrically along a path where the local
 // variance is steep in k, so on surface B at n = 4 and on the real surface it is far above the
 // derivatives themselves and detects nothing. So each difference must also be within 2^-26 of the
@@ -265,7 +265,7 @@ TEST(LocalVolGradient, TheValueIsThePricersAndNothingDependsOnTheThreadCount) {
 
 // The batch run sums each path's adjoints into the set-up and sweeps it once per block, so its
 // gradient must be the mean of the per-path gradients Evaluate gives. Bound, stated before this
-// check ran (NOTES.md, "Stage 7a", decisions after the pre-registration): 1e-10 times the mean
+// check ran (docs/NOTES.md, "Stage 7a", decisions after the pre-registration): 1e-10 times the mean
 // of their absolute values, since only the order of the same additions differs, about 2^-52
 // times a few thousand statements at most; a set-up sweep skipped, repeated or misread is off by
 // whole multiples.
@@ -307,7 +307,7 @@ TEST(LocalVolGradient, TheBatchGradientIsTheMeanOfThePerPathGradients) {
 // (svi/local_vol.hpp). Per path, on common random numbers, the tape's 15 derivatives against
 // central differences of the double path. Each surface below is surface A with one floor class
 // over a wide region that every path, or most, crosses: B and the real surface floor too few
-// path-steps for a price-level comparison to see a wrong derivative there (NOTES.md, "Stage 8a
+// path-steps for a price-level comparison to see a wrong derivative there (docs/NOTES.md, "Stage 8a
 // results").
 //
 // Tolerance, stated before the comparison first ran. Parameter theta_i is bumped by h_i =

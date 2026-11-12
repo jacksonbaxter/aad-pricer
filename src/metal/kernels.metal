@@ -1,6 +1,6 @@
 // Metal entry points (stage 9). Never compiled offline: cmake/area_metal.cmake embeds this text,
 // after src/f32/float_kernels.hpp, in the string src/metal/metal_backend.mm compiles at run time.
-// The pricing kernel calls the shared code only; the probes measure what NOTES.md, "Stage 9",
+// The pricing kernel calls the shared code only; the probes measure what docs/NOTES.md, "Stage 9",
 // lists. Inputs come from buffers, so the compiler cannot fold a probe.
 
 using namespace aadp::f32;

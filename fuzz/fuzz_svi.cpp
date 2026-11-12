@@ -13,8 +13,8 @@
 // an explicit error:
 // - inversion: an error status has a name and vol NaN, at-intrinsic has vol 0, ok has a finite
 //   positive vol that prices back inside the discounted bounds, and within 1000 times SVI-1's
-//   price tolerance (NOTES.md, stage 6a) of the quoted price; a non-finite input is reported as
-//   such. The price from the vol field goes through the same inversion.
+//   price tolerance (docs/NOTES.md, stage 6a) of the quoted price; a non-finite input is reported
+//   as such. The price from the vol field goes through the same inversion.
 // - checks: every violation has a known kind and the fields that kind promises (a grid region
 //   is finite and ordered, with its worst point inside and a value below its bound; a wing is at
 //   +-infinity; a classifier failure is type 0 to 4); invalid parameters produce only that

@@ -63,8 +63,8 @@ BarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
                                            const GaussLegendreResolution& resolution);
 BarrierResult DiscreteDownOutSimpson(const BarrierInputs& in, const SimpsonResolution& resolution);
 
-// The same recursions over Dual (NOTES.md, "Stage 8"). The grids are those of the double call on
-// `in`: nodes, weights, panel and interval counts, top and band. Only each step's drift, sd and
+// The same recursions over Dual (docs/NOTES.md, "Stage 8"). The grids are those of the double call
+// on `in`: nodes, weights, panel and interval counts, top and band. Only each step's drift, sd and
 // discount, the closed-form last step and the root's log spot carry the tangents of `market`,
 // whose values must be in's. The double functions are these at double, so their bits stand.
 DualBarrierResult DiscreteDownOutGaussLegendre(const BarrierInputs& in,
@@ -85,7 +85,7 @@ inline constexpr BarrierInputs kKnockInTerms{.spot = 100,
                                              .maturity = 0.2,
                                              .monitors = 50};
 // The b of the discrete knock-in rows: O5's and O6's for value and delta, 1e-8 for the Greeks
-// whose integrands carry polynomial factors (NOTES.md, "Stage 8"). The continuous rows have 0.
+// whose integrands carry polynomial factors (docs/NOTES.md, "Stage 8"). The continuous rows have 0.
 inline constexpr double kKnockInValueB = 1e-9;
 inline constexpr double kKnockInGreekB = 1e-8;
 // Parity and the BGK identity, both closed forms in double.

@@ -1,4 +1,4 @@
-// The 45 surface comparisons of stage 8 (NOTES.md, "Stage 8") on 7a's synthetic surfaces, at a
+// The 45 surface comparisons of stage 8 (docs/NOTES.md, "Stage 8") on 7a's synthetic surfaces, at a
 // development seed: the full ladder, the level rule and the paired comparison of the tape against
 // D_{h*} on the same paths, with b from the ladder and no ceiling.
 //   A, no floors: all 45 resolve and pass, with the paired SE below 0.1 of the tape's own SE.

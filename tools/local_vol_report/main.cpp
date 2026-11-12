@@ -1,5 +1,5 @@
 // Local-volatility prices and their 15 raw SVI sensitivities off the surface fitted to the TAIFEX
-// captures (NOTES.md, "Stage 7a"). Every number it prints is iteration only.
+// captures (docs/NOTES.md, "Stage 7a"). Every number it prints is iteration only.
 //
 //   aadp_local_vol_report [--options <file>] [--futures <file>] [--mode report|bias|timing]
 //                         [--paths <N>] [--threads <T>] [--repetitions <R>]
@@ -150,7 +150,7 @@ void Header(const Options& o) {
          "settlements of trade date 2024-11-15.\n"
          "These are daily settlement prices set by the exchange's rules, not tradable quotes.\n"
          "Maturity reaches 33 days only: nothing is extrapolated past the 202412 expiry.\n"
-         "ITERATION ONLY, not a result. Method, floor rule and contracts: NOTES.md, \"Stage "
+         "ITERATION ONLY, not a result. Method, floor rule and contracts: docs/NOTES.md, \"Stage "
          "7a\".\n";
   std::cout << "compiler: " << aadp::build_info::compiler_id << ' '
             << aadp::build_info::compiler_version << ", " << aadp::build_info::build_type << ", "

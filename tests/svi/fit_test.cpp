@@ -1,5 +1,5 @@
 // The raw SVI fit (src/svi/fit.hpp) on hand-made parameters only, never chain data. Every slice,
-// seed and tolerance here was stated in NOTES.md, "Stage 6b", before any of these tests ran.
+// seed and tolerance here was stated in docs/NOTES.md, "Stage 6b", before any of these tests ran.
 #include "svi/fit.hpp"
 
 #include <gtest/gtest.h>

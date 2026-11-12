@@ -183,7 +183,7 @@ std::vector<float> GridPoints(Grid grid) {
         break;
     }
     const auto point = static_cast<float>(x);
-    // float(2^128) is +inf: the wide log grid's last point is left out, as NOTES.md records.
+    // float(2^128) is +inf: the wide log grid's last point is left out, as docs/NOTES.md records.
     if (std::isfinite(point)) out.push_back(point);
   }
   return out;

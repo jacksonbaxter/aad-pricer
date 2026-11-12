@@ -46,6 +46,14 @@ if(AADP_BUILD_TESTS)
             "${PROJECT_BINARY_DIR}/data_test_scratch/fetch_data"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(data_fetch_script PROPERTIES LABELS "unit;fast")
+
+  # The repo scan's notes-file rule: a tracked agent notes file fails it at any path.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_test(NAME data_repo_scan_script
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tests/data/scan_repo_test.py"
+            "${PROJECT_BINARY_DIR}/data_test_scratch/scan_repo"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(data_repo_scan_script PROPERTIES LABELS "unit;fast")
 endif()
 
 aadp_fuzz(fuzz_cp950

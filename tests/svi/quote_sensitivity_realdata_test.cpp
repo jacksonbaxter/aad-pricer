@@ -1,6 +1,6 @@
-// The calibration adjoint on the chain fitted to the pinned captures. Asserts only what NOTES.md,
-// "Stage 7b", fixed before the first real-surface sensitivity: every slice's adjoint is computed
-// (no refusal), one multiplier per active bound, positive and clear of its numerical
+// The calibration adjoint on the chain fitted to the pinned captures. Asserts only what
+// docs/NOTES.md, "Stage 7b", fixed before the first real-surface sensitivity: every slice's adjoint
+// is computed (no refusal), one multiplier per active bound, positive and clear of its numerical
 // uncertainty, every derivative finite and on the constraint manifold, and the middle quote of
 // each slice passes the bump-and-recalibrate check on its parameters with the market held. The
 // sensitivities themselves are reported by aadp_quote_sensitivity_report, not asserted here. The

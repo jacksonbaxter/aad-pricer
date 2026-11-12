@@ -1,4 +1,4 @@
-// The production estimator of measured run 2 and stage 8's pilot (NOTES.md, "Stage 8").
+// The production estimator of measured run 2 and stage 8's pilot (docs/NOTES.md, "Stage 8").
 //
 // Every row's estimate is a batch mean of the production code: ad::PriceWithGradient for the 102
 // GBM rows (the value and the five tape Greeks, theta = -dV/dT), and ad::PriceLocalVolWithGradient

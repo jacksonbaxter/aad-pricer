@@ -1,5 +1,5 @@
 // Gradients on the vector tape against the scalar tape, at every lane width this build can run
-// (NOTES.md, "Vector tape: design and oracle", oracle items 1, 2, 4 and 5). No tolerance:
+// (docs/NOTES.md, "Vector tape: design and oracle", oracle items 1, 2, 4 and 5). No tolerance:
 // 1. per path: every lane's value and gradient after its own set-up sweep are
 //    PathGradient::Evaluate's for that path, on every product and treatment of tests/ad/cases.hpp
 //    at 1, 12 and 50 steps, and on stage 5a's wild and dying markets;

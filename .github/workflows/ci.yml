@@ -43,7 +43,7 @@ jobs:
           # Still different: the runner's OS is 27.0.1, so the libc++ the tests run on is that
           # build, not 27.2's; the SDK is Xcode's, not the Command Line Tools'; and a preview has
           # no SLA and may be relabelled at GA. macos-15 linked a 15.5 SDK whose libc++ lacks
-          # symbols those headers call (std::__1::__hash_memory). Details in NOTES.md.
+          # symbols those headers call (std::__1::__hash_memory). Details in docs/NOTES.md.
           - { name: macos-clang-debug, os: xcode-27, compiler: clang, preset: debug, test: true }
           - { name: macos-clang-release, os: xcode-27, compiler: clang, preset: release, test: true }
           - { name: macos-asan-ubsan, os: xcode-27, compiler: clang, preset: asan-ubsan, test: true }
@@ -106,7 +106,8 @@ jobs:
       # virtual machine, has a Metal device is found out here, on every run, by the backend's own
       # probe: "metal: device <name>" or "metal: none". Only "none" lets the Test step allow the
       # GPU tests' skip, by name, with a warning and a line in the job summary; with a device they
-      # run and must pass. A device the backend cannot set up on fails here. NOTES.md, "Stage 9".
+      # run and must pass. A device the backend cannot set up on fails here.
+      # docs/NOTES.md, "Stage 9".
       - name: Show whether Metal has a device
         id: metal
         if: runner.os == 'macOS'

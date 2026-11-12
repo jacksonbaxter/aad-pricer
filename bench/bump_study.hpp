@@ -1,4 +1,4 @@
-// The bump-size study: h for each Greek, chosen by halving (NOTES.md, "Bump size").
+// The bump-size study: h for each Greek, chosen by halving (docs/NOTES.md, "Bump size").
 //
 // With a barrier treatment or a Lipschitz payoff the estimator is continuous in each input, so
 // under common random numbers the difference quotient does not grow noisier as h falls, and h is

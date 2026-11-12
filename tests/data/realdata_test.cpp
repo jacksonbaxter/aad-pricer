@@ -1,5 +1,5 @@
-// Asserts the known counts on the pinned captures, from NOTES.md and the chain evidence. The files
-// are never committed. With no file the tests skip, visibly, and say how to get it.
+// Asserts the known counts on the pinned captures, from docs/NOTES.md and the chain evidence. The
+// files are never committed. With no file the tests skip, visibly, and say how to get it.
 
 #include <gtest/gtest.h>
 
@@ -254,8 +254,8 @@ TEST(RealFutures, TxSettlementsAndThePublishedForwards) {
   EXPECT_EQ(settlements["202506"], 22890.0);
   EXPECT_FALSE(settlements.contains("202411W4"));
 
-  // NOTES.md: within 0.92 points of TX where a TX month exists. Both numbers there are rounded to
-  // two places, so the bound allows for that rounding and no more.
+  // docs/NOTES.md: within 0.92 points of TX where a TX month exists. Both numbers there are rounded
+  // to two places, so the bound allows for that rounding and no more.
   constexpr double kPublishedGap = 0.92 + 0.005;
   EXPECT_LE(std::abs(22761.47 - settlements["202411"]), kPublishedGap);
   EXPECT_LE(std::abs(22792.92 - settlements["202412"]), kPublishedGap);
@@ -329,7 +329,7 @@ constexpr std::array<PhaseOneParity, 3> kSettleNear = {{
 }};
 
 // Two implementations of the same centred regression in double differ by rounding, about 1e-13
-// here; one strike more or less moves F by far more. NOTES.md, "Stage 6b".
+// here; one strike more or less moves F by far more. docs/NOTES.md, "Stage 6b".
 constexpr double kSameRegression = 1e-9;
 
 double round_to(double value, int places) {
@@ -362,7 +362,7 @@ TEST(RealParity, PublishedForwardsAndDiscountsToTheirPrintedPlaces) {
   AADP_LOAD_OR_SKIP(bytes, kOptionsFile);
   const auto file = read_options(*bytes);
   ASSERT_TRUE(file.has_value());
-  // NOTES.md, "Recommended calibration set": F to two places and D to five.
+  // docs/NOTES.md, "Recommended calibration set": F to two places and D to five.
   const std::array<double, 3> forwards = {22761.47, 22786.07, 22792.92};
   const std::array<double, 3> discounts = {0.99987, 0.99944, 0.99829};
   for (std::size_t i = 0; i < kSettleAll.size(); ++i) {
@@ -373,10 +373,10 @@ TEST(RealParity, PublishedForwardsAndDiscountsToTheirPrintedPlaces) {
   }
 }
 
-// The weights' sigma_leg is settle_all's RMS / sqrt(2), as the method says. NOTES.md's 1.87, 2.43
-// and 1.55 come from settle_near instead: strikes within 5% of the TX settlement (of settle_all's
-// F where there is no TX month), with the RMS rounded to two places before dividing by sqrt(2).
-// Both are asserted, so the difference is on record.
+// The weights' sigma_leg is settle_all's RMS / sqrt(2), as the method says.
+// docs/NOTES.md's 1.87, 2.43 and 1.55 come from settle_near instead: strikes within 5% of the TX
+// settlement (of settle_all's F where there is no TX month), with the RMS rounded to two places
+// before dividing by sqrt(2). Both are asserted, so the difference is on record.
 TEST(RealParity, SigmaLegBySettleAllAndPhaseOnesSettleNearRoute) {
   AADP_LOAD_OR_SKIP(options_bytes, kOptionsFile);
   AADP_LOAD_OR_SKIP(futures_bytes, kFuturesFile);

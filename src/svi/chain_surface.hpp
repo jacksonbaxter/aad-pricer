@@ -1,6 +1,6 @@
-// The fitted TAIFEX chain as a pricing surface, and the three svi-surface contracts that NOTES.md,
-// "Stage 7a", pre-registers on it. Shared by the real-data test and aadp_local_vol_report, so both
-// price exactly the same thing.
+// The fitted TAIFEX chain as a pricing surface, and the three svi-surface contracts that
+// docs/NOTES.md, "Stage 7a", pre-registers on it. Shared by the real-data test and
+// aadp_local_vol_report, so both price exactly the same thing.
 #ifndef AADP_SVI_CHAIN_SURFACE_HPP_
 #define AADP_SVI_CHAIN_SURFACE_HPP_
 

@@ -1,6 +1,6 @@
 # Run 2's development-seed fingerprint, from aadp_run_oracles fingerprint: every plan row
 # through the production estimator at seed 20261128 and N / 1024 paths, as hex floats.
-# NOTES.md, "Stage 8", registers it; each host keeps its own file. The surface rows rest
+# docs/NOTES.md, "Stage 8", registers it; each host keeps its own file. The surface rows rest
 # on TAIFEX settlements of trade date 2024-11-15, not tradable quotes, reaching 33 days.
 # Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
 VA.value estimate=0x1.9052e38d6c51bp+3 reference=0x1.8dd9dcb9df62bp+3 se=0x1.935f6d1120181p-3

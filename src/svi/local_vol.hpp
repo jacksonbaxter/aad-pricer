@@ -1,4 +1,4 @@
-// Dupire local variance on the interpolated raw SVI surface, with the floor rule, as NOTES.md,
+// Dupire local variance on the interpolated raw SVI surface, with the floor rule, as docs/NOTES.md,
 // "Stage 7a", pre-registers it. Templated on Real, so the tape records it.
 //
 //   sigma_loc^2(t, k) = dT w / g,  g = (1 - k q / 2)^2 - w' q / 4 - w'^2 / 16 + w'' / 2,  q = w'/w
@@ -6,7 +6,7 @@
 // g is Gatheral and Jacquier's eq. (2.1), arXiv 1204.0646, with 1/w written through q, the
 // working denominator of QuantLib's LocalVolSurface and of the R code in Gatheral's VW4 notes.
 // VW4's displayed eq. (12) has the opposite sign on the (1/4)(1/4 + 1/w) w'^2 term; the minus
-// sign here is the one its code, QuantLib and g share (NOTES.md, "SVI"). k is forward
+// sign here is the one its code, QuantLib and g share (docs/NOTES.md, "SVI"). k is forward
 // log-moneyness, so rates and carry enter only through k.
 //
 // Floor rule, on the double values, which are the same bits for every Real, in this order:

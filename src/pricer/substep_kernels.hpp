@@ -1,5 +1,5 @@
 // Path kernels with n Euler sub-steps between the contract's dates, for the local-volatility model
-// (NOTES.md, "Stage 7a"). The contract keeps its m dates t_i = i T / m: an Asian fixes and a
+// (docs/NOTES.md, "Stage 7a"). The contract keeps its m dates t_i = i T / m: an Asian fixes and a
 // discrete barrier monitors there only, while a continuous barrier is bridged on every sub-step.
 // The model sees m n steps of T / (m n), step s using the uniforms of step s.
 //
