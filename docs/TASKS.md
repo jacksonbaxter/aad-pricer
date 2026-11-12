@@ -4,6 +4,8 @@ Plan through to the Done criteria. Tick items when done, and add anything new. T
 
 Each phase ends with a phase report and waits for a go-ahead. Every commit builds and passes tests. Work is on `jb-build`, which is published to the public GitHub repository.
 
+Counts, fit errors, prices and sensitivities here that come from the option chain are derived from it: settlements of one trade date, not tradable quotes. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
+
 ## Phase 1: Research
 
 - [x] AAD cost, tape libraries, code-quality bar

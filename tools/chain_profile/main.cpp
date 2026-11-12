@@ -2,7 +2,9 @@
 //
 //   chain_profile [--options <file>] [--futures <file>]
 //
-// The output is derived from the chain, so it opens with the attribution.
+// The output is derived from the chain, so it opens with the attribution. The three published
+// forwards below are derived from it too. Data: TAIFEX via data.gov.tw, Open Government Data
+// License (NOTICE).
 
 #include <cstddef>
 #include <cstdint>

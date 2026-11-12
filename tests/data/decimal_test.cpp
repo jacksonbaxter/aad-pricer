@@ -102,6 +102,8 @@ TEST(Decimal, MatchesStrtodExactly) {
 TEST(Decimal, EqualValuesInDifferentSpellingsAreEqualDoubles) {
   EXPECT_EQ(parse_decimal("1", SignPolicy::kNonNegative),
             parse_decimal("1.0", SignPolicy::kNonNegative));
+  // 22761.47 is the 202411 parity forward, derived from the chain. Data: TAIFEX via data.gov.tw,
+  // Open Government Data License (NOTICE).
   EXPECT_EQ(parse_decimal("22761.47", SignPolicy::kNonNegative),
             parse_decimal("22761.470", SignPolicy::kNonNegative));
 }

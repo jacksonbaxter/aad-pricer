@@ -130,3 +130,17 @@ The raw files are never committed. `scripts/fetch_data.sh` downloads the Interne
 ## CI
 
 `.github/workflows/ci.yml` runs on GitHub. Its first run, at bc3e6d3, failed 9 of 17 jobs: actionlint, clang-tidy, the two GCC jobs, Linux TSan and the four macOS jobs. The fixes for it, and for the later failed runs 41884006533, 41942650525 and 42018873540, are pushed, and CI has confirmed them: run 43107078217, at 01f467d, passed all 22 jobs. `docs/NOTES.md` has the causes. The two release jobs also check that the README headline and `RESULTS.md` match a fresh generation. The workflow covers Linux and macOS, clang and, on Linux, gcc, Debug and Release, ASan with UBSan, TSan, clang-tidy on libc++ and on libstdc++, format, a fuzz smoke, the repo scan, AVX2 and AVX-512 builds, a SIMD lane matrix at 1, 2, 4 and 8 lanes, and the Metal GPU tests on the four macOS jobs, whose runners have a Metal device (`Apple Paravirtual device`). A step prints the device first, and only a runner with none may skip the GPU tests, by name and with a warning. The 8-lane job always runs its tests: natively on a runner with every x86-64-v4 feature, and otherwise under Intel SDE as a Skylake-X (`-skx`), so a green run has tested 8 lanes either way. AVX-512 is build-only on the two measurement hosts, which cannot run it.
+
+## Licence
+
+The project's own code and documentation are under the MIT licence, in [`LICENSE`](LICENSE).
+
+What is derived from the TAIFEX option chain is not covered by MIT. It keeps the source's terms, the Open Government Data License v1.0 of data.gov.tw datasets 11320 and 11319, and the attribution that licence requires is in [`NOTICE`](NOTICE). The chain holds exchange settlement prices of one trade date, never tradable quotes. The derived parts are:
+
+- in `references/`: all of `svi_fd_ladder.csv`, and the surface rows (`P3.AS`, `P3.DB`, `P3.CB`) of `comparison_plan.csv`, `pilot_results_stage8.csv`, `measured_results_run2.csv`, `run2_fingerprint_linux-zen1.txt` and `run2_fingerprint_mac-m4max.txt`;
+- the values from the chain quoted in `README.md`, `RESULTS.md`, `BENCHMARKS.md`, `docs/NOTES.md` and `docs/TASKS.md`;
+- the expected counts and values in `tests/data/realdata_test.cpp`, `tests/svi/chain_realdata_test.cpp` and `tests/data/decimal_test.cpp`, the three forwards in `tools/chain_profile/main.cpp`, and the calibration-set row counts named in two faults of `faults/manifest.json`.
+
+The raw chain is never committed. The rest of `references/`, everything in `results/` and `bench/quantlib/ceilings.csv` come from closed forms, GBM or a synthetic surface, not from the chain.
+
+Third-party code fetched at build time is not in this repo and keeps its own licence: GoogleTest, Google Benchmark, HdrHistogram_c, Highway and Let's Be Rational, and Boost and QuantLib for the optional comparison. `NOTICE` lists them, and `cmake/AadpDependencies.cmake` pins each by hash.

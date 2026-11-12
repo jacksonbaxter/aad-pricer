@@ -2,6 +2,8 @@
 
 Research findings and decisions. Later phases add what was tried, including what did not help.
 
+Counts, forwards, fitted parameters, prices and sensitivities here that come from the option chain are derived from it: settlements of one trade date, not tradable quotes. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
+
 ## Evidence index
 
 Raw evidence is outside the repo, because third-party material is not committed: it sits in the project's private research cache, `.orchestrator/research-cache/aad-pricer/`, in the folder above this repo. Evidence files record local paths as `.research/<track>/`, the location before they were moved. Read those paths relative to the cache.
@@ -1854,6 +1856,8 @@ None affected a number.
 ## Option chain
 
 ### Result
+
+The counts and values in this section are derived from the chain. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
 
 TAIFEX TXO, trade date 2024-11-15, qualifies, for three expiries only. It was the one candidate of over 30 to pass all four tests: real, licensed for redistribution, valid provenance, fixed file.
 

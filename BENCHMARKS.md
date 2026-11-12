@@ -492,6 +492,7 @@ QuantLib's 2.34 × SE pattern is useful for its two-part shape, but the multipli
 Real, free and redistributable. Licence text and full reasoning are in `docs/NOTES.md`.
 
 - Data: TAIFEX TXO daily report, trade date 2024-11-15, data.gov.tw dataset 11320, Open Government Data License v1.0.
+- Attribution: the licence's required statement is in `NOTICE`. The counts, fit errors and oracle results in this file that come from the chain are derived from it, and the attribution in `NOTICE` covers them.
 - Fixed file: `https://web.archive.org/web/20241117234312id_/https://www.taifex.com.tw/data_gov/taifex_open_data.asp?data_name=DailyMarketReportOpt`, 465,662 bytes, sha256 `fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e`. Lead check: done, hash matched on a fresh download.
 - Usable surface: three expiries only, 2024-11-20, 2024-11-27, 2024-12-18 (5, 12, 33 days). Longer expiries are exchange-set marks, not market prices. Any figure that includes them is labelled so.
 - Input arbitrage, before any fit. Fit violations are always reported beside these. Lead check: done, the profile was re-run from the fresh download, and `arb.csv`, `parity.csv` and `profile_recommended.txt` are byte-identical to the subagent's (`verify/rerun/chain/`).

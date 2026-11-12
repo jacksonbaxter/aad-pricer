@@ -1,7 +1,9 @@
 // The chain into the fit on the pinned captures. Asserts only what docs/NOTES.md, "Stage 6b", fixed
 // before the first fit: the slices, their sizes and input counts, that every fit returns, and that
 // the checks ran. The fitted values are reported by aadp_svi_fit, not asserted here. The files are
-// never committed. With no file the tests skip, visibly, and say how to get it.
+// never committed. With no file the tests skip, visibly, and say how to get it. The sizes and
+// counts asserted here are derived from the chain. Data: TAIFEX via data.gov.tw, Open Government
+// Data License (NOTICE).
 
 #include <gtest/gtest.h>
 

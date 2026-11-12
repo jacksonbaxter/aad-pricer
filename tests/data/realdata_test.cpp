@@ -1,5 +1,7 @@
 // Asserts the known counts on the pinned captures, from docs/NOTES.md and the chain evidence. The
 // files are never committed. With no file the tests skip, visibly, and say how to get it.
+// The counts, forwards, discount factors and settlements asserted here are derived from the
+// chain. Data: TAIFEX via data.gov.tw, Open Government Data License (NOTICE).
 
 #include <gtest/gtest.h>
 
