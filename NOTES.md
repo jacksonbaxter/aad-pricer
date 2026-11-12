@@ -1786,10 +1786,40 @@ Faults: 12 new, all caught at 9180dc3 on the Mac (350 in the manifest).
   - `ql-lanes-seed`: lanes-equal-scalar;
   - `ql-grid-time-variance`: the grid check against `FixedLocalVolSurface`.
 
-CI: run 43107078217, at 01f467d, passed all 23 jobs.
+The 5 `quantlib`-preset faults stopped being judged after their first run, because the flag check looked for QuantLib in the wrong place.
+- The check found its sampled QuantLib unit by the suffix `_deps/quantlib-src/ql/pricingengines/barrier/mcbarrierengine.cpp`. That is where FetchContent puts QuantLib by default, in `<build>/_deps/`. The fault runner keeps one source cache for every preset, keyed by a hash of `cmake/AadpDependencies.cmake`, and configures with `FETCHCONTENT_SOURCE_DIR_QUANTLIB` pointing into it, at `build/fault/_deps/<hash>/quantlib-src/`. There, the suffix does not match.
+- So the unmutated `aadp_bench_quantlib` stopped at the flag check with `check_quantlib_flags: no QuantLib unit ...` (exit 2). All five faults came out `baseline-failed`: `ql-bench-flags-differ`, `ql-r7-unbiased`, `ql-tuned-differs`, `ql-lanes-seed` and `ql-grid-time-variance`. An `--only` rerun of the five at 22223a5 gave the same result, and the copy's `CMakeCache.txt` and `compile_commands.json` put the unit under the cache.
+- They were caught at 9180dc3 because that run configured the `quantlib` copy before the cache held QuantLib's sources, so FetchContent fetched into the build tree. The runner then copied those sources into the cache: its `quantlib-src` is dated 35 s after that run's start. Every later run read them from there.
+- The fix: CMake passes `quantlib_SOURCE_DIR`, wherever FetchContent put the sources, to the check as a second argument, both in the bench's build and in the ctest. The check looks up `ql/pricingengines/barrier/mcbarrierengine.cpp` there by its full resolved path, not by a guessed suffix. With no directory, or no unit at that path, it still exits 2. The flags it compares, and how it compares them, are unchanged.
+- The self-test's QuantLib now sits outside the build tree, as under the fault runner, for every existing case. It gains three cases: QuantLib in the build tree, where FetchContent puts it by default; a unit named relative to its directory; and a unit only under another directory, which must exit 2.
+- In a normal `quantlib` build, with QuantLib in `build/quantlib/_deps/quantlib-src`, the check passes, its ctest passes, and a copy of that compile database with `-O1` added to `bench/quantlib/main.cpp` gives `flag mismatch bench/quantlib/main.cpp: ... -O1`, exit 1.
+
+CI: run 43107078217, at 01f467d, passed all 22 jobs, as the GitHub API lists them. This line said 23 until the commit that fixed the flag check.
 - The new library, its 12 tests and the flag check's self-test ran in every build job. The release jobs went from 720 to 733 tests on Linux and from 732 to 745 on macOS.
 - The Linux jobs keep their one allowed, named skip from before. macOS had none.
 - CI builds no QuantLib: the option stays off there, and the `quantlib` presets are not in its lists, as registered.
+
+### Generated README headline and RESULTS.md (e67aa02)
+
+- `aadp_results_table --docs <root> --write|--check` (`src/results/docs.cpp`) generates the README's headline block, between its markers, and `RESULTS.md`. It reads `results/headline.csv`, the target headings of `BENCHMARKS.md`, every file in `results/<host>/` and the measured oracle runs, and holds no number itself.
+- `scripts/check.sh` gained the `results-docs` step, its 11th of 14, before `data-verify`. It builds `aadp_results_table` in the release preset and runs `--docs . --check`, which fails unless both files match a fresh generation byte for byte.
+- CI's two release jobs, `linux-clang-release` and `macos-clang-release`, run the same check after their build.
+- 4 faults, which bring the manifest to 354 (62 oracle, 264 check, 28 fuzz):
+  - `check-results-docs-readme`: a number in the README's headline is edited by hand;
+  - `check-results-docs-results-md`: a mean batch time in `RESULTS.md` is edited by hand;
+  - `check-results-docs-host-mixing`: a file under `results/mac-m4max/` says it came from `linux-zen1`;
+  - `fuzz-results-docs`: the measured-run row decoder reads past a short row, which `fuzz_results_docs` finds under ASan.
+- 22223a5 corrected the README's fault count, 316 to 354, and run 43107078217's job count, 23 to 22.
+
+The full check at 22223a5 failed on the flag check's path bug (above, under "Stage 10 results").
+- `scripts/check.sh` through `heavy.sh`: 13 of 14 steps passed, and fault-injection failed with `caught=349 not-caught=0 not-applied=0 baseline-failed=5`.
+- Its fault report names e67aa02 as the commit under test. 22223a5 differs from it only in two lines of `README.md`.
+- The five were the `quantlib`-preset faults. No fault was missed.
+
+The full check at 822acaa, after the fix, passed. It finished unattended: the subagent that started it, `scripts/check.sh` through `heavy.sh`, was stopped by a usage limit first, and this result is taken from the run's complete summary and fault report.
+- 14 of 14 steps passed, none skipped. Tests: release 764 of 764, and debug, asan-ubsan and tsan 763 of 763 each, with 0 failed and 0 skipped in every preset.
+- Fault injection: `caught=354 not-caught=0 not-applied=0 baseline-failed=0`. Its report names 822acaa as the commit under test, and the five `quantlib`-preset faults are caught again.
+- The steps took 8276 s in all, 5612 s of it fault injection.
 
 ### Rule slips
 
