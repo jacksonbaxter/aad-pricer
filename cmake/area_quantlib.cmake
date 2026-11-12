@@ -52,10 +52,11 @@ endif()
 configure_file(cmake/quantlib_build.hpp.in "${AADP_GENERATED_DIR}/quantlib_build.hpp" @ONLY)
 
 # Fails the bench's build unless a sampled QuantLib unit and the bench's units were compiled with
-# the same optimisation and architecture flags, read from the compile database.
+# the same optimisation and architecture flags, read from the compile database. QuantLib's sources
+# are wherever FetchContent put them, which FETCHCONTENT_SOURCE_DIR_QUANTLIB can move.
 add_custom_target(aadp_quantlib_flag_check ALL
   COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/scripts/check_quantlib_flags.py"
-    "${PROJECT_BINARY_DIR}/compile_commands.json"
+    "${PROJECT_BINARY_DIR}/compile_commands.json" "${quantlib_SOURCE_DIR}"
   COMMENT "Checking that QuantLib and the bench share their code-generation flags"
   VERBATIM)
 
@@ -74,7 +75,7 @@ if(AADP_BUILD_TESTS)
     LABELS "bench;quantlib" TIMEOUT 900)
   add_test(NAME aadp_quantlib_flag_check
     COMMAND "${Python3_EXECUTABLE}" -I scripts/check_quantlib_flags.py
-      "${PROJECT_BINARY_DIR}/compile_commands.json"
+      "${PROJECT_BINARY_DIR}/compile_commands.json" "${quantlib_SOURCE_DIR}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_quantlib_flag_check PROPERTIES LABELS "bench;quantlib")
 endif()

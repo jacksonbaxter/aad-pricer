@@ -2,7 +2,12 @@
 """Fails unless QuantLib and the comparison bench were compiled with the same optimisation and
 architecture flags (NOTES.md, "Stage 10").
 
-    python3 -I scripts/check_quantlib_flags.py <build>/compile_commands.json
+    python3 -I scripts/check_quantlib_flags.py <build>/compile_commands.json <quantlib source dir>
+
+The QuantLib source directory is CMake's quantlib_SOURCE_DIR, which the build passes. FetchContent
+puts it under <build>/_deps/quantlib-src by default, but FETCHCONTENT_SOURCE_DIR_QUANTLIB moves it
+anywhere (the fault runner's shared cache does), so the sampled unit is looked up by its full path
+there, never by a guessed suffix.
 
 Reads one sampled QuantLib translation unit and every bench translation unit from the compile
 database, keeps the flags that decide code generation, in order, and compares the lists:
@@ -20,7 +25,7 @@ import re
 import shlex
 import sys
 
-QUANTLIB_SAMPLE = "_deps/quantlib-src/ql/pricingengines/barrier/mcbarrierengine.cpp"
+QUANTLIB_SAMPLE = "ql/pricingengines/barrier/mcbarrierengine.cpp"  # Relative to the source dir.
 BENCH_UNITS = (
     "bench/quantlib/main.cpp",
     "bench/quantlib/quantlib_side.cpp",
@@ -65,22 +70,39 @@ def codegen_flags(args):
     return kept
 
 
+def unit_path(entry):
+    path = entry.get("file", "")
+    if not os.path.isabs(path):
+        path = os.path.join(entry.get("directory", ""), path)
+    return path.replace("\\", "/")
+
+
+def same_file(a, b):
+    return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
+
+
 def find_unit(database, suffix):
     for entry in database:
-        path = entry.get("file", "")
-        if not os.path.isabs(path):
-            path = os.path.join(entry.get("directory", ""), path)
-        if path.replace("\\", "/").endswith("/" + suffix):
+        if unit_path(entry).endswith("/" + suffix):
             return entry
     return None
 
 
-def check(database, quantlib_sample=QUANTLIB_SAMPLE, bench_units=BENCH_UNITS):
+def find_quantlib_unit(database, quantlib_source, sample):
+    target = os.path.join(quantlib_source, sample)
+    for entry in database:
+        if same_file(unit_path(entry), target):
+            return entry
+    return None
+
+
+def check(database, quantlib_source, quantlib_sample=QUANTLIB_SAMPLE, bench_units=BENCH_UNITS):
     """Returns (exit code, report lines)."""
     lines = []
-    sample = find_unit(database, quantlib_sample)
+    sample = find_quantlib_unit(database, quantlib_source, quantlib_sample)
     if sample is None:
-        return 2, ["check_quantlib_flags: no QuantLib unit " + quantlib_sample]
+        where = os.path.join(quantlib_source, quantlib_sample)
+        return 2, ["check_quantlib_flags: no QuantLib unit " + where]
     reference = codegen_flags(arguments(sample))
     lines.append("quantlib " + quantlib_sample + ": " + " ".join(reference))
     status = 0
@@ -99,7 +121,7 @@ def check(database, quantlib_sample=QUANTLIB_SAMPLE, bench_units=BENCH_UNITS):
 
 
 def main(argv):
-    if len(argv) != 2:
+    if len(argv) != 3 or not argv[2]:
         print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)
         return 2
     try:
@@ -111,7 +133,7 @@ def main(argv):
     if not isinstance(database, list):
         print("check_quantlib_flags: not a compile database", file=sys.stderr)
         return 2
-    status, lines = check(database)
+    status, lines = check(database, argv[2])
     for line in lines:
         print(line)
     return status

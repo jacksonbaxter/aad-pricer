@@ -16,18 +16,24 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "scripts"))
 import check_quantlib_flags as flags  # noqa: E402
 
 BASE = ["clang++", "-ffp-contract=off", "-O3", "-DNDEBUG", "-std=gnu++23"]
-QL = "/b/_deps/quantlib-src/ql/pricingengines/barrier/mcbarrierengine.cpp"
+# Outside the build tree, as FETCHCONTENT_SOURCE_DIR_QUANTLIB puts it under the fault runner.
+QL_SOURCE = "/cache/0123456789abcdef/quantlib-src"
+QL = QL_SOURCE + "/" + flags.QUANTLIB_SAMPLE
+QL_DEFAULT = "/b/_deps/quantlib-src/" + flags.QUANTLIB_SAMPLE  # FetchContent's own place.
 
 
-def database(ql_args, bench_args, use_command=False, drop=None):
+def database(ql_args, bench_args, use_command=False, drop=None, ql_path=QL):
     entries = []
-    units = [QL] + ["/repo/" + unit for unit in flags.BENCH_UNITS]
+    units = [ql_path] + ["/repo/" + unit for unit in flags.BENCH_UNITS]
     for path in units:
-        args = list(ql_args if path == QL else bench_args)
+        args = list(ql_args if path == ql_path else bench_args)
         args += ["-o", "x.o", "-c", path]
         if drop is not None and path.endswith(drop):
             continue
-        entry = {"directory": "/b", "file": path}
+        directory = "/b"
+        if path == ql_path and not path.startswith("/"):
+            directory = QL_SOURCE
+        entry = {"directory": directory, "file": path}
         if use_command:
             entry["command"] = " ".join(args)
         else:
@@ -42,6 +48,12 @@ def bench_variant(extra, remove=()):
 
 CASES = [
     ("identical", database(BASE, BASE), 0),
+    ("QuantLib in the build tree",
+     database(BASE, BASE, ql_path=QL_DEFAULT), 0, "/b/_deps/quantlib-src"),
+    ("QuantLib unit named relative to its directory",
+     database(BASE, BASE, ql_path=flags.QUANTLIB_SAMPLE), 0),
+    ("QuantLib unit only under another source dir",
+     database(BASE, BASE, ql_path=QL_DEFAULT), 2),
     ("identical, command strings", database(BASE, BASE, use_command=True), 0),
     ("warnings, includes and definitions differ",
      database(BASE + ["-Wall", "-Wno-unknown-pragmas", "-DBOOST_ALL_NO_LIB", "-isystem", "/x"],
@@ -63,8 +75,8 @@ CASES = [
 
 def main():
     failures = 0
-    for name, db, expected in CASES:
-        status, lines = flags.check(db)
+    for name, db, expected, *source in CASES:
+        status, lines = flags.check(db, source[0] if source else QL_SOURCE)
         verdict = "ok" if status == expected else "FAILED"
         if status != expected:
             failures += 1
