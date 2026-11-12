@@ -54,6 +54,13 @@ if(AADP_BUILD_TESTS)
             "${PROJECT_BINARY_DIR}/data_test_scratch/scan_repo"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(data_repo_scan_script PROPERTIES LABELS "unit;fast")
+
+  # The per-commit verifier's tree sync, alone and in the verifier, with no rsync on PATH.
+  add_test(NAME data_verify_commits_script
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tests/data/verify_commits_test.py"
+            "${PROJECT_BINARY_DIR}/data_test_scratch/verify_commits"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(data_verify_commits_script PROPERTIES LABELS "unit;fast")
 endif()
 
 aadp_fuzz(fuzz_cp950

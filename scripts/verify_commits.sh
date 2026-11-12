@@ -5,9 +5,9 @@
 #
 # <range> goes to git rev-list, for example main..jb-build or HEAD~3..HEAD. Commits run oldest
 # first. Each is exported with git archive into build/commit-check/src. Only files that changed
-# are replaced there, so build/commit-check/build and its FetchContent downloads carry over
-# from one commit to the next. Real-file tests see the existing data/ through a link. This reads
-# history and never rewrites it. No commit is ever checked out.
+# are replaced there, by scripts/sync_tree.py, so build/commit-check/build and its FetchContent
+# downloads carry over from one commit to the next. Real-file tests see the existing data/
+# through a link. This reads history and never rewrites it. No commit is ever checked out.
 #
 # build/logs/commits/summary.txt gets one line per commit as it finishes:
 #   <hash> | <subject> | configure=<r> | build=<r> | tests=<r> | verdict=<pass|fail|no-build>
@@ -56,7 +56,7 @@ done
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_root" || exit 2
 
-for tool in cmake ctest git ninja python3 rsync tar; do
+for tool in cmake ctest git ninja python3 tar; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     printf 'verify_commits: %s is not available\n' "$tool" >&2
     exit 2
@@ -91,13 +91,16 @@ export GIT_CEILING_DIRECTORIES=$check_dir
 
 # Replaces only what differs, so unchanged files keep their times and ninja rebuilds no more
 # than the commit changed. data is the link to the real captures, and is never part of a commit.
+# scripts/sync_tree.py does what rsync -rlc --delete would, with no rsync on the host; the
+# script comes from this tree, not from the commit being checked.
 export_commit() {
   local commit=$1
   rm -rf -- "$export_dir"
   mkdir -p -- "$export_dir" || return 1
   git archive --format=tar "$commit" | tar -x -C "$export_dir" || return 1
   printf '%s\n' "$commit" >"$export_dir/COMMIT" || return 1
-  rsync -rlc --delete --exclude=/data "$export_dir/" "$source_dir/" || return 1
+  python3 -I "$repo_root/scripts/sync_tree.py" --keep data "$export_dir" "$source_dir" ||
+    return 1
   rm -rf -- "$export_dir"
   if [[ ! -L $source_dir/data ]]; then
     rm -rf -- "$source_dir/data"

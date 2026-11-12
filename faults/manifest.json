@@ -679,6 +679,46 @@
       "mutated_exit": 1
     },
     {
+      "id": "check-verify-sync-rewrites-all",
+      "kind": "check",
+      "covers": "scripts/sync_tree.py: unchanged files keep their mtimes",
+      "bug": "The sync stops comparing contents and rewrites every file, so each commit the verifier checks rebuilds the whole tree.",
+      "edits": [
+        {
+          "file": "scripts/sync_tree.py",
+          "find": "                and filecmp.cmp(source, dest, shallow=False)\n",
+          "replace": "                and False\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/verify_commits_test.py", "{build}/data_test_scratch/verify_commits"],
+      "detect": "test",
+      "reason": "^FAILED verify_commits: an unchanged file keeps its mtime: ",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-verify-commits-replaces-data-link",
+      "kind": "check",
+      "covers": "scripts/verify_commits.sh: the data link is kept out of the sync",
+      "bug": "The verifier's sync no longer keeps data, so a commit's data/ replaces the link to the real captures, which the script then has to recreate.",
+      "edits": [
+        {
+          "file": "scripts/verify_commits.sh",
+          "find": " --keep data \"$export_dir\"",
+          "replace": " \"$export_dir\""
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/verify_commits_test.py", "{build}/data_test_scratch/verify_commits"],
+      "detect": "test",
+      "reason": "^FAILED verify_commits: the data link is untouched: ",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
       "id": "check-wall",
       "kind": "check",
       "covers": "-Wall in cmake/AadpWarnings.cmake",
