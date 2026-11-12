@@ -1,0 +1,6 @@
+# Measured run 1, synthetic. Host linux-zen1, Linux.
+# run=3 passed=2 failed=1 skipped=0.
+id,estimate,reference,se,bound,verdict
+A.value,1.0,1.0,0.1,0.5,pass
+A.delta,0.5,0.4,0.01,0.05,FAIL
+A.vega,2.0,2.0,0.1,0.5,pass

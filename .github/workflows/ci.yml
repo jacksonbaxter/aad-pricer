@@ -82,6 +82,12 @@ jobs:
           PRESET: ${{ matrix.preset }}
         run: cmake --build --preset "$PRESET" --parallel "$AADP_JOBS"
 
+      # The step scripts/check.sh calls results-docs: README.md's headline and RESULTS.md must be
+      # what aadp_results_table generates from the committed results files, byte for byte.
+      - name: Check the generated results docs
+        if: matrix.preset == 'release'
+        run: build/release/bin/aadp_results_table --docs . --check
+
       # Which libc++ the binaries link, and the version of it in the SDK, for the run's record.
       - name: Show the C++ runtime linked
         if: runner.os == 'macOS'

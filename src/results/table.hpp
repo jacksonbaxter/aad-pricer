@@ -1,5 +1,6 @@
-// The markdown results table. It is the only way numbers reach the README. One table per host,
-// because a Mac number and a Linux number must never sit side by side.
+// The markdown results table. It and results/docs.hpp, which builds RESULTS.md and the README's
+// headline from it, are the only way numbers reach the docs. One table per host, because a Mac
+// number and a Linux number must never sit side by side.
 #ifndef AADP_RESULTS_TABLE_HPP_
 #define AADP_RESULTS_TABLE_HPP_
 
@@ -16,8 +17,10 @@ namespace aadp::results {
 
 struct TableOptions {
   // Admit files that are not reportable, under a banner that says the numbers are iteration only.
-  // For looking at a run while working on it; such a table never goes in the README.
+  // For looking at a run while working on it; such a table never goes in the README or RESULTS.md.
   bool iteration = false;
+  // A `### <host>` line first. RESULTS.md puts the table under its own host heading.
+  bool host_heading = true;
 };
 
 // One table. Refuses files from more than one host, and any file that is not reportable unless

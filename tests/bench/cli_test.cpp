@@ -392,6 +392,71 @@ TEST(Table, ToolRefusesAFaultReportOutsideAHostDirectory) {
   expect_reason(dir, "first line is not the results magic");
 }
 
+// A repo tree the --docs mode can generate from: one host file and one oracle run.
+void docs_tree(const fs::path& root) {
+  fs::create_directories(root / "results" / "linux-zen1");
+  fs::create_directories(root / "references");
+  std::ofstream(root / "results" / "linux-zen1" / "a.txt") << text_of(stamped_file("linux-zen1"));
+  std::ofstream(root / "results" / "headline.csv")
+      << "kind,id,host,source,detail,target,target_text,better,scale,unit,label\n"
+         "measured_run,run 1,linux-zen1,references/r.csv,,,,,,,\n"
+         "oracle_run,run 1,linux-zen1,references/r.csv,,,,,,,\n";
+  std::ofstream(root / "references" / "r.csv")
+      << "id,estimate,reference,se,bound,verdict\nA,1,1,1,1,pass\nB,1,1,1,1,FAIL\n";
+  std::ofstream(root / "BENCHMARKS.md") << "# BENCHMARKS\n";
+  std::ofstream(root / "README.md") << "# r\n\n<!-- BEGIN GENERATED HEADLINE: aadp_results_table "
+                                       "--docs . --write; do not edit -->\n<!-- END GENERATED "
+                                       "HEADLINE -->\n\nrest\n";
+}
+
+std::string docs_command(const fs::path& root, std::string_view mode, const fs::path& dir) {
+  return std::string(AADP_TABLE_BIN) + " --docs " + quoted(root) + " " + std::string(mode) +
+         " >/dev/null" + stderr_to_file(dir);
+}
+
+TEST(Table, DocsWritesBothFilesAndThenFindsThemCurrent) {
+  const fs::path dir = fresh_dir();
+  docs_tree(dir / "repo");
+  ASSERT_EQ(run(docs_command(dir / "repo", "--check", dir)), 1);
+  expect_reason(dir, "README.md headline differs from a fresh generation, first at line 4");
+  expect_reason(dir, "RESULTS.md differs from a fresh generation, first at line 1");
+  ASSERT_EQ(run(docs_command(dir / "repo", "--write", dir)), 0) << slurp(dir / "err.txt");
+  EXPECT_EQ(run(docs_command(dir / "repo", "--check", dir)), 0) << slurp(dir / "err.txt");
+  const std::string readme = slurp(dir / "repo" / "README.md");
+  EXPECT_NE(
+      readme.find("| 1 of 2 pass | [linux-zen1](references/r.csv), synthetic | 1 failed: B |"),
+      std::string::npos)
+      << readme;
+  EXPECT_TRUE(readme.ends_with("<!-- END GENERATED HEADLINE -->\n\nrest\n")) << readme;
+}
+
+TEST(Table, DocsCheckFailsOnAHandEditToEitherFile) {
+  const fs::path dir = fresh_dir();
+  docs_tree(dir / "repo");
+  ASSERT_EQ(run(docs_command(dir / "repo", "--write", dir)), 0) << slurp(dir / "err.txt");
+  std::string readme = slurp(dir / "repo" / "README.md");
+  readme.replace(readme.find("1 of 2 pass"), 11, "2 of 2 pass");
+  std::ofstream(dir / "repo" / "README.md") << readme;
+  EXPECT_EQ(run(docs_command(dir / "repo", "--check", dir)), 1);
+  expect_reason(dir, "README.md headline differs from a fresh generation");
+  EXPECT_EQ(slurp(dir / "err.txt").find("RESULTS.md differs"), std::string::npos);
+
+  ASSERT_EQ(run(docs_command(dir / "repo", "--write", dir)), 0) << slurp(dir / "err.txt");
+  std::ofstream(dir / "repo" / "RESULTS.md", std::ios::app) << "\nan edit\n";
+  EXPECT_EQ(run(docs_command(dir / "repo", "--check", dir)), 1);
+  expect_reason(dir, "RESULTS.md differs from a fresh generation");
+  EXPECT_EQ(slurp(dir / "err.txt").find("README.md headline differs"), std::string::npos);
+}
+
+TEST(Table, DocsRefusesAnythingElseUnderResults) {
+  const fs::path dir = fresh_dir();
+  docs_tree(dir / "repo");
+  std::ofstream(dir / "repo" / "results" / "notes.txt") << "x\n";
+  EXPECT_EQ(run(docs_command(dir / "repo", "--write", dir)), 1);
+  expect_reason(dir, "results/notes.txt is neither the spec nor a host");
+  EXPECT_FALSE(fs::exists(dir / "repo" / "RESULTS.md"));
+}
+
 TEST(Table, ToolStillRefusesAnUnknownFileWhateverItIsCalled) {
   const fs::path dir = fresh_dir();
   fs::create_directories(dir / "in");

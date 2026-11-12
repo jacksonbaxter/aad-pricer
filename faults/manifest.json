@@ -716,7 +716,7 @@
       "id": "check-host-mixing",
       "kind": "check",
       "covers": "host-mixing refusal, aadp_results_table",
-      "bug": "A results file under results/mac-m4max/ says it came from linux-zen1, so the README's command would mix two hosts' numbers. The bad input is the fault.",
+      "bug": "A results file under results/mac-m4max/ says it came from linux-zen1, so `aadp_results_table results/` would mix two hosts' numbers. The bad input is the fault.",
       "edits": [
         {
           "file": "results/mac-m4max/harness-selftest-20261030T231633Z.txt",
@@ -756,6 +756,107 @@
       "reason": "^results_table: refusing to put hosts mac-m4max and linux-zen1 in one table$",
       "timeout_s": 60,
       "mutated_exit": 1
+    },
+    {
+      "id": "check-results-docs-readme",
+      "kind": "check",
+      "covers": "scripts/check.sh results-docs: README.md's generated headline",
+      "bug": "A number in the README's headline table is edited by hand, so the README claims a multiple the results file does not hold.",
+      "edits": [
+        {
+          "file": "README.md",
+          "find": "| 1.89 times one scalar pricing |",
+          "replace": "| 1.79 times one scalar pricing |"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "results-docs"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+results-docs\\s.*results_table: README\\.md headline differs from a fresh generation, first at line \\d+",
+      "timeout_s": 900,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "configure": ["release"],
+      "output_files": ["build/logs/check/check-results-docs.log"]
+    },
+    {
+      "id": "check-results-docs-results-md",
+      "kind": "check",
+      "covers": "scripts/check.sh results-docs: RESULTS.md",
+      "bug": "A mean batch time in RESULTS.md is edited by hand, so the full results disagree with the results file they come from.",
+      "edits": [
+        {
+          "file": "RESULTS.md",
+          "find": "| aad1-barrier.tape | 3 | 15 | 9.7304817670175190e+09 |",
+          "replace": "| aad1-barrier.tape | 3 | 15 | 9.6304817670175190e+09 |"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "results-docs"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+results-docs\\s.*results_table: RESULTS\\.md differs from a fresh generation, first at line \\d+",
+      "timeout_s": 900,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "configure": ["release"],
+      "output_files": ["build/logs/check/check-results-docs.log"]
+    },
+    {
+      "id": "check-results-docs-host-mixing",
+      "kind": "check",
+      "covers": "host-mixing refusal, aadp_results_table --docs",
+      "bug": "A results file under results/mac-m4max/ says it came from linux-zen1, so RESULTS.md would put a Linux number in the Mac's tables. The bad input is the fault.",
+      "edits": [
+        {
+          "file": "results/mac-m4max/harness-selftest-20261030T231633Z.txt",
+          "find": "host_label: mac-m4max\n",
+          "replace": "host_label: linux-zen1\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "results-docs"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+results-docs\\s.*results_table: mac-m4max/harness-selftest-\\S+\\.txt is under mac-m4max but its header says otherwise",
+      "timeout_s": 900,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "configure": ["release"],
+      "output_files": ["build/logs/check/check-results-docs.log"]
+    },
+    {
+      "id": "fuzz-results-docs",
+      "kind": "fuzz",
+      "covers": "fuzz_results_docs",
+      "bug": "The measured-run row decoder refuses only too many fields, so a short row reads its verdict past the end of its field list.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "if (f.size() != kMeasuredFields || f[0].empty()) {",
+          "replace": "if (f.size() > kMeasuredFields || f[0].empty()) {"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_results_docs"],
+      "command": [
+        "{build}/bin/fuzz_results_docs",
+        "-seed=1",
+        "-max_total_time=60",
+        "-print_final_stats=1",
+        "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-results-docs/",
+        "{build}/fault-fuzz/fuzz-results-docs/corpus",
+        "fuzz/fuzz_results_docs_seeds"
+      ],
+      "detect": "test",
+      "reason": "AddressSanitizer: (heap-buffer-overflow|container-overflow)(?=[\\s\\S]*? in aadp::results::\\(anonymous namespace\\)::parse_measured_row\\()",
+      "timeout_s": 120,
+      "output_files": [
+        "build/fuzz/fault-fuzz/fuzz-results-docs/*",
+        "build/fuzz/fault-fuzz/fuzz-results-docs/corpus/*"
+      ]
     },
     {
       "id": "check-stamp-forbidden-string",

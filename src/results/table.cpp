@@ -152,7 +152,7 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
     rows += *file_text;
   }
 
-  std::string out = "### " + host + "\n\n";
+  std::string out = options.host_heading ? "### " + host + "\n\n" : std::string();
   if (!not_reportable.empty()) {
     out += "**ITERATION ONLY: not results.** Not reportable: " + cell(not_reportable) +
            ". Nothing here may be quoted.\n\n";

@@ -35,7 +35,7 @@ set -uo pipefail
 readonly MAX_JOBS=6
 readonly COULD_NOT_RUN=77
 readonly ALL_STEPS='nice format tidy repo-scan release debug asan-ubsan tsan fuzz measured-plan
-  data-verify actionlint fault-injection'
+  results-docs data-verify actionlint fault-injection'
 
 usage() {
   printf 'usage: check.sh [--only <step,...>] [--allow-skip-step <step,...>]\n' >&2
@@ -171,6 +171,15 @@ step_measured_plan() {
   tool python3 -I scripts/compare_measured.py "$output" references/measured_results.csv
 }
 
+# README.md's headline block and RESULTS.md must be what aadp_results_table generates from the
+# committed results files today, byte for byte, so neither can be edited by hand or go stale.
+step_results_docs() {
+  command -v cmake >/dev/null 2>&1 || return "$COULD_NOT_RUN"
+  cmake --preset release || return 1
+  cmake --build --preset release --parallel "$jobs" --target aadp_results_table || return 1
+  build/release/bin/aadp_results_table --docs . --check
+}
+
 step_data_verify() {
   scripts/fetch_data.sh --verify
   local code=$?
@@ -205,6 +214,7 @@ run_body() {
     release | debug | asan-ubsan | tsan) step_preset "$1" ;;
     fuzz) step_fuzz ;;
     measured-plan) step_measured_plan ;;
+    results-docs) step_results_docs ;;
     data-verify) step_data_verify ;;
     actionlint) step_actionlint ;;
     fault-injection) step_fault_injection ;;

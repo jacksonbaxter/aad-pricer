@@ -1,0 +1,19 @@
+# The README's headline rows and the oracle runs RESULTS.md shows side by side. Read by
+# aadp_results_table --docs (src/results/docs.hpp), which takes every measured value from the
+# files and none from here. A row says which result answers which target, and the target's
+# threshold as BENCHMARKS.md states it: target_text must appear in the target's heading there.
+#
+# Pinned headline numbers come from linux-zen1. A row on mac-m4max is labelled macOS.
+# Rows: AAD-1 and AAD-4 against the scalar primal; AAD-5, tape over the hand-written adjoint,
+# missed; MC-1, missed; MEM-4, the largest tape of any workload; and measured run 2, with its two
+# failures. Both oracle runs were recorded on mac-m4max: run 2's file says so, and run 1's host
+# is in NOTES.md, "Stage 8b: measured run 2".
+kind,id,host,source,detail,target,target_text,better,scale,unit,label
+measured_run,run 1,mac-m4max,references/measured_results.csv,,,,,,,
+measured_run,run 2,mac-m4max,references/measured_results_run2.csv,,,,,,,
+multiple,AAD-1,linux-zen1,aad1-barrier,tape/price,3.0,below 3.0,below,1,,times one scalar pricing
+multiple,AAD-4,linux-zen1,aad4-asian12,tape/price,2.8,multiple 2.8,at_most,1,,times one scalar pricing
+multiple,AAD-5,linux-zen1,aad4-asian12,tape/hand,1.25,within 1.25,at_most,1,,times the hand-written adjoint
+paths_per_second,MC-1,linux-zen1,mc-asian252,price,1.044e6,1.044 million paths/s,at_least,1,paths/s,
+largest,MEM-4,linux-zen1,tape_allocated_bytes,,50,below 50 MB,below,1e6,MB,of tape chunks
+oracle_run,run 2,mac-m4max,references/measured_results_run2.csv,,,,,,,

@@ -19,9 +19,12 @@
 #define AADP_RESULTS_AAD_TABLE_HPP_
 
 #include <expected>
+#include <functional>
+#include <map>
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "results/results_file.hpp"
 
@@ -32,6 +35,18 @@ inline constexpr std::string_view kAadSectionPrefix = "aad_";
 // The AAD tables of every file that has AAD sections, in file order; empty if none has. The
 // caller has admitted the files (results/table.hpp).
 std::expected<std::string, std::string> render_aad_tables(std::span<const ResultsFile> files);
+
+// One AAD section of a file, read as the tables read it, for the headline (results/docs.hpp).
+struct AadWorkload {
+  std::map<std::string, std::string, std::less<>> fields;  // the section's single-valued keys
+  bool valid = false;  // `valid yes` and every in-run check passed, as the tables mark it
+  double paths = 0.0;
+  std::map<std::string, double, std::less<>> times_ns;  // variant -> mean real time of one run
+  std::map<std::string, double, std::less<>> peak_rss;  // variant -> bytes
+};
+
+// Every AAD section of the file, in file order; empty if it has none.
+std::expected<std::vector<AadWorkload>, std::string> read_aad_workloads(const ResultsFile& file);
 
 }  // namespace aadp::results
 

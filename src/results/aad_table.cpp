@@ -487,6 +487,42 @@ std::expected<std::string, std::string> file_tables(const ResultsFile& file) {
 
 }  // namespace
 
+std::expected<std::vector<AadWorkload>, std::string> read_aad_workloads(const ResultsFile& file) {
+  std::vector<AadWorkload> out;
+  const ResultsSection* benchmark = file.section(kBenchmarkSection);
+  for (const ResultsSection& raw : file.sections) {
+    if (!raw.name.starts_with(kAadSectionPrefix)) {
+      continue;
+    }
+    if (benchmark == nullptr) {
+      return std::unexpected("no benchmark section");
+    }
+    auto json = parse_json(benchmark->body);
+    if (!json) {
+      return std::unexpected("benchmark JSON: " + json.error());
+    }
+    auto section = parse_section(raw.body);
+    if (!section) {
+      return std::unexpected(raw.name + ": " + section.error());
+    }
+    auto times = variant_times(*section, *json);
+    if (!times) {
+      return std::unexpected(times.error());
+    }
+    const auto paths = parse_number(section->field("paths"));
+    if (!paths || !(*paths > 0.0)) {
+      return std::unexpected(raw.name + ": paths is not a positive number");
+    }
+    const bool valid = section_valid(*section);
+    out.push_back({.fields = std::move(section->fields),
+                   .valid = valid,
+                   .paths = *paths,
+                   .times_ns = std::move(*times),
+                   .peak_rss = std::move(section->rss)});
+  }
+  return out;
+}
+
 std::expected<std::string, std::string> render_aad_tables(std::span<const ResultsFile> files) {
   std::string out;
   for (const ResultsFile& file : files) {

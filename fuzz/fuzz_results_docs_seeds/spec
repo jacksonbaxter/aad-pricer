@@ -1,0 +1,8 @@
+# a synthetic spec
+kind,id,host,source,detail,target,target_text,better,scale,unit,label
+measured_run,run 1,linux-zen1,references/r.csv,,,,,,,
+multiple,AAD-1,linux-zen1,w,tape/price,3.0,below 3.0,below,1,,times one pricing
+paths_per_second,MC-1,linux-zen1,w,price,1.044e6,1.044 million,at_least,1,paths/s,
+largest,MEM-4,linux-zen1,tape_allocated_bytes,,50,below 50 MB,below,1e6,MB,of tape
+oracle_run,run 1,linux-zen1,references/r.csv,,,,,,,
+### AAD-1: barrier: multiple below 3.0

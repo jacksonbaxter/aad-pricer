@@ -24,7 +24,8 @@ aadp_library(aadp_results
     src/results/results_file.cpp
     src/results/stamp.cpp
     src/results/table.cpp
-    src/results/aad_table.cpp)
+    src/results/aad_table.cpp
+    src/results/docs.cpp)
 
 set(_aadp_bench_scratch "${PROJECT_BINARY_DIR}/bench-test-scratch")
 
@@ -38,6 +39,7 @@ aadp_test(aadp_results_unit
     tests/bench/stamp_test.cpp
     tests/bench/table_test.cpp
     tests/bench/aad_table_test.cpp
+    tests/bench/docs_test.cpp
   LINK aadp_results)
 
 if(TARGET aadp_results_unit)
@@ -100,6 +102,11 @@ aadp_fuzz(fuzz_results_file
   SOURCES fuzz/fuzz_results_file.cpp
   LINK aadp_results
   CORPUS fuzz/fuzz_results_file_seeds)
+
+aadp_fuzz(fuzz_results_docs
+  SOURCES fuzz/fuzz_results_docs.cpp
+  LINK aadp_results
+  CORPUS fuzz/fuzz_results_docs_seeds)
 
 aadp_fuzz(fuzz_results_json
   SOURCES fuzz/fuzz_results_json.cpp

@@ -1,0 +1,11 @@
+aadp-fault-injection 1
+claim: none
+commit: 0123456789abcdef0123456789abcdef01234567
+host_label: linux-zen1
+utc_time: 2026-01-02T03:04:05Z
+selected: 2
+scope: all 2 faults
+columns: id | covers | baseline | mutated_exit | reason | verdict
+a | x | pass | 1 | r | caught
+b | y | pass | 1 | r | caught
+summary: caught=2 not-caught=0
