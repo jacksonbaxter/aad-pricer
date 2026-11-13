@@ -139,7 +139,10 @@ class LocalVolModel {
     const svi::LocalVariance<Real> lv = svi::LocalVarianceAt(surface_.At(s.slot, k), k, rule_);
     if (tally_ != nullptr) tally_->Add(lv.cls, s.slot.segment, Value(k), s.time);
     const Real variance = lv.variance * dt_;
-    return {(x + s.log_forward_increment) - 0.5 * variance, Sqrt(variance)};
+    // Named in clang's order (kernels.hpp, Finish). A braced list is evaluated in order.
+    const Real drifted = x + s.log_forward_increment;
+    const Real half_variance = 0.5 * variance;
+    return {drifted - half_variance, Sqrt(variance)};
   }
 
  private:

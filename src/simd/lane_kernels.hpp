@@ -144,9 +144,12 @@ Real Gap(Direction direction, const Real& x, const Real& log_barrier) {
   return direction == Direction::kDown ? x - log_barrier : log_barrier - x;
 }
 
+// As kernels.hpp's Finish: the two operands that record are named in clang's order.
 template <class Real, class Model>
 PathValue<Real> Finish(const Contract& c, const Model& model, const Real& x, const Real& weight) {
-  return {model.Discount() * weight * Intrinsic(c.type, Real(Exp(x)), c.strike), weight};
+  const Real discounted = model.Discount() * weight;
+  const Real payoff = Intrinsic(c.type, Real(Exp(x)), c.strike);
+  return {discounted * payoff, weight};
 }
 
 template <class Real, class Model>

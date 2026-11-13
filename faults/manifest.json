@@ -2640,8 +2640,8 @@
       "edits": [
         {
           "file": "src/pricer/conditional_kernels.hpp",
-          "find": "Real(law.sd / count));",
-          "replace": "Real(law.sd));"
+          "find": "  const Real sd = law.sd / count;",
+          "replace": "  const Real sd = law.sd;"
         }
       ],
       "preset": "release",
@@ -4592,8 +4592,8 @@
       "edits": [
         {
           "file": "src/svi/surface.hpp",
-          "find": "    const Real w = beta * lo.w + alpha * hi.w;",
-          "replace": "    const Real w = alpha * lo.w + beta * hi.w;"
+          "find": "    const Real w_lo = beta * lo.w;\n    const Real w_hi = alpha * hi.w;\n",
+          "replace": "    const Real w_lo = alpha * lo.w;\n    const Real w_hi = beta * hi.w;\n"
         }
       ],
       "preset": "release",
@@ -4725,8 +4725,8 @@
       "edits": [
         {
           "file": "src/svi/local_vol.hpp",
-          "find": "  return u * u - 0.25 * (w1 * q) - 0.0625 * (w1 * w1) + 0.5 * w2;",
-          "replace": "  return u * u + 0.25 * (w1 * q) + 0.0625 * (w1 * w1) + 0.5 * w2;"
+          "find": "  const Real first = u2 - slope;\n  const Real slope2 = 0.0625 * (w1 * w1);\n  const Real second = first - slope2;\n",
+          "replace": "  const Real first = u2 + slope;\n  const Real slope2 = 0.0625 * (w1 * w1);\n  const Real second = first + slope2;\n"
         }
       ],
       "preset": "release",
@@ -4801,8 +4801,8 @@
       "edits": [
         {
           "file": "src/pricer/local_vol_model.hpp",
-          "find": "    return {(x + s.log_forward_increment) - 0.5 * variance, Sqrt(variance)};",
-          "replace": "    return {x + s.log_forward_increment, Sqrt(variance)};"
+          "find": "    const Real half_variance = 0.5 * variance;\n    return {drifted - half_variance, Sqrt(variance)};\n",
+          "replace": "    return {drifted, Sqrt(variance)};\n"
         }
       ],
       "preset": "release",
@@ -5205,8 +5205,8 @@
       "edits": [
         {
           "file": "src/svi/calibration_adjoint.cpp",
-          "find": ": discount * ((q.strike * NormalCdf(-d2)) - (forward * NormalCdf(-d1)));",
-          "replace": ": discount * ((forward * NormalCdf(d1)) - (q.strike * NormalCdf(d2)));"
+          "find": "    const R8 cash = q.strike * NormalCdf(-d2);\n    const R8 share = forward * NormalCdf(-d1);\n    legs = cash - share;\n",
+          "replace": "    const R8 share = forward * NormalCdf(d1);\n    const R8 cash = q.strike * NormalCdf(d2);\n    legs = share - cash;\n"
         }
       ],
       "preset": "release",
@@ -6691,6 +6691,63 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] Run2Fingerprint\\.CommittedBitsOnThisHost",
       "timeout_s": 900
+    },
+    {
+      "id": "order-surface-w-swapped",
+      "kind": "check",
+      "covers": "the tape's statement order, pinned for every compiler: the SVI surface",
+      "bug": "The surface records hi's share of w before lo's, the order g++ chose before Stage 11; the values are the same, the adjoints' rounding is not.",
+      "edits": [
+        {
+          "file": "src/svi/surface.hpp",
+          "find": "    const Real w_lo = beta * lo.w;\n    const Real w_hi = alpha * hi.w;\n",
+          "replace": "    const Real w_hi = alpha * hi.w;\n    const Real w_lo = beta * lo.w;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_statement_order_test"],
+      "command": ["{build}/bin/aadp_ad_statement_order_test", "--gtest_filter=StatementOrder.LocalVolPathIsPinned"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StatementOrder\\.LocalVolPathIsPinned",
+      "timeout_s": 300
+    },
+    {
+      "id": "order-finish-swapped",
+      "kind": "check",
+      "covers": "the tape's statement order, pinned for every compiler: the GBM payoff",
+      "bug": "Finish records the payoff before the discounted weight, the order g++ chose before Stage 11.",
+      "edits": [
+        {
+          "file": "src/pricer/kernels.hpp",
+          "find": "  const Real discounted = model.Discount() * weight;\n  const Real payoff = Intrinsic(c.type, Real(Exp(x)), c.strike);\n",
+          "replace": "  const Real payoff = Intrinsic(c.type, Real(Exp(x)), c.strike);\n  const Real discounted = model.Discount() * weight;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_statement_order_test"],
+      "command": ["{build}/bin/aadp_ad_statement_order_test", "--gtest_filter=StatementOrder.GbmPathsArePinned"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StatementOrder\\.GbmPathsArePinned",
+      "timeout_s": 300
+    },
+    {
+      "id": "order-conditional-swapped",
+      "kind": "check",
+      "covers": "the tape's statement order, pinned for every compiler: the conditional kernels",
+      "bug": "The one-step knock-out records the corridor before the discounted weight, the order g++ chose before Stage 11.",
+      "edits": [
+        {
+          "file": "src/pricer/conditional_kernels.hpp",
+          "find": "  const Real discounted = model.Discount() * weight;\n  const Real expected = Corridor(c.type, c.strike, KnockOutRegion(c), law.mean, law.sd);\n",
+          "replace": "  const Real expected = Corridor(c.type, c.strike, KnockOutRegion(c), law.mean, law.sd);\n  const Real discounted = model.Discount() * weight;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_ad_statement_order_test"],
+      "command": ["{build}/bin/aadp_ad_statement_order_test", "--gtest_filter=StatementOrder.ConditionalPathsArePinned"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StatementOrder\\.ConditionalPathsArePinned",
+      "timeout_s": 300
     },
     {
       "id": "metal-philox-mulhi",

@@ -103,7 +103,11 @@ inline Region KnockOutRegion(const Contract& c) {
 template <class Real>
 Real Mass(const Real& l, const Real& h) {
   const auto upper = l > 0.0;
-  return NormalCdf(Select(upper, Real(-l), h)) - NormalCdf(Select(upper, Real(-h), l));
+  // Both terms named, in clang's order, so the tape's statement order does not depend on the
+  // compiler (kernels.hpp, Finish). So below.
+  const Real high = NormalCdf(Select(upper, Real(-l), h));
+  const Real low = NormalCdf(Select(upper, Real(-h), l));
+  return high - low;
 }
 
 // E[(e^X - K) 1{X in r}] for a call, E[(K - e^X) 1{X in r}] for a put, X ~ N(mean, sd^2).
@@ -117,7 +121,9 @@ Real Corridor(OptionType type, double strike, const Region& r, const Real& mean,
     const Real l = (r.lo - mean) / sd;
     const Real h = (r.hi - mean) / sd;
     strike_mass = Mass(l, h);
-    share_mass = Mass(Real(l - sd), Real(h - sd));
+    const Real l_share = l - sd;
+    const Real h_share = h - sd;
+    share_mass = Mass(l_share, h_share);
   } else if (r.has_lo) {
     const Real l = (mean - r.lo) / sd;
     strike_mass = NormalCdf(l);
@@ -127,7 +133,9 @@ Real Corridor(OptionType type, double strike, const Region& r, const Real& mean,
     strike_mass = NormalCdf(h);
     share_mass = NormalCdf(h - sd);
   }
-  const Real call = forward * share_mass - strike * strike_mass;
+  const Real share_leg = forward * share_mass;
+  const Real strike_leg = strike * strike_mass;
+  const Real call = share_leg - strike_leg;
   return type == OptionType::kCall ? call : -call;
 }
 
@@ -151,8 +159,9 @@ Real AsianGeometric(const Contract& c, const Model& model, std::span<const doubl
   }
   const StepLaw<Real> law = model.Law(c.steps - 1, x);
   const double count = static_cast<double>(c.steps) + (c.include_spot ? 1.0 : 0.0);
-  return model.Discount() * Corridor(c.type, c.strike, Vanilla(c), Real((sum + law.mean) / count),
-                                     Real(law.sd / count));
+  const Real mean = (sum + law.mean) / count;
+  const Real sd = law.sd / count;
+  return model.Discount() * Corridor(c.type, c.strike, Vanilla(c), mean, sd);
 }
 
 // (sum + S_m) / count - K = (S_m - K') / count with K' = count K - sum, the strike left for the
@@ -174,12 +183,18 @@ Real AsianArithmetic(const Contract& c, const Model& model, std::span<const doub
   const Real strike = Select(positive, left, Real(1.0));
   const Real forward = Exp(law.mean + 0.5 * law.sd * law.sd);
   const Real d = (law.mean - Log(strike)) / law.sd;
-  const Real inner =
-      c.type == OptionType::kCall
-          ? Select(positive, Real(forward * NormalCdf(d + law.sd) - strike * NormalCdf(d)),
-                   Real(forward - left))
-          : Select(positive, Real(strike * NormalCdf(-d) - forward * NormalCdf(-(d + law.sd))),
-                   Real(0.0));
+  Real inner(0.0);
+  if (c.type == OptionType::kCall) {
+    const Real share_leg = forward * NormalCdf(d + law.sd);
+    const Real strike_leg = strike * NormalCdf(d);
+    const Real in_range = share_leg - strike_leg;
+    const Real in_the_money = forward - left;
+    inner = Select(positive, in_range, in_the_money);
+  } else {
+    const Real strike_leg = strike * NormalCdf(-d);
+    const Real share_leg = forward * NormalCdf(-(d + law.sd));
+    inner = Select(positive, Real(strike_leg - share_leg), Real(0.0));
+  }
   return model.Discount() * inner / count;
 }
 
@@ -209,8 +224,9 @@ Real OutOneStep(const Contract& c, const Model& model, std::span<const double> u
     x = SurvivingStep(c, model.Law(i, x), log_barrier, u[i], weight);
   }
   const StepLaw<Real> law = model.Law(c.steps - 1, x);
-  return model.Discount() * weight *
-         Corridor(c.type, c.strike, KnockOutRegion(c), law.mean, law.sd);
+  const Real discounted = model.Discount() * weight;
+  const Real expected = Corridor(c.type, c.strike, KnockOutRegion(c), law.mean, law.sd);
+  return discounted * expected;
 }
 
 template <class Real, class Model>
@@ -224,19 +240,27 @@ Real OutOneStepBridge(const Contract& c, const Model& model, std::span<const dou
     const Real next = SurvivingStep(c, law, log_barrier, u[i], weight);
     const Real d0 = Max(kernel_detail::Gap(direction, x, log_barrier), Real(0.0));
     const Real d1 = Max(kernel_detail::Gap(direction, next, log_barrier), Real(0.0));
-    weight = weight * (1.0 - Exp(-2.0 * d0 * d1 / (law.sd * law.sd)));
+    const Real gaps = -2.0 * d0 * d1;
+    const Real variance = law.sd * law.sd;
+    weight = weight * (1.0 - Exp(gaps / variance));
     x = next;
   }
   const StepLaw<Real> law = model.Law(c.steps - 1, x);
   const Real d0 = Max(kernel_detail::Gap(direction, x, log_barrier), Real(0.0));
   const double sign = direction == Direction::kUp ? 1.0 : -1.0;
-  const Real exponent = sign * 2.0 * d0 * (law.mean - x) / (law.sd * law.sd);
+  const Real scaled_gap = sign * 2.0 * d0;
+  const Real step = law.mean - x;
+  const Real product = scaled_gap * step;
+  const Real variance = law.sd * law.sd;
+  const Real exponent = product / variance;
   const Real reflection = Exp(Min(exponent, Real(kMaxReflectionExponent)));
   const Region region = KnockOutRegion(c);
   const Real direct = Corridor(c.type, c.strike, region, law.mean, law.sd);
   const Real reflected =
       Corridor(c.type, c.strike, region, Real(law.mean + sign * 2.0 * d0), law.sd);
-  return model.Discount() * weight * (direct - reflection * reflected);
+  const Real discounted = model.Discount() * weight;
+  const Real net = direct - reflection * reflected;
+  return discounted * net;
 }
 
 template <class Real, class Model>

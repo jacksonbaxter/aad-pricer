@@ -71,7 +71,15 @@ Real Select(bool mask, const Real& if_true, const Real& if_false) {
 template <class Real>
 Real Durrleman(const Real& q, const Real& w1, const Real& w2, const Real& k) {
   const Real u = 1.0 - 0.5 * (k * q);
-  return u * u - 0.25 * (w1 * q) - 0.0625 * (w1 * w1) + 0.5 * w2;
+  // ((u^2 - w1 q / 4) - w1^2 / 16) + w2 / 2, each operand that records named in clang's order, so
+  // the tape's statement order does not depend on the compiler (src/pricer/kernels.hpp, Finish).
+  const Real u2 = u * u;
+  const Real slope = 0.25 * (w1 * q);
+  const Real first = u2 - slope;
+  const Real slope2 = 0.0625 * (w1 * w1);
+  const Real second = first - slope2;
+  const Real curvature = 0.5 * w2;
+  return second + curvature;
 }
 
 template <class Real>

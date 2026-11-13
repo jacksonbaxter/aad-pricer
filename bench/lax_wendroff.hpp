@@ -91,7 +91,11 @@ void Advect(Field<Real>& q, std::uint32_t steps, double c) {
   std::array<Real, kPoints - 1> flux{};
   for (std::uint32_t step = 0; step < steps; ++step) {
     for (std::size_t i = 0; i + 1 < kPoints; ++i) {
-      flux[i] = half_c * ((q[i] + q[i + 1]) + c * (q[i] - q[i + 1]));
+      // Named in clang's order, so the tape's statement order does not depend on the compiler
+      // (src/pricer/kernels.hpp, Finish).
+      const Real sum = q[i] + q[i + 1];
+      const Real difference = q[i] - q[i + 1];
+      flux[i] = half_c * (sum + c * difference);
     }
     for (std::size_t i = 1; i + 1 < kPoints; ++i) {
       q[i] = q[i] + (flux[i - 1] - flux[i]);

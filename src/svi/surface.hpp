@@ -165,11 +165,19 @@ class SviSurface {
     const SviPoint<Real> hi = EvaluateSlice(slices_[slot.segment], k);
     const double alpha = slot.weight;
     const double beta = 1.0 - alpha;
-    const Real w = beta * lo.w + alpha * hi.w;
-    const Real w1 = beta * lo.w1 + alpha * hi.w1;
+    // Each product named, in clang's order, so the tape's statement order does not depend on the
+    // compiler (src/pricer/kernels.hpp, Finish).
+    const Real w_lo = beta * lo.w;
+    const Real w_hi = alpha * hi.w;
+    const Real w = w_lo + w_hi;
+    const Real w1_lo = beta * lo.w1;
+    const Real w1_hi = alpha * hi.w1;
+    const Real w1 = w1_lo + w1_hi;
+    const Real w2_lo = beta * lo.w2;
+    const Real w2_hi = alpha * hi.w2;
     return {.w = w,
             .w1 = w1,
-            .w2 = beta * lo.w2 + alpha * hi.w2,
+            .w2 = w2_lo + w2_hi,
             .dwdt = (hi.w - lo.w) * slot.inverse_length,
             .q_num = w1,
             .q_den = w};

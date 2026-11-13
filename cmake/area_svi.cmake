@@ -108,6 +108,12 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     aadp_library(aadp_local_vol_ad
       SOURCES src/ad/local_vol_gradient.cpp
       LINK aadp_ad aadp_local_vol)
+    # The tape's statement order on GBM, local-vol and conditional paths, one pinned constant for
+    # every host and compiler (docs/NOTES.md, "Stage 11").
+    aadp_test(aadp_ad_statement_order_test
+      SOURCES tests/ad/statement_order_test.cpp
+      LINK aadp_local_vol_ad
+      LABELS ad svi fast)
 
     # The sub-stepped kernels against EvaluatePath and a hand loop, the flat-surface oracle
     # against GBM, validation, and the same bits for any thread count.

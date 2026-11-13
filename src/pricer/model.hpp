@@ -37,7 +37,7 @@ class GbmModel {
       : spot_(m.spot),
         log_spot_(Log(m.spot)),
         discount_(Exp(-m.r * m.maturity)),
-        drift_((m.r - m.q - 0.5 * m.sigma * m.sigma) * (m.maturity / static_cast<double>(steps))),
+        drift_(StepDrift(m, steps)),
         sd_(m.sigma * Sqrt(m.maturity / static_cast<double>(steps))) {}
 
   [[nodiscard]] const Real& Spot() const { return spot_; }
@@ -52,6 +52,16 @@ class GbmModel {
   }
 
  private:
+  // (r - q - sigma^2 / 2) dt, each operand that records named in clang's order, as kernels.hpp's
+  // Finish explains.
+  static Real StepDrift(const Market<Real>& m, std::uint32_t steps) {
+    const Real carry = m.r - m.q;
+    const Real half_variance = 0.5 * m.sigma * m.sigma;
+    const Real rate = carry - half_variance;
+    const Real dt = m.maturity / static_cast<double>(steps);
+    return rate * dt;
+  }
+
   Real spot_;
   Real log_spot_;
   Real discount_;

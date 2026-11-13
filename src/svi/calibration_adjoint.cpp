@@ -68,15 +68,28 @@ R8 Residual(const std::array<R8, kLanes>& z, const R8& price, const FitQuote& q,
   const R8& leg = z[kSigmaLegLane];
   const R8 k = Log(q.strike / forward);
   const R8 x = k - m;
-  const R8 w = a + (b * ((rho * x) + Sqrt((x * x) + (sigma * sigma))));
+  // Operands that both record are named, in clang's order, so the tape's statement order does not
+  // depend on the compiler (src/pricer/kernels.hpp, Finish).
+  const R8 rho_x = rho * x;
+  const R8 x2 = x * x;
+  const R8 sigma2 = sigma * sigma;
+  const R8 w = a + (b * (rho_x + Sqrt(x2 + sigma2)));
   w_value = w.value();
   if (!(w_value > 0.0)) return {0.0};
   const R8 root = Sqrt(w);
   const R8 d1 = ((0.5 * w) - k) / root;
   const R8 d2 = d1 - root;
-  const R8 model = q.type == OptionType::kCall
-                       ? discount * ((forward * NormalCdf(d1)) - (q.strike * NormalCdf(d2)))
-                       : discount * ((q.strike * NormalCdf(-d2)) - (forward * NormalCdf(-d1)));
+  R8 legs(0.0);
+  if (q.type == OptionType::kCall) {
+    const R8 share = forward * NormalCdf(d1);
+    const R8 cash = q.strike * NormalCdf(d2);
+    legs = share - cash;
+  } else {
+    const R8 cash = q.strike * NormalCdf(-d2);
+    const R8 share = forward * NormalCdf(-d1);
+    legs = cash - share;
+  }
+  const R8 model = discount * legs;
   const R8 noise = Sqrt((leg * leg) + tau2);
   return (model - price) / noise;
 }

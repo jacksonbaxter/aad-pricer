@@ -101,9 +101,15 @@ Real Gap(Direction direction, const Real& x, const Real& log_barrier) {
   return direction == Direction::kDown ? x - log_barrier : log_barrier - x;
 }
 
+// Two operands that both record on a tape are named, in the order clang evaluates them: C++
+// leaves the order of an operator's operands and of a call's arguments unspecified, g++ takes them
+// right to left, and the tape's statement order, and so its sums, would follow the compiler
+// (docs/NOTES.md, "Stage 11"). tests/ad/statement_order_test.cpp pins the order.
 template <class Real, class Model>
 PathValue<Real> Finish(const Contract& c, const Model& model, const Real& x, const Real& weight) {
-  return {model.Discount() * weight * Intrinsic(c.type, Real(Exp(x)), c.strike), weight};
+  const Real discounted = model.Discount() * weight;
+  const Real payoff = Intrinsic(c.type, Real(Exp(x)), c.strike);
+  return {discounted * payoff, weight};
 }
 
 // Continuous: the bridge between two points on the live side stays there with probability
