@@ -1257,6 +1257,31 @@
       "output_files": ["build/fuzz/fault-fuzz/fuzz-plan/*", "build/fuzz/fault-fuzz/fuzz-plan/corpus/*"]
     },
     {
+      "id": "fuzz-plan-knock-in-lost",
+      "kind": "fuzz",
+      "covers": "aadp_fuzz_plan on stage 8's row kinds: a knock-in resolves to a knock-in",
+      "bug": "The resolver returns the catalog's knock-out contract for knock-in-parity rows without marking it a knock-in, so the runner would price a knock-out where the plan names a knock-in.",
+      "edits": [
+        {
+          "file": "src/oracle/plan.cpp",
+          "find": "    knock_out->knock_in = entry.knock_in;",
+          "replace": "    knock_out->knock_in = false;"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["aadp_fuzz_plan"],
+      "command": [
+        "{build}/bin/aadp_fuzz_plan", "-dict=fuzz/fuzz_plan.dict", "-seed=1",
+        "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1",
+        "-artifact_prefix={build}/fault-fuzz/fuzz-plan-knock-in-lost/",
+        "{build}/fault-fuzz/fuzz-plan-knock-in-lost/corpus", "fuzz/fuzz_plan_seeds"
+      ],
+      "detect": "test",
+      "reason": "deadly signal(?=[\\s\\S]*? in LLVMFuzzerTestOneInput )",
+      "timeout_s": 120,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-plan-knock-in-lost/*", "build/fuzz/fault-fuzz/fuzz-plan-knock-in-lost/corpus/*"]
+    },
+    {
       "id": "fuzz-references",
       "kind": "fuzz",
       "covers": "aadp_fuzz_references",

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "mc/gbm_kernels.hpp"
+#include "oracle/catalog.hpp"
 #include "oracle/finite_difference.hpp"
 #include "oracle/plan.hpp"
 
@@ -39,17 +40,30 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   for (const aadp::PlanRow& row : plan->rows) {
     Require(ids.insert(row.id).second);
     Require(row.batches == plan->header.batches);
-    if (row.status != aadp::RowStatus::kRun) continue;
+    if (row.status == aadp::RowStatus::kAwaitingPhase3) continue;
     Require(row.paths > 0 && row.paths % row.batches == 0);
+    // The runner resolves a row's instrument as the decoder did: a GBM contract, a knock-in by
+    // parity or a surface contract (stage 8), not a GBM contract alone.
+    const auto instrument = aadp::ResolveInstrument(row.instrument);
+    if (!instrument) __builtin_trap();
+    const auto step = aadp::FiniteDifferenceStep(row.reference);
+    if (instrument->kind == aadp::InstrumentKind::kSurface) {
+      Require(instrument->surface < aadp::catalog::kSurfaceInstruments.size());
+      Require(aadp::DecodeSurfaceGreek(row.greek).has_value());
+      Require(step.has_value() && *step > 0.0);
+    } else {
+      Require(row.status == aadp::RowStatus::kRun);
+    }
+    if (row.status != aadp::RowStatus::kRun) continue;
     Require(std::isfinite(row.se_ceiling) && row.se_ceiling > 0.0);
     Require(std::isfinite(row.b) && row.b >= 0.0);
-    const auto instrument = aadp::DecodeInstrument(row.instrument);
-    if (!instrument) __builtin_trap();
-    Require(instrument->market.spot > 0.0 && instrument->contract.steps >= 1);
-    PriceOnePath(*instrument);
+    if (instrument->kind == aadp::InstrumentKind::kSurface) continue;
+    const aadp::Instrument& gbm = instrument->gbm;
+    Require(gbm.knock_in == (instrument->kind == aadp::InstrumentKind::kKnockIn));
+    Require(gbm.market.spot > 0.0 && gbm.contract.steps >= 1);
+    PriceOnePath(gbm);
     const auto greek = aadp::DecodeGreek(row.greek);
     if (!greek) __builtin_trap();
-    const auto step = aadp::FiniteDifferenceStep(row.reference);
     if (step) Require(*step > 0.0 && *greek != aadp::Greek::kValue);
   }
   const std::string encoded = aadp::EncodePlan(*plan);

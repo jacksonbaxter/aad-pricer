@@ -84,7 +84,7 @@ Other scripts:
 
 ## Fault injection
 
-A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 364 faults: 64 against the oracles, 272 against the checks and 28 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
+A check that cannot fail proves nothing. `scripts/fault_injection.py` plants one bug at a time, from `faults/manifest.json`, and shows that the oracle or check aimed at it fails for the stated reason. There are 365 faults: 64 against the oracles, 272 against the checks and 29 against the fuzz targets. Each is applied to a copy under `build/fault`, never to the working tree. The unmutated copy must pass first, and the mutated run must fail with output matching the fault's reason. Failing for some other reason, such as a compile error where a test failure was expected, counts as not caught.
 
 ```sh
 python3 -I scripts/fault_injection.py --list                 # print the faults
@@ -94,7 +94,7 @@ python3 -I scripts/fault_injection.py --jobs 6 --output <file>   # run all of th
 
 It needs the toolchain in the environment, as the build does. `--kind` runs one kind, and `--source <dir>` mutates an export with no `.git`. The schema and the verdicts are described at the top of the script, and the runner's own tests are in `faults/test_fault_injection.py`. `scripts/check.sh` runs every fault as its last step.
 
-Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. Those committed reports are from Phase 2, when there were 41 faults. On the Mac all 41 were caught. On the Linux host 29 ran and all 29 were caught. The 9 fuzz faults and 3 sanitizer faults were left out there, because sanitizer and fuzz runs stay on the Mac. The latest full `scripts/check.sh` run, at 009605c on the Mac, caught all 355 faults the manifest held then. The two added since by 67e340e, the three added by f131c23, the two added by 5d2e385 and the two added with the fix to the SVI-11 RMSE were run on their own and caught. `docs/NOTES.md` gives each stage's fault results. What the faults found is in `docs/NOTES.md`, under "Fault injection results".
+Reports are in `results/<host>/fault-injection-<time>.txt`, with the commit, a scope line and one line per fault. Those committed reports are from Phase 2, when there were 41 faults. On the Mac all 41 were caught. On the Linux host 29 ran and all 29 were caught. The 9 fuzz faults and 3 sanitizer faults were left out there, because sanitizer and fuzz runs stay on the Mac. The latest full `scripts/check.sh` run, at 009605c on the Mac, caught all 355 faults the manifest held then. The two added since by 67e340e, the three added by f131c23, the two added by 5d2e385 and the two added by 6a21a31 and the one added with the plan fuzzer's fix were run on their own and caught. `docs/NOTES.md` gives each stage's fault results. What the faults found is in `docs/NOTES.md`, under "Fault injection results".
 
 ## Results
 
