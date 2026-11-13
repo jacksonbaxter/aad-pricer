@@ -414,7 +414,45 @@
       "id": "oracle-math-central-identity",
       "kind": "oracle",
       "covers": "inverse normal, bit identity with the reference",
-      "bug": "The central branch divides before multiplying by q, q * (N / D) for (q * N) / D, which keeps the accuracy and changes the last bit of some results.",
+      "bug": "The central fast path divides before multiplying by q, q * (N / D) for (q * N) / D, which keeps the accuracy and changes the last bit of some results.",
+      "edits": [
+        {
+          "file": "src/math/inverse_normal.hpp",
+          "find": "  return (q * num) / den;",
+          "replace": "  return q * (num / den);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.CentralRegionIsBitIdenticalToTheReference"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.CentralRegionIsBitIdenticalToTheReference \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-fast-path-edge",
+      "kind": "oracle",
+      "covers": "inverse normal, central fast path against the select form",
+      "bug": "The fast path tests p against the decimals 0.075 and 0.925 instead of |p - 1/2| against 0.425, which moves the upper edge by one double: p = 0.925 takes the central rational where the select form takes the tail's, and its last bits change.",
+      "edits": [
+        {
+          "file": "src/math/inverse_normal.hpp",
+          "find": "  if ((q < 0.0 ? -q : q) <= kCentralBound) return Central(q);",
+          "replace": "  if (p >= 0.075 && p <= 0.925) return Central(q);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_math_inverse_normal_test"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.FastPathGivesTheSelectFormsBits"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.FastPathGivesTheSelectFormsBits \\(",
+      "timeout_s": 120
+    },
+    {
+      "id": "oracle-math-select-form-central",
+      "kind": "oracle",
+      "covers": "inverse normal, the select form the lanes copy",
+      "bug": "The select form's central region divides before multiplying by q, q * (N / D) for (q * N) / D, which the scalar fast path no longer runs but the select form the lane kernels copy does.",
       "edits": [
         {
           "file": "src/math/inverse_normal.hpp",
@@ -424,9 +462,9 @@
       ],
       "preset": "release",
       "targets": ["aadp_math_inverse_normal_test"],
-      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.CentralRegionIsBitIdenticalToTheReference"],
+      "command": ["{build}/bin/aadp_math_inverse_normal_test", "--gtest_filter=MathInverseNormal.FastPathGivesTheSelectFormsBits"],
       "detect": "test",
-      "reason": "\\[  FAILED  \\] MathInverseNormal\\.CentralRegionIsBitIdenticalToTheReference \\(",
+      "reason": "\\[  FAILED  \\] MathInverseNormal\\.FastPathGivesTheSelectFormsBits \\(",
       "timeout_s": 120
     },
     {

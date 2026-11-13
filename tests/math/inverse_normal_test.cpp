@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <ios>
 #include <limits>
 #include <string>
 
@@ -183,6 +184,84 @@ TEST(MathInverseNormal, EdgeContract) {
         std::numeric_limits<double>::signaling_NaN()}) {
     EXPECT_EQ(Bits(math::inverse_normal(p)), kCanonicalNaN) << p;
   }
+}
+
+// The central fast path changes no bit: every p gives what the select form gives, NaNs included.
+TEST(MathInverseNormal, FastPathGivesTheSelectFormsBits) {
+  constexpr double kSmallest = std::numeric_limits<double>::denorm_min();
+  std::size_t checked = 0;
+  std::size_t central = 0;
+  std::size_t differ = 0;
+  const auto compare = [&](double p) {
+    ++checked;
+    const double q = p - 0.5;
+    if ((q < 0.0 ? -q : q) <= production::kCentralBound) ++central;
+    const double fast = math::inverse_normal(p);
+    const double select = production::SelectForm(p);
+    if (Bits(fast) != Bits(select) && ++differ <= 20) {
+      ADD_FAILURE() << "p = " << std::hexfloat << p << ": " << fast << " against " << select;
+    }
+  };
+  // x and the 4096 doubles on each side of it.
+  const auto around = [&](double x) {
+    double down = x;
+    double up = x;
+    compare(x);
+    for (int i = 0; i < 4096; ++i) {
+      down = std::nextafter(down, -kInf);
+      up = std::nextafter(up, kInf);
+      compare(down);
+      compare(up);
+    }
+  };
+
+  // The central region, on a grid and at random, and 1/2, where the sign of q flips.
+  constexpr std::size_t kSteps = std::size_t{1} << 20;
+  for (std::size_t i = 0; i <= kSteps; ++i) compare(0.075 + 0.85 * static_cast<double>(i) / kSteps);
+  std::uint64_t state = kSeed ^ 0xfa57U;
+  for (int i = 0; i < (1 << 20); ++i) {
+    state += 0x9e3779b97f4a7c15U;
+    compare(UniformFromBits(state * 0xbf58476d1ce4e5b9U));
+  }
+  around(0.5);
+
+  // The central region's edges, where |p - 1/2| <= 0.425 flips: around the doubles 1/2 -+ 0.425.
+  // The decimal 0.925 is the upper one, and the decimal 0.075 is one double below the lower one.
+  // Then the far tail's edge, r = 5, at p = exp(-25) and its complement.
+  const double far_edge = std::exp(-25.0);
+  for (const double edge : {0.5 - production::kCentralBound, 0.5 + production::kCentralBound,
+                            far_edge, 1.0 - far_edge}) {
+    around(edge);
+  }
+
+  // Both tails, every binade down to the smallest subnormal and up to the largest double below 1:
+  // 64 points in each binade of p and of 1 - p.
+  for (int exponent = -4; exponent >= -1074; --exponent) {
+    const double scale = std::ldexp(1.0, exponent);
+    for (int k = 0; k < 64; ++k) {
+      const double p = scale * (1.0 + (k / 64.0));
+      compare(p);
+      compare(1.0 - p);
+    }
+  }
+  around(kSmallest);
+  around(0x1p-1022);
+  around(std::nextafter(1.0, 0.0));
+
+  // The edge contract: 0, 1, negatives, above 1, infinities and NaNs with several payloads.
+  for (const double p :
+       {0.0, -0.0, 1.0, -kSmallest, -0.25, -1.0, std::nextafter(1.0, 2.0), 1.5, 2.0, kInf, -kInf,
+        std::numeric_limits<double>::quiet_NaN(), -std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::signaling_NaN(), std::bit_cast<double>(0x7ff0000000000123U),
+        std::bit_cast<double>(0xfff8000000000456U)}) {
+    compare(p);
+  }
+
+  std::printf("fast path against the select form: %zu of %zu differ in any bit, %zu central\n",
+              differ, checked, central);
+  EXPECT_EQ(differ, 0U);
+  EXPECT_GT(central, 0U);
+  EXPECT_LT(central, checked);
 }
 
 // Dyadic p only: 1 - p is then exact, so both calls see the same tail.

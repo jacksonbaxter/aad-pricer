@@ -10,7 +10,14 @@
 // with its argument and each coefficient picked by region, and every lane takes the log and sqrt.
 // A SIMD lane then runs the same operations in the same order as this scalar code and gets the
 // same bits. A vector version may skip the log and sqrt when no lane is in a tail: that changes no
-// lane's value.
+// lane's value. inverse_normal_detail::SelectForm is that form, whole.
+//
+// Central fast path. The scalar function branches once, where no lane does: a central p, 85% of
+// uniform draws, takes the central rational alone, with the select form's operations in its
+// order, and skips the log, the sqrt and the tail's selects. Every other p, NaN included, takes
+// the select form. So every p gets the select form's bits, which
+// tests/math/inverse_normal_test.cpp checks bit for bit, and a tape that records the result
+// records what it did before.
 //
 // Accuracy target, stated before measuring: 1.0e-15 maximum relative error on IEEE double, for
 // every p in (0, 1). Wichura's 6.0e-16 (BENCHMARKS.md RNG-3) is a sample maximum over 50,000
@@ -78,10 +85,8 @@ inline constexpr double kCentralShift = 0.180625;  // 0.425^2
 inline constexpr double kMiddleShift = 1.6;
 inline constexpr double kFarBound = 5.0;  // r = sqrt(-log tail) at the far tail's edge
 
-}  // namespace inverse_normal_detail
-
-inline double inverse_normal(double p) {
-  using namespace inverse_normal_detail;
+// The whole function in its select form, which src/simd/lane_math.hpp runs lane by lane.
+inline double SelectForm(double p) {
   using detail::kInf;
   const double q = p - 0.5;
   const bool central = (q < 0.0 ? -q : q) <= kCentralBound;
@@ -113,6 +118,29 @@ inline double inverse_normal(double p) {
   const double infinity = lower ? -kInf : kInf;
   x = (!central && tail == 0.0) ? infinity : x;
   return (p >= 0.0 && p <= 1.0) ? x : detail::kNaN;
+}
+
+// The select form's central region alone, its operations in its order: t, Horner from the top,
+// then (q N) / D. For a central p the select form's other selects pass the ratio through.
+inline double Central(double q) {
+  const double t = kCentralShift - q * q;
+  double num = kCentralNum[7];
+  double den = kCentralDen[7];
+  for (std::size_t i = 7; i-- > 0;) {
+    num = num * t + kCentralNum[i];
+    den = den * t + kCentralDen[i];
+  }
+  return (q * num) / den;
+}
+
+}  // namespace inverse_normal_detail
+
+inline double inverse_normal(double p) {
+  using namespace inverse_normal_detail;
+  const double q = p - 0.5;
+  // The select form's own test, so both agree on which p is central. A NaN fails it.
+  if ((q < 0.0 ? -q : q) <= kCentralBound) return Central(q);
+  return SelectForm(p);
 }
 
 }  // namespace aadp::math

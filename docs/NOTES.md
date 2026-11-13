@@ -1918,6 +1918,38 @@ CI found an open fault outside this stage's code. Run 43357450022, at 271c28c, p
 
 - The old test's failures saw 14.8 to 29.6 ms enabled when shared and 13.9 to 17.0 ms beside the hog, against the 29.7 ms floor.
 
+A central fast path in the scalar inverse normal (`src/math/inverse_normal.hpp`). Raw output in the research cache, `evidence/stage11-s1/piece2/`.
+- What was recorded about the select form: it exists so that a SIMD lane runs the scalar's operations in the scalar's order and gets its bits (a43f40c, and "SIMD" above). Nothing recorded asks the scalar function itself to be branch-free, and its AVX2 build already had 17 conditional branches ("Stage 5c", B15). So one branch does not defeat a recorded reason.
+- The change: when |p − 1/2| ≤ 0.425, the select form's own test and so 85% of uniform draws, `math::inverse_normal` evaluates the central rational alone, with the select form's operations in its order, and skips the `log`, the `sqrt` and the tail selects. Every other p, NaN included, runs the select form, now `inverse_normal_detail::SelectForm`, which the lane kernels copy and which did not change. The lane kernels did not change.
+- The same bits for every input: `MathInverseNormal.FastPathGivesTheSelectFormsBits` compares the two on 2,299,801 inputs, 0 differing in any bit: the central region on a grid and at random, 4096 doubles on each side of 1/2, of both central edges (1/2 ∓ 0.425 as doubles; the decimal 0.925 is the upper one, the decimal 0.075 one double below the lower one), of exp(−25) and its complement, of the smallest subnormal, of 2^−1022 and of the largest double below 1; 64 points in every binade of p and of 1 − p down to the smallest subnormal; and 0, −0, 1, negatives, values above 1, both infinities and five NaNs.
+- Faults, all caught with `--only`: `oracle-math-fast-path-edge` (the fast path tests p against the decimals 0.075 and 0.925, which sends p = 0.925 to the central rational, one ULP off the select form's tail value) and `oracle-math-select-form-central` (the select form's central ratio divides first), both on the new test; `oracle-math-central-identity` now makes its bug in the fast path, and the central region's test against the reference still catches it. `oracle-math-inverse-normal`, `oracle-math-inverse-normal-edges`, `simd-inverse-normal-order` and `fuzz-simd-kernels` are still caught. The manifest holds 362 faults: 64 oracle, 270 check, 28 fuzz.
+- The tape records what it recorded before: `InverseNormal` on a `Real` records one statement from the value and its partial, and both are the same bits. `aadp_run2_fingerprint`, `aadp_ad_statement_order_test`, the lane bit-identity tests and the inverse normal's host-independence hash pass unchanged on the Mac, and on the Linux host under clang `release` and g++ `release-gcc`. No reference file, seed, tolerance or ceiling changed.
+
+Before and after, iteration only, scalar code, the stage 11 driver of `PERF.md` linked against each build: the inverse normal over 1,032,192 Philox-grid uniforms, and the `mc-asian252` workload at 1/10 scale through `bench/aad_workloads` as `aadp_bench_aad` runs it. Three alternating rounds; ranges over the rounds.
+
+`linux-zen1`, `release-avx2` (x86-64-v3, AVX2, scalar code), clang 23.1.4, `cycles:u` of the timed loop only (`perf stat --control`), through `heavy.sh taskset -c 4`, governor schedutil:
+
+| Kernel | Before | After | Change |
+|---|---|---|---|
+| Inverse normal, cycles per value | 121.7 to 121.8 | 58.9 | −52% |
+| Inverse normal, instructions per value | 163.6 | 64.2 | |
+| Inverse normal, branch misses per value | 0.655 | 0.303 | |
+| `mc-asian252` price, cycles per path-step | 206.2 to 207.4 | 161.6 to 162.1 | −22% |
+| `mc-asian252` hand adjoint, cycles per path-step | 206.3 to 208.9 | 163.7 to 164.6 | −21% |
+| `mc-asian252` tape, cycles per path-step | 415.0 to 416.9 | 368.3 to 370.5 | −11% |
+
+`mac-m4max`, macOS, `release` (AArch64, scalar code), clang 23.1.4, wall time per unit, the median of each run's repetitions, each run under `measure.sh`, unpinned:
+
+| Kernel | Before | After | Change |
+|---|---|---|---|
+| Inverse normal, ns per value | 13.89 to 13.90 | 5.83 | −58% |
+| `mc-asian252` price, ns per path-step | 29.54 to 29.61 | 17.12 to 17.15 | −42% |
+| `mc-asian252` hand adjoint, ns per path-step | 30.02 to 30.04 | 17.25 to 17.28 | −43% |
+| `mc-asian252` tape, ns per path-step | 78.85 to 78.87 | 64.14 to 64.22 | −19% |
+
+- This makes the tape's cost against the hand adjoint worse: both lose the same inverse-normal time per draw, which is a larger share of the hand adjoint. The medians over the rounds give tape over hand 1.99 before and 2.25 after on `linux-zen1`, and 2.63 before and 3.72 after on `mac-m4max`. The same holds for tape over price.
+- The scalar baseline of every lane speedup that draws normals now runs the fast path, while the lanes still take every lane's `log` and `sqrt`. So a future run of `SIMD-1` or the lane variants will show smaller speedups for the inverse normal and the pricers than the stage 5c figures; the lanes did not get slower.
+
 ### Rule slips
 
 None affected a number.
