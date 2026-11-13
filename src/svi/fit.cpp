@@ -840,12 +840,29 @@ double MeanAbsPriceErrorBp(const FitSlice& slice, std::span<const double> model_
 
 double ImpliedVolRmse(std::span<const double> model_vol, std::span<const double> market_vol) {
   if (model_vol.size() != market_vol.size() || model_vol.empty()) return kNaN;
+  const auto n = static_cast<double>(model_vol.size());
   double sum = 0.0;
   for (std::size_t i = 0; i < model_vol.size(); ++i) {
     const double e = model_vol[i] - market_vol[i];
     sum += e * e;
   }
-  return 100.0 * std::sqrt(sum / static_cast<double>(model_vol.size()));
+  if (std::isfinite(sum)) return 100.0 * std::sqrt(sum / n);
+  // At an expiry near 1e-308 every vol, sqrt(w / T), is near 1e154: finite, but the squared
+  // errors sum past the largest double (the fuzzer found it). Only then are the errors scaled,
+  // by a power of two so that the scaling is exact; every sum that fits is taken as above.
+  double largest = 0.0;
+  for (std::size_t i = 0; i < model_vol.size(); ++i) {
+    const double e = std::abs(model_vol[i] - market_vol[i]);
+    if (!std::isfinite(e)) return 100.0 * std::sqrt(sum / n);
+    largest = std::max(largest, e);
+  }
+  const int exponent = std::ilogb(largest);
+  double scaled = 0.0;
+  for (std::size_t i = 0; i < model_vol.size(); ++i) {
+    const double e = std::scalbn(model_vol[i] - market_vol[i], -exponent);
+    scaled += e * e;
+  }
+  return 100.0 * std::scalbn(std::sqrt(scaled / n), exponent);
 }
 
 }  // namespace aadp::svi

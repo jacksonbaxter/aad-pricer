@@ -155,7 +155,8 @@ using Matrix5 = std::array<std::array<double, 5>, 5>;
                                          std::span<const double> model_price);
 
 // SVI-11, Zhang, Lin and Lu: sqrt((1/n) sum (sigma_model,i - sigma_market,i)^2), in vol points
-// (100 times the decimal). Unweighted.
+// (100 times the decimal). Unweighted. Finite whenever the errors are finite and the RMSE is
+// below the largest double, even where their squares are not.
 [[nodiscard]] double ImpliedVolRmse(std::span<const double> model_vol,
                                     std::span<const double> market_vol);
 

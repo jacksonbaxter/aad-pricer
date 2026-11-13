@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -307,6 +308,59 @@ TEST(FitMetrics, ImpliedVolRmseInVolPointsUnweighted) {
   // Errors -0.01, 0.02, 0: mean square 5e-4 / 3, RMSE 0.012910 = 1.2910 vol points.
   EXPECT_NEAR(ImpliedVolRmse(model, market), 100.0 * std::sqrt(5e-4 / 3.0), 1e-12);
   EXPECT_TRUE(std::isnan(ImpliedVolRmse(model, std::vector<double>{0.2})));
+}
+
+// Errors of 2e154 square to 4e308, past the largest double; the RMSE, 2e154 = 2e156 vol points,
+// is finite.
+TEST(FitMetrics, ImpliedVolRmseWhereTheSquaredErrorsOverflow) {
+  const std::vector<double> model = {3e154, 3e154, 3e154, 3e154};
+  const std::vector<double> market = {1e154, 1e154, 1e154, 1e154};
+  EXPECT_DOUBLE_EQ(ImpliedVolRmse(model, market), 100.0 * (3e154 - 1e154));
+  // Errors 3e154 and -4e154: mean square 12.5e308.
+  const std::vector<double> mixed_model = {4e154, 1e154};
+  const std::vector<double> mixed_market = {1e154, 5e154};
+  EXPECT_NEAR(ImpliedVolRmse(mixed_model, mixed_market) / (100.0 * std::sqrt(12.5) * 1e154), 1.0,
+              1e-14);
+  // A vol that is not finite still gives what it did: inf, or NaN.
+  constexpr double kInf = std::numeric_limits<double>::infinity();
+  constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+  EXPECT_TRUE(std::isinf(ImpliedVolRmse(std::vector<double>{kInf}, std::vector<double>{0.2})));
+  EXPECT_TRUE(std::isnan(
+      ImpliedVolRmse(std::vector<double>{kNaN, 3e154}, std::vector<double>{0.2, 1e154})));
+}
+
+// The fuzzer's case, hand-made: at T = 1e-308 every vol, sqrt(w / T), is near 1e154 while w is
+// O(1). Total variances alternating 0.01 and 1.5 on 10 strikes leave the flat-ish fit about
+// 6e153 from every market vol, so the squared errors sum past the largest double. The reference
+// takes the RMSE in sqrt(w) units, where nothing overflows, and divides by sqrt(T).
+TEST(FitMetrics, ImpliedVolRmseFiniteAtATinyExpiry) {
+  constexpr double kExpiry = 1e-308;
+  constexpr std::size_t kStrikes = 10;
+  FitSlice slice{.forward = 100.0, .discount = 1.0, .expiry = kExpiry, .quotes = {}};
+  for (std::size_t i = 0; i < kStrikes; ++i) {
+    const double strike = 100.0 * std::exp(0.1 * (static_cast<double>(i) - 4.5));
+    const double w = i % 2 == 0 ? 0.01 : 1.5;
+    const OptionType type = OtmType(strike, 100.0);
+    slice.quotes.push_back(
+        {.strike = strike,
+         .price = Black76Price(100.0, 1.0, strike, kExpiry, std::sqrt(w / kExpiry), type),
+         .type = type,
+         .noise = 1.0});
+  }
+  const auto fit = FitRawSvi(slice);
+  ASSERT_TRUE(fit.has_value());
+  const double root_t = std::sqrt(kExpiry);
+  double sum = 0.0;
+  for (std::size_t i = 0; i < kStrikes; ++i) {
+    ASSERT_TRUE(std::isfinite(fit->model_vol[i]) && std::isfinite(fit->market_vol[i]));
+    const double e = (fit->model_vol[i] - fit->market_vol[i]) * root_t;
+    sum += e * e;
+  }
+  const double reference = 100.0 * std::sqrt(sum / static_cast<double>(kStrikes)) / root_t;
+  ASSERT_TRUE(std::isfinite(reference));
+  const double rmse = ImpliedVolRmse(fit->model_vol, fit->market_vol);
+  ASSERT_TRUE(std::isfinite(rmse)) << rmse;
+  EXPECT_NEAR(rmse / reference, 1.0, 1e-12);
 }
 
 TEST(FitErrors, AreValuesWithNames) {

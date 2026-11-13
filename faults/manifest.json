@@ -4296,6 +4296,44 @@
       "timeout_s": 300
     },
     {
+      "id": "svi-fit-rmse-overflow",
+      "kind": "check",
+      "covers": "SVI-11 finite where the vols are near 1e154 and their squared errors overflow",
+      "bug": "The implied-vol RMSE rescales only a NaN sum, so a sum of squared errors past the largest double, as at an expiry near 1e-308, is reported as an infinite RMSE.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  if (std::isfinite(sum)) return 100.0 * std::sqrt(sum / n);",
+          "replace": "  if (!std::isnan(sum)) return 100.0 * std::sqrt(sum / n);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitMetrics.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseFiniteAtATinyExpiry",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-rmse-scale-back",
+      "kind": "check",
+      "covers": "the rescaled implied-vol RMSE equal to the unscaled one",
+      "bug": "The rescaled RMSE is not scaled back by the power of two, so an overflowing sum reports an RMSE near 100 instead of near 1e156.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return 100.0 * std::scalbn(std::sqrt(scaled / n), exponent);",
+          "replace": "  return 100.0 * std::sqrt(scaled / n);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_test"],
+      "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitMetrics.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseWhereTheSquaredErrorsOverflow",
+      "timeout_s": 300
+    },
+    {
       "id": "svi-fit-rho-constraint",
       "kind": "check",
       "covers": "rho >= -1 held in the solve, and rho beyond its bound fitting the bound",
