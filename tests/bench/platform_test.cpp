@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <ctime>
 #include <fstream>
 #endif
 
@@ -345,12 +346,27 @@ TEST(PerfCounters, MacOsCountersAreProcessWideAndLabelled) {
 #endif
 
 #ifdef __linux__
+std::uint64_t thread_cpu_ns() {
+  timespec now{};
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
+  return (static_cast<std::uint64_t>(now.tv_sec) * 1'000'000'000U) +
+         static_cast<std::uint64_t>(now.tv_nsec);
+}
+
 // Found on debian: the times kept growing across regions, while the counts did not.
 TEST(PerfCounters, EachRegionReportsItsOwnTimes) {
   PerfCounterSession session;
+  // A per-thread counter is enabled only while its thread is on a CPU, so its enabled time follows
+  // the thread's CPU time, not the wall clock: with another task on the core, 30 ms of wall time
+  // gave about 15 ms. So the spin runs until the thread has had ns of CPU time, however often it
+  // is preempted. The thread CPU clock is a system call, so it is read only between 50 us bursts
+  // of spinning on the vDSO's steady clock, which keeps the region mostly user cycles.
   const auto spin = [](std::uint64_t ns) {
-    const auto start = std::chrono::steady_clock::now();
-    while (std::chrono::steady_clock::now() - start < std::chrono::nanoseconds(ns)) {
+    const std::uint64_t start = thread_cpu_ns();
+    while (thread_cpu_ns() - start < ns) {
+      const auto burst = std::chrono::steady_clock::now();
+      while (std::chrono::steady_clock::now() - burst < std::chrono::microseconds(50)) {
+      }
     }
   };
   session.start();
@@ -365,8 +381,8 @@ TEST(PerfCounters, EachRegionReportsItsOwnTimes) {
   if (!second.cycles) {
     FAIL() << second.note;
   }
-  // Perf times come from the scheduler clock and the spin from CLOCK_MONOTONIC, which differ by
-  // about 0.14% on debian. The bound allows 1%, the limit timer calibration works to.
+  // The floor is 1% below the 30 ms of thread CPU time the spin waited for, the limit timer
+  // calibration works to.
   EXPECT_GE(first.time_enabled_ns, 29'700'000U);
   EXPECT_LT(second.time_enabled_ns, first.time_enabled_ns / 2);
   EXPECT_LT(*second.cycles, *first.cycles / 2);

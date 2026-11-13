@@ -1906,6 +1906,18 @@ CI found an open fault outside this stage's code. Run 43357450022, at 271c28c, p
 - On the Mac's fuzz build, from a copy of the seed corpus, 90 s per libFuzzer seed: seeds 1 and 2 passed, and seed 3 found the same failure. The input is in the research cache, `evidence/stage11-s1/fuzz-svi-fit/`, and not committed.
 - A fit that meets the target's other properties so far reports an implied-vol RMSE that is not finite. It is not fixed here, and is listed under `docs/TASKS.md`, "Iterate".
 
+`PerfCounters.EachRegionReportsItsOwnTimes` under load (`tests/bench/platform_test.cpp`, Linux only). Iteration only; raw output in the research cache, `evidence/stage11-s1/piece1/`.
+- The cause: a per-thread counter (pid 0, any CPU) is enabled only while its thread is on a CPU, so its enabled time follows the thread's CPU time, not the wall clock. The test spun 30 ms of `steady_clock` and required at least 29.7 ms enabled, so with another runnable task on its core it saw about half. Stage 6a's pre-commit failure (29.11 ms) and stage 5b's two came while other jobs loaded the host, which fits this cause; their runs were not traced.
+- The fix: the spin runs until the thread's CPU time (`CLOCK_THREAD_CPUTIME_ID`) has advanced 30 ms, however often the thread is preempted. That clock is a system call, so it is read only between 50 µs bursts of spinning on `steady_clock`, which keeps the region mostly user cycles. The checks are unchanged: the first region's enabled time at least 29.7 ms, 99% of 30 ms, and the second region's enabled time and cycles each below half the first's. No check was added, so no fault; `bench-darwin-stuck-counter`, the one fault whose command runs `PerfCounters.*`, is still caught on the Mac (`--only`). CI's named skip for this test, which skips itself where the runner's kernel settings give no counters, is unchanged.
+- Pass counts on `linux-zen1`, clang 23.1.4 `release`, 20 runs each, through `heavy.sh`. Shared: `taskset -c 6,7` while the per-commit verification job loaded cpus 6 and 7 (79% to 91% busy over each set). Hog: `taskset -c 2` with a busy loop pinned to cpu 2.
+
+| Test | Shared, cpus 6 and 7 | Hog on cpu 2 |
+|---|---|---|
+| New (CPU-time spin) | 20 of 20 | 20 of 20 |
+| Old (wall-time spin) | 9 of 20 | 0 of 20 |
+
+- The old test's failures saw 14.8 to 29.6 ms enabled when shared and 13.9 to 17.0 ms beside the hog, against the 29.7 ms floor.
+
 ### Rule slips
 
 None affected a number.
