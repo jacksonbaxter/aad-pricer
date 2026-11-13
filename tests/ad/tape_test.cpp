@@ -6,8 +6,11 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <numbers>
@@ -278,6 +281,199 @@ TEST(Tape, SweepsCrossChunkBoundaries) {
   tape.SetTangent(x, 1.0);
   tape.SweepForward(start);
   EXPECT_LE(Relative(tape.Tangent(y), expected), 1e-12);
+}
+
+// Recording at every chunk-boundary position, through both of Tape::Push's paths: the inline one
+// and the one that enters a chunk. The probe is nine statements, two operands and one in turn
+// (two is the most the tape takes):
+//   z = -sqrt(exp(x0 x1) + x0) x1 / x0 + log(x1).
+// It is recorded with each of its statements in turn as the first of a statement chunk, with its
+// operands meeting the end of an operand chunk at every offset, with both at once, and far from
+// both, and then again after a rewind, into chunks that already exist. After every statement the
+// position must be where the layout puts it: a statement's operands go in the current operand
+// chunk if they fit there, and start the next chunk otherwise. Values must be the double
+// operations' bits; adjoints and tangents must be the bits of the same probe recorded on a fresh
+// tape, and its analytic derivatives on libm within kProbeRelative.
+constexpr std::array<OperandCount, 9> kProbeCounts = {2, 1, 2, 1, 2, 1, 2, 1, 2};
+constexpr std::size_t kProbeOperands = 14;
+constexpr double kX0 = 0.7;
+constexpr double kX1 = 1.3;
+// Nine statements whose partials are each within a few ULP (kAnalyticRelative's reasoning), and
+// derivatives that lose at most a factor of 2 to cancellation: 1e-13 leaves room, while a lost
+// operand or a partial on the wrong statement moves a derivative by order 1.
+constexpr double kProbeRelative = 1e-13;
+
+std::uint64_t Bits(double x) { return std::bit_cast<std::uint64_t>(x); }
+
+struct ProbeRun {
+  Real z;
+  std::array<double, 9> values{};
+  std::array<Position, 9> positions{};
+};
+
+ProbeRun RecordProbe(const Tape& tape, const Real& x0, const Real& x1) {
+  ProbeRun run;
+  std::size_t i = 0;
+  const auto at = [&](const Real& r) {
+    run.values.at(i) = r.value();
+    run.positions.at(i) = tape.GetPosition();
+    ++i;
+    return r;
+  };
+  const Real u = at(x0 * x1);
+  const Real e = at(Exp(u));
+  const Real s = at(e + x0);
+  const Real r = at(Sqrt(s));
+  const Real q = at(r * x1);
+  const Real n = at(-q);
+  const Real d = at(n / x0);
+  const Real l = at(Log(x1));
+  run.z = at(d + l);
+  return run;
+}
+
+std::array<double, 9> ProbeValues() {
+  const double u = kX0 * kX1;
+  const double e = math::exp(u);
+  const double s = e + kX0;
+  const double r = math::sqrt(s);
+  const double q = r * kX1;
+  const double n = -q;
+  const double d = n / kX0;
+  const double l = math::log(kX1);
+  return {u, e, s, r, q, n, d, l, d + l};
+}
+
+// dz/dx0 and dz/dx1 by hand, on libm.
+std::array<double, 2> ProbeDerivatives() {
+  const double e = std::exp(kX0 * kX1);
+  const double r = std::sqrt(e + kX0);
+  return {(-(kX1 / kX0) * ((kX1 * e) + 1.0) / (2.0 * r)) + (r * kX1 / (kX0 * kX0)),
+          (-(r + (kX1 * kX0 * e / (2.0 * r))) / kX0) + (1.0 / kX1)};
+}
+
+struct ProbeGradient {
+  std::array<double, 2> adjoints{};
+  std::array<double, 2> tangents{};
+};
+
+// Sweeps the probe recorded since `from` both ways; leaves every adjoint and tangent at zero.
+ProbeGradient SweepProbe(Tape& tape, const Position& from, const Real& z, const Real& x0,
+                         const Real& x1) {
+  ProbeGradient g;
+  tape.AddAdjoint(z, 1.0);
+  tape.SweepBack(tape.GetPosition(), from);
+  g.adjoints = {tape.Adjoint(x0), tape.Adjoint(x1)};
+  tape.ClearAdjoints(from, Position{});
+  tape.SetTangent(x0, 1.0);
+  tape.SweepForward(from);
+  g.tangents[0] = tape.Tangent(z);
+  tape.SetTangent(x0, 0.0);
+  tape.SetTangent(x1, 1.0);
+  tape.SweepForward(from);
+  g.tangents[1] = tape.Tangent(z);
+  tape.ClearTangents();
+  return g;
+}
+
+std::string Describe(const Position& p) {
+  return "statements " + std::to_string(p.statements) + ", operand chunk " +
+         std::to_string(p.operand_chunk) + " offset " + std::to_string(p.operand_offset);
+}
+
+// Where the layout puts a statement with `count` operands recorded at `p`.
+Position Advance(Position p, std::size_t count) {
+  if (count > 0 && p.operand_offset + count > kChunkEntries) {
+    p.operand_chunk += 1;
+    p.operand_offset = 0;
+  }
+  p.operand_offset += count;
+  p.statements += 1;
+  return p;
+}
+
+// Fillers until the next statement is number `start` and `offset` operands fill chunk 0. They hang
+// off their own variable, so they never reach the probe's derivatives: f f takes two operands, f 2
+// one, a new variable none.
+void Pad(Tape& tape, std::size_t start, std::size_t offset) {
+  const Real f = tape.Register(0.5);
+  const std::size_t fillers = start - tape.GetPosition().statements;
+  const std::size_t two = offset > fillers ? offset - fillers : 0;
+  const std::size_t one = offset - (2 * two);
+  ASSERT_LE(one + two, fillers);
+  for (std::size_t i = 0; i < two; ++i) static_cast<void>(f * f);
+  for (std::size_t i = 0; i < one; ++i) static_cast<void>(f * 2.0);
+  for (std::size_t i = one + two; i < fillers; ++i) static_cast<void>(tape.Register(1.0));
+}
+
+// Records the probe at `from` and checks each statement's position and value, then the gradient.
+void CheckProbe(Tape& tape, const Position& from, const Real& x0, const Real& x1,
+                const ProbeGradient& reference) {
+  const std::array<double, 9> values = ProbeValues();
+  const ProbeRun run = RecordProbe(tape, x0, x1);
+  Position expected = from;
+  for (std::size_t i = 0; i < kProbeCounts.size(); ++i) {
+    expected = Advance(expected, kProbeCounts.at(i));
+    ASSERT_EQ(Describe(run.positions.at(i)), Describe(expected)) << "statement " << i;
+    EXPECT_EQ(Bits(run.values.at(i)), Bits(values.at(i))) << "statement " << i;
+  }
+  const ProbeGradient g = SweepProbe(tape, from, run.z, x0, x1);
+  for (std::size_t k = 0; k < 2; ++k) {
+    EXPECT_EQ(Bits(g.adjoints.at(k)), Bits(reference.adjoints.at(k))) << k;
+    EXPECT_EQ(Bits(g.tangents.at(k)), Bits(reference.tangents.at(k))) << k;
+  }
+}
+
+ProbeGradient FreshProbeGradient() {
+  Tape tape;
+  const TapeScope scope(tape);
+  const Real x0 = tape.Register(kX0);
+  const Real x1 = tape.Register(kX1);
+  const Position from = tape.GetPosition();
+  const ProbeRun run = RecordProbe(tape, x0, x1);
+  return SweepProbe(tape, from, run.z, x0, x1);
+}
+
+TEST(Tape, RecordsAtEveryChunkBoundaryPosition) {
+  const std::array<double, 2> derivatives = ProbeDerivatives();
+  const ProbeGradient reference = FreshProbeGradient();
+  for (std::size_t k = 0; k < 2; ++k) {
+    EXPECT_LE(Relative(reference.adjoints.at(k), derivatives.at(k)), kProbeRelative) << k;
+    EXPECT_LE(Relative(reference.tangents.at(k), derivatives.at(k)), kProbeRelative) << k;
+  }
+
+  // The probe's first statement number: each of its statements in turn the first of chunk 1, or
+  // all of them inside chunk 1. Its first operand offset in chunk 0: every offset at which its 14
+  // operands reach the end of the chunk (14 slots left down to 0, so the probe meets the boundary
+  // before any filler has to fill a chunk exactly), or the middle of the chunk.
+  std::vector<std::size_t> starts;
+  starts.reserve(kProbeCounts.size() + 1);
+  for (std::size_t j = 0; j < kProbeCounts.size(); ++j) starts.push_back(kChunkEntries - j);
+  starts.push_back(kChunkEntries + (kChunkEntries / 2));
+  std::vector<std::size_t> offsets;
+  offsets.reserve(kProbeOperands + 2);
+  for (std::size_t left = kProbeOperands + 1; left-- > 0;) offsets.push_back(kChunkEntries - left);
+  offsets.push_back(kChunkEntries / 2);
+
+  for (const std::size_t start : starts) {
+    for (const std::size_t offset : offsets) {
+      SCOPED_TRACE("first statement " + std::to_string(start) + ", first operand offset " +
+                   std::to_string(offset));
+      Tape tape;
+      const TapeScope scope(tape);
+      const Real x0 = tape.Register(kX0);
+      const Real x1 = tape.Register(kX1);
+      Pad(tape, start, offset);
+      const Position from = tape.GetPosition();
+      ASSERT_EQ(Describe(from), Describe({.statements = start, .operand_offset = offset}));
+      for (const char* pass : {"first recording", "after a rewind"}) {
+        SCOPED_TRACE(pass);
+        CheckProbe(tape, from, x0, x1, reference);
+        if (HasFatalFailure()) return;
+        tape.Rewind(from);
+      }
+    }
+  }
 }
 
 TEST(Tape, RewindKeepsMemoryAndReRecordsTheSame) {

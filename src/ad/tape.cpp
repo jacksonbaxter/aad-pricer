@@ -38,6 +38,32 @@ Tape::~Tape() = default;
 
 Real Tape::Register(double value) { return PushStatement(value, 0); }
 
+Real Tape::PushStatement(double value, OperandCount count) {
+  if ((statements_ & kChunkMask) == 0) EnterStatementChunk();
+  counts_[statements_ & kChunkMask] = count;
+  const auto index = static_cast<Index>(statements_);
+  statements_ += 1;
+  return {value, index};
+}
+
+Real Tape::PushEnteringChunk(double value, Index a, double da) {
+  if (!OperandsFit(op_offset_, 1)) NextOperandChunk();
+  partials_[op_offset_] = da;
+  indices_[op_offset_] = a;
+  op_offset_ += 1;
+  return PushStatement(value, 1);
+}
+
+Real Tape::PushEnteringChunk(double value, Index a, double da, Index b, double db) {
+  if (!OperandsFit(op_offset_, 2)) NextOperandChunk();
+  partials_[op_offset_] = da;
+  indices_[op_offset_] = a;
+  partials_[op_offset_ + 1] = db;
+  indices_[op_offset_ + 1] = b;
+  op_offset_ += 2;
+  return PushStatement(value, 2);
+}
+
 void Tape::EnterStatementChunk() {
   const std::size_t chunk = statements_ >> kChunkShift;
   if (chunk == statement_chunks_.size()) {

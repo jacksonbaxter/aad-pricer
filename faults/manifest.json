@@ -1710,8 +1710,8 @@
       "edits": [
         {
           "file": "src/ad/real.hpp",
-          "find": "    return ActiveTape().Push(value, a.index(), da);\n  }",
-          "replace": "    return ActiveTape().Push(value, a.index(), da, b.index(), db);\n  }"
+          "find": "  if (a.active() && b.active()) return ActiveTape().Push(",
+          "replace": "  if (a.active() || b.active()) return ActiveTape().Push("
         }
       ],
       "preset": "release",
@@ -1840,6 +1840,30 @@
       ],
       "detect": "test",
       "reason": "\\[  FAILED  \\] TapeDeathTest\\.ASecondActivationOnOneThreadIsAnError",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-record-chunk-fit-off-by-one",
+      "kind": "check",
+      "covers": "recording at every chunk-boundary position, both record paths",
+      "bug": "The operand-chunk test is off by one: operands that would exactly fill the chunk are taken not to fit, so the inline path and the one that enters a chunk both leave the last slot empty and start the next chunk early.",
+      "edits": [
+        {
+          "file": "src/ad/tape.hpp",
+          "find": "    return offset + count <= kChunkEntries;",
+          "replace": "    return offset + count < kChunkEntries;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.RecordsAtEveryChunkBoundaryPosition"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.RecordsAtEveryChunkBoundaryPosition",
       "timeout_s": 300
     },
     {

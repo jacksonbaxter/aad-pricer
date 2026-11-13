@@ -182,25 +182,45 @@ class Tape {
   [[nodiscard]] SweepCount Swept() const { return swept_; }
 
   // Recording, for the operations in real.hpp. a and b are active indices.
+  //
+  // The common case, a statement and its operands that fit in the current chunks, is inline and
+  // small enough to inline into every operation: each cursor is read once and written once.
+  // Entering a chunk, which allocates the first time, is out of line (PushEnteringChunk). The
+  // count is a byte, and a byte store may alias anything, so everything the statement needs is
+  // read before it and the cursors are written after it. Either path writes the same entries.
   Real Push(double value, Index a, double da) {
-    if (op_offset_ + 1 > kChunkEntries) [[unlikely]] {
-      NextOperandChunk();
+    const std::size_t s = statements_;
+    const std::size_t o = op_offset_;
+    if (!FitsInChunks(s, o, 1)) [[unlikely]] {
+      return PushEnteringChunk(value, a, da);
     }
-    partials_[op_offset_] = da;
-    indices_[op_offset_] = a;
-    op_offset_ += 1;
-    return PushStatement(value, 1);
+    double* const partials = partials_;
+    Index* const indices = indices_;
+    OperandCount* const counts = counts_;
+    partials[o] = da;
+    indices[o] = a;
+    counts[s & kChunkMask] = 1;
+    op_offset_ = o + 1;
+    statements_ = s + 1;
+    return {value, static_cast<Index>(s)};
   }
   Real Push(double value, Index a, double da, Index b, double db) {
-    if (op_offset_ + 2 > kChunkEntries) [[unlikely]] {
-      NextOperandChunk();
+    const std::size_t s = statements_;
+    const std::size_t o = op_offset_;
+    if (!FitsInChunks(s, o, 2)) [[unlikely]] {
+      return PushEnteringChunk(value, a, da, b, db);
     }
-    partials_[op_offset_] = da;
-    indices_[op_offset_] = a;
-    partials_[op_offset_ + 1] = db;
-    indices_[op_offset_ + 1] = b;
-    op_offset_ += 2;
-    return PushStatement(value, 2);
+    double* const partials = partials_;
+    Index* const indices = indices_;
+    OperandCount* const counts = counts_;
+    partials[o] = da;
+    indices[o] = a;
+    partials[o + 1] = db;
+    indices[o + 1] = b;
+    counts[s & kChunkMask] = 2;
+    op_offset_ = o + 2;
+    statements_ = s + 1;
+    return {value, static_cast<Index>(s)};
   }
 
  private:
@@ -210,16 +230,20 @@ class Tape {
     std::size_t used = 0;  // Valid for chunks before the current one.
   };
 
-  Real PushStatement(double value, OperandCount count) {
-    if ((statements_ & kChunkMask) == 0) [[unlikely]] {
-      EnterStatementChunk();
-    }
-    counts_[statements_ & kChunkMask] = count;
-    const auto index = static_cast<Index>(statements_);
-    statements_ += 1;
-    return {value, index};
+  // The one test of whether a statement's operands fit in the current operand chunk, for both
+  // paths: they never straddle two chunks, and they fill a chunk when they fit.
+  static constexpr bool OperandsFit(std::size_t offset, std::size_t count) {
+    return offset + count <= kChunkEntries;
+  }
+  // Whether statement s and its operands go in the current chunks: s does not start a statement
+  // chunk, and the operands fit.
+  static constexpr bool FitsInChunks(std::size_t s, std::size_t offset, std::size_t count) {
+    return (s & kChunkMask) != 0 && OperandsFit(offset, count);
   }
 
+  Real PushEnteringChunk(double value, Index a, double da);
+  Real PushEnteringChunk(double value, Index a, double da, Index b, double db);
+  Real PushStatement(double value, OperandCount count);
   void EnterStatementChunk();
   void NextOperandChunk();
   void SelectOperandChunk(std::size_t chunk);

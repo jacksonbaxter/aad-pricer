@@ -2029,8 +2029,8 @@ What `cache-misses` and `cache-references` count on this CPU.
 
 The candidate changes, in the profile's ranking. Gains marked estimated were not measured.
 - Done: the inverse normal's central fast path, the profile's first (5d2e385, above). Bit-identical by construction and by its test.
+- Done: the record path inlined, the profile's second ("The record path inlined", below). The profile estimated recording at 10 to 15 cycles a statement after it, the tape 15% to 25% faster, and `aad4-asian12`'s tape over hand at about 1.6 or 1.7.
 - Next, in this order, each of which must leave both run-2 fingerprints bit-identical (`docs/TASKS.md`, "Iterate"):
-  - Inline the record path, with chunk crossings and the no-tape case out of line. Estimated: recording from 20 to 30 down to 10 to 15 cycles a statement, the tape 15% to 25% faster, and `aad4-asian12`'s tape over hand from 1.98 to about 1.6 or 1.7. No arithmetic changes.
   - Specialise the sweep for statements with one and two operands, adding the contributions in the same order. Estimated: the sweep 20% to 35% faster.
   - The zero-adjoint skip as the default sweep. Measured: `aad1-barrier` 9.6% faster, `aad4-asian12` 3.3%, the local-vol Asian 8.5% and bridge 18%, Lax-Wendroff 2% to 5%. It can differ only in the sign of an exactly zero adjoint, so both fingerprints must be checked.
   - The Lax-Wendroff hand adjoint in gather form, each adjoint summed in the same order, with no in-place update. Estimated: from 3.36 to about 2.4 times the primal. Bench only, so the fingerprints cannot move.
@@ -2041,6 +2041,66 @@ The candidate changes, in the profile's ranking. Gains marked estimated were not
   - A faster `math::exp` (Estrin's scheme, or contraction): it changes bits everywhere, prices included, so every row of both fingerprints moves. Estimated: up to about 24 cycles a path-step on `mc-asian252`.
   - Stopping the full unroll of the Lax-Wendroff primal on AVX2: bit-identical and bench only, but it speeds up only the AVX2 build's primal, which raises that build's multiple, and the AAD workloads run on the `release` preset on this host, where the loop is already packed at 4.0 instructions per cycle.
   - The chunk size and the thread-local read on their own: under 1% here (458 chunk crossings in 1.38M statements, 0.09% of samples in operand-chunk selection, 0.009 dTLB misses a statement). They stay as measurements, B4 and B13, not as speed-ups.
+
+#### The record path inlined
+
+Iteration only, not a result. Raw output is in the research cache, `evidence/stage11-s3/`.
+
+What was changed, and why.
+- The profile above found recording the largest avoidable cost of the tape: `detail::Record` for two operands was an out-of-line call that spilled its floating-point arguments, read the thread-local tape, reloaded five tape fields and ran both chunk tests, 45 to 57 instructions a statement.
+- `Tape::Push` (`src/ad/tape.hpp`) now records the common case inline: it reads the statement and operand cursors once, makes one test (the statement does not start a statement chunk, and its operands fit in the operand chunk), writes the operands, then the count, then the cursors. A statement that enters a chunk goes out of line to `PushEnteringChunk` (`src/ad/tape.cpp`), which is the old code, order unchanged, and allocates a chunk the first time. Both paths ask one function, `OperandsFit`, whether operands fit. The no-tape case was already out of line (`detail::NoActiveTape`).
+- The order matters. The count is one byte, and C++ lets a byte-typed store alias any object, so the compiler must assume it may change the tape's own fields. Everything the statement needs is read before that store and the cursors are written after it, so nothing is read twice.
+- Left to the inliner, this was not enough. With `Push` small, the two-operand `Record` still stayed a call (it holds three pushes), and once `Record` was forced inline, the four operations on two Reals became the calls instead: `operator+`, `-`, `*` and `/` appeared as out-of-line functions in the Mac's `aadp_bench_aad`. So `detail::Record` and those four operators are `[[gnu::always_inline]]`, and the two-operand `Record` pushes once for its one-active-operand case, whichever operand it is, which writes the same entries as before.
+- Nothing arithmetic changed: the same values and partials, from the same expressions, recorded in the same order into the same slots. The lane tape (`src/simd/lane_tape.hpp`) was left as it was.
+
+What was tried. One run each, macOS, `measure.sh`, iteration only, ns a path-step (a run for `lw-worst`), before, then `Push` inline and only `Record` forced inline, then the change as committed: `aad4-asian12` tape 66.97, 58.97, 55.08, its tape-record 44.68, 35.78, 32.63; `aad1-barrier` tape 72.73, 64.37, 59.36; `mc-asian252` tape 64.38, 56.28, 53.08; `lw-worst` tape 9.23, 8.00 and 7.51 ms, its tape-record 3.70, 2.49 and 1.95 ms. The calls to the operators cost about half of what was left to gain. Nothing else was tried.
+
+The same bits.
+- `aadp_run2_fingerprint` passes on the Mac (`release`), and on the Linux host under clang 23.1.4 `release` and g++ `release-gcc` (the GCC pre-commit). `aadp_ad_statement_order_test` passes on all three, with its constant unchanged. On the Linux host's clang build the 23 tests of `Run2Fingerprint`, `StatementOrder`, `Tape`, `TapeDeathTest`, `TapeVsDual` and `HandAdjoint` pass. Every tape, lane-against-scalar, tape-against-`Dual`, allocation, memory, thread and oracle test passes unchanged in the Mac's `release` ctest and the GCC pre-commit's. No reference file, seed, tolerance or ceiling changed.
+- The memory targets are where they were: the `static_assert`s on the 16-byte `Real`, 1-byte statement and 12-byte operand are untouched, and the bytes a statement, the zero allocations after warm-up and the thread tests pass. In the timed runs below the tape shapes are the same before and after (`aad4-asian12` 5.250 statements a path-step, `aad1-barrier` 6.162, `mc-asian252` 5.012, `lw-worst` 1,382,299 a run), and so are the price's and the hand adjoint's instruction counts, which record nothing.
+
+The test of both paths. `Tape.RecordsAtEveryChunkBoundaryPosition` (`tests/ad/tape_test.cpp`) records a probe of nine statements, two operands and one in turn (two is the most the tape takes), z = −sqrt(exp(x0 x1) + x0) x1 / x0 + log(x1), on 160 tapes: each of its statements in turn as the first of a statement chunk, or none; its operands reaching the end of an operand chunk with 0 to 14 slots left, or from the middle of a chunk; every pair of the two. Each is recorded twice, the second time after a rewind into chunks that exist. After every statement the position must be where the layout puts it (operands that fit go in the current chunk, others start the next one); every value must be the double operations' bits; adjoints and tangents must be the bits of the probe recorded on a fresh tape; and those must match the analytic derivatives on libm within 1e-13 relative, set before the first run (nine statements whose partials are within a few ULP, at most a factor of 2 lost to cancellation). It passes on the Mac and on the Linux host's clang build.
+
+Faults, run with `--only` through `heavy.sh` on an export of the uncommitted tree:
+- `ad-record-chunk-fit-off-by-one`, new: `OperandsFit` asks for a slot to spare, so operands that would exactly fill a chunk start the next one, on both paths. Values and adjoints stay right; the test catches it on the positions, in its first configuration, where the probe's last statement, two operands at offset 8190, starts chunk 1 instead of filling chunk 0. An off-by-one the other way would write one slot past the chunk, which a release test cannot be relied on to report, so the fault takes the safe side.
+- `ad-passive-operand` edited the old two-operand `Record`'s lines, which are gone. It is re-pointed: the two-operand push is taken when either operand is active, so a passive one is recorded too, the bug it named. Caught.
+- Still caught, their edits unchanged: `ad-log-partial`, `ad-corner-clamp`, `ad-dot-tangent-sign`, `ad-second-activation`, `ad-sweep-flush-subnormal` and `bench-tape-skip`, the release faults that edit `src/ad/real.hpp`, `tape.hpp` or `tape.cpp` or run `aadp_ad_tape_test`. The three fuzz faults on these files, `ad-select-both`, `ad-normal-cdf-partial` and `ad-sweep-zeroing`, edit lines this change did not touch and were not rerun: their fuzz builds are sanitizer builds, and the Mac's pinned fault run was using the sanitizer presets.
+- The manifest holds 366 faults: 64 oracle, 273 check, 29 fuzz.
+
+Before and after, iteration only, scalar code, the stage 11 driver of `PERF.md` linked against each build, running `bench/aad_workloads` as `aadp_bench_aad` does: `aad1-barrier` at 1/50 scale, `aad4-asian12` and `mc-asian252` at 1/10, `lw-worst` at full scale. Before is 5e4fad8. Three alternating rounds; the median over the rounds, whose ranges are in the raw output.
+
+`linux-zen1` (AMD Ryzen Embedded V1605B, Zen 1), clang 23.1.4 at `-O3 -g` with `-ffp-contract=off`, `cycles:u` of the timed loop only (`perf stat --control`, no multiplexing), each run through `heavy.sh taskset -c 4`, governor schedutil, cpu5 at most 4.8% busy during any run. SSE2 is the `release` preset and AVX2 `release-avx2` (x86-64-v3); both are scalar code here. Cycles a path-step, millions a run for `lw-worst`:
+
+| Workload, variant | SSE2 before | SSE2 after | Change | AVX2 before | AVX2 after | Change |
+|---|---|---|---|---|---|---|
+| `aad1-barrier` tape | 383.8 | 379.0 | −1.2% | 379.8 | 375.6 | −1.1% |
+| `aad1-barrier` tape-record | 325.5 | 318.7 | −2.1% | 316.0 | 310.5 | −1.7% |
+| `aad4-asian12` tape | 392.8 | 320.0 | −18.5% | 386.8 | 309.5 | −20.0% |
+| `aad4-asian12` tape-record | 333.1 | 260.4 | −21.8% | 326.1 | 246.8 | −24.3% |
+| `mc-asian252` tape | 371.4 | 291.9 | −21.4% | 366.7 | 284.6 | −22.4% |
+| `mc-asian252` tape-record | 319.0 | 240.3 | −24.7% | 313.5 | 231.3 | −26.2% |
+| `lw-worst` tape | 55.75 | 44.20 | −20.7% | 55.86 | 42.05 | −24.7% |
+| `lw-worst` tape-record | 27.45 | 16.34 | −40.5% | 28.71 | 16.85 | −41.3% |
+
+`mac-m4max`, macOS, `release` (AArch64), clang 23.1.4, wall time per unit, the median of each run's repetitions, each run under `measure.sh`, unpinned, load average 3.6 to 4.3 from other jobs. Nanoseconds a path-step, milliseconds a run for `lw-worst`:
+
+| Workload, variant | Before | After | Change |
+|---|---|---|---|
+| `aad1-barrier` tape | 72.98 | 59.44 | −18.5% |
+| `aad1-barrier` tape-record | 46.70 | 33.60 | −28.1% |
+| `aad4-asian12` tape | 66.82 | 54.98 | −17.7% |
+| `aad4-asian12` tape-record | 44.61 | 32.61 | −26.9% |
+| `mc-asian252` tape | 64.68 | 52.88 | −18.2% |
+| `mc-asian252` tape-record | 42.17 | 30.31 | −28.1% |
+| `lw-worst` tape | 9.153 | 7.461 | −18.5% |
+| `lw-worst` tape-record | 3.659 | 1.938 | −47.0% |
+
+- The bar, set before measuring: keep the change only if no workload on either host gets slower by more than 2% and at least one gets faster by more than 5%. None got slower; the smallest gain is `aad1-barrier`'s on the Linux host.
+- `aad4-asian12`'s tape over its hand adjoint: 2.16 before and 1.76 after on SSE2 (hand 181.9 and 182.0 cycles), 2.20 and 1.77 on AVX2 (175.7 and 175.1), and 3.50 and 2.89 on macOS (19.08 and 19.06 ns). `AAD-5`'s target is 1.25.
+- Recording, counted as `PERF.md` counts it (the tape-record variant less the price, divided by the statements; so it includes the primal's own extra work on Reals), on SSE2, before and after: `aad4-asian12` 57.6 and 44.8 instructions a statement, 30.0 and 16.1 cycles; `mc-asian252` 56.9 and 43.7, 30.0 and 14.2; `aad1-barrier` 52.3 and 42.0, 25.1 and 24.0; `lw-worst` 49.4 and 28.7, 19.5 and 11.5. AVX2 is within a cycle and an instruction of these. The profile's estimate of 10 to 15 cycles a statement holds everywhere but `aad1-barrier`.
+- Not determined: why `aad1-barrier` gains 1% to 2% on the Linux host, though it records 10 fewer instructions a statement and gains 18% on the Mac. It was not profiled.
+
+Compile time and size, on the Mac (`release`, a clean build of every target through `heavy.sh` at 4 jobs, beside the other jobs on the machine, so wall time is rough): 42.1 s wall and 147.0 s user before, 39.0 s and 143.8 s after. `aadp_bench_aad` grows from 1,251,312 to 1,268,432 bytes (+1.4%), its `__TEXT` from 917,504 to 933,888.
 
 ### Rule slips
 
@@ -2069,7 +2129,8 @@ None affected a number.
 - Stage 11, the timing test and the inverse normal's fast path: two smoke runs of a timing driver on the Mac outside `measure.sh`, whose numbers are not used; two pre-commit runs superseded by reruns, of which only the reruns are recorded. The tool keeps an output file in the system temporary directory for each background command.
 - Stage 11, the SVI-11 fix: one `python3 -I -` waited on stdin for 2 minutes and was stopped; it ran nothing and was no heredoc. Outside `heavy.sh` on the Mac: the scratch probes (`build/s11b/probe*.cpp`, `makeseed.cpp`: compiles and runs of seconds), and single-target rebuilds and runs of `aadp_svi_fit_test`, `aadp_svi_fit`, `aadp_run2_fingerprint` (5 s) and `aadp_fuzz_plan` (single inputs). One foreground wait ran past its 600 s tool timeout and was moved to the background, then finished. The GCC pre-commit and the libstdc++ clang-tidy of the plan fix shipped trees that differ from the commit only in a few sentences of this file. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s11b/` and the research cache.
 - Stage 11, the lead: an unattended job's Python import wrote `scripts/__pycache__/` into the working tree. It was removed at once and never staged.
-- Stage 11, the state, wording and profile notes (docs only): the tool keeps an output file in the system temporary directory for each background command; the gates' own output went to `build/s11docs/`. One wait on CI ran past its 590 s tool timeout and the tool moved it to the background, where it went on polling until the run finished.
+- Stage 11, the state, wording and profile notes (docs only): the tool keeps an output file in the system temporary directory for each background command; the gates' own output went to `build/s11docs/`. One wait on CI ran past its 590 s tool timeout and the tool moved it to the background, where it went on polling until the run finished. Left out of this entry when it was written: a second wait on CI also ran past the tool's timeout and was moved to the background; background output went to the system temporary folder; and one commit's gates were rerun after a late edit to these notes.
+- Stage 11, the record path: two foreground calls ran past the tool's 600 s timeout and were moved to the background, a first timing run waiting on `measure.sh` and a one-target build waiting in `heavy.sh`; both finished and were waited for by polling. One `python3 -I -` read only `/dev/null`, a no-op, and was no heredoc. Outside `heavy.sh` on the Mac: the stage 11 driver's compiles and links against each build (seconds each), symbol and disassembly listings, single runs of `aadp_ad_tape_test` (milliseconds) and `clang-format`. The new test changed twice after its first fault run: its order of operand offsets, so that the new fault is caught by the probe rather than by the test's set-up, and then its split into helper functions, after the first full clang-tidy run found two findings in it (the test body's cognitive complexity, and a vector filled in a loop without a reserve). The new fault, the full clang-tidy and the gates ran again on the final test; the seven other faults ran on the first version, which differs only in that order and that split. One single-file clang-tidy run of the test (seconds) ran outside `heavy.sh`. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s11r/` and the research cache.
 
 ## Option chain
 

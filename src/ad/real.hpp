@@ -30,18 +30,22 @@ namespace aadp::ad {
 
 namespace detail {
 
-inline Real Record(double value, const Real& a, double da) {
+// Recording is inlined into every operation, and the four operations on two Reals are inlined
+// into their callers: left to the inliner, each stayed a call, which spilled its floating-point
+// arguments and cost more than the recording itself (docs/NOTES.md, "Stage 11"). Tape::Push
+// enters a new chunk out of line, which keeps the inlined code small.
+[[gnu::always_inline]] inline Real Record(double value, const Real& a, double da) {
   if (!a.active()) return {value};
   return ActiveTape().Push(value, a.index(), da);
 }
 
-inline Real Record(double value, const Real& a, double da, const Real& b, double db) {
-  if (a.active()) {
-    if (b.active()) return ActiveTape().Push(value, a.index(), da, b.index(), db);
-    return ActiveTape().Push(value, a.index(), da);
-  }
-  if (b.active()) return ActiveTape().Push(value, b.index(), db);
-  return {value};
+[[gnu::always_inline]] inline Real Record(double value, const Real& a, double da, const Real& b,
+                                          double db) {
+  if (a.active() && b.active()) return ActiveTape().Push(value, a.index(), da, b.index(), db);
+  if (!a.active() && !b.active()) return {value};
+  // One operand is active, and only it is recorded: one push serves either, to keep the code small.
+  const bool first = a.active();
+  return ActiveTape().Push(value, first ? a.index() : b.index(), first ? da : db);
 }
 
 }  // namespace detail
@@ -53,25 +57,25 @@ inline double NormalPdf(double x) {
 inline Real operator+(const Real& a) { return a; }
 inline Real operator-(const Real& a) { return detail::Record(-a.value(), a, -1.0); }
 
-inline Real operator+(const Real& a, const Real& b) {
+[[gnu::always_inline]] inline Real operator+(const Real& a, const Real& b) {
   return detail::Record(a.value() + b.value(), a, 1.0, b, 1.0);
 }
 inline Real operator+(const Real& a, double b) { return detail::Record(a.value() + b, a, 1.0); }
 inline Real operator+(double a, const Real& b) { return detail::Record(a + b.value(), b, 1.0); }
 
-inline Real operator-(const Real& a, const Real& b) {
+[[gnu::always_inline]] inline Real operator-(const Real& a, const Real& b) {
   return detail::Record(a.value() - b.value(), a, 1.0, b, -1.0);
 }
 inline Real operator-(const Real& a, double b) { return detail::Record(a.value() - b, a, 1.0); }
 inline Real operator-(double a, const Real& b) { return detail::Record(a - b.value(), b, -1.0); }
 
-inline Real operator*(const Real& a, const Real& b) {
+[[gnu::always_inline]] inline Real operator*(const Real& a, const Real& b) {
   return detail::Record(a.value() * b.value(), a, b.value(), b, a.value());
 }
 inline Real operator*(const Real& a, double b) { return detail::Record(a.value() * b, a, b); }
 inline Real operator*(double a, const Real& b) { return detail::Record(a * b.value(), b, a); }
 
-inline Real operator/(const Real& a, const Real& b) {
+[[gnu::always_inline]] inline Real operator/(const Real& a, const Real& b) {
   const double value = a.value() / b.value();
   if (!a.active() && !b.active()) return {value};
   return detail::Record(value, a, 1.0 / b.value(), b, -a.value() / (b.value() * b.value()));
