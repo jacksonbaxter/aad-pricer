@@ -1900,6 +1900,12 @@ The check that keeps it fixed.
 
 Gates, on the tree f131c23 commits: on the Mac, `release` 769 of 769 and `fuzz` 20 of 20, 0 failed and 0 skipped, the format check, the repository scan and clang-tidy; on the Linux host, the GCC pre-commit (757 of 757), clang-tidy on libc++ and on libstdc++ (the latter on f131c23's code beside the next commit's edits to `README.md`, `BENCHMARKS.md` and `docs/TASKS.md`), and the clang `release` build with `Run2Fingerprint` and `StatementOrder` passing, 4 of 4.
 
+CI found an open fault outside this stage's code. Run 43357450022, at 271c28c, passed 21 of its 22 jobs; `fuzz-smoke` failed on `aadp_fuzz_svi_fit` 21 s into its 30 s, with `invariant failed: SVI-11 finite: std::isfinite(ImpliedVolRmse(r.model_vol, r.market_vol))` (`fuzz/fuzz_svi_fit.cpp`, line 160).
+- In that run the three `StatementOrder` tests passed under g++ (`linux-gcc-release`) and clang (`linux-clang-release`, `macos-clang-release`).
+- That target builds from `fuzz/fuzz_svi_fit.cpp`, `src/svi/fit.*`, `arbitrage.*`, `implied_vol.*` and `raw_svi.hpp`, none of which this stage touched. libFuzzer's mutations are random, and the smoke at 92cc148 passed.
+- On the Mac's fuzz build, from a copy of the seed corpus, 90 s per libFuzzer seed: seeds 1 and 2 passed, and seed 3 found the same failure. The input is in the research cache, `evidence/stage11-s1/fuzz-svi-fit/`, and not committed.
+- A fit that meets the target's other properties so far reports an implied-vol RMSE that is not finite. It is not fixed here, and is listed under `docs/TASKS.md`, "Iterate".
+
 ### Rule slips
 
 None affected a number.
