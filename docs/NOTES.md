@@ -237,7 +237,7 @@ Fixed before any Phase 3 code exists, so git history shows it came first.
 
 ## Phase 3 findings so far
 
-Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Stage 6a, e5d4cc5 to 6216fad, and stage 6b to 23936a9, with its CI fix in 2b6f343. Stage 7a, c1449fd to a4bb6ff, and stage 7b, bcdbc28 to d3a0648, with no CI fix. Stage 7c, 31267b1 to 8cbaaf3. Stage 8, 6bf17a9 to 22e9d3d, with measured run 2 in d70a1d4. Stage 9, 4aa7925 to d605c78, and stage 10, 959315b to 244a453, each green in CI (runs 42983993850 and 43107078217). Then the generated README headline and `RESULTS.md` (e67aa02, 22223a5), the QuantLib flag check's path fix (822acaa), the public layout and licence (eddbaa4, 009605c), and `verify_commits` without rsync (67e340e). What remains of the phase is in `docs/TASKS.md`, "Iterate". Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
+Stages 1a to 3b, a1d9325 to e495a37, then the CI fixes up to 54933ed. Stage 4, c17c90a to 4072072, and stage 5a, to 065e5b6, then the second CI round up to 48d30a7. Stage 5b, 9459507 to e98a570, stage 5c to a398d1f with its CI fix in 1029047, then Intel SDE for the 8-lane CI job, 36d701d and a6be05a. Stage 6a, e5d4cc5 to 6216fad, and stage 6b to 23936a9, with its CI fix in 2b6f343. Stage 7a, c1449fd to a4bb6ff, and stage 7b, bcdbc28 to d3a0648, with no CI fix. Stage 7c, 31267b1 to 8cbaaf3. Stage 8, 6bf17a9 to 22e9d3d, with measured run 2 in d70a1d4. Stage 9, 4aa7925 to d605c78, and stage 10, 959315b to 244a453, each green in CI (runs 42983993850 and 43107078217). Then the generated README headline and `RESULTS.md` (e67aa02, 22223a5), the QuantLib flag check's path fix (822acaa), the public layout and licence (eddbaa4, 009605c), and `verify_commits` without rsync (67e340e). Stage 11, one statement order on every compiler, is f131c23. What remains of the phase is in `docs/TASKS.md`, "Iterate". Measured numbers are under each target in `BENCHMARKS.md`, from the files in `results/`.
 
 ### Math kernels
 
@@ -1838,6 +1838,68 @@ The full check at 009605c passed.
 - The steps took 8367 s in all, 5613 s of it fault injection.
 - The commit that adds these lines changes only this file and had no full run of its own. Format and the repo scan ran on it.
 
+### Stage 11: one statement order on every compiler
+
+Iteration only: nothing here is a stamped result. Raw output is in the research cache, `evidence/stage11-s1/`. Commit: f131c23 (the code, the test, the faults and the Linux file).
+
+How it was found.
+- `references/run2_fingerprint_linux-zen1.txt` was written from the Linux host's GCC pre-commit build ("Stage 8a results"), and `aadp_run2_fingerprint` had only ever been run against it under g++. The open item in `docs/TASKS.md`, "Iterate", asked for the clang `release` build there.
+- At 92cc148, clang 23.1.4 `release` on the Linux host, with the captures linked, failed it: 45 of the 147 data lines differ, exactly the surface rows (`P3.AS`, `P3.DB`, `P3.CB`). The other 102 match bit for bit, and 1 and 8 threads agree.
+
+The cause.
+- C++ leaves unspecified the order in which the two operands of an overloaded operator, and the arguments of a call, are evaluated. clang evaluates them left to right; g++ 14.2.0 right to left.
+- The demo: `x * x + s * s` on a type whose `operator*` prints, built with `-std=c++23 -O3 -ffp-contract=off` on the Linux host, prints the product 4 first under clang and 9 first under g++.
+- On the tape, each operation with an active operand records a statement when it is evaluated. So an expression with two operands that record, such as the surface's `beta * lo.w + alpha * hi.w`, records them in one order under clang and in the other under g++.
+- The values do not change. The reverse sweep adds each statement's contributions to its operands' adjoints in statement order, so the adjoints can round differently.
+
+What was and was not bit-identical between the two builds of 92cc148 on the Linux host (a scratch probe linked against each build's libraries):
+- Identical: the parsed chain, the fitted SVI parameters, the plain prices, the 90 bumped prices of the central differences and the tape's primal values.
+- Different, in the probe: the tape's gradients, in 43 of the 45 surface rows' means and 2,619 of their 2,880 batch means.
+- A statement trace in a scratch copy found the same statements, values and operand counts, in a different order.
+- A hash of every recorded statement (value, operand indices and partials, in order) over the whole fingerprint at 1 thread, 127,375,581 statements, differs between the compilers from its first checkpoint, at 65,536 statements. So the GBM rows were recorded in a different order too, and their bits came out the same anyway.
+
+The fix.
+- Wherever code instantiated on a tape type had two or more operands or arguments that each record a statement in one full expression, they are now named temporaries, in the order clang evaluated them. clang records what it did before, and g++ now records the same.
+- Full expressions rewritten, by file:
+  - `src/pricer/conditional_kernels.hpp`, 9: `Mass`, the share-measure bounds and the call in `Corridor`, the arguments in `AsianGeometric`, both legs in `AsianArithmetic`, the return of `OutOneStep`, and in `OutOneStepBridge` the loop's weight, the reflection exponent and the return.
+  - `src/svi/surface.hpp`, 3: `w`, `w1` and `w2` between two slices.
+  - `src/svi/calibration_adjoint.cpp`, 2: the slice's `w` and the model price, on the second-order tape.
+  - `src/pricer/kernels.hpp`, 1: `Finish`, which carries the comment the others point to.
+  - `src/simd/lane_kernels.hpp`, 1: the lane `Finish`.
+  - `src/pricer/model.hpp`, 1: `GbmModel`'s drift per step, now `StepDrift`.
+  - `src/pricer/local_vol_model.hpp`, 1: the drift in `Law`.
+  - `src/svi/local_vol.hpp`, 1: the Durrleman `g`.
+  - `bench/lax_wendroff.hpp`, 1: the flux.
+- Left as they are, with the reason:
+  - `src/svi/raw_svi.hpp` (`Evaluate`, `TotalVariance`, the Durrleman `g`, `DPlus`, `DMinus`) and `src/svi/essvi.hpp`: instantiated on `double` and `Dual` only, never on a tape. The surface evaluates its slices through `EvaluateSlice`.
+  - Every other expression on a tape type: at most one operand per operator records, or the operands are braced or designated initializers or mem-initializers, which C++ evaluates in order.
+  - `src/oracle/` and the tools: no tape.
+  - The tests' own kernels (`tests/simd/diverging_kernel.hpp`, `tests/ad/random_program.hpp`): each compares two runs within one compiler.
+- The sweep's check: the statement hash, made safe for several threads (a hash per statement, its index on its tape included, summed), over seven test binaries that record on all three tapes (scalar, second-order, lane): `aadp_ad_statement_order_test`, `aadp_ad_dual_agreement_test`, `aadp_ad_second_order_test`, `aadp_ad_local_vol_gradient_test`, `aadp_simd_lane_gradient_test`, `aadp_svi_calibration_adjoint_test` and `aadp_aad_bench_unit`. Each ran twice under each compiler on the Linux host. The two runs agree, and clang and g++ agree in all seven.
+
+The prediction and its outcome.
+- Registered before the Linux runs (2026-11-13T00:36Z): with the fix, the clang `release` build and the g++ `release-gcc` build on the Linux host each give exactly clang's lines at 92cc148, that is, the file's 102 lines that were not surface rows and clang's 45 surface lines. The sha256 of those 147 data lines, each ending in a newline, is `139276448413734809ea87a74522abd7420d1d9355d2393f0c045a25ebf2b858`.
+- Outcome: met. Both builds of the fixed tree give 147 data lines with that sha256. The statement hash over the fingerprint is the same under both, and the same as clang's at 92cc148.
+- On the Mac, `references/run2_fingerprint_mac-m4max.txt` is unchanged and `aadp_run2_fingerprint` passes.
+
+The change in the Linux file: its 45 surface lines take clang's values, and its comment says the lines hold for both compilers.
+- 31 rows have a different estimate, by at most 2.8e-14 relatively (`P3.CB.d05.m`).
+- All 45 have a different SE, by at most 6.2e-9 relatively (`P3.AS.d33.m`).
+- No reference value changes. The 102 other lines do not change.
+
+Two plain statements.
+- Run 2 was measured on the Mac under clang, and its fingerprint did not change.
+- From bf484f3, the commit that added the Linux file, up to this fix, the clang `release` build on the Linux host fails `aadp_run2_fingerprint`. It was run at bf484f3 and at 92cc148, and failed on the 45 surface rows at both; the sites predate bf484f3.
+
+The check that keeps it fixed.
+- `tests/ad/statement_order_test.cpp` (ctest `aadp_ad_statement_order_test`, labels `ad svi fast`) records eight paths on fixed inputs: two GBM paths through the production kernels, a local-volatility path through the sub-stepped kernels and the SVI surface, and five paths through the conditional kernels. It sweeps each tape forward and back absolutely, and hashes every statement's tangent and adjoint in recording order. The hashes, statement counts and operand counts are pinned, one constant for every host and compiler.
+- On the Linux host against 92cc148's code, the test passes under clang and fails under g++: all eight hashes differ, and all three tests fail. On the fixed code it passes under both, and on the Mac.
+- Three faults reverse two named temporaries, the order g++ had chosen, and are caught under clang on the Mac: `order-surface-w-swapped` (`LocalVolPathIsPinned`), `order-finish-swapped` (`GbmPathsArePinned`) and `order-conditional-swapped` (`ConditionalPathsArePinned`).
+- Five faults whose edits named the rewritten expressions now make the same bug on the named form: `ad-second-geometric-sd`, `lv-surface-alpha-swapped`, `lv-vw4-displayed-sign`, `lv-drift-without-half-variance` and `qs-put-as-call`. Run with `--only` and `--manifest` through `heavy.sh` on an export of the uncommitted tree, these eight and the 35 other faults whose edits touch the changed files: 43 caught. The two that read the chain failed their baselines on the first run, because the export had no data where the runner looks for it, and were caught on a rerun with it. That tree differs from f131c23 only in the test, whose one later change was clang-tidy's (designated initializers, an unsigned shift, an include pragma); the three order faults ran again on the final test and were caught.
+- The manifest holds 360 faults: 62 oracle, 270 check, 28 fuzz.
+
+Gates, on the tree f131c23 commits: on the Mac, `release` 769 of 769 and `fuzz` 20 of 20, 0 failed and 0 skipped, the format check, the repository scan and clang-tidy; on the Linux host, the GCC pre-commit (757 of 757), clang-tidy on libc++ and on libstdc++ (the latter on f131c23's code beside the next commit's edits to `README.md`, `BENCHMARKS.md` and `docs/TASKS.md`), and the clang `release` build with `Run2Fingerprint` and `StatementOrder` passing, 4 of 4.
+
 ### Rule slips
 
 None affected a number.
@@ -1861,6 +1923,7 @@ None affected a number.
 - Stage 9: `aadp_metal_info` ran once directly on the Mac, outside `heavy.sh`: one device creation and library compile, under a second. Two waits ran past the tool's 600 s foreground limit and the tool moved them to the background: the libstdc++ clang-tidy pre-commit wrapper (838 s on the Linux host, PASS) and one wait on CI, which was stopped and replaced by waits bounded under 600 s. The tool keeps an output file in the system temporary directory for each background command, including the fault run and the `GPU-1` run, whose output went to `build/s9/`. One `python3 -I -` read its script from stdin, and two `cat` commands redirected only from `/dev/null`; none was a heredoc. The GCC pre-commit and the libstdc++ tidy for d65b8e5 shipped a tree that differs from d65b8e5 only in `README.md`, then uncommitted.
 - Stage 10: two Mac jobs were started with a bare zsh `&`, so at nice 5: the first full clang-tidy run and the first gate of 9180dc3's tree. The gate's ctest failed on `aadp_run_bench_script`, which refuses nice 5. Both were rerun from the tool's background mode at nice 0, and nothing from the niced runs is used (the tidy findings were fixed and the clean rerun is the one recorded). Running the flag check's self-test while drafting wrote `scripts/__pycache__/`, untracked; it was deleted before anything was staged, and the test now sets `sys.dont_write_bytecode`. One `python3 -I -` read nothing from `/dev/null`, a no-op; it was no heredoc. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s10/` and the research cache. Outside `heavy.sh` on the Mac: the release preset's configure (under a second), single-target runs of `aadp_qlcompare_test` of a few seconds, `clang-format`, the flag check script and the scratch table scripts. The first GCC pre-commit of 9180dc3's tree failed on `-Werror=dangling-reference` in the new test, fixed before the commit. e62141c and 01f467d were gated once, on the tree that held both. The scratch probe of QuantLib on unregistered seeds is recorded above, under "Stage 10 results". The libstdc++ clang-tidy pre-commit wrapper hit the tool's two-hour background limit while the Linux host's `heavy.sh` waited on another project's measurements; the remote run finished and passed (176 units clean), and its status and logs were read over SSH.
 - Layout and licence (2026-11-12): the full check was started from a small Python launcher in its own session, at nice 0 and through `heavy.sh`, not from the tool's background mode, whose two-hour limit is shorter than the run. The layout commit was made with `git commit -i` and an explicit path list that left out the untracked root file, so that git would not stage it again.
+- Stage 11: `aadp_bench_aad --help` started the full benchmark directly on the Mac, outside `heavy.sh` and `measure.sh`, and it was stopped after about 2 minutes; nothing from it is used. The scratch probes on the Mac (two-file compiles and runs of seconds) ran outside `heavy.sh`. One `cat` waited on stdin and was stopped; one `python3 -I -` and one `cat` read only `/dev/null`, no-ops, and none was a heredoc. The first Mac gate ran without the toolchain environment: its builds used the configured clang and ninja, and `data_verify_commits_script` failed for want of ninja on PATH; it was rerun with the environment and only the rerun is recorded. One tidy script started the Mac tidy with a bare `&` inside a bash script, at nice 0. One foreground wait ran past its 600 s tool timeout and was moved to the background, then stopped. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s11a/` and the research cache.
 
 ## Option chain
 
