@@ -30,7 +30,7 @@ endif()
 
 aadp_test(aadp_aad_bench_unit
   SOURCES tests/bench/aad_bench_test.cpp tests/bench/bump_study_test.cpp
-    tests/bench/rss_probe_test.cpp
+    tests/bench/lax_wendroff_test.cpp tests/bench/rss_probe_test.cpp
   LINK aadp_aad_bench_lib
   LABELS unit bench)
 # The probe's runs of the real binary need it built; without benchmarks they are left out.

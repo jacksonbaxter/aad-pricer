@@ -119,33 +119,50 @@ inline double Primal(const Field<double>& q_init, const Field<double>& w) {
   return Functional(q, w);
 }
 
+// The hand adjoint's reverse pass on n points, `steps` steps last first, in place: qbar holds the
+// outputs' adjoints on entry and the inputs' on exit. Gather form: each adjoint is written once a
+// step, as one sum, so no iteration updates a neighbour's adjoint in place and the loops
+// vectorise. The sums are those of the scatter form it replaced (a loop over the points that
+// added each point's adjoint into two flux adjoints, then each flux adjoint into two point
+// adjoints), in its order: the flux adjoint of points i and i+1 is (0 + qbar_{i+1}) - qbar_i, and
+// a point's adjoint is (qbar_j + up_j) + down_{j-1}, up and down the two halves of the flux
+// adjoints beside it. The zeros the scatter form started from are added too, so a zero keeps its
+// sign; tests/bench/lax_wendroff_test.cpp holds the scatter form and checks the bits.
+template <std::size_t N>
+void ReverseSteps(std::array<double, N>& qbar, std::uint32_t steps, double c) {
+  static_assert(N >= 3, "the scheme needs an interior point");
+  const double half_c = 0.5 * c;
+  std::array<double, N - 1> fbar{};
+  // A flux adjoint's two contributions: to the point on its left and to the one on its right.
+  const auto up = [&](std::size_t i) {
+    const double sum_bar = half_c * fbar[i];
+    return sum_bar + (c * sum_bar);
+  };
+  const auto down = [&](std::size_t i) {
+    const double sum_bar = half_c * fbar[i];
+    return sum_bar - (c * sum_bar);
+  };
+  for (std::uint32_t step = 0; step < steps; ++step) {
+    // q_{n-1} = q_1, then q_0 = q_{n-2}, undone last first.
+    qbar[1] += qbar[N - 1];
+    qbar[N - 1] = 0.0;
+    qbar[N - 2] += qbar[0];
+    qbar[0] = 0.0;
+    fbar[0] = 0.0 + qbar[1];
+    for (std::size_t i = 1; i + 2 < N; ++i) fbar[i] = (0.0 + qbar[i + 1]) - qbar[i];
+    fbar[N - 2] = 0.0 - qbar[N - 2];
+    qbar[0] = 0.0 + up(0);
+    for (std::size_t j = 1; j + 1 < N; ++j) qbar[j] = (qbar[j] + up(j)) + down(j - 1);
+    qbar[N - 1] = 0.0 + down(N - 2);
+  }
+}
+
 // The hand adjoint: J, and dJ/dq_init in gradient. Forward pass, then the reverse pass.
 inline double HandGradient(const Field<double>& q_init, const Field<double>& w,
                            Field<double>& gradient) {
   const double value = Primal(q_init, w);
-  const double c = kCourant;
-  const double half_c = 0.5 * c;
-  Field<double>& qbar = gradient;
-  qbar = w;
-  std::array<double, kPoints - 1> fbar{};
-  for (std::uint32_t step = 0; step < kTimeSteps; ++step) {
-    // q_{n-1} = q_1, then q_0 = q_{n-2}, undone last first.
-    qbar[1] += qbar[kPoints - 1];
-    qbar[kPoints - 1] = 0.0;
-    qbar[kPoints - 2] += qbar[0];
-    qbar[0] = 0.0;
-    fbar.fill(0.0);
-    for (std::size_t i = kPoints - 2; i >= 1; --i) {
-      fbar[i - 1] += qbar[i];
-      fbar[i] -= qbar[i];
-    }
-    for (std::size_t i = kPoints - 1; i-- > 0;) {
-      const double sum_bar = half_c * fbar[i];
-      const double difference_bar = c * sum_bar;
-      qbar[i] += sum_bar + difference_bar;
-      qbar[i + 1] += sum_bar - difference_bar;
-    }
-  }
+  gradient = w;
+  ReverseSteps(gradient, kTimeSteps, kCourant);
   return value;
 }
 

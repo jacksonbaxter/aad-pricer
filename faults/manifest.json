@@ -2455,6 +2455,54 @@
       "timeout_s": 300
     },
     {
+      "id": "bench-lw-hand-gather-order",
+      "kind": "check",
+      "covers": "the Lax-Wendroff hand adjoint's gather form keeps the scatter form's bits",
+      "bug": "The gather form adds an interior point's two flux contributions in the other order, the left flux's before the right's, which rounds differently from the scatter form; the bench's in-run check against the tape still passes, since only round-off moves.",
+      "edits": [
+        {
+          "file": "bench/lax_wendroff.hpp",
+          "find": "    for (std::size_t j = 1; j + 1 < N; ++j) qbar[j] = (qbar[j] + up(j)) + down(j - 1);",
+          "replace": "    for (std::size_t j = 1; j + 1 < N; ++j) qbar[j] = (qbar[j] + down(j - 1)) + up(j);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=LaxWendroffHand.GatherFormHasTheScatterFormsBits"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaxWendroffHand\\.GatherFormHasTheScatterFormsBits",
+      "timeout_s": 300
+    },
+    {
+      "id": "bench-lw-hand-gather-boundary",
+      "kind": "check",
+      "covers": "the Lax-Wendroff hand adjoint's gather form keeps the scatter form's bits",
+      "bug": "The gather form drops the last flux adjoint's term, the last interior point's adjoint, so that flux adjoint is zero and the last two points' adjoints miss it.",
+      "edits": [
+        {
+          "file": "bench/lax_wendroff.hpp",
+          "find": "    fbar[N - 2] = 0.0 - qbar[N - 2];",
+          "replace": "    fbar[N - 2] = 0.0;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_aad_bench_unit"
+      ],
+      "command": [
+        "{build}/bin/aadp_aad_bench_unit",
+        "--gtest_filter=LaxWendroffHand.GatherFormHasTheScatterFormsBits"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LaxWendroffHand\\.GatherFormHasTheScatterFormsBits",
+      "timeout_s": 300
+    },
+    {
       "id": "bench-bump-allowance",
       "kind": "check",
       "covers": "in-run check of the bumps against the tape, its allowance b",
