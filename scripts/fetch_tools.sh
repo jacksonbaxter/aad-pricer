@@ -207,10 +207,11 @@ install_llvm() {
 
   # Keep what the builds, tidy and the sanitizers use. The rest is gigabytes of other tools and
   # of static compiler libraries. lib/clang holds the builtin headers and sanitizer runtimes.
+  # dsymutil writes the dSYM bundles without which llvm-symbolizer gives macOS reports no lines.
   for file in "$staged"/bin/*; do
     case ${file##*/} in
       clang | clang++ | clang-[0-9]* | clang-format | clang-tidy) ;;
-      lld | ld.lld | ld64.lld | llvm-ar | llvm-nm | llvm-ranlib | llvm-symbolizer) ;;
+      lld | ld.lld | ld64.lld | llvm-ar | llvm-nm | llvm-ranlib | llvm-symbolizer | dsymutil) ;;
       *) rm -f -- "$file" ;;
     esac
   done
