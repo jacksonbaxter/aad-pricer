@@ -2135,6 +2135,84 @@ The check. `python3 -I scripts/fault_injection.py --static` builds and runs noth
 Reruns, with `--only` through `heavy.sh` on an export of the uncommitted tree, with `data/` beside it: every fault whose edits name a file changed since 5e4fad8 (`README.md`, `src/ad/real.hpp`, `src/ad/tape.hpp`, `src/ad/tape.cpp`, `tests/ad/tape_test.cpp`) or by this change (`.github/workflows/ci.yml`): `check-results-docs-readme`, `ad-log-partial`, `ad-dot-tangent-sign`, `ad-passive-operand`, `ad-corner-clamp`, `ad-second-activation`, `ad-record-chunk-fit-off-by-one`, `ad-sweep-flush-subnormal`, `bench-tape-skip`, the three fuzz faults the record-path piece did not rerun (`ad-select-both`, `ad-normal-cdf-partial`, `ad-sweep-zeroing`), and `check-actionlint`, `check-actionlint-shellcheck` and `check-actionlint-sde-launcher`; with them `svi-fit-svi11-root`, `check-fault-edits-stale`, `svi-fit-rmse-overflow` and `svi-fit-rmse-scale-back`. All 19 caught. That run shipped the tree before this entry and the README's edits; `check-results-docs-readme` and `check-fault-edits-stale` ran again on the final tree and were caught.
 - The manifest holds 367 faults: 64 oracle, 274 check, 29 fuzz.
 
+#### The reverse sweep: straight-line paths and a carried adjoint
+
+Iteration only, not a result. Raw output is in the research cache, `evidence/stage11-sweep/`.
+
+What was changed, and why.
+- Before, every statement was swept by one loop over its operands. real.hpp records only statements of one or two operands, so on every statement that loop computed its remainder and took an exit branch that the operand count made hard to predict: the local-vol gradients, which mix both counts, took 0.9 to 4.7 of the sweep's branch misses a path-step on the Linux host.
+- `Tape::Sweep` (`src/ad/tape.cpp`) now hands each statement to one function, `Propagate`, which adds one- and two-operand statements by straight-line code and wider ones by the loop. Each adds its operands' contributions first operand first, statements last first, as the loop did, so every adjoint receives the same additions in the same order. Every path adds `Contribution`, the one product the sweep forms.
+- The plain sweep (and the absolute one) also carries the adjoint of the statement before, the next one swept, in a register. A statement's result is most often an operand of the next statement recorded, so before, the sweep read back the adjoint it had just stored, each statement. `held` is that adjoint at the top of each iteration: loaded when the statement after it begins, replaced by every sum that statement stores there, and reloaded past a statement with no operands. Memory is written exactly as before, so `held` is only a copy of what memory holds, and no operation or order changes.
+- The skip sweep (`SweepBackSkippingZeros`) has the straight-line paths but not the carry: on the Linux host the carry made it slower (below).
+- `Tape::Push(value, operands, partials)` records a statement of 1 to 255 operands and aborts on any other count. real.hpp does not call it; it is how the tests reach the loop for wide statements, and the only push of more than two.
+
+What was tried, against 0965664, the same runs as below (first campaign 3 rounds on each host, second 3 rounds on Linux and 5 on the Mac).
+- a: the straight-line paths alone. Linux host, SSE2: the tape 1.7% to 3.2% faster on the GBM workloads, 6.1% on `lw-worst`, 3.6% to 4.0% on the local-vol gradients, and every variant at least as fast. Mac: the tape 0.2% to 7.1% faster, but the skip 1.5% and 2.3% slower on `aad1-barrier` and `mc-asian252`, by medians whose ranges overlap. The carry gives most of what the Mac gains.
+- b: the carry in all three sweeps. Mac: the tape 17.5% to 25.7% faster, and the skip from 0.2% slower (`aad1-barrier`) to 27.9% faster. Linux host: `aad1-barrier` tape-skip on SSE2 2.3% slower in the first campaign (347.2 cycles a path-step before, range 346.6 to 348.6, against 355.3, 354.0 to 355.3) and 1.7% slower in the second, and on AVX2 0.1% faster and 0.6% slower, where c's skip is 0.4% and 1.5% faster. On x86-64 the compiler turns the carry's select into compares and jumps, and in the skip loop a zero-adjoint statement takes two taken branches where a's takes one (the listings are in the raw output); on AArch64 the select is one `fcsel`.
+- c, committed: the carry in the plain and absolute sweeps, not in the skip. A branch-free select for x86 (a mask and blend) was considered and not tried.
+
+The same bits.
+- `aadp_run2_fingerprint` passes on the Mac (`release`), and on the Linux host under the `release` preset and the `release-gcc` preset, which uses the other compiler (its pre-commit, 763 of 763). `aadp_ad_statement_order_test` passes on all three, its constant unchanged. On the Linux host's `release` build the 25 tests of `Run2Fingerprint`, `StatementOrder`, `Tape`, `TapeDeathTest`, `TapeVsDual` and `HandAdjoint` pass. Every tape, lane-against-scalar, tape-against-`Dual`, allocation, memory, thread and oracle test passes unchanged in the Mac's `release` tests (775 of 775) and the `release-gcc` pre-commit's. No reference file, seed, tolerance or ceiling changed.
+- The memory targets are where they were: the `static_assert`s on the 16-byte `Real`, the 1-byte statement and the 12-byte operand are untouched, and the bytes a statement, the zero allocations after warm-up and the thread tests pass. The tape shapes in the timed runs are the same before and after.
+
+The test of the new paths. `Tape.SweepsStatementsOfEveryOperandCountInOrder` (`tests/ad/tape_test.cpp`) records a program of 14 statements over 5 inputs: statements of 1, 2, 3 and 255 operands; an operand used twice in one statement (in the two-, three- and 255-operand statements) with partials whose contributions round differently in the other order; two seeded statements, so an adjoint mid-program has two parts; five statements nothing uses, whose adjoint is zero, three of them with an infinite partial on an input of their own, so that the plain sweep makes that input's adjoint NaN and the skip leaves it at zero; and two new variables, one used mid-program and one last, past which the carry must reload. The reference is the sweep's definition on plain doubles. Before anything is recorded the test asserts that the program tells its cases apart: the NaN under the plain sweep only, a non-zero adjoint on every other input and on the mid-program variable, and, for 2, 3 and 255 operands, some slot whose bits change when those statements add their contributions last operand first, under each sweep. Then, for both sweeps, it records the program on 390 tapes: each statement in turn the first of a statement chunk, or none; operands that just fit in the operand chunk and that just do not, for each statement, an empty chunk and its middle; each recorded twice, the second time after a rewind. Every position must be where the layout puts it, and every slot's adjoint the reference's bits. `TapeDeathTest.AStatementOfNoOrTooManyOperandsIsAnError` checks that 0 and 256 operands abort. Both pass on the Mac and on the Linux host under both presets.
+
+Faults, run with `--only` through the machine's job wrapper on an export of the uncommitted tree, each caught by the new test:
+- `ad-sweep-one-operand-partial`, new: the one-operand path adds the adjoint itself, as if the partial were 1.
+- `ad-sweep-two-operand-order`, new: the two-operand path adds its second operand's contribution first.
+- `ad-sweep-wide-short`, new: the loop for wide statements stops one operand short.
+- `ad-sweep-carry-index`, new: the carried adjoint is matched against the statement's own index, so it never takes the contributions to the statement before.
+- `ad-sweep-carry-no-reload`, new: past a new variable the carry is not reloaded, so the statement before sweeps the new variable's adjoint as its own.
+- `ad-push-operand-count-unchecked`, new: the general push takes any count of operands; caught by the death test.
+- `ad-sweep-flush-subnormal` is re-pointed: the loop line it edited is gone, and it now flushes subnormal products in `Contribution`, which every path calls. Caught, as before, by its `TapeVsDual` check.
+- Still caught, their edits unchanged: `bench-tape-skip`, `ad-dot-tangent-sign`, `ad-second-activation`, `ad-record-chunk-fit-off-by-one` and the fuzz fault `ad-sweep-zeroing`, the other faults whose edits name `src/ad/tape.hpp` or `tape.cpp`; and `check-results-docs-readme`, which edits `README.md`, on the final tree.
+- The manifest holds 373 faults: 64 oracle, 280 check, 29 fuzz.
+
+Before and after, iteration only, scalar code, the stage 11 driver of `PERF.md` linked against each build, running `bench/aad_workloads` as `aadp_bench_aad` does: `aad1-barrier` at 1/50 scale, `aad4-asian12` and `mc-asian252` at 1/10, `lw-worst` at full scale; and the local-vol path gradient (`LocalVolPathGradient`, `src/ad/local_vol_gradient.hpp`) on 4,096 paths of 132 steps (33 dates, 4 substeps) for its three contracts, `asian-arithmetic-call` (lv0), `down-out-call-discrete-one-step` (lv1) and `down-out-call-continuous-bridge` (lv2): each path recorded and swept back to its mark by `SweepBack` (`grad`) or `SweepBackSkippingZeros` (`grad-skip`), the set-up swept once a block, and `record` the recording alone. Before is 0965664. Alternating rounds, the median over the rounds, whose ranges are in the raw output.
+
+`linux-zen1` (AMD Ryzen Embedded V1605B, Zen 1), the pinned compiler, 23.1.4, at `-O3 -g` with `-ffp-contract=off`, `cycles:u` of the timed loop only (the counters started and stopped through a control pipe, no multiplexing), each run pinned to cpu4 through the machine's job wrapper, governor schedutil, cpu5 at most 8.1% busy during any run. SSE2 is the `release` preset and AVX2 `release-avx2` (x86-64-v3); both are scalar code here. Three rounds, except `lw-worst`: its runs spread by 10% to 20% between processes, within a run too, so it had 10 rounds of its own, which are the figures below (in the three rounds its tape was +1.0% on SSE2 and its skip +3.3% on AVX2, each range inside the other side's). Cycles a path-step, millions a run for `lw-worst`:
+
+| Workload, variant | SSE2 before | SSE2 after | Change | AVX2 before | AVX2 after | Change |
+|---|---|---|---|---|---|---|
+| `aad1-barrier` tape | 378.7 | 370.8 | −2.1% | 375.5 | 358.5 | −4.5% |
+| `aad1-barrier` tape-skip | 347.5 | 346.1 | −0.4% | 344.8 | 339.6 | −1.5% |
+| `aad4-asian12` tape | 320.8 | 310.0 | −3.4% | 309.2 | 298.7 | −3.4% |
+| `aad4-asian12` tape-skip | 315.6 | 300.6 | −4.7% | 299.3 | 293.1 | −2.1% |
+| `mc-asian252` tape | 290.0 | 284.3 | −2.0% | 286.2 | 270.7 | −5.4% |
+| `mc-asian252` tape-skip | 277.0 | 276.5 | −0.2% | 272.6 | 266.7 | −2.2% |
+| `lw-worst` tape | 43.68 | 43.04 | −1.5% | 44.40 | 41.86 | −5.7% |
+| `lw-worst` tape-skip | 43.82 | 41.98 | −4.2% | 45.01 | 43.25 | −3.9% |
+| lv0 grad | 1778.0 | 1619.5 | −8.9% | 1810.7 | 1590.8 | −12.1% |
+| lv0 grad-skip | 1668.7 | 1546.6 | −7.3% | 1654.8 | 1554.5 | −6.1% |
+| lv1 grad | 1886.4 | 1718.6 | −8.9% | 1908.7 | 1707.9 | −10.5% |
+| lv1 grad-skip | 1792.7 | 1669.3 | −6.9% | 1764.9 | 1661.1 | −5.9% |
+| lv2 grad | 2064.4 | 1884.1 | −8.7% | 2110.8 | 1850.3 | −12.3% |
+| lv2 grad-skip | 1914.7 | 1754.0 | −8.4% | 1902.1 | 1794.4 | −5.7% |
+
+`mac-m4max`, macOS, `release` (AArch64), the pinned compiler, 23.1.4, wall time per unit, the median of each run's repetitions, each run under the machine's measurement wrapper, unpinned, five rounds, load average 1.5 to 4.6 from other projects' jobs. Nanoseconds a path-step, milliseconds a run for `lw-worst`:
+
+| Workload, variant | Before | After | Change |
+|---|---|---|---|
+| `aad1-barrier` tape | 54.57 | 44.35 | −18.7% |
+| `aad1-barrier` tape-skip | 36.13 | 35.61 | −1.5% |
+| `aad4-asian12` tape | 51.15 | 42.27 | −17.4% |
+| `aad4-asian12` tape-skip | 43.52 | 42.66 | −2.0% |
+| `mc-asian252` tape | 48.65 | 39.89 | −18.0% |
+| `mc-asian252` tape-skip | 40.24 | 39.69 | −1.4% |
+| `lw-worst` tape | 6.818 | 5.392 | −20.9% |
+| `lw-worst` tape-skip | 7.360 | 7.011 | −4.7% |
+| lv0 grad | 406.4 | 319.5 | −21.4% |
+| lv0 grad-skip | 307.9 | 291.4 | −5.3% |
+| lv1 grad | 424.7 | 339.2 | −20.1% |
+| lv1 grad-skip | 331.4 | 317.3 | −4.3% |
+| lv2 grad | 461.4 | 372.2 | −19.3% |
+| lv2 grad-skip | 336.4 | 323.8 | −3.7% |
+
+- The bar, set before measuring: keep the change only if no workload on either host gets slower by more than 2% and at least one gets faster by more than 5%. None got slower; the smallest gains are the skip's on `mc-asian252` and `aad1-barrier` on SSE2.
+- `aad4-asian12`'s tape over its hand adjoint: 1.76 before and 1.70 after on SSE2 (hand 182.2 and 182.1 cycles), 1.77 and 1.71 on AVX2 (175.1 and 175.0), and 3.00 and 2.48 on macOS (17.06 and 17.08 ns). `AAD-5`'s target is 1.25.
+- The sweep per statement, counted as the record path's was (the tape less tape-record, divided by the statements; so it includes seeding and the set-up's sweep), plain sweep, cycles and instructions, before and after. SSE2: `aad1-barrier` 9.0 and 8.4 cycles, 34.3 and 33.0 instructions; `aad4-asian12` 11.9 and 9.8, 39.5 and 35.6; `mc-asian252` 10.2 and 9.0, 39.4 and 35.0; `lw-worst` 19.7 and 19.3, 41.6 and 36.7; lv0 to lv2 11.4 to 11.6 and 8.7 to 8.9, 40.0 to 40.6 and 35.5 to 35.7. AVX2: `aad1-barrier` 10.5 and 7.4, 40.3 and 33.3; `aad4-asian12` 10.2 and 9.9, 42.8 and 36.2; `mc-asian252` 11.3 and 8.0, 42.2 and 35.6; `lw-worst` 20.0 and 18.1, 43.0 and 36.6; lv0 to lv2 12.6 to 12.8 and 8.6 to 9.2, 42.4 to 42.6 and 35.9 to 36.1. The cycle figures move by about 0.7 between campaigns, since they are differences of two runs; the instruction counts do not. The Mac runs do not time tape-record, so these are the Linux host's only.
+- The sweep's branch misses (the tape's less tape-record's), plain sweep, before and after, SSE2 then AVX2, a path-step: `aad1-barrier` 0.029 and 0.027, 0.033 and 0.026; `aad4-asian12` 0.084 and 0.084 on both; `mc-asian252` 0.004 on both; lv0 1.11 and 0.37, 3.94 and 0.37; lv1 1.16 and 0.38, 4.66 and 0.39; lv2 0.90 and 0.19, 4.16 and 0.18. A run of `lw-worst`: 6,397 and 4,315 on SSE2, 4,300 and 4,310 on AVX2. The GBM workloads' statements alternate in a pattern the predictor had already learnt; the local-vol paths' did not.
+
 ### Rule slips
 
 None affected a number.
@@ -2166,6 +2244,7 @@ None affected a number.
 - Stage 11, the record path: two foreground calls ran past the tool's 600 s timeout and were moved to the background, a first timing run waiting on `measure.sh` and a one-target build waiting in `heavy.sh`; both finished and were waited for by polling. One `python3 -I -` read only `/dev/null`, a no-op, and was no heredoc. Outside `heavy.sh` on the Mac: the stage 11 driver's compiles and links against each build (seconds each), symbol and disassembly listings, single runs of `aadp_ad_tape_test` (milliseconds) and `clang-format`. The new test changed twice after its first fault run: its order of operand offsets, so that the new fault is caught by the probe rather than by the test's set-up, and then its split into helper functions, after the first full clang-tidy run found two findings in it (the test body's cognitive complexity, and a vector filled in a loop without a reserve). The new fault, the full clang-tidy and the gates ran again on the final test; the seven other faults ran on the first version, which differs only in that order and that split. One single-file clang-tidy run of the test (seconds) ran outside `heavy.sh`. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s11r/` and the research cache.
 - Stage 11, the read-only fuzz triage of `aadp_fuzz_simd_kernels`'s out-of-memory stop (research cache, `evidence/stage11-fuzz-oom/`): short probe runs outside `heavy.sh`, some of them while a measurement of this project held the lock (the record-path Mac runs above, which were repeated for it); runs on more than one core; and tool output in the system temporary folder.
 - Stage 11, the stale fault and the static check: one empty `python3 - <<'EOF'` heredoc, which zsh writes to `/tmp`; it ran nothing. One `python3 -I -` read only `/dev/null`, a no-op. Outside `heavy.sh` on the Mac, runs of a second or two: the static check on the tree and on exports of seven commits, and the new class of tests by itself. A first edit of `docs/TASKS.md` by a script cut one line short; it was restored from git and redone before anything was staged. The first gate of the commit that adds a5d0925 to `docs/TASKS.md` was started with a bare zsh `&`, so at nice 5; it was stopped in its release ctest, before any result, with the tests it had started, and rerun from the tool's background mode at nice 0. Nothing from it is used. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/x1/` and the research cache.
+- Stage 11, the sweep: the quoting of one shell command broke on an apostrophe inside an inline script argument, so the shell ran fragments of it as commands, which failed and changed nothing; the edit was redone in the editor. One foreground call, a first short timing run on the Mac waiting on the measurement wrapper, ran past the tool's 600 s timeout and was moved to the background, then finished and was waited for by polling; one 420 s sleep was refused by the tool. Two inline scripts read only `/dev/null`, no-ops, and were no heredocs. One in-place stream edit changed a scratch script under `build/`. Outside the job wrapper on the Mac: the scratch trees' configures (seconds), single runs of their tape test, statement-order test and fingerprint (seconds), the static fault check (0.1 s, once during the Mac timing runs), the scratch summary scripts and the formatter. The `release-gcc` pre-commit shipped a tree that differs from the commit only in `docs/NOTES.md`, `docs/TASKS.md` and `README.md`, then uncommitted. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/sw/` and the research cache.
 
 ## Option chain
 

@@ -1891,6 +1891,150 @@
       "timeout_s": 300
     },
     {
+      "id": "ad-sweep-one-operand-partial",
+      "kind": "check",
+      "covers": "the reverse sweep's one-operand path, both sweeps",
+      "bug": "The one-operand path weighs its operand by 1 instead of its partial, as if every one-operand partial were 1.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "  } else if (count == 1) {\n    add(x[0], p[0]);",
+          "replace": "  } else if (count == 1) {\n    add(x[0], 1.0);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.SweepsStatementsOfEveryOperandCountInOrder"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.SweepsStatementsOfEveryOperandCountInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-sweep-two-operand-order",
+      "kind": "check",
+      "covers": "the reverse sweep's two-operand path keeps the contribution order, both sweeps",
+      "bug": "The two-operand path adds the second operand's contribution before the first's, so an operand used twice in one statement gets its two contributions in the other order.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "    add(x[0], p[0]);\n    add(x[1], p[1]);",
+          "replace": "    add(x[1], p[1]);\n    add(x[0], p[0]);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.SweepsStatementsOfEveryOperandCountInOrder"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.SweepsStatementsOfEveryOperandCountInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-sweep-wide-short",
+      "kind": "check",
+      "covers": "the reverse sweep's path for statements of three or more operands, both sweeps",
+      "bug": "The loop for wide statements stops one operand short, so a statement's last operand gets nothing.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "    for (std::size_t j = 0; j < count; ++j) add(x[j], p[j]);",
+          "replace": "    for (std::size_t j = 0; j + 1 < count; ++j) add(x[j], p[j]);"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.SweepsStatementsOfEveryOperandCountInOrder"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.SweepsStatementsOfEveryOperandCountInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-sweep-carry-index",
+      "kind": "check",
+      "covers": "the plain reverse sweep's carried adjoint takes the contributions to the statement before",
+      "bug": "The carried adjoint is matched against the statement's own index instead of the one before it, so it never takes this statement's contributions and the statement before sweeps a stale adjoint.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "    if constexpr (kCarry) held = t == previous ? sum : held;",
+          "replace": "    if constexpr (kCarry) held = t == previous + 1 ? sum : held;"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.SweepsStatementsOfEveryOperandCountInOrder"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.SweepsStatementsOfEveryOperandCountInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-sweep-carry-no-reload",
+      "kind": "check",
+      "covers": "the plain reverse sweep reloads its carried adjoint past a statement with no operands",
+      "bug": "Past a new variable the carried adjoint is not reloaded, so the statement before it sweeps the new variable's adjoint as its own.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "      if (kCarry && i != 0) held = adjoints[i - 1];\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=Tape.SweepsStatementsOfEveryOperandCountInOrder"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Tape\\.SweepsStatementsOfEveryOperandCountInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-push-operand-count-unchecked",
+      "kind": "check",
+      "covers": "the general push refuses a statement of no operands or more than a byte counts",
+      "bug": "The general push takes any number of operands, so a statement of none is recorded and one of 256 is recorded with a count of 0.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "  if (count == 0 || count > kMaxOperands || partials.size() != count) {",
+          "replace": "  if (partials.size() != count) {"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=TapeDeathTest.AStatementOfNoOrTooManyOperandsIsAnError"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeDeathTest\\.AStatementOfNoOrTooManyOperandsIsAnError",
+      "timeout_s": 300
+    },
+    {
       "id": "ad-one-step-tiny-q",
       "kind": "check",
       "covers": "one-step adjoint at p v near 0, check 6",
@@ -1922,8 +2066,8 @@
       "edits": [
         {
           "file": "src/ad/tape.cpp",
-          "find": "      adjoints[indices[offset + j]] += adjoint * partial;",
-          "replace": "      const double product = adjoint * partial;\n      adjoints[indices[offset + j]] += std::fabs(product) < 0x1p-1022 ? 0.0 : product;"
+          "find": "  return adjoint * (kAbsolute ? std::fabs(partial) : partial);",
+          "replace": "  const double product = adjoint * (kAbsolute ? std::fabs(partial) : partial);\n  return std::fabs(product) < 0x1p-1022 ? 0.0 : product;"
         }
       ],
       "preset": "release",

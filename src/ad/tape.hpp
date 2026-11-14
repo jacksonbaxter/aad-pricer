@@ -22,7 +22,10 @@
 // Sweeps. SweepBack(from, stop) propagates adjoints from the statements in [stop, from), last
 // first, then zeroes each one it propagated. Independent variables (statements with no operand)
 // keep theirs: that is the result. A path's sweep stops at the mark, so its adjoints add into the
-// set-up's, and one sweep from the mark to the start serves every path accumulated since.
+// set-up's, and one sweep from the mark to the start serves every path accumulated since. Every
+// adjoint receives its contributions in one order: statements last first, and a statement's
+// operands in the order they were recorded. Statements with one and two operands, all that
+// real.hpp records, are swept by straight-line code, wider ones by a loop, in that same order.
 //
 // Threads. Each thread has at most one active tape, set by a TapeScope, and an operation on an
 // active Real records onto it. A second activation on a thread is an error (EVIDENCE B10).
@@ -31,7 +34,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
+#include <span>
 #include <type_traits>
 #include <vector>
 
@@ -40,6 +45,8 @@ namespace aadp::ad {
 using Index = std::uint32_t;
 using OperandCount = std::uint8_t;
 inline constexpr Index kPassiveIndex = 0;
+// The most operands one statement can have: its count is a byte.
+inline constexpr std::size_t kMaxOperands = std::numeric_limits<OperandCount>::max();
 
 // 2^13 entries: a statement chunk is 8 KiB and an operand chunk 96 KiB, so the 252-step paths of
 // this pricer fit in one of each, and a short path does not reserve megabytes. Not yet tuned by
@@ -222,6 +229,10 @@ class Tape {
     statements_ = s + 1;
     return {value, static_cast<Index>(s)};
   }
+  // A statement with 1 to kMaxOperands operands, all active, each with its partial; aborts on any
+  // other count. real.hpp records one or two; this is for a caller that forms a wider statement
+  // itself, and is how the tests reach the sweep's path for wide statements. Out of line.
+  Real Push(double value, std::span<const Index> operands, std::span<const double> partials);
 
  private:
   struct OperandChunk {

@@ -14,6 +14,7 @@
 #include <functional>
 #include <limits>
 #include <numbers>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -474,6 +475,243 @@ TEST(Tape, RecordsAtEveryChunkBoundaryPosition) {
       }
     }
   }
+}
+
+// The reverse sweep's paths: one and two operands, each straight-line, and the loop for wider
+// statements, here three and kMaxOperands, in both SweepBack and SweepBackSkippingZeros. The
+// reference is the sweep's definition on plain doubles (ReferenceSweep), and the adjoints must be
+// its bits. The program has operands used twice in one statement with partials whose
+// contributions round differently in the other order, statements whose adjoint is not zero and
+// ones nothing uses, whose adjoint is zero; three of those have an infinite partial on an input
+// of their own, so the plain sweep makes that input's adjoint NaN and the skip leaves it at zero.
+// Two new variables sit among the statements, one used and one last, since the plain sweep carries
+// the next statement's adjoint and must reload it past a statement with no operands. It is recorded
+// at chunk boundaries as RecordsAtEveryChunkBoundaryPosition is, and again after a rewind.
+struct ProgramStatement {
+  std::vector<std::size_t> operands;  // Slots: the inputs, then the statements in order.
+  std::vector<double> partials;
+};
+
+constexpr std::size_t kProgramInputs = 5;  // The last is used only by the unused statements.
+
+std::vector<ProgramStatement> SweepProgram() {
+  const auto s = [](std::size_t statement) { return kProgramInputs + statement; };
+  const double inf = std::numeric_limits<double>::infinity();
+  const auto wide = [](std::vector<std::size_t> cycle, std::size_t odd, double odd_partial) {
+    ProgramStatement w;
+    for (std::size_t j = 0; j < kMaxOperands; ++j) {
+      w.operands.push_back(cycle[j % cycle.size()]);
+      const double sign = j % 2 == 0 ? 1.0 : -1.0;
+      w.partials.push_back(j == odd ? odd_partial : sign * static_cast<double>((j % 7) + 1) / 9.0);
+    }
+    return w;
+  };
+  return {
+      {.operands = {0, 1}, .partials = {0.3, -1.7}},                     // 0
+      {.operands = {s(0)}, .partials = {1.0 / 3.0}},                     // 1
+      {.operands = {s(1), s(1)}, .partials = {0.1, -0.7}},               // 2
+      {.operands = {s(2), 2, s(2)}, .partials = {1.3, 0.25, -0.65}},     // 3
+      {},                                                                // 4, a new variable
+      {.operands = {4}, .partials = {inf}},                              // 5, unused
+      wide({s(3), 0, s(1), s(2), 1, s(4)}, 0, -0.6),                     // 6
+      {.operands = {s(6), 3}, .partials = {0.5, -0.25}},                 // 7
+      {.operands = {s(7)}, .partials = {-0.75}},                         // 8, the output
+      {.operands = {s(6), 4}, .partials = {1.5, inf}},                   // 9, unused
+      {.operands = {s(3), 2, s(3)}, .partials = {0.4, 0.2, -1.3}},       // 10, unused
+      wide({s(3), 4, s(0)}, 4, inf),                                     // 11, unused
+      {.operands = {s(2), s(7), s(2)}, .partials = {-0.6, 0.35, 0.15}},  // 12, unused
+      {},                                                                // 13, a new variable
+  };
+}
+
+// Statement 8 is the output; statement 3 is seeded too, so an adjoint mid-program has two parts.
+constexpr std::array<std::pair<std::size_t, double>, 2> kProgramSeeds = {
+    std::pair{kProgramInputs + 8, 1.0}, std::pair{kProgramInputs + 3, -0.5}};
+
+// The sweep by its definition: statements last first; a new variable keeps its adjoint; any other
+// statement's adjoint is read and zeroed, and then, unless it is zero and `skip`, each operand's
+// adjoint gets the adjoint times its partial added, first operand first. With `reversed` set,
+// statements of that many operands add theirs last operand first instead, which the test uses to
+// show that the program tells the orders apart.
+std::vector<double> ReferenceSweep(const std::vector<ProgramStatement>& program, bool skip,
+                                   std::size_t reversed = 0) {
+  std::vector<double> adjoints(kProgramInputs + program.size(), 0.0);
+  for (const auto& [slot, seed] : kProgramSeeds) adjoints.at(slot) += seed;
+  for (std::size_t k = program.size(); k-- > 0;) {
+    const ProgramStatement& statement = program.at(k);
+    const std::size_t n = statement.operands.size();
+    if (n == 0) continue;
+    const double adjoint = adjoints.at(kProgramInputs + k);
+    adjoints.at(kProgramInputs + k) = 0.0;
+    if (skip && adjoint == 0.0) continue;
+    for (std::size_t i = 0; i < n; ++i) {
+      const std::size_t j = n == reversed ? n - 1 - i : i;
+      adjoints.at(statement.operands.at(j)) += adjoint * statement.partials.at(j);
+    }
+  }
+  return adjoints;
+}
+
+// A new variable is registered; one and two operands go through the pushes real.hpp uses, and
+// wider statements through the general one.
+Real PushStatement(Tape& tape, const std::vector<Real>& slots, const ProgramStatement& statement,
+                   double value) {
+  const std::vector<std::size_t>& o = statement.operands;
+  const std::vector<double>& p = statement.partials;
+  if (o.empty()) return tape.Register(value);
+  if (o.size() == 1) return tape.Push(value, slots.at(o[0]).index(), p[0]);
+  if (o.size() == 2) {
+    return tape.Push(value, slots.at(o[0]).index(), p[0], slots.at(o[1]).index(), p[1]);
+  }
+  std::vector<Index> indices;
+  indices.reserve(o.size());
+  for (const std::size_t slot : o) indices.push_back(slots.at(slot).index());
+  return tape.Push(value, indices, p);
+}
+
+// Bits, except that a NaN matches any NaN: which NaN 0 times infinity gives is the hardware's.
+bool SameBits(double a, double b) { return Bits(a) == Bits(b) || (std::isnan(a) && std::isnan(b)); }
+
+// Records the program at `from`, checking each statement's position, then sweeps it (skipping
+// zeros if `skip`) and checks every slot's adjoint against `reference`. It leaves every adjoint
+// at zero, the new variables' among the statements too, so that a rewind to `from` may follow.
+void CheckProgramSweep(Tape& tape, const Position& from, const std::vector<Real>& inputs,
+                       const std::vector<ProgramStatement>& program, bool skip,
+                       const std::vector<double>& reference) {
+  std::vector<Real> slots = inputs;
+  Position expected = from;
+  for (std::size_t k = 0; k < program.size(); ++k) {
+    slots.push_back(PushStatement(tape, slots, program.at(k), 1.0 + static_cast<double>(k)));
+    expected = Advance(expected, program.at(k).operands.size());
+    ASSERT_EQ(Describe(tape.GetPosition()), Describe(expected)) << "statement " << k;
+  }
+  for (const auto& [slot, seed] : kProgramSeeds) tape.AddAdjoint(slots.at(slot), seed);
+  if (skip) {
+    tape.SweepBackSkippingZeros(tape.GetPosition(), from);
+  } else {
+    tape.SweepBack(tape.GetPosition(), from);
+  }
+  for (std::size_t slot = 0; slot < slots.size(); ++slot) {
+    const double adjoint = tape.Adjoint(slots.at(slot));
+    EXPECT_TRUE(SameBits(adjoint, reference.at(slot)))
+        << "slot " << slot << ": " << adjoint << " against " << reference.at(slot);
+  }
+  tape.ClearAdjoints(tape.GetPosition(), Position{});
+}
+
+// The program exercises what it says: an input NaN under the plain sweep only, an adjoint that is
+// not zero on every other input and on the new variable mid-program, and, for two, three and
+// kMaxOperands operands, a slot whose bits change when those statements add their contributions
+// in the other order.
+void CheckTheProgramTellsItsCasesApart(const std::vector<ProgramStatement>& program,
+                                       const std::array<std::vector<double>, 2>& references) {
+  constexpr std::size_t kNaNInput = kProgramInputs - 1;
+  ASSERT_TRUE(std::isnan(references[0].at(kNaNInput)));
+  ASSERT_EQ(Bits(references[1].at(kNaNInput)), Bits(0.0));
+  for (std::size_t i = 0; i < kNaNInput; ++i) ASSERT_NE(references[0].at(i), 0.0) << i;
+  ASSERT_NE(references[0].at(kProgramInputs + 4), 0.0);
+  for (const bool skip : {false, true}) {
+    const std::vector<double>& reference = references.at(skip ? 1 : 0);
+    for (const std::size_t count : {std::size_t{2}, std::size_t{3}, kMaxOperands}) {
+      const std::vector<double> reversed = ReferenceSweep(program, skip, count);
+      bool differs = false;
+      for (std::size_t i = 0; i < reference.size(); ++i) {
+        differs = differs || !SameBits(reversed.at(i), reference.at(i));
+      }
+      ASSERT_TRUE(differs) << count << " operands, skip " << skip;
+    }
+  }
+}
+
+// First statements: each of the program's entries in turn the first of statement chunk 1, or all
+// inside it.
+std::vector<std::size_t> ProgramStarts(const std::vector<ProgramStatement>& program) {
+  std::vector<std::size_t> starts;
+  starts.reserve(program.size() + 1);
+  for (std::size_t k = 0; k < program.size(); ++k) starts.push_back(kChunkEntries - k);
+  starts.push_back(kChunkEntries + (kChunkEntries / 2));
+  return starts;
+}
+
+// First operand offsets: for each statement, the one at which its operands just fit in operand
+// chunk 0 and the one at which they just do not, an empty chunk 0, and the middle of the chunk.
+std::vector<std::size_t> ProgramOffsets(const std::vector<ProgramStatement>& program) {
+  std::vector<std::size_t> lefts = {0};
+  lefts.reserve(1 + (2 * program.size()));
+  std::size_t before = 0;
+  for (const ProgramStatement& statement : program) {
+    if (statement.operands.empty()) continue;
+    before += statement.operands.size();
+    lefts.push_back(before - 1);
+    lefts.push_back(before);
+  }
+  std::vector<std::size_t> offsets;
+  offsets.reserve(lefts.size() + 1);
+  for (const std::size_t left : lefts) offsets.push_back(kChunkEntries - left);
+  offsets.push_back(kChunkEntries / 2);
+  return offsets;
+}
+
+// On a new tape: the inputs, fillers up to `start` and `offset`, then the program, swept and
+// checked twice, the second time after a rewind.
+void CheckProgramAt(std::size_t start, std::size_t offset,
+                    const std::vector<ProgramStatement>& program, bool skip,
+                    const std::vector<double>& reference) {
+  constexpr std::array<double, kProgramInputs> kValues = {0.7, 1.3, -0.4, 2.1, 0.9};
+  Tape tape;
+  const TapeScope scope(tape);
+  std::vector<Real> inputs;
+  inputs.reserve(kProgramInputs);
+  for (const double v : kValues) inputs.push_back(tape.Register(v));
+  Pad(tape, start, offset);
+  const Position from = tape.GetPosition();
+  ASSERT_EQ(Describe(from), Describe({.statements = start, .operand_offset = offset}));
+  for (const char* pass : {"first recording", "after a rewind"}) {
+    SCOPED_TRACE(pass);
+    CheckProgramSweep(tape, from, inputs, program, skip, reference);
+    if (::testing::Test::HasFatalFailure()) return;
+    tape.Rewind(from);
+  }
+}
+
+TEST(Tape, SweepsStatementsOfEveryOperandCountInOrder) {
+  const std::vector<ProgramStatement> program = SweepProgram();
+  const std::array<std::vector<double>, 2> references = {ReferenceSweep(program, false),
+                                                         ReferenceSweep(program, true)};
+  CheckTheProgramTellsItsCasesApart(program, references);
+  if (HasFatalFailure()) return;
+  const std::vector<std::size_t> starts = ProgramStarts(program);
+  const std::vector<std::size_t> offsets = ProgramOffsets(program);
+  for (const bool skip : {false, true}) {
+    for (const std::size_t start : starts) {
+      for (const std::size_t offset : offsets) {
+        SCOPED_TRACE(std::string(skip ? "skipping zeros" : "plain") + ", first statement " +
+                     std::to_string(start) + ", first operand offset " + std::to_string(offset));
+        CheckProgramAt(start, offset, program, skip, references.at(skip ? 1 : 0));
+        if (HasFatalFailure()) return;
+      }
+    }
+  }
+}
+
+TEST(TapeDeathTest, AStatementOfNoOrTooManyOperandsIsAnError) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  const std::vector<Index> wide(kMaxOperands + 1, 1);
+  const std::vector<double> partials(kMaxOperands + 1, 1.0);
+  EXPECT_DEATH(
+      {
+        Tape tape;
+        static_cast<void>(tape.Register(1.0));
+        static_cast<void>(tape.Push(0.0, std::span(wide).first(0), std::span(partials).first(0)));
+      },
+      "a statement takes 1 to 255 operands");
+  EXPECT_DEATH(
+      {
+        Tape tape;
+        static_cast<void>(tape.Register(1.0));
+        static_cast<void>(tape.Push(0.0, wide, partials));
+      },
+      "a statement takes 1 to 255 operands");
 }
 
 TEST(Tape, RewindKeepsMemoryAndReRecordsTheSame) {
