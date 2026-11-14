@@ -509,6 +509,8 @@ jobs:
           llvm: "false"
           lbr: "false"
       - run: python3 -I scripts/scan_repo.py
+      # Every fault's edits still apply to this tree, with data/ for the one that reads a row.
+      - run: python3 -I scripts/fault_injection.py --static
 
   actionlint:
     runs-on: ubuntu-24.04

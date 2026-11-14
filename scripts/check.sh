@@ -9,6 +9,10 @@
 # line and writes build/logs/check/check-<step>.log. Steps run strictly in sequence, so only
 # one sanitizer build or tidy run exists at a time.
 #
+# The second step, fault-edits, checks with no build that every fault in faults/manifest.json still
+# applies to the tree on disk: each edit's file is there and each find text matches exactly once,
+# so a fault that a code change left stale fails in seconds, by name, and not hours later.
+#
 # The last step, fault-injection, runs every fault in faults/manifest.json against the committed
 # HEAD, in a copy under build/fault, so uncommitted edits have no effect on it. Faults that test
 # this script run it in that copy with --only, so the step never runs itself.
@@ -34,8 +38,8 @@ set -uo pipefail
 
 readonly MAX_JOBS=6
 readonly COULD_NOT_RUN=77
-readonly ALL_STEPS='nice format tidy repo-scan release debug asan-ubsan tsan fuzz measured-plan
-  results-docs data-verify actionlint fault-injection'
+readonly ALL_STEPS='nice fault-edits format tidy repo-scan release debug asan-ubsan tsan fuzz
+  measured-plan results-docs data-verify actionlint fault-injection'
 
 usage() {
   printf 'usage: check.sh [--only <step,...>] [--allow-skip-step <step,...>]\n' >&2
@@ -208,6 +212,7 @@ step_fault_injection() {
 run_body() {
   case $1 in
     nice) step_nice ;;
+    fault-edits) tool python3 -I scripts/fault_injection.py --static ;;
     format) tool scripts/check_format.sh ;;
     tidy) tool scripts/run_clang_tidy.sh --jobs "$jobs" release fuzz ;;
     repo-scan) tool python3 -I scripts/scan_repo.py ;;

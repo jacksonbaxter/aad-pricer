@@ -4,9 +4,23 @@
     python3 -I scripts/fault_injection.py [--only <id,...>] [--kind oracle|check|fuzz]
         [--jobs <n>] [--source <dir>] [--output <file>] [--list]
         [--manifest <file>] [--build-root <dir>] [--scope-note <text>]
+    python3 -I scripts/fault_injection.py --static [--only <id,...>] [--kind <kind>]
+        [--source <dir>] [--manifest <file>]
 
 Run it with the toolchain in the environment (CC, CXX, SDKROOT, PATH). Standard library only.
 Exit codes: 0 every selected fault was caught, 1 otherwise, 2 could not run.
+
+--static builds and runs nothing, in well under a second. It checks that every selected fault
+still applies: each edit's file is in the tree and each find text matches exactly once, by the
+same rule as a run, with each edit judged on the bytes the fault's earlier edits left, so a find
+that only exists after an earlier edit is judged as the run would judge it. It reads the tree on
+disk, not HEAD, with the manifest in it, or --source and --manifest: the files git tracks there
+(every file but build/ and data/ when there is no .git), and data/ for a fault with data true. It
+prints a line for each fault that does not apply and a summary. Exit 0 every edit applies, 1 one
+does not (that fault would be not-applied), 2 none failed but one could not be judged: an edit
+that reads or edits data/ when data/ is missing. It judges the files as exported, and a run
+edits them after its baseline, so a fault whose baseline wrote a file it then edits would be
+judged on other bytes.
 
 For each fault: the unmutated copy must build and pass, the edits are applied, the mutated copy
 is built and run, and the edited files go back to their pristine bytes. Verdicts:
@@ -548,30 +562,35 @@ def edit_target(layout, relative):
     return target, target.relative_to(copy_root)
 
 
-def line_of(layout, edit):
-    source, _ = edit_target(layout, edit["append_line_of"])
-    lines = source.read_bytes().splitlines()
+def nth_line(data, edit):
+    lines = data.splitlines()
     if edit["line"] > len(lines):
         raise NotApplied(f"{edit['append_line_of']} has {len(lines)} lines")
     return lines[edit["line"] - 1] + b"\n"
 
 
+def edited(data, edit, read):
+    """The bytes of edit["file"] after the edit, given its bytes before. read(path) gives another
+    file's bytes, for append_line_of. The one rule for a run and for --static."""
+    if "find" in edit:
+        find = edit["find"].encode()
+        count = count_matches(data, find)
+        if count != 1:
+            raise NotApplied(f"find matched {count} times in {edit['file']}")
+        return data.replace(find, edit["replace"].encode())
+    if "append" in edit:
+        return data + edit["append"].encode()
+    return data + nth_line(read(edit["append_line_of"]), edit)
+
+
 def apply_edits(layout, fault, touched):
+    def read(relative):
+        return edit_target(layout, relative)[0].read_bytes()
+
     for edit in fault["edits"]:
         target, relative = edit_target(layout, edit["file"])
         touched.add(relative)
-        data = target.read_bytes()
-        if "find" in edit:
-            find = edit["find"].encode()
-            count = count_matches(data, find)
-            if count != 1:
-                raise NotApplied(f"find matched {count} times in {edit['file']}")
-            data = data.replace(find, edit["replace"].encode())
-        elif "append" in edit:
-            data += edit["append"].encode()
-        else:
-            data += line_of(layout, edit)
-        fresh_write(target, data)
+        fresh_write(target, edited(target.read_bytes(), edit, read))
 
 
 def first_error_line(output):
@@ -656,6 +675,94 @@ def run_fault(layout, fault, jobs):
         for relative in touched:
             restore_entry(layout, relative)
         remove_fixture(layout)
+
+
+class Unjudged(Exception):
+    pass
+
+
+class StaticTree:
+    """The files a run's copy would hold, read in place: the tracked files of a git work tree, or
+    every file of a tree with no .git but its top-level build/, plus data/ for a fault with data
+    true. Nothing is written."""
+
+    def __init__(self, root):
+        self.root = root.resolve()
+        self.tracked = None
+        if (root / ".git").exists():  # Without one, git would walk up to an enclosing repo.
+            listed = subprocess.run(
+                ["git", "-C", str(root), "ls-files", "-z"], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, check=False,
+            )  # fmt: skip
+            require(listed.returncode == 0, f"git ls-files failed: {listed.stderr.decode()}")
+            self.tracked = {Path(name) for name in listed.stdout.decode().split("\0") if name}
+
+    def in_export(self, relative):
+        if self.tracked is not None:
+            return relative in self.tracked
+        return relative.parts[0] not in ("build", ".git", "data")
+
+    def target(self, fault, name):
+        relative = Path(name)
+        if self.in_export(relative):
+            base = self.root
+        elif relative.parts[0] == "data":
+            if not fault.get("data"):
+                raise NotApplied(f"{name} does not exist: data/ is copied in only with data true")
+            base = (self.root / "data").resolve()
+            if not base.is_dir():
+                raise Unjudged(f"{name} is in data/, which is not here: run scripts/fetch_data.sh")
+            relative = Path(*relative.parts[1:])
+        else:
+            raise NotApplied(f"{name} does not exist in the export")
+        target = (base / relative).resolve()
+        if not target.is_relative_to(base) or target == base:
+            raise NotApplied(f"{name} resolves outside the copy")
+        if not target.is_file():
+            raise NotApplied(f"{name} does not exist")
+        return target
+
+
+def static_fault(tree, fault):
+    """Applies the fault's edits in order to an overlay of the tree, by the run's rule, so an edit
+    is judged on the bytes the edits before it left. Returns None, or (verdict, why)."""
+    overlay = {}
+
+    def read(name):
+        target = tree.target(fault, name)
+        return overlay[target] if target in overlay else target.read_bytes()
+
+    edits = fault["edits"]
+    for number, edit in enumerate(edits, 1):
+        try:
+            target = tree.target(fault, edit["file"])
+            overlay[target] = edited(read(edit["file"]), edit, read)
+        except NotApplied as error:
+            return "not-applied", f"edit {number} of {len(edits)}: {error}"
+        except Unjudged as error:
+            return "unjudged", f"edit {number} of {len(edits)}: {error}"
+    return None
+
+
+def run_static(selected, root):
+    """Exit 0: every edit applies. 1: an edit does not, so that fault would be not-applied. 2: no
+    edit failed, but one could not be judged here."""
+    tree = StaticTree(root)
+    counts = {"applies": 0, "not-applied": 0, "unjudged": 0}
+    for fault in selected:
+        problem = static_fault(tree, fault)
+        if problem is None:
+            counts["applies"] += 1
+            continue
+        verdict, why = problem
+        counts[verdict] += 1
+        print(f"{fault['id']} | {verdict} | {why}", flush=True)
+    edits = sum(len(fault["edits"]) for fault in selected)
+    summary = " ".join(f"{verdict}={count}" for verdict, count in counts.items())
+    print(f"static: {len(selected)} faults, {edits} edits: {summary}")
+    if counts["not-applied"]:
+        return 1
+    return 2 if counts["unjudged"] else 0
 
 
 class Scrubber:
@@ -811,7 +918,12 @@ def parse_arguments():
     parser.add_argument("--manifest", type=Path, help="a manifest other than the committed one")
     parser.add_argument("--build-root", type=Path, help="default build/fault")
     parser.add_argument("--scope-note", help="why this run covers what it covers")
+    parser.add_argument(
+        "--static", action="store_true", help="check, with no build, that every edit still applies"
+    )
     args = parser.parse_args()
+    if args.static and (args.output or args.build_root or args.scope_note or args.list):
+        parser.error("--static takes no --output, --build-root, --scope-note or --list")
     if not 1 <= args.jobs <= MAX_JOBS:
         parser.error(f"--jobs must be between 1 and {MAX_JOBS}")
     if args.source:
@@ -828,6 +940,14 @@ def main():
     args = parse_arguments()
     os.environ["AADP_JOBS"] = str(args.jobs)
     try:
+        if args.static:
+            root = args.source or REPO
+            manifest = args.manifest or root / "faults" / "manifest.json"
+            try:
+                text = manifest.read_text()
+            except OSError as error:
+                raise CannotRun(f"cannot read the manifest: {error}") from error
+            return run_static(select_faults(parse_manifest(text), args), root)
         commit = source_commit(args)
         faults = parse_manifest(read_manifest_text(args, commit))
         selected = select_faults(faults, args)

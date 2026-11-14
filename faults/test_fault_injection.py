@@ -476,11 +476,162 @@ class TheRealManifest(unittest.TestCase):
             steps = command[command.index("--only") + 1].split(",")
             self.assertNotIn("fault-injection", steps, entry["id"])
 
+    def test_every_fault_applies_to_this_tree(self):
+        done = subprocess.run(
+            [sys.executable, "-I", str(RUNNER), "--static"], cwd=REPO, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, text=True,
+        )  # fmt: skip
+        self.assertNotIn("| not-applied |", done.stdout)
+        # Without data/, only the faults that read it go unjudged, and that is not a pass.
+        self.assertEqual(done.returncode, 0 if (REPO / "data").is_dir() else 2, done.stdout)
+
     def test_no_fault_fixes_its_own_job_count(self):
         for entry in self.faults:
             command = entry.get("command", [])
             if "--jobs" in command:
                 self.assertEqual(command[command.index("--jobs") + 1], "{jobs}", entry["id"])
+
+
+class Static(unittest.TestCase):
+    """--static: no build, the tree on disk, and the run's own rule for an edit."""
+
+    def static(self, project, *arguments):
+        done = project.run("--static", *arguments)
+        lines = [line for line in done.stdout.splitlines() if " | " in line]
+        return done, {line.split(" | ")[0]: line.split(" | ")[1:] for line in lines}
+
+    def test_a_stale_find_is_named_and_fails_with_nothing_built(self):
+        project = Project(
+            "static-stale",
+            [
+                fault("fine", [swap("a + b", "a - b")]),
+                fault("gone", [swap("a * b", "a - b")]),
+                fault("two", [swap("ADD IS WRONG", "ADD")]),
+                fault("lap", [swap("  ", "\t")]),
+            ],
+        ).committed()
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertNotIn("fine", rows)
+        self.assertEqual(
+            rows["gone"], ["not-applied", "edit 1 of 1: find matched 0 times in main.cpp"]
+        )
+        self.assertIn("find matched 2 times", rows["two"][1])
+        self.assertEqual(rows["lap"][0], "not-applied")
+        self.assertIn("static: 4 faults, 4 edits: applies=1 not-applied=3 unjudged=0", done.stdout)
+        self.assertFalse((project.root / "build").exists())
+
+    def test_the_tree_on_disk_is_judged_not_head(self):
+        project = Project("static-disk", [fault("real", [swap("a + b", "a - b")])]).committed()
+        self.assertEqual(self.static(project)[0].returncode, 0)
+        (project.root / "main.cpp").write_text(MAIN.replace("a + b", "b + a"))
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("find matched 0 times", rows["real"][1])
+        # The manifest on disk too: a fault re-pointed and not yet committed applies.
+        project.write_manifest([fault("real", [swap("b + a", "b - a")])])
+        self.assertEqual(self.static(project)[0].returncode, 0)
+
+    def test_each_edit_is_judged_on_the_bytes_the_edits_before_it_left(self):
+        project = Project(
+            "static-order",
+            [
+                fault("chain", [swap("a + b", "a - b"), swap("a - b", "a * b")]),
+                fault("alone", [swap("a - b", "a * b")]),
+                fault("used-up", [swap("a + b", "a - b"), swap("a + b", "a * b")]),
+                fault(
+                    "appended",
+                    [{"file": "main.cpp", "append": "\n// MARK\n"}, swap("// MARK", "// DONE")],
+                ),
+            ],
+        ).committed()
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertNotIn("chain", rows)
+        self.assertNotIn("appended", rows)
+        self.assertIn("edit 1 of 1: find matched 0 times", rows["alone"][1])
+        self.assertIn("edit 2 of 2: find matched 0 times", rows["used-up"][1])
+        self.assertEqual((project.root / "main.cpp").read_text(), MAIN)
+
+    def test_a_file_outside_the_export_does_not_apply(self):
+        project = Project(
+            "static-files",
+            [
+                fault("untracked", [swap("x", "y", file="new.txt")]),
+                fault("missing", [swap("x", "y", file="nowhere.txt")]),
+                fault("built", [swap("x", "y", file="build/made.txt")]),
+                fault("link", [swap("KEEP", "GONE", file="link.txt")]),
+            ],
+        )
+        outside = SCRATCH / "static-symlink-target.txt"
+        outside.write_text("KEEP\n")
+        (project.root / "link.txt").symlink_to(outside)
+        project.committed()
+        (project.root / "new.txt").write_text("x\n")
+        (project.root / "build").mkdir()
+        (project.root / "build/made.txt").write_text("x\n")
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("new.txt does not exist in the export", rows["untracked"][1])
+        self.assertIn("nowhere.txt does not exist in the export", rows["missing"][1])
+        self.assertIn("build/made.txt does not exist in the export", rows["built"][1])
+        self.assertIn("link.txt resolves outside the copy", rows["link"][1])
+
+    def test_data_is_judged_when_it_is_here_and_reported_when_it_is_not(self):
+        def appended(line):
+            return [{"file": "notes.txt", "append_line_of": "data/sample.txt", "line": line}]
+
+        project = Project(
+            "static-data",
+            [
+                fault("second", appended(2), data=True),
+                fault("no-flag", appended(2)),
+            ],
+        )
+        (project.root / "notes.txt").write_text("notes\n")
+        project.committed()
+        done, rows = self.static(project, "--only", "second")
+        self.assertEqual(done.returncode, 2, done.stdout)
+        self.assertEqual(rows["second"][0], "unjudged")
+        self.assertIn("data/sample.txt is in data/, which is not here", rows["second"][1])
+        self.assertIn("applies=0 not-applied=0 unjudged=1", done.stdout)
+        (project.root / "data").mkdir()
+        (project.root / "data/sample.txt").write_bytes(b"header\r\nROW\r\nlast\r\n")
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertNotIn("second", rows)
+        self.assertIn("data/ is copied in only with data true", rows["no-flag"][1])
+        project.write_manifest([fault("beyond", appended(9), data=True)])
+        done, rows = self.static(project)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("data/sample.txt has 3 lines", rows["beyond"][1])
+
+    def test_an_export_with_no_git_and_a_selection(self):
+        project = Project("static-export", [])
+        source = project.root / "src"
+        source.mkdir()
+        for name in ("CMakePresets.json", "CMakeLists.txt", "main.cpp", "faults"):
+            shutil.move(project.root / name, source / name)
+        Project.write_manifest(
+            type("Export", (), {"root": source}),
+            [
+                fault("real", [swap("a + b", "a - b")]),
+                fault("gone", [swap("a * b", "a - b")], kind="check"),
+            ],
+        )
+        done, rows = self.static(project, "--source", "src", "--kind", "oracle")
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertIn("static: 1 faults, 1 edits: applies=1", done.stdout)
+        done, rows = self.static(project, "--source", "src")
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertEqual(list(rows), ["gone"])
+
+    def test_options_that_mean_nothing_here_are_refused(self):
+        project = Project("static-options", [fault("real", [swap("a + b", "a - b")])]).committed()
+        for extra in (["--output", "x.txt"], ["--list"], ["--scope-note", "why"]):
+            done = project.run("--static", *extra)
+            self.assertEqual(done.returncode, 2, done.stdout)
+            self.assertIn("--static takes no", done.stdout)
 
 
 class Modes(unittest.TestCase):

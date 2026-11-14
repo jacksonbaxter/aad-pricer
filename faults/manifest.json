@@ -671,6 +671,30 @@
       "data": true
     },
     {
+      "id": "check-fault-edits-stale",
+      "kind": "check",
+      "covers": "scripts/check.sh fault-edits: every fault still applies to the tree",
+      "bug": "A line that a fault's find text names is rewritten and the fault is not re-pointed, as 6a21a31 left svi-fit-svi11-root, so the full fault run would find it not-applied a step too late.",
+      "edits": [
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return 100.0 * std::scalbn(std::sqrt(scaled / n), exponent);",
+          "replace": "  return std::scalbn(100.0 * std::sqrt(scaled / n), exponent);"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["scripts/check.sh", "--only", "fault-edits"],
+      "detect": "test",
+      "reason": "(?s)^FAIL\\s+fault-edits\\s.*^svi-fit-rmse-scale-back \\| not-applied \\| edit 1 of 1: find matched 0 times in src/svi/fit\\.cpp$",
+      "timeout_s": 120,
+      "baseline_exit": 3,
+      "mutated_exit": 1,
+      "git": true,
+      "data": true,
+      "output_files": ["build/logs/check/check-fault-edits.log"]
+    },
+    {
       "id": "check-repo-scan",
       "kind": "check",
       "covers": "scripts/scan_repo.py",
@@ -4481,19 +4505,24 @@
       "id": "svi-fit-svi11-root",
       "kind": "check",
       "covers": "SVI-11, the root of the mean squared vol error",
-      "bug": "SVI-11 is the mean squared error, without the root.",
+      "bug": "SVI-11 is the mean squared error, without the root, on both paths that take one: the plain sum and the rescaled sum. The third root, of a sum that is not finite, gives the same inf or NaN without it.",
       "edits": [
         {
           "file": "src/svi/fit.cpp",
-          "find": "  return 100.0 * std::sqrt(sum / static_cast<double>(model_vol.size()));",
-          "replace": "  return 100.0 * (sum / static_cast<double>(model_vol.size()));"
+          "find": "  if (std::isfinite(sum)) return 100.0 * std::sqrt(sum / n);",
+          "replace": "  if (std::isfinite(sum)) return 100.0 * (sum / n);"
+        },
+        {
+          "file": "src/svi/fit.cpp",
+          "find": "  return 100.0 * std::scalbn(std::sqrt(scaled / n), exponent);",
+          "replace": "  return 100.0 * std::scalbn(scaled / n, exponent);"
         }
       ],
       "preset": "release",
       "targets": ["aadp_svi_fit_test"],
       "command": ["{build}/bin/aadp_svi_fit_test", "--gtest_filter=FitMetrics.*"],
       "detect": "test",
-      "reason": "\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseInVolPointsUnweighted",
+      "reason": "(?s)\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseInVolPointsUnweighted .*\\[  FAILED  \\] FitMetrics\\.ImpliedVolRmseWhereTheSquaredErrorsOverflow ",
       "timeout_s": 300
     },
     {
