@@ -60,8 +60,10 @@ TEST(RssProbe, AnIdleChildDoesNotInheritTheParentsPeak) {
 TEST(RssProbe, AVariantThatBuildsATapePeaksAboveIdle) {
   const auto idle = ChildPeakRss(AADP_BENCH_AAD_BIN, {"--aadp-rss-probe=idle"});
   ASSERT_TRUE(idle.has_value()) << idle.error();
-  const auto tape = ChildPeakRss(AADP_BENCH_AAD_BIN, {"--aadp-rss-probe=mc-asian252.tape",
-                                                      "--aadp-scale=500", "--aadp-threads=1"});
+  // lw-worst's tape holds about 47 MB. A GBM worker's, at most 172 KB, does not show above an
+  // ASan build's idle peak on macOS once the sanitizers are given a symbolizer.
+  const auto tape =
+      ChildPeakRss(AADP_BENCH_AAD_BIN, {"--aadp-rss-probe=lw-worst.tape", "--aadp-threads=1"});
   ASSERT_TRUE(tape.has_value()) << tape.error();
   EXPECT_GT(*tape, *idle);
 }

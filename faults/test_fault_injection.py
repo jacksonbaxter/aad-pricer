@@ -717,6 +717,67 @@ class Modes(unittest.TestCase):
         )
 
 
+SYMBOLIZER_NAMES = ("ASAN_SYMBOLIZER_PATH", "UBSAN_SYMBOLIZER_PATH", "TSAN_SYMBOLIZER_PATH")
+PRINT_SYMBOLIZERS = (
+    "import json, os; print('SYMBOLIZERS ' + json.dumps([os.environ.get(name) for name in "
+    f"{SYMBOLIZER_NAMES!r}]))"
+)
+
+
+class Symbolizer(unittest.TestCase):
+    """A fault's command gets the llvm-symbolizer beside the compiler that its preset's build tree
+    in the copy names, unless the caller set the variable or there is none there."""
+
+    def run_probe(self, name, with_symbolizer, caller=None):
+        probe = fault(
+            "probe", [swap("a + b", "a - b")], preset="fakesym", targets=[],
+            command=["python3", "-I", "-c", PRINT_SYMBOLIZERS], reason="NEVER PRINTED",
+        )  # fmt: skip
+        project = Project(name, [probe]).committed()
+        toolchain = project.root / "build" / "toolchain" / "bin"
+        toolchain.mkdir(parents=True)
+        (toolchain / "clang++").write_text("")
+        if with_symbolizer:
+            (toolchain / "llvm-symbolizer").write_text("#!/bin/sh\n")
+            (toolchain / "llvm-symbolizer").chmod(0o755)
+        cache = project.root / "build" / "fault" / "copy" / "build" / "fakesym" / "CMakeCache.txt"
+        cache.parent.mkdir(parents=True)
+        cache.write_text(f"//The compiler\nCMAKE_CXX_COMPILER:FILEPATH={toolchain}/clang++\n")
+        environment = {k: v for k, v in os.environ.items() if k not in SYMBOLIZER_NAMES}
+        environment.update(caller or {})
+        done = subprocess.run(
+            [sys.executable, "-I", "scripts/fault_injection.py"], cwd=project.root,
+            env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )  # fmt: skip
+        log = (project.root / "build/fault/logs/probe-baseline-run.txt").read_text()
+        got = json.loads(log.split("SYMBOLIZERS ", 1)[1].splitlines()[0])
+        return done, got, str(toolchain / "llvm-symbolizer")
+
+    def test_a_command_gets_the_symbolizer_beside_its_build_trees_compiler(self):
+        done, got, path = self.run_probe("symbolizer-found", True)
+        self.assertEqual(got, [path] * 3, done.stdout)
+        self.assertIn(
+            "fakesym: symbolizer: <repo>/build/toolchain/bin/llvm-symbolizer, beside the compiler "
+            "of build/fakesym\n",
+            done.stdout,
+        )
+
+    def test_a_variable_the_caller_set_is_left_alone(self):
+        caller = {"ASAN_SYMBOLIZER_PATH": "/caller/symbolizer"}
+        done, got, path = self.run_probe("symbolizer-caller", True, caller)
+        self.assertEqual(got, ["/caller/symbolizer", path, path], done.stdout)
+        self.assertIn("ASAN_SYMBOLIZER_PATH as the caller set it\n", done.stdout)
+
+    def test_with_no_symbolizer_there_the_environment_is_left_alone(self):
+        done, got, _ = self.run_probe("symbolizer-none", False)
+        self.assertEqual(got, [None] * 3, done.stdout)
+        self.assertIn(
+            "fakesym: symbolizer: no llvm-symbolizer beside <repo>/build/toolchain/bin/clang++, "
+            "environment left alone\n",
+            done.stdout,
+        )
+
+
 if __name__ == "__main__":
     SCRATCH.mkdir(parents=True, exist_ok=True)
     unittest.main()

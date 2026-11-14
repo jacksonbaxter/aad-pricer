@@ -61,6 +61,13 @@ if(AADP_BUILD_TESTS)
             "${PROJECT_BINARY_DIR}/data_test_scratch/verify_commits"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(data_verify_commits_script PROPERTIES LABELS "unit;fast")
+
+  # The test runner's fuzz slices, timeouts, wrapper and symbolizer guard, on fake targets.
+  add_test(NAME data_run_tests_script
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tests/data/run_tests_test.py"
+            "${PROJECT_BINARY_DIR}/data_test_scratch/run_tests"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(data_run_tests_script PROPERTIES LABELS "unit")
 endif()
 
 aadp_fuzz(fuzz_cp950

@@ -1,0 +1,4 @@
+# LeakSanitizer suppressions for fuzz runs on macOS, where scripts/run_tests.py turns leak
+# detection on. libFuzzer's memory-watch thread is started and never joined, and LeakSanitizer
+# there reports its start-up state (56 bytes in 2 allocations) as a leak in every target.
+leak:fuzzer::StartRssThread

@@ -7843,6 +7843,627 @@
       "reason": "^check,grid-rule-equals-FixedLocalVolSurface,FAILED,",
       "timeout_s": 900,
       "mutated_exit": 4
+    },
+    {
+      "id": "run-tests-slice-plan-rest-dropped",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the slice plan",
+      "bug": "A run whose seconds are not a whole number of slices drops the last, shorter slice, so the target runs less than its seconds.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    return [slice_seconds] * full + ([rest] if rest else [])\n",
+          "replace": "    return [slice_seconds] * full + ([rest] if rest and not full else [])\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_the_slice_plan_fills_whole_slices_then_the_rest"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_the_slice_plan_fills_whole_slices_then_the_rest \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-plan-one-process",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: no process longer than a slice",
+      "bug": "A long run is one libFuzzer process again, as before slicing, so a threaded target's runtime bookkeeping can reach the memory limit.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    plan = slice_plan(arguments.seconds, arguments.slice)\n",
+          "replace": "    plan = [arguments.seconds]\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_each_target_gets_its_seconds_in_slices_of_at_most_the_slice_length"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_each_target_gets_its_seconds_in_slices_of_at_most_the_slice_length \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-corpus-fresh",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the slices share one corpus",
+      "bug": "Each slice starts from an empty corpus, so it loses what the slices before it found.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        command = fuzz_command(binary, name, seconds, work, corpus, seeds)\n",
+          "replace": "        shutil.rmtree(corpus, ignore_errors=True)\n        os.makedirs(corpus)\n        command = fuzz_command(binary, name, seconds, work, corpus, seeds)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_the_slices_of_a_target_share_one_corpus_emptied_when_the_target_starts"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_the_slices_of_a_target_share_one_corpus_emptied_when_the_target_starts \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-corpus-stale",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the corpus is emptied when a target starts",
+      "bug": "The work directory of an earlier run is kept, so a run starts from its stale corpus and is not the run it says it is.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    shutil.rmtree(work, ignore_errors=True)\n    corpus = os.path.join(work, \"corpus\")\n    os.makedirs(corpus)\n",
+          "replace": "    corpus = os.path.join(work, \"corpus\")\n    os.makedirs(corpus, exist_ok=True)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_the_slices_of_a_target_share_one_corpus_emptied_when_the_target_starts"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_the_slices_of_a_target_share_one_corpus_emptied_when_the_target_starts \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-failure-ignored",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a failed slice fails its target",
+      "bug": "A slice that exits non-zero is treated as a pass unless it timed out, so a crash in a later slice reads as a clean target.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        if why or code != 0:\n",
+          "replace": "        if why:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-failure-runs-on",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: no slice after a failure",
+      "bug": "The target's remaining slices still run after one fails, against the stated rule, re-finding the same input.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "            sys.stdout.flush()\n            break\n",
+          "replace": "            sys.stdout.flush()\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-failure-stops-run",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the other targets still run",
+      "bug": "The first failed target ends the whole run, so the targets after it are never fuzzed.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    failed = sum(not run_target(target, plan, arguments, environment) for target in chosen)\n",
+          "replace": "    failed = 0\n    for target in chosen:\n        if not run_target(target, plan, arguments, environment):\n            failed += 1\n            break\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_failing_slice_fails_its_target_by_number_and_the_other_targets_still_run \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-timeout-off",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a hung slice is killed",
+      "bug": "The slice's limit is a thousand times too long, so a hung slice blocks the run.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "                if started is not None and now - started > limit:\n",
+          "replace": "                if started is not None and now - started > limit * 1000:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-slice-kills-leader-only",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a hung slice's children die with it",
+      "bug": "Only the slice's first process is killed, so a child it started, such as a symbolizer, lives on.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        os.killpg(pid, signal.SIGKILL)\n",
+          "replace": "        os.kill(pid, signal.SIGKILL)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-timeout-reads-as-exit",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a timeout says timed out",
+      "bug": "A killed slice is reported by its signal exit, like a crash, not as timed out.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    return (None, why) if why else (code, None)\n",
+          "replace": "    return code, None\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_slice_that_hangs_is_killed_with_its_children_and_recorded_as_timed_out \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-wrapper-first-slice-only",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: every slice goes through the wrapper",
+      "bug": "Only a target's first slice goes through the wrapper, so the later ones run while a measurement may hold the machine.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        if arguments.wrapper:\n            command.insert(0, arguments.wrapper)\n",
+          "replace": "        if arguments.wrapper and number == 1:\n            command.insert(0, arguments.wrapper)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_every_slice_goes_through_the_wrapper"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_every_slice_goes_through_the_wrapper \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-wrapper-wait-counted",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the limit does not count the wrapper's wait",
+      "bug": "The slice's limit starts when the wrapper starts, so a lock wait is killed and reported as a hang.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        started = None if wrapper_wait is not None else launched\n",
+          "replace": "        started = launched\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_the_limit_does_not_count_the_wrappers_wait"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_the_limit_does_not_count_the_wrappers_wait \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-wrapper-wait-unbounded",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the wrapper's wait is bounded",
+      "bug": "The bound on the wrapper's wait is a thousand times too long, so a wrapper that never starts the target blocks the run.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "                if started is None and now - launched > wrapper_wait:\n",
+          "replace": "                if started is None and now - launched > wrapper_wait * 1000:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_the_wrappers_wait_has_its_own_bound"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_the_wrappers_wait_has_its_own_bound \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-peak-final-stats-ignored",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the peak memory line",
+      "bug": "libFuzzer's final peak_rss_mb is never read, so every slice reports its status lines' rss instead.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    final = FINAL_PEAK.findall(text)\n",
+          "replace": "    final = []\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_each_slice_and_each_target_print_their_peak_memory"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_each_slice_and_each_target_print_their_peak_memory \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-peak-largest-first",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a target's largest peak",
+      "bug": "The target's largest peak is its first slice's, so growth over the slices is hidden.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        if peak is not None and (largest[0] is None or peak > largest[0]):\n",
+          "replace": "        if peak is not None and largest[0] is None:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_each_slice_and_each_target_print_their_peak_memory"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_each_slice_and_each_target_print_their_peak_memory \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-only-ignored",
+      "kind": "check",
+      "covers": "run_tests.py fuzz --only",
+      "bug": "--only is ignored, so a run of one named target runs them all.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    chosen = select_targets(targets, arguments.only)\n",
+          "replace": "    chosen = targets\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_only_runs_the_named_targets_and_refuses_an_unknown_one"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_only_runs_the_named_targets_and_refuses_an_unknown_one \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-one-slice-log-renamed",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a run of one slice as before",
+      "bug": "A run of one slice writes slice-1.log, not output.log, so its output differs from before slicing.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        log = os.path.join(work, f\"slice-{number}.log\" if sliced else \"output.log\")\n",
+          "replace": "        log = os.path.join(work, f\"slice-{number}.log\")\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_run_within_one_slice_is_one_invocation_with_the_old_arguments"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_run_within_one_slice_is_one_invocation_with_the_old_arguments \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-one-slice-arguments-changed",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a run of one slice keeps its arguments",
+      "bug": "Every slice is given the slice length as -max_total_time, so a short run fuzzes for 300 s.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        command = fuzz_command(binary, name, seconds, work, corpus, seeds)\n",
+          "replace": "        command = fuzz_command(binary, name, arguments.slice, work, corpus, seeds)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_run_within_one_slice_is_one_invocation_with_the_old_arguments"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_run_within_one_slice_is_one_invocation_with_the_old_arguments \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-symbolizer-overrides-caller",
+      "kind": "check",
+      "covers": "run_tests.py: the caller's symbolizer is kept",
+      "bug": "Every symbolizer variable is set, over what the caller set.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    unset = [name for name in SYMBOLIZER_VARIABLES if not environment.get(name)]\n",
+          "replace": "    unset = list(SYMBOLIZER_VARIABLES)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_variable_the_caller_set_is_left_alone"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_variable_the_caller_set_is_left_alone \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-symbolizer-guessed",
+      "kind": "check",
+      "covers": "run_tests.py: no symbolizer, environment left alone",
+      "bug": "With no llvm-symbolizer beside the compiler, the variables are set to a path that does not exist.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    return environment, (\n        f\"symbolizer: no llvm-symbolizer beside {compiler}",
+          "replace": "    environment.update(dict.fromkeys(unset, os.path.join(folders[0], \"llvm-symbolizer\")))\n    return environment, (\n        f\"symbolizer: no llvm-symbolizer beside {compiler}"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_with_no_symbolizer_beside_the_compiler_the_environment_is_left_alone"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_with_no_symbolizer_beside_the_compiler_the_environment_is_left_alone \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-symbolizer-wrong-key",
+      "kind": "check",
+      "covers": "run_tests.py: the compiler read from the build tree",
+      "bug": "The compiler is read from the wrong cache entry, so the symbolizer beside it is never found.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    compiler = cache.get(\"CMAKE_CXX_COMPILER\") or cache.get(\"CMAKE_C_COMPILER\")\n",
+          "replace": "    compiler = cache.get(\"CMAKE_CXX_COMPILER_AR\") or cache.get(\"CMAKE_C_COMPILER\")\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_fuzz_runs_get_the_symbolizer_beside_the_build_trees_compiler"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_fuzz_runs_get_the_symbolizer_beside_the_build_trees_compiler \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-fuzz-environment-dropped",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: slices get the symbolizer",
+      "bug": "Slices run in the caller's environment, without the symbolizer variables.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "                env=environment,\n                stdin=subprocess.DEVNULL,\n",
+          "replace": "                env=None,\n                stdin=subprocess.DEVNULL,\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_fuzz_runs_get_the_symbolizer_beside_the_build_trees_compiler"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_fuzz_runs_get_the_symbolizer_beside_the_build_trees_compiler \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-ctest-environment-dropped",
+      "kind": "check",
+      "covers": "run_tests.py ctest: tests get the symbolizer",
+      "bug": "ctest runs in the caller's environment, without the symbolizer variables.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        status = subprocess.run(command, cwd=REPO, env=environment, check=False).returncode\n",
+          "replace": "        status = subprocess.run(command, cwd=REPO, check=False).returncode\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_ctest_runs_get_the_symbolizer_too"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_ctest_runs_get_the_symbolizer_too \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-ctest-timeout-dropped",
+      "kind": "check",
+      "covers": "run_tests.py ctest: a hung test fails at the timeout",
+      "bug": "The per-test timeout is never passed to ctest, whose own is 10,000,000 s, so a hung test blocks the run.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    if timeout is not None:\n        command += [\"--timeout\", str(timeout)]\n",
+          "replace": "    if timeout is not None:\n        command += []\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_test_that_hangs_fails_at_the_timeout_and_its_child_goes_with_it"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_test_that_hangs_fails_at_the_timeout_and_its_child_goes_with_it \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-ctest-sanitizer-timeout-off",
+      "kind": "check",
+      "covers": "run_tests.py ctest: a sanitizer build's default timeout",
+      "bug": "Only a TSan build gets the per-test timeout, so an ASan or fuzz build's hung test blocks the run.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    if \"-fsanitize=\" in flags:\n",
+          "replace": "    if \"-fsanitize=thread\" in flags:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_a_sanitizer_build_gets_a_per_test_timeout_and_a_plain_build_does_not"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_a_sanitizer_build_gets_a_per_test_timeout_and_a_plain_build_does_not \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-leak-detection-off",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: leak detection on macOS",
+      "bug": "detect_leaks=1 is never added, so ASan on macOS leaves leak detection off.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    environment[\"ASAN_OPTIONS\"] = f\"{asan}:detect_leaks=1\" if asan else \"detect_leaks=1\"\n",
+          "replace": "    environment[\"ASAN_OPTIONS\"] = asan\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_leak_detection_is_turned_on_only_on_macos_and_never_over_the_caller"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_leak_detection_is_turned_on_only_on_macos_and_never_over_the_caller \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-leak-suppression-dropped",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: the suppression of libFuzzer's own thread",
+      "bug": "The suppressions file is never named, so every target reports libFuzzer's memory-watch thread as a leak.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    if \"suppressions=\" not in lsan:\n",
+          "replace": "    if False:\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_leak_detection_is_turned_on_only_on_macos_and_never_over_the_caller"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_leak_detection_is_turned_on_only_on_macos_and_never_over_the_caller \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-fuzz-leak-caught",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: a leak in a real target is reported",
+      "bug": "The cp950 target leaks one allocation on every input longer than two bytes, which ASan on macOS reports only with the leak detection the runner turns on.",
+      "edits": [
+        {
+          "file": "fuzz/fuzz_cp950.cpp",
+          "find": "  const auto units = aadp::cp950::decode(bytes);\n",
+          "replace": "  const auto units = aadp::cp950::decode(bytes);\n  if (size > 2) {\n    char* leaked = new char[size];\n    asm volatile(\"\" : : \"r\"(leaked) : \"memory\");\n  }\n"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["all"],
+      "command": ["python3", "-I", "scripts/run_tests.py", "fuzz", "--seconds", "20", "--only", "fuzz_cp950"],
+      "detect": "test",
+      "reason": "ERROR: LeakSanitizer: detected memory leaks",
+      "timeout_s": 600,
+      "mutated_exit": 1,
+      "output_files": ["build/fuzz-smoke/fuzz_cp950/*.log"]
+    },
+    {
+      "id": "fault-injection-symbolizer-dropped",
+      "kind": "check",
+      "covers": "fault_injection.py: commands get the symbolizer",
+      "bug": "A fault's command runs without the symbolizer variables, so a sanitizer report there can hang on the system's symbolizer.",
+      "edits": [
+        {
+          "file": "scripts/fault_injection.py",
+          "find": "    code, output = run_logged(command, layout.copy, log, fault[\"timeout_s\"], variables)\n",
+          "replace": "    code, output = run_logged(command, layout.copy, log, fault[\"timeout_s\"])\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "faults/test_fault_injection.py", "Symbolizer"],
+      "detect": "test",
+      "reason": "^FAIL: test_a_command_gets_the_symbolizer_beside_its_build_trees_compiler \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "fault-injection-symbolizer-overrides-caller",
+      "kind": "check",
+      "covers": "fault_injection.py: the caller's symbolizer is kept",
+      "bug": "Every symbolizer variable is set, over what the caller set.",
+      "edits": [
+        {
+          "file": "scripts/fault_injection.py",
+          "find": "    unset = [name for name in SYMBOLIZER_VARIABLES if not os.environ.get(name)]\n",
+          "replace": "    unset = list(SYMBOLIZER_VARIABLES)\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "faults/test_fault_injection.py", "Symbolizer"],
+      "detect": "test",
+      "reason": "^FAIL: test_a_variable_the_caller_set_is_left_alone \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "bench-rss-probe-runs-nothing",
+      "kind": "check",
+      "covers": "the RSS probe sees a tape, under ASan with a symbolizer",
+      "bug": "The probe's child parses its variant and runs nothing, so the peak it reports is the idle peak.",
+      "edits": [
+        {
+          "file": "bench/aad_bench.cpp",
+          "find": "  aad::VariantResult result = aad::MakeRunner(*w, *variant, *config)();\n  benchmark::DoNotOptimize(result.value.mean);\n",
+          "replace": ""
+        }
+      ],
+      "preset": "asan-ubsan",
+      "targets": ["aadp_aad_bench_unit", "aadp_bench_aad"],
+      "command": ["{build}/bin/aadp_aad_bench_unit", "--gtest_filter=RssProbe.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RssProbe\\.AVariantThatBuildsATapePeaksAboveIdle",
+      "timeout_s": 300,
+      "mutated_exit": 1
     }
   ]
 }

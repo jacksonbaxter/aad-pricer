@@ -46,6 +46,13 @@ Where things live. The working tree is never touched. <build root> defaults to b
               twice
   logs/       raw output of every step
 
+A sanitizer report in a fault's command cannot hang the run on the system's own symbolizer, which
+can hang when the machine's developer authorization has lapsed: each of ASAN_SYMBOLIZER_PATH,
+UBSAN_SYMBOLIZER_PATH and TSAN_SYMBOLIZER_PATH that the caller left unset is set, for the command,
+to the llvm-symbolizer beside the compiler in the CMakeCache.txt of the fault's preset in the copy,
+by the same rule as scripts/run_tests.py, and the first command of each preset prints which. With
+none there the environment is left alone, and the line says so. timeout_s still bounds each run.
+
 The code under test comes from `git archive HEAD` of the repo holding this script. An export with
 no .git, as on the Linux host, passes --source <dir>; it is copied, its COMMIT file names the
 commit, and the build root defaults to build/fault next to <dir>. The manifest comes from the same
@@ -138,6 +145,8 @@ LEAK = re.compile(
     r"(?<![A-Za-z0-9_.~-])/(?:Users|home|root)/[A-Za-z0-9._-]+"
     r"|(?<![\d.])\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?!\d|\.\d)"
 )
+SYMBOLIZER_VARIABLES = ("ASAN_SYMBOLIZER_PATH", "UBSAN_SYMBOLIZER_PATH", "TSAN_SYMBOLIZER_PATH")
+CACHE_ENTRY = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):[A-Z_]+=(.*)$", re.MULTILINE)
 
 
 class CannotRun(Exception):
@@ -298,6 +307,33 @@ def read_manifest_text(args, commit):
         raise CannotRun(f"cannot read the manifest: {error}") from error
 
 
+def symbolizer_environment(build_dir):
+    """The rule of scripts/run_tests.py: each symbolizer variable the caller left unset goes to the
+    llvm-symbolizer beside the compiler in the build tree's cache. Returns (variables, line)."""
+    unset = [name for name in SYMBOLIZER_VARIABLES if not os.environ.get(name)]
+    where = f"build/{build_dir.name}"
+    if not unset:
+        return {}, "symbolizer: as the caller set it"
+    try:
+        text = (build_dir / "CMakeCache.txt").read_text(errors="replace")
+    except OSError:
+        return {}, f"symbolizer: no CMakeCache.txt in {where}, environment left alone"
+    cache = dict(CACHE_ENTRY.findall(text))
+    compiler = cache.get("CMAKE_CXX_COMPILER") or cache.get("CMAKE_C_COMPILER")
+    if not compiler:
+        return {}, f"symbolizer: no compiler in {where}'s cache, environment left alone"
+    if not os.path.isabs(compiler):
+        compiler = shutil.which(compiler) or compiler
+    for folder in dict.fromkeys((Path(compiler).parent, Path(compiler).resolve().parent)):
+        path = folder / "llvm-symbolizer"
+        if path.is_file() and os.access(path, os.X_OK):
+            kept = [name for name in SYMBOLIZER_VARIABLES if name not in unset]
+            note = f", {' and '.join(kept)} as the caller set it" if kept else ""
+            line = f"symbolizer: {path}, beside the compiler of {where}{note}"
+            return dict.fromkeys(unset, str(path)), line
+    return {}, f"symbolizer: no llvm-symbolizer beside {compiler}, environment left alone"
+
+
 class Layout:
     def __init__(self, build_root, origin):
         self.root = build_root
@@ -306,9 +342,19 @@ class Layout:
         self.copy = build_root / "copy"
         self.logs = build_root / "logs"
         self.deps = build_root / "_deps"
+        self.scrub = str
+        self.symbolizers = {}
 
     def build_dir(self, preset):
         return self.copy / "build" / preset
+
+    def symbolizer(self, preset):
+        """The variables for a command of this preset, printed the first time."""
+        if preset not in self.symbolizers:
+            variables, line = symbolizer_environment(self.build_dir(preset))
+            print(self.scrub(f"{preset}: {line}"), flush=True)
+            self.symbolizers[preset] = variables
+        return self.symbolizers[preset]
 
 
 def fresh_write(path, data):
@@ -426,10 +472,11 @@ def remove_fixture(layout):
             clear_dir(layout.copy / name)
 
 
-def run_logged(command, cwd, log, timeout):
+def run_logged(command, cwd, log, timeout, variables=None):
     """Returns (exit code, output). The exit code is None on a timeout, and a signal is negative.
-    The child leads its own process group, so a timeout takes its children too."""
-    environment = dict(os.environ, GTEST_COLOR="no")
+    The child leads its own process group, so a timeout takes its children too. variables are
+    added to the environment."""
+    environment = dict(os.environ, GTEST_COLOR="no", **(variables or {}))
     with open(log, "wb") as sink:
         try:
             child = subprocess.Popen(
@@ -534,7 +581,8 @@ def run_command(layout, fault, stage, jobs):
     log = layout.logs / f"{fault['id']}-{stage}-run.txt"
     for stale in output_files(layout, fault):
         stale.unlink()
-    code, output = run_logged(command, layout.copy, log, fault["timeout_s"])
+    variables = layout.symbolizer(fault["preset"])
+    code, output = run_logged(command, layout.copy, log, fault["timeout_s"], variables)
     extra = "".join(path.read_text(errors="replace") + "\n" for path in output_files(layout, fault))
     if extra:
         with open(log, "a") as sink:
@@ -879,6 +927,7 @@ def default_build_root(args):
 
 def run_all(faults, selected, layout, commit, args):
     scrub = Scrubber(layout)
+    layout.scrub = scrub
     lines = [scrub(line) for line in header_lines(commit, faults, selected, args)]
     print("\n".join(lines), flush=True)
     export_pristine(args, commit, layout)
