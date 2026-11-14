@@ -275,8 +275,10 @@ int main(int argc, char** argv) try {
   add("tape_config",
       "tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of "
       "arrays), chunks of " +
-          std::to_string(aadp::ad::kChunkEntries) +
-          " entries, thread-local active tape, one tape per worker, mark and rewind per path, "
+          std::to_string(aadp::ad::kChunkEntries) + " entries, " +
+          (aadp::ad::kStaticSlot ? "a static active tape (one thread only)"
+                                 : "thread-local active tape") +
+          ", one tape per worker, mark and rewind per path, "
           "set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. "
           "tape-lanes: the vector tape at " +
           lanes +

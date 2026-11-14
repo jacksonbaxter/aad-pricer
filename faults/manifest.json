@@ -2085,6 +2085,54 @@
       "timeout_s": 120
     },
     {
+      "id": "ad-static-slot-guard-open",
+      "kind": "check",
+      "covers": "the static tape slot's guard refuses a second thread and lets its owner claim again",
+      "bug": "The guard's test is inverted: it fails the thread that owns the static slot when that thread claims it again, and lets any other thread share the slot.",
+      "edits": [
+        {
+          "file": "src/ad/tape.cpp",
+          "find": "&& expected != self) {",
+          "replace": "&& expected == self) {"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=TapeDeathTest.TheStaticSlotsGuardRefusesASecondThread"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeDeathTest\\.TheStaticSlotsGuardRefusesASecondThread",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-static-slot-config-on",
+      "kind": "check",
+      "covers": "the tape's active slot is thread_local in the default build",
+      "bug": "The generated header fixes the static slot on, so every default build gets a slot that one thread only may use and the pricer's threaded runs fail.",
+      "edits": [
+        {
+          "file": "cmake/tape_config.hpp.in",
+          "find": "#define AADP_TAPE_SLOT_STATIC @AADP_TAPE_SLOT_STATIC@",
+          "replace": "#define AADP_TAPE_SLOT_STATIC 1"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=TapeConfig.TheKnobsAreAtTheirDefaults"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeConfig\\.TheKnobsAreAtTheirDefaults",
+      "timeout_s": 300
+    },
+    {
       "id": "ad-one-step-tiny-q",
       "kind": "check",
       "covers": "one-step adjoint at p v near 0, check 6",

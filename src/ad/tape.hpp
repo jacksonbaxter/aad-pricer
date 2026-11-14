@@ -28,7 +28,10 @@
 // real.hpp records, are swept by straight-line code, wider ones by a loop, in that same order.
 //
 // Threads. Each thread has at most one active tape, set by a TapeScope, and an operation on an
-// active Real records onto it. A second activation on a thread is an error (EVIDENCE B10).
+// active Real records onto it. A second activation on a thread is an error (EVIDENCE B10). The
+// slot is thread_local; a build for the single-threaded timing of EVIDENCE B13 only
+// (cmake/AadpTapeKnobs.cmake) makes it a plain static, and there a tape activated on any thread
+// but the first is an error.
 #ifndef AADP_AD_TAPE_HPP_
 #define AADP_AD_TAPE_HPP_
 
@@ -56,6 +59,8 @@ inline constexpr std::size_t kMaxOperands = std::numeric_limits<OperandCount>::m
 // test, oracle and result assumes the default, 13 (docs/NOTES.md, "The tape's chunk size").
 inline constexpr std::size_t kChunkShift = AADP_TAPE_CHUNK_SHIFT;
 inline constexpr std::size_t kDefaultChunkShift = AADP_TAPE_CHUNK_SHIFT_DEFAULT;
+// Whether the active tape's slot is a plain static (detail::ActiveSlot), a timing build only.
+inline constexpr bool kStaticSlot = AADP_TAPE_SLOT_STATIC != 0;
 inline constexpr std::size_t kChunkEntries = std::size_t{1} << kChunkShift;
 inline constexpr std::size_t kChunkMask = kChunkEntries - 1;
 
@@ -292,9 +297,17 @@ class Tape {
 namespace detail {
 
 inline Tape*& ActiveSlot() {
+#if AADP_TAPE_SLOT_STATIC
+  static Tape* slot = nullptr;
+#else
   thread_local Tape* slot = nullptr;
+#endif
   return slot;
 }
+
+// The static slot's guard: the first thread to call it owns the slot, and a call from any other
+// thread is an error. TapeScope calls it only in a build with the static slot.
+void ClaimStaticSlot();
 
 // An active Real with no active tape outlived its scope or crossed a thread.
 [[noreturn]] void NoActiveTape();

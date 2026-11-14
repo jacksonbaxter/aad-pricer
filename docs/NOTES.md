@@ -2306,6 +2306,67 @@ The tape's allocated bytes after one run (`MemoryReport`, the driver's `wlshape`
 - Not profiled; what differs for `lw-worst`'s recording at small chunks: its run of 1,382,299 statements and 2,368,298 operands fills about 3,660 chunks at 2^10 and about 460 at 2^13, and each chunk entered takes the record path's out-of-line branch. The GBM workloads' paths fit in one chunk of each kind at 2^11 and up; at 2^10 every `mc-asian252` path and `aad1-barrier`'s longest do not. A GBM worker's tape grows eightfold from 2^13 to 2^16 for no gain on the Mac and at most 2.8% on the Linux host. `lw-worst`'s `tape` runs spread by 10% to 20% between processes on the Linux host, as before, so its ranges there are wide.
 - B4 is answered: 2^13 stays, by this table.
 
+#### The thread-local slot
+
+Iteration only, not a result. Raw output is in the research cache, `evidence/stage11-s2c/`, with the plan as stated before the first run (`PREREGISTERED.txt`). EVIDENCE B13 asks what the thread-local read of the active tape costs: every recorded operation reads the slot once, and on macOS that read is a thread-local lookup.
+
+The option.
+- `AAD_PRICER_TAPE_SLOT_STATIC` (`cmake/AadpTapeKnobs.cmake`), default `OFF`. `ON` makes the active tape's slot (`detail::ActiveSlot`, `src/ad/tape.hpp`) a plain static instead of `thread_local`, for a single-threaded timing only, and the configure warns as for a chunk shift but the default. `kStaticSlot` says which build it is, and `TapeConfig.TheKnobsAreAtTheirDefaults` requires the default.
+- Threaded use fails loudly, by the smallest guard that covers every way a tape becomes active: `TapeScope` is the only way, and in the static build it first calls `detail::ClaimStaticSlot` (`src/ad/tape.cpp`). That records the first thread to activate a tape in an atomic thread id, by one compare-and-swap, lets that thread activate again, and aborts with "a tape activated on a second thread, in a build whose active tape is a plain static" on any other. A GBM worker activates its tape once, and the `lw-worst` runner once a run, so the guard is outside the recording and the sweep that the runs time. The lane tape's and the second-order tape's slots are their own and stay `thread_local`.
+- In the default build the guard is compiled but not called. `TapeDeathTest.TheStaticSlotsGuardRefusesASecondThread` calls it directly, in a child process each time: claimed twice on one thread it exits normally, and claimed from a second thread it dies with the message.
+- Checked by hand in the Mac's static build: `aadp_ad_tape_test` passes 17 of 18, failing only `TapeConfig.TheKnobsAreAtTheirDefaults` on `kStaticSlot`, as designed; `aadp_ad_thread_test` aborts in its first test with the guard's message.
+- Production change: 55 lines added and 3 removed, in the knobs file, the header template, `src/ad/tape.hpp`, `src/ad/tape.cpp` and the bench's line, under the brief's 150.
+
+The same bits at the default: `aadp_run2_fingerprint` and `aadp_ad_statement_order_test` pass on the Mac (`release`, 781 of 781), on the Linux host under clang `release` (the 27 tests of `Run2Fingerprint`, `StatementOrder`, `Tape`, `TapeDeathTest`, `TapeVsDual`, `HandAdjoint` and `TapeConfig`) and under g++ `release-gcc` (the GCC pre-commit, 769 of 769). The MEM-1 and MEM-2 `static_assert`s and the MEM-6 test are untouched and pass.
+
+Faults, run with `--only` through `heavy.sh` on an export of the uncommitted tree:
+- `ad-static-slot-guard-open`, new: the guard's test is inverted, so it refuses its owner and lets any other thread share the slot. Caught by the death test.
+- `ad-static-slot-config-on`, new: the header template fixes the static slot on in every build. Caught by `TapeConfig.TheKnobsAreAtTheirDefaults`.
+- That `TapeScope` calls the guard is compiled only in the static build, which no fault run builds; it is the hand check above.
+- The manifest holds 379 faults: 64 oracle, 286 check, 29 fuzz.
+
+Timed: the default build (`thread_local`) against the static-slot build, the stage 11 driver of `PERF.md` linked against each, single thread, `bench/aad_workloads` as `aadp_bench_aad` runs it: `aad1-barrier` at 1/50 scale, `aad4-asian12` and `mc-asian252` at 1/10, `lw-worst` at full scale, the tape and tape-record variants. Rounds alternate the two builds; three rounds, five for `lw-worst`. `mac-m4max`, macOS, `release` (AArch64), clang 23.1.4, wall time, each run under the machine's measurement wrapper, unpinned, load average 2.6 to 4.4. Nanoseconds a path-step, milliseconds a run for `lw-worst`; the median over the rounds with their range; "faster" marks a change beyond the larger of the two ranges:
+
+| Workload, variant | `thread_local` | static | Change |
+|---|---|---|---|
+| `aad1-barrier` tape | 46.76 (46.56 to 46.79) | 46.37 (46.11 to 46.65) | −0.8% |
+| `aad1-barrier` tape-record | 33.33 (33.20 to 33.42) | 33.05 (32.99 to 33.14) | −0.9%, faster |
+| `aad4-asian12` tape | 43.81 (43.40 to 43.85) | 43.33 (43.21 to 43.42) | −1.1%, faster |
+| `aad4-asian12` tape-record | 32.36 (32.06 to 32.36) | 31.60 (31.36 to 31.60) | −2.3%, faster |
+| `mc-asian252` tape | 41.74 (41.44 to 42.07) | 41.23 (41.09 to 41.37) | −1.2% |
+| `mc-asian252` tape-record | 30.00 (29.96 to 30.16) | 29.30 (29.25 to 29.31) | −2.3%, faster |
+| `lw-worst` tape | 5.648 (5.632 to 5.653) | 5.600 (5.584 to 5.608) | −0.8%, faster |
+| `lw-worst` tape-record | 1.927 (1.923 to 1.932) | 1.925 (1.924 to 1.932) | −0.1% |
+
+- On macOS the thread-local read costs 0.1% to 2.3% of the tape's time, most on the GBM workloads' recording, up to about 0.7 ns a path-step of 5.0 to 6.2 statements. No bar was set: the default stays `thread_local`, since the pricer runs one tape per worker thread.
+
+`linux-zen1` (AMD Ryzen Embedded V1605B, Zen 1), clang 23.1.4 at `-O3 -g` with `-ffp-contract=off`, `cycles:u` of the timed loop only, each run pinned to cpu4 through the machine's job wrapper, governor schedutil, the machine's measurement window checked free before and after every run, load average 5.5 to 9.6 (another job of this project's on cpus 6 and 7), cpu5 at most 8.2% busy during any run. SSE2 is the `release` preset and AVX2 `release-avx2`. Three rounds, ten for `lw-worst`. Cycles a path-step, millions a run for `lw-worst`:
+
+| Build, workload, variant | `thread_local` | static | Change |
+|---|---|---|---|
+| SSE2, `aad1-barrier` tape | 371.4 (365.3 to 410.1) | 319.2 (319.2 to 320.5) | −14.1%, faster |
+| SSE2, `aad1-barrier` tape-record | 317.6 (316.9 to 317.8) | 271.2 (270.7 to 271.8) | −14.6%, faster |
+| SSE2, `aad4-asian12` tape | 307.4 (307.3 to 314.2) | 279.8 (279.7 to 280.6) | −9.0%, faster |
+| SSE2, `aad4-asian12` tape-record | 257.5 (256.3 to 260.6) | 229.1 (229.0 to 229.5) | −11.0%, faster |
+| SSE2, `mc-asian252` tape | 282.2 (280.2 to 282.9) | 259.6 (257.4 to 259.6) | −8.0%, faster |
+| SSE2, `mc-asian252` tape-record | 239.6 (238.0 to 240.4) | 215.5 (215.2 to 215.9) | −10.1%, faster |
+| SSE2, `lw-worst` tape | 41.66 (38.46 to 46.10) | 42.36 (38.40 to 46.73) | +1.7% |
+| SSE2, `lw-worst` tape-record | 16.67 (16.57 to 17.01) | 16.56 (16.41 to 16.68) | −0.6% |
+| AVX2, `aad1-barrier` tape | 361.5 (361.4 to 362.2) | 309.5 (308.6 to 309.6) | −14.4%, faster |
+| AVX2, `aad1-barrier` tape-record | 311.7 (311.2 to 312.6) | 254.1 (253.7 to 255.7) | −18.5%, faster |
+| AVX2, `aad4-asian12` tape | 298.1 (298.1 to 298.6) | 279.1 (275.9 to 285.6) | −6.4%, faster |
+| AVX2, `aad4-asian12` tape-record | 248.2 (246.9 to 249.2) | 225.1 (223.7 to 232.0) | −9.3%, faster |
+| AVX2, `mc-asian252` tape | 270.9 (265.5 to 272.2) | 248.8 (247.1 to 250.7) | −8.2%, faster |
+| AVX2, `mc-asian252` tape-record | 229.3 (228.8 to 229.5) | 205.9 (205.8 to 211.4) | −10.2%, faster |
+| AVX2, `lw-worst` tape | 39.83 (37.54 to 42.14) | 40.81 (35.17 to 44.52) | +2.5% |
+| AVX2, `lw-worst` tape-record | 16.71 (16.56 to 17.12) | 16.54 (16.48 to 16.64) | −1.0% |
+
+- On the Linux host the thread-local read costs far more than on macOS: on the GBM workloads the static slot takes 6.4% to 18.5% fewer cycles, the most on recording, 4.4 to 9.3 cycles a statement (from 5.0 to 6.2 statements a path-step). On `lw-worst` the change is within its runs' spread. Not determined: why the GBM workloads pay and `lw-worst` does not; it was not profiled.
+- No bar was set: the default stays `thread_local`, since the pricer runs one tape per worker thread. B13 is answered by these two tables.
+- Two earlier attempts on the Linux host are not used. The first, from 09:57 UTC on 2026-11-14, ran clean for one round; from about 10:01 other jobs loaded the host (load average 9 to 19, cpu5 busy for up to the whole of a run), and at 10:07:51 the host was reserved for another project's measurements, so the batch, by then checking the window, stopped, and its run in flight is marked partial. The second, from 10:22, once the host was free again, had cpu5 busy for 5% to 57% of 22 of its runs, mostly in its second round; its medians agree with the table's to within a few per cent, but its ranges do not hold. The table is the third, from 10:31, the same 152 runs.
+
+Gates while the Linux host was reserved for other projects' measurements: fa8154c (the chunk size) had its GCC pre-commit and the Linux host's clang check, but not the libstdc++ clang-tidy there, which the reservation came before. In its place it was pushed to `jb-build` on its own, and CI's 22 jobs, its GCC and libstdc++ jobs among them, passed on it (run 43584066065) before the next commit that touches C++. The commit that adds this entry had all of the Linux host's gates, run once the host was free again: the GCC pre-commit, the clang check and the libstdc++ clang-tidy (180 units clean). The first run of that tidy was cut short by the host's automatic restart at 11:02 UTC, with no result, and is not used; the rerun passed.
+
 ### Rule slips
 
 None affected a number.
@@ -2341,6 +2402,7 @@ None affected a number.
 - Stage 11, the skip as the default (docs only): a loop over the history's blobs for the privacy check, before the push of ab1e985, named its variable `path`, which the shell ties to its command search path, so none of its commands were found; it changed nothing, and was rerun in another shell under another name. The tool keeps an output file in the system temporary directory for each background command.
 - Stage 11, the Lax-Wendroff gather form: the piece's agent first stopped before doing anything, because its effort indicator showed a number it could not read as a level; the harness's record showed the required effort, and it resumed. Its pre-registration file says it was written at 08:05 UTC; it was written at 08:02:37 (its file time), before the first run at 08:05:18, and is left as written, with a note beside it. Outside `heavy.sh` on the Mac: the scratch bit driver's compiles and runs (seconds), single-target rebuilds and runs of `aadp_aad_bench_unit` (seconds), one remark-only compile, `clang-format` and the static fault check; one `python3 -I -` that read only `/dev/null`, a no-op and no heredoc; and one hand edit of the header, swapping the addition order, to see the new test fail before the fault was written, restored from a copy at once. The first gate failed the format check on the new test, which `clang-format` then changed (layout only) after its first fault run; the gate and the faults ran again on the final tree. One inline script edit of these notes was quoted so that the shell ran a backquoted word of it as a command, which was not found and ran nothing; the edit came out doubled and was redone in the editor. One `cat` in the same call waited on its input and was stopped; it ran nothing. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s2c/` and the research cache.
 - Stage 11, the chunk size: 9ab335d was pushed as `git push origin 9ab335d:refs/heads/jb-build`, not by the plain `git push origin jb-build` the rules name; the same commit reached the same branch. One foreground 240 s sleep was refused by the tool. One polling loop ended early, because the status line it read began with a digit, and was rerun. The fault counts in `README.md` were changed by an in-place stream edit. Outside `heavy.sh` on the Mac: the knobs file run alone in CMake's script mode (under a second each), `clang-format`, the static fault check and the scratch summary scripts. The Linux host's timing batch was one detached shell loop, not itself under `heavy.sh` or `measure.sh`; each run in it was its own `heavy.sh taskset -c 4 perf stat` call. The GCC pre-commit and the Linux host's clang check ran on a tree that differs from the commit only in `docs/NOTES.md`, `docs/TASKS.md` and `README.md`, then unwritten. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s2c/` and the research cache.
+- Stage 11, the thread-local slot: the Linux host's timing batch started at 09:57:53 UTC with no check of the machine's measurement window, whose rule came in at about the same time. It was stopped by hand at 10:01 and restarted with the window checked before and after every run; the run it stopped is marked partial, and so is the one the check found overlapping the reservation at 10:07:51. No run of that batch after its first round is used (the section above). The option was written in a scratch overlay copied over exports of the tree, from which the Mac's timed builds and the faults' first run were made, then copied into the tree after fa8154c. The Mac's first full clang-tidy of the tree found that `src/ad/tape.cpp` used the knob's macro without including its header; the include was added, and the tidy, the gate and the 17 faults ran again on the final tree. The Linux host's timed builds were made before that include, which changes no code. One fetch of the Linux host's output broke because a status line shared the archive's stream; it wrote nothing and was redone. One foreground watch of the host ran past the tool's 600 s timeout and was moved to the background, where it finished. A scratch watcher was first written with a here-string, replaced before it ever ran. Outside `heavy.sh` on the Mac: the knobs file run alone in CMake's script mode (under a second), `clang-format`, the static fault check and the scratch summary scripts. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s2c/` and the research cache.
 
 ## Option chain
 

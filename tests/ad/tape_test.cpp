@@ -11,11 +11,13 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <limits>
 #include <numbers>
 #include <span>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -816,12 +818,33 @@ TEST(TapeDeathTest, AnActiveRealWithNoActiveTapeIsAnError) {
       "no active tape");
 }
 
+// The static slot's guard, called here directly, since only a build with the static slot calls
+// it from TapeScope: the first thread owns the slot and may claim it again; any other thread dies.
+TEST(TapeDeathTest, TheStaticSlotsGuardRefusesASecondThread) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  EXPECT_EXIT(
+      {
+        detail::ClaimStaticSlot();
+        detail::ClaimStaticSlot();
+        std::exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
+  EXPECT_DEATH(
+      {
+        detail::ClaimStaticSlot();
+        std::thread other([] { detail::ClaimStaticSlot(); });
+        other.join();
+      },
+      "a tape activated on a second thread");
+}
+
 // The tape's build knobs (cmake/AadpTapeKnobs.cmake) are at their defaults, which every test,
 // oracle and results file assumes. A build for a timing study fails here, as its configure says.
 TEST(TapeConfig, TheKnobsAreAtTheirDefaults) {
   EXPECT_EQ(kDefaultChunkShift, 13U);
   EXPECT_EQ(kChunkShift, kDefaultChunkShift);
   EXPECT_EQ(kChunkEntries, 8192U);
+  EXPECT_FALSE(kStaticSlot);
 }
 
 }  // namespace

@@ -1,12 +1,16 @@
 #include "ad/tape.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
 #include <span>
+#include <thread>
+
+#include "tape_config.hpp"
 
 namespace aadp::ad {
 
@@ -293,7 +297,25 @@ MemoryReport Tape::Memory() const {
   return report;
 }
 
+namespace detail {
+
+void ClaimStaticSlot() {
+  static std::atomic<std::thread::id> owner{};
+  std::thread::id expected{};
+  const std::thread::id self = std::this_thread::get_id();
+  if (!owner.compare_exchange_strong(expected, self) && expected != self) {
+    Fail(
+        "a tape activated on a second thread, in a build whose active tape is a plain static "
+        "(AAD_PRICER_TAPE_SLOT_STATIC), which is for a single-threaded timing only");
+  }
+}
+
+}  // namespace detail
+
 TapeScope::TapeScope(Tape& tape) {
+#if AADP_TAPE_SLOT_STATIC
+  detail::ClaimStaticSlot();
+#endif
   Tape*& slot = detail::ActiveSlot();
   if (slot != nullptr) Fail("a second tape activated on one thread");
   slot = &tape;

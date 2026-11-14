@@ -5,6 +5,9 @@
 #
 # AAD_PRICER_TAPE_CHUNK_SHIFT: log2 of the entries in a statement or an operand chunk (EVIDENCE
 # B4). Any value but the default is for the chunk-size sweep only.
+# AAD_PRICER_TAPE_SLOT_STATIC: the active tape's slot as a plain static instead of thread_local
+# (EVIDENCE B13), for a single-threaded timing only. The pricer is multi-threaded, so in such a
+# build a tape activated on any thread but the first fails at once (TapeScope, src/ad/tape.cpp).
 
 # Not cached, so a changed default reaches tape_config.hpp and TapeConfig.TheKnobsAreAtTheirDefaults.
 set(AADP_TAPE_CHUNK_SHIFT_DEFAULT 13)
@@ -18,9 +21,20 @@ if(NOT AAD_PRICER_TAPE_CHUNK_SHIFT MATCHES "^[0-9]+$" OR AAD_PRICER_TAPE_CHUNK_S
                       "'${AAD_PRICER_TAPE_CHUNK_SHIFT}'")
 endif()
 
+option(AAD_PRICER_TAPE_SLOT_STATIC
+       "The active tape's slot as a plain static: a single-threaded timing build only" OFF)
+if(AAD_PRICER_TAPE_SLOT_STATIC)
+  set(AADP_TAPE_SLOT_STATIC 1)
+else()
+  set(AADP_TAPE_SLOT_STATIC 0)
+endif()
+
 set(_aadp_tape_study "")
 if(NOT AAD_PRICER_TAPE_CHUNK_SHIFT EQUAL AADP_TAPE_CHUNK_SHIFT_DEFAULT)
   list(APPEND _aadp_tape_study "AAD_PRICER_TAPE_CHUNK_SHIFT=${AAD_PRICER_TAPE_CHUNK_SHIFT}")
+endif()
+if(AAD_PRICER_TAPE_SLOT_STATIC)
+  list(APPEND _aadp_tape_study "AAD_PRICER_TAPE_SLOT_STATIC=ON")
 endif()
 if(_aadp_tape_study)
   message(WARNING "${_aadp_tape_study}: a build for a tape timing study only. Only aadp_bench_aad "
