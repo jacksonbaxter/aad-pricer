@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests of scripts/run_tests.py: fuzz slices, their corpus, failures, timeouts and wrapper, the
-peak-memory lines, --only, the symbolizer guard and ctest's per-test timeout.
+peak-memory lines, --only, the symbolizer guard, the dSYM bundles on macOS and ctest's per-test
+timeout.
 
     python3 -I tests/data/run_tests_test.py <scratch-dir> [unittest arguments, such as -k <name>]
 
@@ -14,6 +15,7 @@ and ninja. Takes about a minute.
 import importlib.util
 import json
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -91,6 +93,18 @@ child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
 open(os.path.join(os.environ["FAKE_FUZZ_STATE"], "hang.child"), "w").write(str(child.pid))
 time.sleep(120)
 """
+
+# A dsymutil that writes the bundle's DWARF file and records the binary it was given.
+DSYMUTIL = """#!{python} -I
+import os, sys
+binary = sys.argv[1]
+dwarf = os.path.join(binary + ".dSYM", "Contents", "Resources", "DWARF")
+os.makedirs(dwarf, exist_ok=True)
+open(os.path.join(dwarf, os.path.basename(binary)), "w").write("dwarf")
+with open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "calls"), "a") as file:
+    file.write(binary + "\\n")
+"""
+MACH_O = b"\xcf\xfa\xed\xfe" + bytes(60)
 
 LISTS = """cmake_minimum_required(VERSION 3.25)
 project(fake NONE)
@@ -184,6 +198,7 @@ class Project:
         for toolchain in ("toolchain", "toolchain-nosym"):
             executable(self.root / toolchain / "bin" / "clang++", "#!/bin/sh\nexit 1\n")
         executable(self.root / "toolchain" / "bin" / "llvm-symbolizer", "#!/bin/sh\nexit 0\n")
+        executable(self.root / "toolchain" / "bin" / "dsymutil", DSYMUTIL.format(python=python))
         self.symbolizer = str(self.root / "toolchain" / "bin" / "llvm-symbolizer")
         self.state = self.root / "state"
         for preset in ("fuzz", "nosym", "plain", "hangs"):
@@ -281,6 +296,61 @@ class Units(unittest.TestCase):
         self.assertEqual(environment["LSAN_OPTIONS"], "suppressions=x")
         self.assertEqual(runner.leak_environment({}, "Linux"), ({}, None))
         self.assertTrue((REPO / "scripts" / "lsan_suppressions.txt").is_file())
+
+    def debug_info_fixture(self, name, with_dsymutil=True):
+        root = SCRATCH / name
+        if root.exists():
+            shutil.rmtree(root)
+        tools = root / "toolchain" / "bin"
+        executable(tools / "clang++", "#!/bin/sh\nexit 1\n")
+        if with_dsymutil:
+            executable(tools / "dsymutil", DSYMUTIL.format(python=sys.executable))
+        programs = []
+        for binary in ("one", "two"):
+            path = root / "bin" / binary
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(MACH_O)
+            programs.append(str(path))
+        executable(root / "bin" / "script", "#!/bin/sh\n")
+        programs.append(str(root / "bin" / "script"))
+        cache = {"CMAKE_CXX_COMPILER": str(tools / "clang++")}
+        return tools, programs, cache
+
+    def test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer(self):
+        runner = load_runner()
+        tools, programs, cache = self.debug_info_fixture("units-debug-info")
+        environment = {"ASAN_SYMBOLIZER_PATH": str(tools / "llvm-symbolizer")}
+        head = f"debug info: dSYM bundles from {tools / 'dsymutil'}, "
+
+        def calls():
+            path = tools / "calls"
+            return path.read_text().splitlines() if path.exists() else []
+
+        line = runner.debug_info(programs + programs[:1], environment, cache, "Darwin", 2)
+        self.assertEqual(line, head + "2 written and 0 current, of 2 binaries")
+        self.assertEqual(sorted(calls()), programs[:2])
+        line = runner.debug_info(programs, environment, cache, "Darwin", 2)
+        self.assertEqual(line, head + "0 written and 2 current, of 2 binaries")
+        later = time.time() + 5
+        os.utime(programs[0], (later, later))
+        line = runner.debug_info(programs, environment, cache, "Darwin", 2)
+        self.assertEqual(line, head + "1 written and 1 current, of 2 binaries")
+        self.assertEqual(calls().count(programs[0]), 2)
+
+    def test_dsym_bundles_are_for_llvm_symbolizer_on_macos_only(self):
+        runner = load_runner()
+        tools, programs, cache = self.debug_info_fixture("units-debug-info-where")
+        llvm = {"TSAN_SYMBOLIZER_PATH": str(tools / "llvm-symbolizer")}
+        self.assertIsNone(runner.debug_info(programs, llvm, cache, "Linux", 1))
+        system = {"ASAN_SYMBOLIZER_PATH": "/usr/bin/atos"}
+        self.assertIsNone(runner.debug_info(programs, system, cache, "Darwin", 1))
+        self.assertIsNone(runner.debug_info(programs, {}, cache, "Darwin", 1))
+        self.assertFalse((tools / "calls").exists())
+        tools, programs, cache = self.debug_info_fixture("units-debug-info-none", False)
+        self.assertEqual(
+            runner.debug_info(programs, llvm, cache, "Darwin", 1),
+            "debug info: no dsymutil beside the compiler, so reports name functions, no lines",
+        )
 
 
 class Fuzz(unittest.TestCase):
@@ -536,6 +606,23 @@ class Symbolizer(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout)
         probe = json.loads((project.state / "probe.json").read_text())
         self.assertEqual(list(probe.values()), [None] * 3)
+
+
+    @unittest.skipUnless(platform.system() == "Darwin", "dSYM bundles are for macOS")
+    def test_on_macos_fuzz_runs_and_sanitizer_ctest_runs_see_to_their_debug_info(self):
+        project = self.project
+        dsymutil = project.root / "toolchain" / "bin" / "dsymutil"
+        line = f"run_tests: debug info: dSYM bundles from {dsymutil}, "
+        project.reset()
+        done = project.run("fuzz", "--seconds", "1")
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertIn(line, done.stdout)
+        done = project.run("ctest", "fuzz", "--junit", str(project.state / "junit.xml"))
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertIn(line, done.stdout)
+        done = project.run("ctest", "plain", "--junit", str(project.state / "junit.xml"))
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertNotIn("debug info", done.stdout)
 
 
 class CtestTimeout(unittest.TestCase):

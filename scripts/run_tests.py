@@ -22,6 +22,13 @@ sanitizer build (-fsanitize= in CMAKE_CXX_FLAGS) with a per-test timeout of 1500
 default for a project that includes CTest: this one does not, so ctest's is 10,000,000 s. A test
 with a TIMEOUT of its own keeps it, and --test-timeout sets another for any build (0: none).
 
+On macOS a binary keeps its debug info in its object files, which the system symbolizer reads and
+llvm-symbolizer does not: given the binary alone it names functions, with no lines and no inlined
+frames. So on macOS, where the sanitizers get llvm-symbolizer, the Mach-O programs of a fuzz run
+or of a sanitizer build's ctest run get a dSYM bundle beside them first, from the dsymutil beside
+the compiler, written again only when a program is newer than its bundle, and one line says how
+many. Without a dsymutil there the line says so, and reports name functions only.
+
 Fuzzing. Targets are found with `ctest --show-only`, so a new target needs no edit here, and
 --only picks some by name. Each target gets --seconds in total, as slices of at most --slice
 seconds (default 300), each its own libFuzzer process: as many full slices as fit, then one with
@@ -81,6 +88,7 @@ import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ElementTree
+from concurrent.futures import ThreadPoolExecutor
 
 REPO = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 PASSED_OUTPUT_BYTES = 10_000_000
@@ -95,6 +103,8 @@ POLL_S = 0.25
 LEAK_SUPPRESSIONS = os.path.join(REPO, "scripts", "lsan_suppressions.txt")
 FINAL_PEAK = re.compile(r"^stat::peak_rss_mb:\s*(\d+)\s*$", re.MULTILINE)
 STATUS_RSS = re.compile(r" rss: (\d+)Mb")
+MACH_O_MAGIC = (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca")
+DSYM_JOBS = 4
 
 
 class CannotRun(Exception):
@@ -216,6 +226,87 @@ def test_timeout(arguments, cache):
     return None, "per-test timeout: ctest's default, not a sanitizer build"
 
 
+def tool_beside_compiler(cache, name):
+    """The path of the named tool beside the compiler in the cache, or None."""
+    compiler = (cache or {}).get("CMAKE_CXX_COMPILER") or (cache or {}).get("CMAKE_C_COMPILER")
+    if not compiler:
+        return None
+    if not os.path.isabs(compiler):
+        compiler = shutil.which(compiler) or compiler
+    folders = (os.path.dirname(compiler), os.path.dirname(os.path.realpath(compiler)))
+    for folder in dict.fromkeys(folders):
+        path = os.path.join(folder, name)
+        if folder and os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+def is_mach_o(path):
+    try:
+        with open(path, "rb") as file:
+            return file.read(4) in MACH_O_MAGIC
+    except OSError:
+        return False
+
+
+def debug_bundle_current(binary):
+    name = os.path.basename(binary)
+    dwarf = os.path.join(f"{binary}.dSYM", "Contents", "Resources", "DWARF", name)
+    try:
+        return os.path.getmtime(dwarf) >= os.path.getmtime(binary)
+    except OSError:
+        return False
+
+
+def debug_info(programs, environment, cache, system, jobs):
+    """On macOS a binary's debug info stays in its object files. The system symbolizer reads them
+    and llvm-symbolizer does not: given the binary alone it names functions, with no lines and no
+    inlined frames. So where the sanitizers get llvm-symbolizer on macOS, each Mach-O program about
+    to run gets a dSYM bundle beside it, from the dsymutil beside the compiler, written again when
+    the program is newer than its bundle. Returns the line saying what was done, or None where
+    nothing applies."""
+    if system != "Darwin" or not any(
+        os.path.basename(environment.get(name) or "").startswith("llvm-symbolizer")
+        for name in SYMBOLIZER_VARIABLES
+    ):
+        return None
+    dsymutil = tool_beside_compiler(cache, "dsymutil")
+    if dsymutil is None:
+        return "debug info: no dsymutil beside the compiler, so reports name functions, no lines"
+    binaries = [path for path in dict.fromkeys(programs) if is_mach_o(path)]
+    stale = [binary for binary in binaries if not debug_bundle_current(binary)]
+
+    def write(binary):
+        done = subprocess.run(
+            [dsymutil, binary], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
+        return done.returncode
+
+    with ThreadPoolExecutor(max(1, jobs)) as pool:
+        codes = list(pool.map(write, stale))
+    failed = [os.path.basename(binary) for binary, code in zip(stale, codes) if code != 0]
+    line = (
+        f"debug info: dSYM bundles from {dsymutil}, {len(stale) - len(failed)} written and "
+        f"{len(binaries) - len(stale)} current, of {len(binaries)} binaries"
+    )
+    if failed:
+        line += f"; dsymutil failed on {', '.join(failed)}, whose reports name no lines"
+    return line
+
+
+def test_programs(preset):
+    """The program each of the preset's tests runs, or nothing if ctest cannot list them."""
+    try:
+        listing = subprocess.run(
+            ["ctest", "--preset", preset, "--show-only=json-v1"],
+            cwd=REPO, capture_output=True, check=False, text=True,
+        )  # fmt: skip
+        tests = json.loads(listing.stdout).get("tests", []) if listing.returncode == 0 else []
+    except (OSError, ValueError):
+        return []
+    return [test["command"][0] for test in tests if test.get("command")]
+
+
 def run_ctest(arguments, allow):
     if arguments.jobs < 1:
         raise CannotRun("--jobs must be positive")
@@ -234,6 +325,11 @@ def run_ctest(arguments, allow):
     print(f"run_tests: {line}")
     timeout, line = test_timeout(arguments, cache)
     print(f"run_tests: {line}")
+    if "-fsanitize=" in (cache or {}).get("CMAKE_CXX_FLAGS", ""):
+        programs = test_programs(arguments.preset)
+        line = debug_info(programs, environment, cache, platform.system(), arguments.jobs)
+        if line:
+            print(f"run_tests: {line}")
     sys.stdout.flush()
     command = [
         "ctest",
@@ -494,11 +590,13 @@ def run_fuzz(arguments):
             f"to its seconds plus {arguments.margin} s"
         )
     folder = build_dir(arguments.preset)
-    environment, line = symbolizer_environment(
-        os.environ, read_cache(folder), os.path.relpath(folder, REPO)
-    )
+    cache = read_cache(folder)
+    environment, line = symbolizer_environment(os.environ, cache, os.path.relpath(folder, REPO))
     print(f"run_tests: {line}")
     environment, line = leak_environment(environment, platform.system())
+    if line:
+        print(f"run_tests: {line}")
+    line = debug_info([t[1] for t in chosen], environment, cache, platform.system(), DSYM_JOBS)
     if line:
         print(f"run_tests: {line}")
     if arguments.wrapper:

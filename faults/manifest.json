@@ -8464,6 +8464,166 @@
       "reason": "\\[  FAILED  \\] RssProbe\\.AVariantThatBuildsATapePeaksAboveIdle",
       "timeout_s": 300,
       "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-off-on-macos",
+      "kind": "check",
+      "covers": "run_tests.py: dSYM bundles on macOS",
+      "bug": "The dSYM step runs everywhere but on macOS, so macOS reports through llvm-symbolizer name no lines or inlined frames.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    if system != \"Darwin\" or not any(\n",
+          "replace": "    if system == \"Darwin\" or not any(\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-any-symbolizer",
+      "kind": "check",
+      "covers": "run_tests.py: dSYM bundles only for llvm-symbolizer",
+      "bug": "Bundles are written whatever symbolizer the sanitizers get, the system one included.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        os.path.basename(environment.get(name) or \"\").startswith(\"llvm-symbolizer\")\n",
+          "replace": "        os.path.basename(environment.get(name) or \"\").startswith(\"\")\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_dsym_bundles_are_for_llvm_symbolizer_on_macos_only"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_dsym_bundles_are_for_llvm_symbolizer_on_macos_only \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-rewrites-current",
+      "kind": "check",
+      "covers": "run_tests.py: a current bundle is kept",
+      "bug": "Every bundle counts as stale, so each run rewrites all of them.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        return os.path.getmtime(dwarf) >= os.path.getmtime(binary)\n",
+          "replace": "        return False\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-not-only-mach-o",
+      "kind": "check",
+      "covers": "run_tests.py: bundles for Mach-O programs only",
+      "bug": "dsymutil is given every program, scripts included, and fails on them.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    binaries = [path for path in dict.fromkeys(programs) if is_mach_o(path)]\n",
+          "replace": "    binaries = list(dict.fromkeys(programs))\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_on_macos_each_mach_o_program_gets_a_dsym_bundle_written_again_only_when_newer \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-fuzz-dropped",
+      "kind": "check",
+      "covers": "run_tests.py fuzz: dSYM bundles for the targets",
+      "bug": "A fuzz run skips the dSYM step, so its reports on macOS name no lines.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "    line = debug_info([t[1] for t in chosen], environment, cache, platform.system(), DSYM_JOBS)\n",
+          "replace": "    line = None\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_on_macos_fuzz_runs_and_sanitizer_ctest_runs_see_to_their_debug_info"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_on_macos_fuzz_runs_and_sanitizer_ctest_runs_see_to_their_debug_info \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "run-tests-debug-info-ctest-dropped",
+      "kind": "check",
+      "covers": "run_tests.py ctest: dSYM bundles in sanitizer builds",
+      "bug": "A sanitizer build's ctest run skips the dSYM step, so its reports on macOS name no lines.",
+      "edits": [
+        {
+          "file": "scripts/run_tests.py",
+          "find": "        line = debug_info(programs, environment, cache, platform.system(), arguments.jobs)\n",
+          "replace": "        line = None\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/data/run_tests_test.py", "{build}/run-tests-selftest", "-k", "test_on_macos_fuzz_runs_and_sanitizer_ctest_runs_see_to_their_debug_info"],
+      "detect": "test",
+      "reason": "^(FAIL|ERROR): test_on_macos_fuzz_runs_and_sanitizer_ctest_runs_see_to_their_debug_info \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "fault-injection-debug-info-dropped",
+      "kind": "check",
+      "covers": "fault_injection.py: dSYM bundles on macOS",
+      "bug": "A fault's command runs without the dSYM step, so a reason that names an inlined frame or a line is not found on macOS.",
+      "edits": [
+        {
+          "file": "scripts/fault_injection.py",
+          "find": "    written, failed = debug_info(command, preset_dir, environment, platform.system())\n",
+          "replace": "    written, failed = [], []\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "faults/test_fault_injection.py", "Symbolizer"],
+      "detect": "test",
+      "reason": "^FAIL: test_on_macos_a_program_of_the_build_tree_that_the_command_names_gets_a_dsym_bundle \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "fault-injection-debug-info-outside-build",
+      "kind": "check",
+      "covers": "fault_injection.py: bundles only inside the build tree",
+      "bug": "Any Mach-O file a command names gets a bundle, outside the build tree too.",
+      "edits": [
+        {
+          "file": "scripts/fault_injection.py",
+          "find": "        if build_dir not in binary.parents or not is_mach_o(binary):\n",
+          "replace": "        if not is_mach_o(binary):\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "faults/test_fault_injection.py", "Symbolizer"],
+      "detect": "test",
+      "reason": "^FAIL: test_only_mach_o_programs_of_the_build_tree_get_a_bundle_and_only_until_it_is_current \\(",
+      "timeout_s": 300,
+      "mutated_exit": 1
     }
   ]
 }

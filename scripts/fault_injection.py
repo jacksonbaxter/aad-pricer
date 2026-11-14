@@ -52,6 +52,11 @@ UBSAN_SYMBOLIZER_PATH and TSAN_SYMBOLIZER_PATH that the caller left unset is set
 to the llvm-symbolizer beside the compiler in the CMakeCache.txt of the fault's preset in the copy,
 by the same rule as scripts/run_tests.py, and the first command of each preset prints which. With
 none there the environment is left alone, and the line says so. timeout_s still bounds each run.
+On macOS llvm-symbolizer, unlike the system symbolizer, does not read the object files that hold a
+binary's debug info, so a report would name functions with no lines and no inlined frames: where
+the command gets llvm-symbolizer there, each Mach-O program of the preset's build tree that the
+command names first gets a dSYM bundle beside it from the dsymutil beside the compiler, unless its
+bundle is newer, and the run's log ends with a line naming them.
 
 The code under test comes from `git archive HEAD` of the repo holding this script. An export with
 no .git, as on the Linux host, passes --source <dir>; it is copied, its COMMIT file names the
@@ -147,6 +152,7 @@ LEAK = re.compile(
 )
 SYMBOLIZER_VARIABLES = ("ASAN_SYMBOLIZER_PATH", "UBSAN_SYMBOLIZER_PATH", "TSAN_SYMBOLIZER_PATH")
 CACHE_ENTRY = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):[A-Z_]+=(.*)$", re.MULTILINE)
+MACH_O_MAGIC = (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca")
 
 
 class CannotRun(Exception):
@@ -332,6 +338,51 @@ def symbolizer_environment(build_dir):
             line = f"symbolizer: {path}, beside the compiler of {where}{note}"
             return dict.fromkeys(unset, str(path)), line
     return {}, f"symbolizer: no llvm-symbolizer beside {compiler}, environment left alone"
+
+
+def is_mach_o(path):
+    try:
+        with open(path, "rb") as file:
+            return file.read(4) in MACH_O_MAGIC
+    except OSError:
+        return False
+
+
+def debug_info(command, build_dir, environment, system):
+    """The rule of scripts/run_tests.py: on macOS llvm-symbolizer, unlike the system symbolizer,
+    does not read the object files that hold a binary's debug info, so where the sanitizers get it,
+    each Mach-O program of the build tree that the command names gets a dSYM bundle beside it from
+    the dsymutil beside the compiler, unless its bundle is newer. Returns the programs it wrote
+    bundles for, and those dsymutil failed on."""
+    if system != "Darwin" or not any(
+        Path(environment.get(name) or "").name.startswith("llvm-symbolizer")
+        for name in SYMBOLIZER_VARIABLES
+    ):
+        return [], []
+    try:
+        text = (build_dir / "CMakeCache.txt").read_text(errors="replace")
+    except OSError:
+        return [], []
+    cache = dict(CACHE_ENTRY.findall(text))
+    compiler = cache.get("CMAKE_CXX_COMPILER") or cache.get("CMAKE_C_COMPILER") or ""
+    if compiler and not os.path.isabs(compiler):
+        compiler = shutil.which(compiler) or compiler
+    folders = (Path(compiler).parent, Path(compiler).resolve().parent)
+    tools = [folder / "dsymutil" for folder in folders]
+    dsymutil = next((tool for tool in tools if compiler and tool.is_file()), None)
+    if dsymutil is None:
+        return [], []
+    written, failed = [], []
+    for part in dict.fromkeys(command):
+        binary = Path(part)
+        if build_dir not in binary.parents or not is_mach_o(binary):
+            continue
+        dwarf = Path(f"{binary}.dSYM") / "Contents" / "Resources" / "DWARF" / binary.name
+        if dwarf.is_file() and dwarf.stat().st_mtime >= binary.stat().st_mtime:
+            continue
+        done = subprocess.run([str(dsymutil), part], capture_output=True, check=False)
+        (failed if done.returncode else written).append(part)
+    return written, failed
 
 
 class Layout:
@@ -582,11 +633,17 @@ def run_command(layout, fault, stage, jobs):
     for stale in output_files(layout, fault):
         stale.unlink()
     variables = layout.symbolizer(fault["preset"])
+    environment = {**os.environ, **variables}
+    preset_dir = layout.build_dir(fault["preset"])
+    written, failed = debug_info(command, preset_dir, environment, platform.system())
     code, output = run_logged(command, layout.copy, log, fault["timeout_s"], variables)
     extra = "".join(path.read_text(errors="replace") + "\n" for path in output_files(layout, fault))
     if extra:
         with open(log, "a") as sink:
             sink.write(extra)
+    if written or failed:  # In the log only, never in the text the reason is matched against.
+        with open(log, "a") as sink:
+            sink.write(f"fault_injection: dSYM bundles written for {written}, failed {failed}\n")
     return code, output + extra
 
 

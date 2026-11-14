@@ -8,8 +8,10 @@ build/fault-selftest/. Each test copies the runner into a project of its own and
 user would, so the exit code and the output are what is checked.
 """
 
+import importlib.util
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -722,16 +724,34 @@ PRINT_SYMBOLIZERS = (
     "import json, os; print('SYMBOLIZERS ' + json.dumps([os.environ.get(name) for name in "
     f"{SYMBOLIZER_NAMES!r}]))"
 )
+# A dsymutil that writes the bundle's DWARF file for the binary it is given.
+DSYMUTIL = """#!{python} -I
+import os, sys
+dwarf = os.path.join(sys.argv[1] + ".dSYM", "Contents", "Resources", "DWARF")
+os.makedirs(dwarf, exist_ok=True)
+open(os.path.join(dwarf, os.path.basename(sys.argv[1])), "w").write("dwarf")
+"""
+MACH_O = b"\xcf\xfa\xed\xfe" + bytes(60)
+
+
+def load_fault_injection():
+    sys.dont_write_bytecode = True  # no scripts/__pycache__ in the tracked tree
+    spec = importlib.util.spec_from_file_location("fault_injection_under_test", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class Symbolizer(unittest.TestCase):
     """A fault's command gets the llvm-symbolizer beside the compiler that its preset's build tree
     in the copy names, unless the caller set the variable or there is none there."""
 
-    def run_probe(self, name, with_symbolizer, caller=None):
+    def run_probe(self, name, with_symbolizer, caller=None, program=False):
+        command = ["python3", "-I", "-c", PRINT_SYMBOLIZERS]
+        command += ["{build}/bin/program"] if program else []
         probe = fault(
             "probe", [swap("a + b", "a - b")], preset="fakesym", targets=[],
-            command=["python3", "-I", "-c", PRINT_SYMBOLIZERS], reason="NEVER PRINTED",
+            command=command, reason="NEVER PRINTED",
         )  # fmt: skip
         project = Project(name, [probe]).committed()
         toolchain = project.root / "build" / "toolchain" / "bin"
@@ -743,6 +763,11 @@ class Symbolizer(unittest.TestCase):
         cache = project.root / "build" / "fault" / "copy" / "build" / "fakesym" / "CMakeCache.txt"
         cache.parent.mkdir(parents=True)
         cache.write_text(f"//The compiler\nCMAKE_CXX_COMPILER:FILEPATH={toolchain}/clang++\n")
+        if program:
+            (toolchain / "dsymutil").write_text(DSYMUTIL.format(python=sys.executable))
+            (toolchain / "dsymutil").chmod(0o755)
+            (cache.parent / "bin").mkdir()
+            (cache.parent / "bin" / "program").write_bytes(MACH_O)
         environment = {k: v for k, v in os.environ.items() if k not in SYMBOLIZER_NAMES}
         environment.update(caller or {})
         done = subprocess.run(
@@ -750,6 +775,7 @@ class Symbolizer(unittest.TestCase):
             env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )  # fmt: skip
         log = (project.root / "build/fault/logs/probe-baseline-run.txt").read_text()
+        self.log, self.program = log, cache.parent / "bin" / "program"
         got = json.loads(log.split("SYMBOLIZERS ", 1)[1].splitlines()[0])
         return done, got, str(toolchain / "llvm-symbolizer")
 
@@ -776,6 +802,48 @@ class Symbolizer(unittest.TestCase):
             "environment left alone\n",
             done.stdout,
         )
+
+    @unittest.skipUnless(platform.system() == "Darwin", "dSYM bundles are for macOS")
+    def test_on_macos_a_program_of_the_build_tree_that_the_command_names_gets_a_dsym_bundle(self):
+        done, got, path = self.run_probe("symbolizer-dsym", True, program=True)
+        self.assertEqual(got, [path] * 3, done.stdout)
+        dwarf = Path(f"{self.program}.dSYM") / "Contents" / "Resources" / "DWARF" / "program"
+        self.assertTrue(dwarf.is_file(), done.stdout)
+        written = r"fault_injection: dSYM bundles written for \['\S*/bin/program'\], failed \[\]"
+        self.assertRegex(self.log, written)
+
+    def test_only_mach_o_programs_of_the_build_tree_get_a_bundle_and_only_until_it_is_current(self):
+        module = load_fault_injection()
+        root = SCRATCH / "dsym-unit"
+        if root.exists():
+            shutil.rmtree(root)
+        toolchain = root / "toolchain" / "bin"
+        toolchain.mkdir(parents=True)
+        (toolchain / "clang++").write_text("")
+        (toolchain / "dsymutil").write_text(DSYMUTIL.format(python=sys.executable))
+        (toolchain / "dsymutil").chmod(0o755)
+        build = root / "build" / "fuzz"
+        (build / "bin").mkdir(parents=True)
+        (build / "CMakeCache.txt").write_text(f"CMAKE_CXX_COMPILER:FILEPATH={toolchain}/clang++\n")
+        inside, script, outside = build / "bin" / "target", build / "bin" / "script", root / "other"
+        inside.write_bytes(MACH_O)
+        script.write_text("#!/bin/sh\n")
+        outside.write_bytes(MACH_O)
+        command = [str(inside), str(script), str(outside), "-runs=1"]
+        llvm = {"ASAN_SYMBOLIZER_PATH": str(toolchain / "llvm-symbolizer")}
+        self.assertEqual(module.debug_info(command, build, llvm, "Darwin"), ([str(inside)], []))
+        dwarf = build / "bin" / "target.dSYM" / "Contents" / "Resources" / "DWARF" / "target"
+        self.assertTrue(dwarf.is_file())
+        self.assertEqual(module.debug_info(command, build, llvm, "Darwin"), ([], []))
+        self.assertFalse(Path(f"{outside}.dSYM").exists())
+        self.assertFalse(Path(f"{script}.dSYM").exists())
+        later = inside.stat().st_mtime + 5
+        os.utime(inside, (later, later))
+        self.assertEqual(module.debug_info(command, build, llvm, "Darwin"), ([str(inside)], []))
+        os.utime(inside, (later + 5, later + 5))
+        self.assertEqual(module.debug_info(command, build, llvm, "Linux"), ([], []))
+        system = {"ASAN_SYMBOLIZER_PATH": "/usr/bin/atos"}
+        self.assertEqual(module.debug_info(command, build, system, "Darwin"), ([], []))
 
 
 if __name__ == "__main__":
