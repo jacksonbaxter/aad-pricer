@@ -816,5 +816,13 @@ TEST(TapeDeathTest, AnActiveRealWithNoActiveTapeIsAnError) {
       "no active tape");
 }
 
+// The tape's build knobs (cmake/AadpTapeKnobs.cmake) are at their defaults, which every test,
+// oracle and results file assumes. A build for a timing study fails here, as its configure says.
+TEST(TapeConfig, TheKnobsAreAtTheirDefaults) {
+  EXPECT_EQ(kDefaultChunkShift, 13U);
+  EXPECT_EQ(kChunkShift, kDefaultChunkShift);
+  EXPECT_EQ(kChunkEntries, 8192U);
+}
+
 }  // namespace
 }  // namespace aadp::ad

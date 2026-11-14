@@ -2035,6 +2035,56 @@
       "timeout_s": 300
     },
     {
+      "id": "ad-chunk-shift-default",
+      "kind": "check",
+      "covers": "the tape's chunk-size knob is at its default, 13, in the default build",
+      "bug": "The knob's default moves to 12, so every default build gets chunks of 4096 entries, which no test, oracle or results file assumes.",
+      "edits": [
+        {
+          "file": "cmake/AadpTapeKnobs.cmake",
+          "find": "set(AADP_TAPE_CHUNK_SHIFT_DEFAULT 13)",
+          "replace": "set(AADP_TAPE_CHUNK_SHIFT_DEFAULT 12)"
+        }
+      ],
+      "preset": "release",
+      "targets": [
+        "aadp_ad_tape_test"
+      ],
+      "command": [
+        "{build}/bin/aadp_ad_tape_test",
+        "--gtest_filter=TapeConfig.TheKnobsAreAtTheirDefaults"
+      ],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] TapeConfig\\.TheKnobsAreAtTheirDefaults",
+      "timeout_s": 300
+    },
+    {
+      "id": "ad-chunk-shift-range-open",
+      "kind": "check",
+      "covers": "the tape's chunk-size knob refuses a value out of range",
+      "bug": "The range check's lower end drops to 7, so a configure accepts chunks of 128 entries, too few for a statement of 255 operands.",
+      "edits": [
+        {
+          "file": "cmake/AadpTapeKnobs.cmake",
+          "find": "OR AAD_PRICER_TAPE_CHUNK_SHIFT LESS 8\n",
+          "replace": "OR AAD_PRICER_TAPE_CHUNK_SHIFT LESS 7\n"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": [
+        "ctest",
+        "--test-dir",
+        "{build}",
+        "--no-tests=error",
+        "-R",
+        "^aadp_tape_knobs_refuse_out_of_range$"
+      ],
+      "detect": "test",
+      "reason": "aadp_tape_knobs_refuse_out_of_range \\(Failed\\)",
+      "timeout_s": 120
+    },
+    {
       "id": "ad-one-step-tiny-q",
       "kind": "check",
       "covers": "one-step adjoint at p v near 0, check 6",

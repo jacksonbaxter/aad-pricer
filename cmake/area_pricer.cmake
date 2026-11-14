@@ -112,6 +112,15 @@ if(TARGET aadp_rng)
     SOURCES tests/ad/tape_test.cpp
     LINK aadp_ad
     LABELS ad fast tsan)
+  # The tape knobs' range check (cmake/AadpTapeKnobs.cmake) refuses a chunk too small for a
+  # statement's 255 operands, run alone as the configure runs it.
+  if(AADP_BUILD_TESTS)
+    add_test(NAME aadp_tape_knobs_refuse_out_of_range
+      COMMAND "${CMAKE_COMMAND}" -DAAD_PRICER_TAPE_CHUNK_SHIFT=7
+        -P "${PROJECT_SOURCE_DIR}/cmake/AadpTapeKnobs.cmake")
+    set_tests_properties(aadp_tape_knobs_refuse_out_of_range PROPERTIES LABELS "ad;fast"
+      PASS_REGULAR_EXPRESSION "AAD_PRICER_TAPE_CHUNK_SHIFT must be an integer from 8 to 20, not '7'")
+  endif()
   # Thread-local tapes: independent across threads, and the same bits for any thread count.
   aadp_test(aadp_ad_thread_test
     SOURCES tests/ad/thread_test.cpp

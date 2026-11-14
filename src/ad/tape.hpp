@@ -40,6 +40,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "tape_config.hpp"
+
 namespace aadp::ad {
 
 using Index = std::uint32_t;
@@ -49,9 +51,11 @@ inline constexpr Index kPassiveIndex = 0;
 inline constexpr std::size_t kMaxOperands = std::numeric_limits<OperandCount>::max();
 
 // 2^13 entries: a statement chunk is 8 KiB and an operand chunk 96 KiB, so the 252-step paths of
-// this pricer fit in one of each, and a short path does not reserve megabytes. Not yet tuned by
-// a sweep (EVIDENCE B4); the benchmark stage does that.
-inline constexpr std::size_t kChunkShift = 13;
+// this pricer fit in one of each, and a short path does not reserve megabytes. The shift is a
+// build knob (cmake/AadpTapeKnobs.cmake) for the chunk-size sweep of EVIDENCE B4 only: every
+// test, oracle and result assumes the default, 13 (docs/NOTES.md, "The tape's chunk size").
+inline constexpr std::size_t kChunkShift = AADP_TAPE_CHUNK_SHIFT;
+inline constexpr std::size_t kDefaultChunkShift = AADP_TAPE_CHUNK_SHIFT_DEFAULT;
 inline constexpr std::size_t kChunkEntries = std::size_t{1} << kChunkShift;
 inline constexpr std::size_t kChunkMask = kChunkEntries - 1;
 

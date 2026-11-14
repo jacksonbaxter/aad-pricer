@@ -2249,6 +2249,63 @@ Before and after: ce6e805 against the gather tree, the stage 11 driver of `PERF.
 - The profile estimated the hand adjoint at about 2.4 times the primal after the change; Hogan's is 2.1. On AVX2 it is now 2.08, below the SSE2 build's 2.41, where before AVX2 was the slower build of the hand adjoint too.
 - This changes the `lw-worst` hand baseline: a hand figure or ratio of the d1596e0 results files (`results/*/lw-worst-*.txt`) is the scatter form's and is not comparable with one after this change (`BENCHMARKS.md`, the note under B34).
 
+#### The tape's chunk size
+
+Iteration only, not a result. Raw output is in the research cache, `evidence/stage11-s2c/`, with the bars as stated before the first run (`PREREGISTERED.txt`). EVIDENCE B4 asks for the chunk size, 2^13 entries, to be justified by a sweep.
+
+The knob.
+- `AAD_PRICER_TAPE_CHUNK_SHIFT` (`cmake/AadpTapeKnobs.cmake`), a cache string: log2 of the entries in a statement or an operand chunk, an integer from 8 to 20, default 13. 2^8 is the smallest chunk that holds a statement's 255 operands; at 2^20 an operand chunk is 12 MiB. Any other value stops the configure, before the dependencies are fetched. The test `aadp_tape_knobs_refuse_out_of_range` runs the file alone, in CMake's script mode, with 7, and requires the refusal.
+- The value reaches the code through a generated header, `tape_config.hpp` (from `cmake/tape_config.hpp.in`), as `kChunkShift` in `src/ad/tape.hpp`, with the default beside it as `kDefaultChunkShift`. The default is set outside the cache, so a changed default reaches the header and the test in a build directory configured before.
+- A value but the default is for the sweep only. The configure says so in a warning: only `aadp_bench_aad` and single-threaded drivers that time it are supported in such a build, and the tests assume the defaults, so some fail there by design. The first is `TapeConfig.TheKnobsAreAtTheirDefaults`, which checks that the default is 13 and that the build uses it, 8192 entries. The bench's `tape_config` line now prints the chunk entries from the constant, the same text at the default.
+- The default build is unchanged. Of the 49 object files of the Mac's `release` build of `aadp_bench_aad` and `aadp_local_vol_report`, 48 are byte-identical at 9ab335d and at this change; the other is `aad_bench.cpp.o`, whose `tape_config` line is now built from the constant.
+- Production change: 52 lines added and 6 removed, in the two CMake files, `CMakeLists.txt`, `src/ad/tape.hpp` and the bench's line, under the brief's 150.
+
+The same bits at the default. `aadp_run2_fingerprint` and `aadp_ad_statement_order_test` pass on the Mac (`release`, 780 of 780), on the Linux host under clang `release` (the 26 tests of `Run2Fingerprint`, `StatementOrder`, `Tape`, `TapeDeathTest`, `TapeVsDual`, `HandAdjoint` and `TapeConfig`) and under g++ `release-gcc` (the GCC pre-commit, 768 of 768). The `static_assert`s on the 16-byte `Real`, the 1-byte statement and the 12-byte operand (MEM-1, MEM-2) and the zero-allocation test (MEM-6) are untouched and pass.
+
+Faults, run with `--only` through `heavy.sh` on an export of the uncommitted tree:
+- `ad-chunk-shift-default`, new: the default moves to 12. Caught by `TapeConfig.TheKnobsAreAtTheirDefaults`.
+- `ad-chunk-shift-range-open`, new: the range's lower end drops to 7, so a chunk of 128 entries, too small for a statement of 255 operands, is accepted. Caught by `aadp_tape_knobs_refuse_out_of_range`.
+- Still caught: `ad-record-chunk-fit-off-by-one`, the other fault on `src/ad/tape.hpp`, and `check-results-docs-readme` on the final tree.
+- The manifest holds 377 faults: 64 oracle, 284 check, 29 fuzz.
+
+The sweep: shifts 10, 11, 12, 13, 14 and 16, one build of this tree at each, the stage 11 driver of `PERF.md` linked against each build, running `bench/aad_workloads` as `aadp_bench_aad` does: `aad1-barrier` at 1/50 scale, `aad4-asian12` and `mc-asian252` at 1/10, `lw-worst` at full scale. On the Mac the tape variant only, on the Linux host the tape and tape-record. Rounds alternate the six builds; three rounds, and ten for `lw-worst` on the Linux host. `linux-zen1` (AMD Ryzen Embedded V1605B, Zen 1), clang 23.1.4 at `-O3 -g` with `-ffp-contract=off`, `cycles:u` of the timed loop only, each run pinned to cpu4 through the machine's job wrapper, governor schedutil, cpu5 at most 6.5% busy during any run, load average about 8 from another job of this project's on cpus 6 and 7; SSE2 is the `release` preset and AVX2 `release-avx2`. `mac-m4max`, macOS, `release` (AArch64), wall time, each run under the machine's measurement wrapper, unpinned, load average 1.7 to 3.7.
+
+The figure at 13 is the median over the rounds, with their range; the others are the change of the median against 13. "faster" and "slower" mark a change beyond the run-to-run range, the larger of the two builds' ranges (max − min over the rounds). Cycles a path-step, millions a run for `lw-worst`, on the Linux host; ns a path-step, ms a run for `lw-worst`, on the Mac:
+
+| Build, workload, variant | 13 | 10 | 11 | 12 | 14 | 16 |
+|---|---|---|---|---|---|---|
+| Mac, `aad1-barrier` tape | 47.10 (46.81 to 47.22) | −0.7% | −1.0%, faster | −0.7% | −0.6% | +0.2% |
+| Mac, `aad4-asian12` tape | 43.70 (43.24 to 44.27) | −0.1% | +0.2% | +0.2% | +0.6% | +0.3% |
+| Mac, `mc-asian252` tape | 42.21 (41.24 to 42.39) | −0.9% | −0.8% | −1.0% | −1.1% | −0.4% |
+| Mac, `lw-worst` tape | 5.660 (5.551 to 5.725) | −1.2% | −0.8% | −1.0% | +0.7% | +3.9% |
+| SSE2, `aad1-barrier` tape | 375.8 (375.4 to 377.3) | −0.1% | −0.1% | +0.4% | −0.1% | −2.1%, faster |
+| SSE2, `aad1-barrier` tape-record | 319.6 (319.1 to 319.9) | +1.1% | −0.3% | +0.0% | +0.2% | −0.1% |
+| SSE2, `aad4-asian12` tape | 313.3 (312.6 to 314.6) | −0.1% | −0.2% | +1.9% | +0.5% | −1.7%, faster |
+| SSE2, `aad4-asian12` tape-record | 257.7 (257.6 to 258.8) | +0.2% | +0.7% | +0.5% | +0.2% | +0.1% |
+| SSE2, `mc-asian252` tape | 282.8 (282.7 to 283.3) | +1.6% | +0.5% | −0.1% | +0.5% | −0.7% |
+| SSE2, `mc-asian252` tape-record | 240.8 (238.9 to 248.9) | −0.5% | −0.7% | −0.9% | −0.2% | −0.8% |
+| SSE2, `lw-worst` tape | 40.84 (38.86 to 45.34) | +7.6% | +0.6% | +1.1% | −3.3% | −1.8% |
+| SSE2, `lw-worst` tape-record | 16.63 (16.59 to 16.84) | +13.5%, slower | +7.4%, slower | +2.5%, slower | −1.5% | −2.7% |
+| AVX2, `aad1-barrier` tape | 366.8 (365.5 to 368.2) | +0.0% | +0.9% | +0.4% | +0.1% | −2.7%, faster |
+| AVX2, `aad1-barrier` tape-record | 311.7 (311.4 to 316.5) | +0.0% | +0.3% | +0.2% | +0.0% | +0.6% |
+| AVX2, `aad4-asian12` tape | 302.8 (302.1 to 308.1) | +0.0% | −0.6% | +0.0% | −0.0% | −0.4% |
+| AVX2, `aad4-asian12` tape-record | 248.9 (248.6 to 250.2) | −0.2% | +0.2% | −0.2% | +0.2% | −0.7% |
+| AVX2, `mc-asian252` tape | 274.2 (272.6 to 275.4) | +0.6% | −0.7% | −0.5% | −0.5% | −2.8% |
+| AVX2, `mc-asian252` tape-record | 228.2 (227.7 to 229.1) | +0.2% | −0.1% | +0.0% | −0.1% | +0.4% |
+| AVX2, `lw-worst` tape | 39.89 (36.98 to 42.20) | +11.1% | +7.0% | +2.8% | +0.4% | +0.1% |
+| AVX2, `lw-worst` tape-record | 16.70 (16.57 to 17.93) | +13.0%, slower | +6.6% | +2.5% | −1.5% | −2.2% |
+
+The tape's allocated bytes after one run (`MemoryReport`, the driver's `wlshape`), the same on both hosts and both builds:
+
+| Shift | 10 | 11 | 12 | 13 | 14 | 16 |
+|---|---|---|---|---|---|---|
+| `lw-worst` | 46,581,760 | 46,594,048 | 46,620,672 | 46,669,824 | 46,678,016 | 47,316,992 |
+| a GBM worker's tape | 21,504 (`aad4-asian12`), 43,008 (the other two) | 43,008 | 86,016 | 172,032 | 344,064 | 1,376,256 |
+
+- The rule, set before measuring: the default stays 13 unless another shift is at least 3% faster than 13 (median) on some workload and variant on both hosts, and slower than 13 beyond the range nowhere; if one were, this piece would not change the default but report it. No shift is 3% faster than 13 on any workload on the Mac (the largest gain is 1.2%, `lw-worst` at 10), so none passes and the default stays 13. Beyond the range, 16 is 1.7% to 2.7% faster on the Linux host's `aad1-barrier` tape and its SSE2 `aad4-asian12` tape, and 10 to 12 make `lw-worst`'s recording 2.5% to 13.5% slower there.
+- Not profiled; what differs for `lw-worst`'s recording at small chunks: its run of 1,382,299 statements and 2,368,298 operands fills about 3,660 chunks at 2^10 and about 460 at 2^13, and each chunk entered takes the record path's out-of-line branch. The GBM workloads' paths fit in one chunk of each kind at 2^11 and up; at 2^10 every `mc-asian252` path and `aad1-barrier`'s longest do not. A GBM worker's tape grows eightfold from 2^13 to 2^16 for no gain on the Mac and at most 2.8% on the Linux host. `lw-worst`'s `tape` runs spread by 10% to 20% between processes on the Linux host, as before, so its ranges there are wide.
+- B4 is answered: 2^13 stays, by this table.
+
 ### Rule slips
 
 None affected a number.
@@ -2283,6 +2340,7 @@ None affected a number.
 - Stage 11, the sweep: the quoting of one shell command broke on an apostrophe inside an inline script argument, so the shell ran fragments of it as commands, which failed and changed nothing; the edit was redone in the editor. One foreground call, a first short timing run on the Mac waiting on the measurement wrapper, ran past the tool's 600 s timeout and was moved to the background, then finished and was waited for by polling; one 420 s sleep was refused by the tool. Two inline scripts read only `/dev/null`, no-ops, and were no heredocs. One in-place stream edit changed a scratch script under `build/`. Outside the job wrapper on the Mac: the scratch trees' configures (seconds), single runs of their tape test, statement-order test and fingerprint (seconds), the static fault check (0.1 s, once during the Mac timing runs), the scratch summary scripts and the formatter. The `release-gcc` pre-commit shipped a tree that differs from the commit only in `docs/NOTES.md`, `docs/TASKS.md` and `README.md`, then uncommitted. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/sw/` and the research cache.
 - Stage 11, the skip as the default (docs only): a loop over the history's blobs for the privacy check, before the push of ab1e985, named its variable `path`, which the shell ties to its command search path, so none of its commands were found; it changed nothing, and was rerun in another shell under another name. The tool keeps an output file in the system temporary directory for each background command.
 - Stage 11, the Lax-Wendroff gather form: the piece's agent first stopped before doing anything, because its effort indicator showed a number it could not read as a level; the harness's record showed the required effort, and it resumed. Its pre-registration file says it was written at 08:05 UTC; it was written at 08:02:37 (its file time), before the first run at 08:05:18, and is left as written, with a note beside it. Outside `heavy.sh` on the Mac: the scratch bit driver's compiles and runs (seconds), single-target rebuilds and runs of `aadp_aad_bench_unit` (seconds), one remark-only compile, `clang-format` and the static fault check; one `python3 -I -` that read only `/dev/null`, a no-op and no heredoc; and one hand edit of the header, swapping the addition order, to see the new test fail before the fault was written, restored from a copy at once. The first gate failed the format check on the new test, which `clang-format` then changed (layout only) after its first fault run; the gate and the faults ran again on the final tree. One inline script edit of these notes was quoted so that the shell ran a backquoted word of it as a command, which was not found and ran nothing; the edit came out doubled and was redone in the editor. One `cat` in the same call waited on its input and was stopped; it ran nothing. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s2c/` and the research cache.
+- Stage 11, the chunk size: 9ab335d was pushed as `git push origin 9ab335d:refs/heads/jb-build`, not by the plain `git push origin jb-build` the rules name; the same commit reached the same branch. One foreground 240 s sleep was refused by the tool. One polling loop ended early, because the status line it read began with a digit, and was rerun. The fault counts in `README.md` were changed by an in-place stream edit. Outside `heavy.sh` on the Mac: the knobs file run alone in CMake's script mode (under a second each), `clang-format`, the static fault check and the scratch summary scripts. The Linux host's timing batch was one detached shell loop, not itself under `heavy.sh` or `measure.sh`; each run in it was its own `heavy.sh taskset -c 4 perf stat` call. The GCC pre-commit and the Linux host's clang check ran on a tree that differs from the commit only in `docs/NOTES.md`, `docs/TASKS.md` and `README.md`, then unwritten. The tool keeps an output file in the system temporary directory for each background command; the runs' own output went to `build/s2c/` and the research cache.
 
 ## Option chain
 

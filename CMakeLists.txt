@@ -40,6 +40,8 @@ if(CMAKE_CXX_FLAGS MATCHES "-flto" AND CMAKE_CXX_COMPILER_AR AND CMAKE_CXX_COMPI
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+# Before the dependencies, so a refused value stops the configure before anything is fetched.
+include(AadpTapeKnobs)
 include(AadpSimd)
 include(AadpWarnings)
 include(AadpDependencies)
@@ -47,6 +49,7 @@ include(AadpTargets)
 
 string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_aadp_build_type}}" AADP_BUILD_CXX_FLAGS)
 configure_file(cmake/build_info.hpp.in "${AADP_GENERATED_DIR}/build_info.hpp" @ONLY)
+configure_file(cmake/tape_config.hpp.in "${AADP_GENERATED_DIR}/tape_config.hpp" @ONLY)
 
 enable_testing()
 

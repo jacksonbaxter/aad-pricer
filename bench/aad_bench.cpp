@@ -29,6 +29,7 @@
 
 #include "aad_checks.hpp"
 #include "aad_workloads.hpp"
+#include "ad/tape.hpp"
 #include "harness.hpp"
 #include "pricer/runner.hpp"
 #include "rss_probe.hpp"
@@ -273,9 +274,11 @@ int main(int argc, char** argv) try {
           "(aad8-*, lw-worst) have no fastest-primal multiple");
   add("tape_config",
       "tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of "
-      "arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and "
-      "rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in "
-      "tape-skip. tape-lanes: the vector tape at " +
+      "arrays), chunks of " +
+          std::to_string(aadp::ad::kChunkEntries) +
+          " entries, thread-local active tape, one tape per worker, mark and rewind per path, "
+          "set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. "
+          "tape-lanes: the vector tape at " +
           lanes +
           " lanes, one statement per operation per group of lanes, statement 1 B, operand "
           "4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any "
