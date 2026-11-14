@@ -1,0 +1,11 @@
+type table
+title Fit error per slice (synthetic)
+targets SVI-6,SVI-11
+timing no
+uses_chain no
+column quotes integer count
+column svi6 real bp_of_F
+column class text none
+row s1 40 0.25 type-1
+row s2W4 51 1.5 no-arbitrage
+row s3 -7 -2.5e-300 x+y

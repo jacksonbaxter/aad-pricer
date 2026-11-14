@@ -1035,10 +1035,10 @@
       "id": "check-header-refusal",
       "kind": "check",
       "covers": "results header refusal, aadp_results_stamp",
-      "bug": "The harness stops writing perf_instructions. It checks only the run keys itself, so the raw file reaches the stamp tool, which must refuse it.",
+      "bug": "The run header (results/run_header.cpp) stops writing perf_instructions. The harness checks only the run keys itself, so the raw file reaches the stamp tool, which must refuse it.",
       "edits": [
         {
-          "file": "bench/harness.cpp",
+          "file": "src/results/run_header.cpp",
           "find": "  add(\"perf_instructions\", perf.instructions ? std::to_string(*perf.instructions) : \"missing\");\n",
           "replace": ""
         }
@@ -4957,8 +4957,8 @@
       "edits": [
         {
           "file": "tools/svi_fit/main.cpp",
-          "find": "  if (timing > 0) {",
-          "replace": "  if (timing >= 0) {\n    timing = timing > 0 ? timing : 1;"
+          "find": "  if (timing > 0) {\n    Timing(*slices, timing);",
+          "replace": "  if (timing >= 0) {\n    Timing(*slices, timing > 0 ? timing : 1);"
         }
       ],
       "preset": "release",
@@ -8624,6 +8624,1039 @@
       "reason": "^FAIL: test_only_mach_o_programs_of_the_build_tree_get_a_bundle_and_only_until_it_is_current \\(",
       "timeout_s": 300,
       "mutated_exit": 1
+    },
+    {
+      "id": "report-kind-both",
+      "kind": "check",
+      "covers": "a file is a benchmark file or a report file, results/report.hpp",
+      "bug": "A file with both a benchmark run and report sections is taken for a benchmark file.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (benchmark && report) {\n    return fail(ReportProblem::kKind, \"both a benchmark file and a report file\");\n  }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.IsABenchmarkFileOrAReportFileNeverBothNorNeither",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-kind-neither",
+      "kind": "check",
+      "covers": "a file with neither kind is refused, results/report.hpp",
+      "bug": "A file with neither a benchmark run nor a report section is taken for a report file.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (!benchmark && !report) {\n    return fail(ReportProblem::kKind, \"neither a benchmark file nor a report file\");\n  }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.IsABenchmarkFileOrAReportFileNeverBothNorNeither",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-unknown-type",
+      "kind": "check",
+      "covers": "a report section of an unknown type is refused",
+      "bug": "Any non-empty type is taken for a table.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    if (rest != \"table\") {",
+          "replace": "    if (rest.empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesAnUnknownType",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-fixed-line-order",
+      "kind": "check",
+      "covers": "the fixed lines of a report section in their order, each once",
+      "bug": "A fixed line's word is not checked, so a title where the type belongs is read as a type.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (at >= kWords.size() || word != kWords[at]) {",
+          "replace": "  if (at >= kWords.size()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesFixedLinesOutOfOrderMissingOrRepeated",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-title-charset",
+      "kind": "check",
+      "covers": "a report title's safe character set",
+      "bug": "A title may hold any character but a newline, a Markdown table bar included.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "                      return is_lower(c) || is_upper(c) || is_digit(c) ||\n                             is_in(c, \" .,:;()+/%='_-\");",
+          "replace": "                      return c != '\\n';"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesATitleOrTargetOutsideItsCharacterSet",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-target-repeated",
+      "kind": "check",
+      "covers": "a target id is named once",
+      "bug": "A repeated target id is taken.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    if (!valid_target(id) || std::ranges::find(targets, id) != targets.end()) {",
+          "replace": "    if (!valid_target(id)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesATitleOrTargetOutsideItsCharacterSet",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-repeated-column",
+      "kind": "check",
+      "covers": "a column name is used once in a section",
+      "bug": "A repeated column name is taken, so a cell has two meanings.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (table.column(parts[0])) {\n    return bad(\"repeated column \" + std::string(parts[0]));\n  }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesABadOrRepeatedColumn",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-column-unit",
+      "kind": "check",
+      "covers": "a column's unit in its character set",
+      "bug": "Any unit is taken, a Markdown bar or an empty one included.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    return is_lower(c) || is_upper(c) || is_digit(c) || is_in(c, \"_%/.^-\");",
+          "replace": "    return c != ' ';"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesABadOrRepeatedColumn",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-column-after-rows",
+      "kind": "check",
+      "covers": "no column after the rows",
+      "bug": "A column line after the rows is taken, so earlier rows have too few cells.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (stage == Stage::kRows) {\n    return malformed(\"a column after the rows\");\n  }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesAColumnAfterTheRowsAndARowBeforeTheColumns",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-repeated-row",
+      "kind": "check",
+      "covers": "a row key is used once in a section",
+      "bug": "A repeated row key is taken, so the headline could read either row.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (!keys.insert(key).second) {",
+          "replace": "  if (!keys.insert(key).second && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesARepeatedOrBadRowKeyAndTheWrongNumberOfCells",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-cell-count",
+      "kind": "check",
+      "covers": "one cell per column in every row",
+      "bug": "A row with more cells than columns is taken and its extra cells dropped.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (parts.size() - 1 != table.columns.size()) {",
+          "replace": "  if (parts.size() - 1 < table.columns.size()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesARepeatedOrBadRowKeyAndTheWrongNumberOfCells",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-row-key",
+      "kind": "check",
+      "covers": "a row key's character set",
+      "bug": "Any row key is taken, a slash included.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    return is_lower(c) || is_upper(c) || is_digit(c) || is_in(c, \"._-\");",
+          "replace": "    return c != ' ';"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesARepeatedOrBadRowKeyAndTheWrongNumberOfCells",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-real-cell-checked",
+      "kind": "check",
+      "covers": "a real cell is a finite number in its one spelling",
+      "bug": "A real column's cells are not read, so inf, nan and 1e999 are taken.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    case CellKind::kReal:\n      return read_real_cell(text).has_value();",
+          "replace": "    case CellKind::kReal:\n      return !text.empty();"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesACellItsColumnDoesNotAdmit",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-real-spelling",
+      "kind": "check",
+      "covers": "one spelling for each real",
+      "bug": "A real is taken in any spelling strtod reads, so 0.10 and 0.1 are two texts for one cell.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (end != copy.c_str() + copy.size() || !std::isfinite(value) || real_cell(value) != text) {",
+          "replace": "  if (end != copy.c_str() + copy.size() || !std::isfinite(value)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportCell.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportCell\\.ARealHasOneSpellingOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-integer-spelling",
+      "kind": "check",
+      "covers": "one spelling for each integer",
+      "bug": "An integer is taken with leading zeros or as -0.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "      integer_cell(value) != text) {",
+          "replace": "      false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportCell.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportCell\\.AnIntegerIsPlainDecimal",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-text-cell",
+      "kind": "check",
+      "covers": "a text cell's character set",
+      "bug": "A text cell may hold a Markdown bar.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    return is_lower(c) || is_upper(c) || is_digit(c) || is_in(c, \"._+:%=/-\");",
+          "replace": "    return c != ' ';"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesACellItsColumnDoesNotAdmit",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-no-rows",
+      "kind": "check",
+      "covers": "a table has at least one row",
+      "bug": "A table with columns and no rows is taken.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (parser.stage != Stage::kRows) {",
+          "replace": "  if (parser.stage < Stage::kColumns) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesATableWithoutRowsAndABlankLine",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-too-many-rows",
+      "kind": "check",
+      "covers": "the row limit of a report section",
+      "bug": "The row limit is not enforced.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (table.rows.size() == kMaxReportRows) {",
+          "replace": "  if (table.rows.size() == 2 * kMaxReportRows) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.RefusesTooManyColumnsOrRows",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-writer-reads-back",
+      "kind": "check",
+      "covers": "the writer refuses what does not read back as the table",
+      "bug": "The writer only checks that its text parses, so a target holding a comma is written and read back as two.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (*back != table) {",
+          "replace": "  if (back->name != table.name) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportSection.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportSection\\.TheWriterRefusesWhatTheReaderWould",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-too-large",
+      "kind": "check",
+      "covers": "the size limit of a report file",
+      "bug": "A report file over 1 MiB is read.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (written_size(file) > kMaxReportFileBytes) {",
+          "replace": "  if (written_size(file) > 2 * kMaxReportFileBytes) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.RefusesTooManySectionsOrTooManyBytes",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-unknown-section",
+      "kind": "check",
+      "covers": "a report file holds only report sections and the attribution",
+      "bug": "Any section in a report file is read as a table, its name cut by the prefix length, a histogram included.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "  if (!name.starts_with(kReportPrefix)) {\n    return fail(ReportProblem::kUnknownSection,",
+          "replace": "  if (false) {\n    return fail(ReportProblem::kUnknownSection,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.RefusesAnyOtherSection",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-attribution-missing",
+      "kind": "check",
+      "covers": "a section derived from the chain needs the attribution section",
+      "bug": "A report section derived from the chain is read with no attribution in the file.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    if (attribution == nullptr) {\n      return fail(ReportProblem::kNoAttribution,",
+          "replace": "    if (attribution == nullptr) {\n      return tables;\n    }\n    if (false) {\n      return fail(ReportProblem::kNoAttribution,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.ASectionFromTheChainNeedsTheWholeAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-attribution-whole",
+      "kind": "check",
+      "covers": "the attribution holds every required line",
+      "bug": "Only the first required line of the attribution is looked for.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    for (const std::string_view fragment : kAttributionFragments) {\n      if (!attribution->body.contains(fragment)) {",
+          "replace": "    for (const std::string_view fragment : std::span(kAttributionFragments).first(1)) {\n      if (!attribution->body.contains(fragment)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportFile.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportFile\\.ASectionFromTheChainNeedsTheWholeAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-report-kind",
+      "kind": "check",
+      "covers": "the stamp refuses a file of both kinds or neither, kFileKind",
+      "bug": "The stamp's raw check drops the kind refusal, so a file of both kinds is refused only later and as a malformed run.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "  if (!kind) {\n    return refuse(StampError::kFileKind, kind.error().detail);\n  }\n  if (*kind == FileKind::kReport) {",
+          "replace": "  if (kind && *kind == FileKind::kReport) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=StampReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StampReport\\.RefusesAFileThatIsBothKindsOrNeither",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-report-rules",
+      "kind": "check",
+      "covers": "the stamp applies the report rules whether or not the run is reportable",
+      "bug": "The stamp's raw check does not read a report, so a not-reportable report out of the grammar is stamped.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "    if (auto report = read_report(run); !report) {",
+          "replace": "    if (auto report = read_report(run); !report && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=StampReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StampReport\\.AppliesTheReportRulesWhenNotReportableToo",
+      "timeout_s": 300
+    },
+    {
+      "id": "stamp-report-attribution-error",
+      "kind": "check",
+      "covers": "a missing attribution is its own refusal, kNoAttribution",
+      "bug": "A missing attribution is refused as a malformed report.",
+      "edits": [
+        {
+          "file": "src/results/stamp.cpp",
+          "find": "      return refuse(report.error().problem == ReportProblem::kNoAttribution",
+          "replace": "      return refuse(report.error().problem == ReportProblem::kTooLarge"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=StampReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] StampReport\\.RefusesASectionFromTheChainWithoutTheAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "validate-report-rules",
+      "kind": "check",
+      "covers": "validate_stamped applies the report rules to a stamped report",
+      "bug": "validate_stamped checks only the kind of a report file, not its sections.",
+      "edits": [
+        {
+          "file": "src/results/results_file.cpp",
+          "find": "    if (auto report = read_report(file); !report) {",
+          "replace": "    if (auto report = read_report(file); !report && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Validate.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Validate\\.RefusesAStampedReportEditedOutOfTheGrammar",
+      "timeout_s": 300
+    },
+    {
+      "id": "validate-file-kind",
+      "kind": "check",
+      "covers": "validate_stamped refuses a file of both kinds",
+      "bug": "validate_stamped takes a file of both kinds as a benchmark file.",
+      "edits": [
+        {
+          "file": "src/results/results_file.cpp",
+          "find": "  if (!kind) {\n    return std::unexpected(kind.error().detail);\n  }\n  if (*kind == FileKind::kReport) {",
+          "replace": "  if (kind && *kind == FileKind::kReport) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Validate.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Validate\\.RefusesAStampedReportEditedOutOfTheGrammar",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-report-units",
+      "kind": "check",
+      "covers": "the report table names each column with its unit",
+      "bug": "A report table's header gives the column names without their units.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "        \" | \" + cell(column.name) + (column.unit == \"none\" ? \"\" : \" (\" + cell(column.unit) + \")\");",
+          "replace": "        \" | \" + cell(column.name);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportTables.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportTables\\.RenderEachSectionWithItsUnitsCommitAndClaim",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-report-claim",
+      "kind": "check",
+      "covers": "the report table says its commit and claim",
+      "bug": "A report table leaves out the file's claim.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "         cell(file.required(\"claim\")) + \"`, started \" + cell(file.required(\"run_started_at\")) +",
+          "replace": "         \"`, started \" + cell(file.required(\"run_started_at\")) +"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportTables.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportTables\\.RenderEachSectionWithItsUnitsCommitAndClaim",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-report-attribution",
+      "kind": "check",
+      "covers": "the attribution is rendered beside tables derived from the chain",
+      "bug": "Report tables derived from the chain are rendered with an empty attribution.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "    out += \"\\n\" + attribution_block(text);",
+          "replace": "    out += \"\\n\" + attribution_block(text.substr(0, 0));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportTables.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportTables\\.CarryTheAttributionOnceWhenASectionUsesTheChain",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-report-as-benchmark",
+      "kind": "check",
+      "covers": "a report file is not rendered as a benchmark",
+      "bug": "The host table treats a report file as a benchmark file and refuses it for having no benchmark section.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "    if (file_kind(file) == FileKind::kReport) {\n      reports.push_back(file);\n      continue;\n    }\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportTables.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportTables\\.AHostTableOfReportsHasNoBenchmarkTable",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-report-admit",
+      "kind": "check",
+      "covers": "report tables admit only reportable files unless iteration",
+      "bug": "Report tables are rendered from files that are not reportable.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "    if (auto admitted = admit_file(file, host, options); !admitted) {\n      return std::unexpected(admitted.error());\n    }\n    auto tables = read_report(file);",
+          "replace": "    if (auto admitted = admit_file(file, host, {.iteration = true, .host_heading = options.host_heading}); !admitted) {\n      return std::unexpected(admitted.error());\n    }\n    auto tables = read_report(file);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=ReportTables.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportTables\\.RefuseAReportThatIsNotReportableUnlessIteration",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-latest",
+      "kind": "check",
+      "covers": "the report_cell headline reads the latest run by run_started_at",
+      "bug": "The headline reads the earliest run of the report section.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    } else if (found.entry == nullptr || found.entry->file.required(\"run_started_at\") < started) {\n      found = {.entry = &entry, .table = &*table};",
+          "replace": "    } else if (found.entry == nullptr || found.entry->file.required(\"run_started_at\") > started) {\n      found = {.entry = &entry, .table = &*table};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.TheLatestRunAnswersAndTiesAreRefused",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-ties",
+      "kind": "check",
+      "covers": "two runs of a report section started together are refused",
+      "bug": "Two runs started at the same second answer the headline, the first in name order winning.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (found.entry != nullptr && found.entry->file.required(\"run_started_at\") == started) {\n      tied = true;",
+          "replace": "    if (found.entry != nullptr && false) {\n      tied = true;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.TheLatestRunAnswersAndTiesAreRefused",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-earlier-tie",
+      "kind": "check",
+      "covers": "only a tie at the latest start refuses a report_cell headline",
+      "bug": "Any two runs started together refuse the headline, even when a later run answers it.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      tied = true;\n    } else if",
+          "replace": "      return std::unexpected(\"two runs of report section \" + std::string(name) + \" started at \" + std::string(started));\n    } else if"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.TheLatestRunAnswersAndTiesAreRefused",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-claim",
+      "kind": "check",
+      "covers": "only a result answers a report_cell headline",
+      "bug": "A report file with claim none answers a target.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (table == entry.reports.end() || entry.file.required(\"claim\") != \"result\") {",
+          "replace": "    if (table == entry.reports.end()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.OnlyAResultAnswers",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-targets",
+      "kind": "check",
+      "covers": "a report_cell's section must name its target",
+      "bug": "A report cell answers a target its section's targets do not name.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (std::ranges::find(table.targets, row.id) == table.targets.end()) {",
+          "replace": "  if (table.targets.empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.RefusesACellThatIsMissingNotANumberOrNotForTheTarget",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-cell-detail",
+      "kind": "check",
+      "covers": "a report_cell's detail is <row key>/<column>",
+      "bug": "The spec takes a report cell's detail without a row and a column.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (parts.size() != 2 || parts.front().empty() || parts.back().empty()) {",
+          "replace": "    if (parts.empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=HeadlineSpec.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] HeadlineSpec\\.RefusesAReportCellWithoutRowAndColumn",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-section",
+      "kind": "check",
+      "covers": "RESULTS.md renders report files under ### Reports",
+      "bug": "Report files are put with the benchmarks, so RESULTS.md has no Reports section.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    (e.reports.empty() ? benchmarks : reports).push_back(e.file);",
+          "replace": "    benchmarks.push_back(e.file);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.ResultsMdRendersTheReportUnderItsHost",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-report-notice",
+      "kind": "check",
+      "covers": "a headline row from the chain points to the attribution",
+      "bug": "The headline note does not say that a row derived from the chain keeps its terms.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (any_chain) {",
+          "replace": "  if (any_chain && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=DocsReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] DocsReport\\.ARowFromTheChainPointsToTheAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "run-header-key-order",
+      "kind": "check",
+      "covers": "the run header keys in the committed order, results/run_header.cpp",
+      "bug": "The header writes observed_cpu before pin_method, an order no committed file has.",
+      "edits": [
+        {
+          "file": "src/results/run_header.cpp",
+          "find": "  add(\"pin_method\", start.pin_method);\n  add(\"observed_cpu\",\n      affinity_after.current ? std::to_string(*affinity_after.current) : \"unavailable\");\n",
+          "replace": "  add(\"observed_cpu\",\n      affinity_after.current ? std::to_string(*affinity_after.current) : \"unavailable\");\n  add(\"pin_method\", start.pin_method);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_header_unit"],
+      "command": ["{build}/bin/aadp_run_header_unit", "--gtest_filter=RunHeader.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RunHeader\\.WritesTheKeysInTheCommittedOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "run-header-source-root",
+      "kind": "check",
+      "covers": "the --source-root run flag, results/run_header.cpp",
+      "bug": "--source-root= is taken and its value dropped.",
+      "edits": [
+        {
+          "file": "src/results/run_header.cpp",
+          "find": "  options.source_root = std::string(text);\n",
+          "replace": "  options.source_root = text.empty() ? \".\" : \".\";\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_header_unit"],
+      "command": ["{build}/bin/aadp_run_header_unit", "--gtest_filter=RunFlags.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RunFlags\\.TakesTheRunFlagsAndKeepsTheRestInOrder",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-run-attribution-first",
+      "kind": "check",
+      "covers": "the emitter writes the attribution as the file's first section",
+      "bug": "The attribution section is written after the tables.",
+      "edits": [
+        {
+          "file": "src/results/report_run.cpp",
+          "find": "  ResultsFile file;\n  // The attribution first, before anything the chain shaped.\n  if (attribution) {",
+          "replace": "  ResultsFile file;\n  // The attribution first, before anything the chain shaped.\n  if (attribution && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_header_unit"],
+      "command": ["{build}/bin/aadp_run_header_unit", "--gtest_filter=ReportRun.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportRun\\.PutsTheAttributionFirstAndEndsItInANewline",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-run-self-check",
+      "kind": "check",
+      "covers": "the emitter reads its own file back before writing it",
+      "bug": "finish() does not read its own file back, so a table from the chain without the attribution is written.",
+      "edits": [
+        {
+          "file": "src/results/report_run.cpp",
+          "find": "  if (auto report = read_report(file); !report) {",
+          "replace": "  if (auto report = read_report(file); !report && false) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_header_unit"],
+      "command": ["{build}/bin/aadp_run_header_unit", "--gtest_filter=ReportRun.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] ReportRun\\.RefusesATableFromTheChainWithoutTheAttribution",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-attribution",
+      "kind": "check",
+      "covers": "aadp_svi_fit --report carries the attribution",
+      "bug": "The report mode passes no attribution, so the emitter refuses its own file and no report is written.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "  auto text = session.finish(shape, tables, aadp::attribution_text());",
+          "replace": "  auto text = session.finish(shape, tables, std::nullopt);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.IsOneRawResultsFileOnStdoutWithTheRunHeader",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-uses-chain",
+      "kind": "check",
+      "covers": "aadp_svi_fit --report's tables say they come from the chain",
+      "bug": "The tables are written as not derived from the chain.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "          .uses_chain = true,",
+          "replace": "          .uses_chain = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.CarriesTheWholeAttributionFirstAndEveryTableSaysItUsesTheChain",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-same-doubles",
+      "kind": "check",
+      "covers": "aadp_svi_fit --report writes the text report's doubles",
+      "bug": "The report divides the objective by n, not n - 5, so its Phi / (n - 5) is not the one the text prints.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "                   real_cell(fit.objective / static_cast<double>(fit.quotes - 5))}});",
+          "replace": "                   real_cell(fit.objective / static_cast<double>(fit.quotes))}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.TheErrorTableHoldsTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-timing-section",
+      "kind": "check",
+      "covers": "SVI-7's fit time is the report's one timed section",
+      "bug": "The fit-time table is written as not a timing.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "      Table(\"svi_fit_time\", \"Raw SVI fit time per slice, one thread\", {\"SVI-7\"}, true,",
+          "replace": "      Table(\"svi_fit_time\", \"Raw SVI fit time per slice, one thread\", {\"SVI-7\"}, false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.WritesExactlyTheSviSixNineElevenAndSevenTables",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-derived-only",
+      "kind": "check",
+      "covers": "the report holds derived figures only, no forward or settlement",
+      "bug": "The error table gains the slice's forward, which with the discount and the fit gives back settlements.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "             {.name = \"objective_per_dof\", .kind = CellKind::kReal, .unit = \"none\"}});",
+          "replace": "             {.name = \"objective_per_dof\", .kind = CellKind::kReal, .unit = \"none\"},\n             {.name = \"forward\", .kind = CellKind::kReal, .unit = \"points\"}});"
+        },
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "                   real_cell(fit.objective / static_cast<double>(fit.quotes - 5))}});",
+          "replace": "                   real_cell(fit.objective / static_cast<double>(fit.quotes - 5)),\n                   real_cell(slices[i].parity.forward)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.HoldsDerivedFiguresOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-run-flags-text",
+      "kind": "check",
+      "covers": "the run flags are for the report mode only",
+      "bug": "The text report takes run flags it cannot use.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "  if (parsed.run_flags && !report) return Usage();\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitTool.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitTool\\.RunFlagsAreForTheReportOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "report-selftest-run-flags",
+      "kind": "check",
+      "covers": "scripts/run_bench.sh runs a report emitter with the run flags, tests/bench/run_bench_report_test.sh",
+      "bug": "The report self-test starts its session with default run options, so run_bench.sh's --reportable never reaches the run and a dirty tree is not refused.",
+      "edits": [
+        {
+          "file": "tools/report_selftest/main.cpp",
+          "find": "  auto session = aadp::results::ReportRun::begin(run);",
+          "replace": "  auto session = aadp::results::ReportRun::begin({});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_report_selftest", "aadp_results_stamp"],
+      "command": ["bash", "tests/bench/run_bench_report_test.sh", "{build}/bin/aadp_report_selftest", "{build}/bench-test-scratch/fault-report-script"],
+      "detect": "test",
+      "reason": "^FAILED: a dirty tree refuses a reportable report run$",
+      "timeout_s": 300
+    },
+    {
+      "id": "fuzz-results-file-report-round-trip",
+      "kind": "fuzz",
+      "covers": "fuzz_results_file, the report grammar",
+      "bug": "The writer joins targets with a semicolon, so a section the reader took no longer reads back.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    body += (i == 0 ? \"\" : \",\") + table.targets[i];",
+          "replace": "    body += (i == 0 ? \"\" : \";\") + table.targets[i];"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_results_file"],
+      "command": ["{build}/bin/fuzz_results_file", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-results-file-report-round-trip/", "{build}/fault-fuzz/fuzz-results-file-report-round-trip/corpus", "fuzz/fuzz_results_file_seeds"],
+      "detect": "test",
+      "reason": "deadly signal(?:(?! in aadp::)[\\s\\S])*? in \\(anonymous namespace\\)::check_report_section\\(",
+      "timeout_s": 300,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-results-file-report-round-trip/*", "build/fuzz/fault-fuzz/fuzz-results-file-report-round-trip/corpus/*"]
+    },
+    {
+      "id": "fuzz-results-file-report-attribution",
+      "kind": "fuzz",
+      "covers": "fuzz_results_file, the report grammar",
+      "bug": "The reader takes a section derived from the chain with no attribution in the file.",
+      "edits": [
+        {
+          "file": "src/results/report.cpp",
+          "find": "    if (attribution == nullptr) {\n      return fail(ReportProblem::kNoAttribution,",
+          "replace": "    if (attribution == nullptr) {\n      return tables;\n    }\n    if (false) {\n      return fail(ReportProblem::kNoAttribution,"
+        }
+      ],
+      "preset": "fuzz",
+      "targets": ["fuzz_results_file"],
+      "command": ["{build}/bin/fuzz_results_file", "-seed=1", "-max_total_time=60", "-print_final_stats=1", "-create_missing_dirs=1", "-artifact_prefix={build}/fault-fuzz/fuzz-results-file-report-attribution/", "{build}/fault-fuzz/fuzz-results-file-report-attribution/corpus", "fuzz/fuzz_results_file_seeds"],
+      "detect": "test",
+      "reason": "deadly signal(?:(?! in aadp::)[\\s\\S])*? in \\(anonymous namespace\\)::check_report_file\\(",
+      "timeout_s": 300,
+      "output_files": ["build/fuzz/fault-fuzz/fuzz-results-file-report-attribution/*", "build/fuzz/fault-fuzz/fuzz-results-file-report-attribution/corpus/*"]
     }
   ]
 }

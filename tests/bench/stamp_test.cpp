@@ -2,11 +2,14 @@
 
 #include <gtest/gtest.h>
 
+#include <initializer_list>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "fixtures.hpp"
+#include "results/report.hpp"
 #include "results/results_file.hpp"
 
 namespace aadp::results {
@@ -380,6 +383,161 @@ TEST(Stamp, NotReportableRunWithoutMeasureLinesSaysSo) {
   EXPECT_EQ(file->value("reportable_reason"), "measure.sh not found");
   EXPECT_EQ(file->value("measure_start"), "absent");
   EXPECT_EQ(file->value("measure_end"), "absent");
+}
+
+// --- report files (results/report.hpp): every rule above, and the report rules ---
+
+StampCase report_case(std::string_view body = testing::kReportBody) {
+  StampCase test_case;
+  test_case.raw = testing::text_of(testing::raw_report_file(body));
+  return test_case;
+}
+
+std::string report_with(std::string_view from, std::string_view to) {
+  std::string body(testing::kReportBody);
+  body.replace(body.find(from), from.size(), to);
+  return body;
+}
+
+TEST(StampReport, AGoodReportRunIsStampedReportableWithItsSectionsUnchanged) {
+  StampCase test_case = report_case();
+  const auto out = test_case.run();
+  ASSERT_TRUE(out.has_value()) << out.error().detail;
+  const auto file = parse_results_file(*out);
+  ASSERT_TRUE(file.has_value()) << file.error();
+  EXPECT_EQ(file->value("reportable"), "yes");
+  EXPECT_TRUE(missing_stamped_keys(*file).empty());
+  EXPECT_TRUE(validate_stamped(*file).has_value());
+  ASSERT_EQ(file->sections.size(), 1U);
+  EXPECT_EQ(file->sections.front().body, testing::kReportBody);
+}
+
+TEST(StampReport, AppliesTheRunRulesToAReportToo) {
+  StampCase no_end = report_case();
+  no_end.captured = testing::start_line() + "\n";
+  expect_refused(no_end, StampError::kNoEndLine);
+  StampCase dirty = report_case();
+  ResultsFile raw = testing::raw_report_file();
+  testing::set_field(raw, "tree_state", "dirty");
+  dirty.raw = testing::text_of(raw);
+  expect_refused(dirty, StampError::kDirtyTree);
+  StampCase debug = report_case();
+  testing::set_field(raw, "tree_state", "exported");
+  testing::set_field(raw, "build_type", "Debug");
+  debug.raw = testing::text_of(raw);
+  expect_refused(debug, StampError::kNotRelease);
+  StampCase missing = report_case();
+  raw = testing::raw_report_file();
+  testing::remove_field(raw, "perf_cycles");
+  missing.raw = testing::text_of(raw);
+  expect_refused(missing, StampError::kIncompleteHeader);
+  StampCase home = report_case(report_with("title Fit error per slice", "title Fit error"));
+  home.request.privacy.forbidden.emplace_back("Fit error");
+  expect_refused(home, StampError::kPrivateData);
+}
+
+TEST(StampReport, RefusesAFileThatIsBothKindsOrNeither) {
+  StampCase both;
+  ResultsFile raw = testing::raw_file();
+  raw.sections.push_back({.name = "report_fit_error", .body = std::string(testing::kReportBody)});
+  both.raw = testing::text_of(raw);
+  expect_refused(both, StampError::kFileKind);
+
+  StampCase neither;
+  raw = testing::raw_file();
+  raw.sections.erase(raw.sections.begin());
+  neither.raw = testing::text_of(raw);
+  expect_refused(neither, StampError::kFileKind);
+}
+
+TEST(StampReport, RefusesEachMalformedTable) {
+  for (const auto& [from, to] :
+       std::initializer_list<std::pair<std::string_view, std::string_view>>{
+           {"type table", "type chart"},
+           {"timing no\n", ""},
+           {"column quotes integer count", "column error integer count"},
+           {"column class text none", "column class bad none"},
+           {"row s2W4", "row s1"},
+           {"row s2W4 1.5 51 no-arbitrage", "row s2W4 1.5 51"},
+           {"row s2W4 1.5", "row s2W4 inf"},
+           {"row s2W4 1.5", "row s2W4 nan"},
+           {"row s2W4 1.5", "row s2W4 1e999"},
+           {"row s2W4 1.5", "row s2W4 1.50"},
+           {"no-arbitrage", "no|arbitrage"},
+       }) {
+    StampCase test_case = report_case(report_with(from, to));
+    SCOPED_TRACE(std::string(from) + " -> " + std::string(to));
+    expect_refused(test_case, StampError::kMalformedReport);
+  }
+}
+
+TEST(StampReport, RefusesAnyOtherSectionInAReport) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_report_file();
+  raw.sections.push_back({.name = "histogram_x", .body = "p50 1\n"});
+  test_case.raw = testing::text_of(raw);
+  expect_refused(test_case, StampError::kMalformedReport);
+}
+
+TEST(StampReport, RefusesAnOversizedReport) {
+  StampCase test_case;
+  ResultsFile raw = testing::raw_report_file();
+  raw.sections.push_back(
+      {.name = "attribution", .body = std::string(kMaxReportFileBytes, 'x') + "\n"});
+  test_case.raw = testing::text_of(raw);
+  expect_refused(test_case, StampError::kMalformedReport);
+}
+
+TEST(StampReport, RefusesASectionFromTheChainWithoutTheAttribution) {
+  const std::string chain = report_with("uses_chain no", "uses_chain yes");
+  StampCase bare = report_case(chain);
+  expect_refused(bare, StampError::kNoAttribution);
+
+  StampCase partial;
+  ResultsFile raw = testing::raw_report_file(chain);
+  raw.sections.push_back({.name = "attribution", .body = "Taiwan Futures Exchange (TAIFEX)\n"});
+  partial.raw = testing::text_of(raw);
+  expect_refused(partial, StampError::kNoAttribution);
+
+  StampCase whole;
+  raw.sections.back().body = testing::attribution_body();
+  whole.raw = testing::text_of(raw);
+  const auto out = whole.run();
+  ASSERT_TRUE(out.has_value()) << out.error().detail;
+  EXPECT_TRUE(out->contains(testing::attribution_body()));
+}
+
+TEST(StampReport, AppliesTheReportRulesWhenNotReportableToo) {
+  StampCase test_case = report_case(report_with("type table", "type chart"));
+  test_case.request.reportable = false;
+  test_case.request.not_reportable_reason = "iteration";
+  expect_refused(test_case, StampError::kMalformedReport);
+  StampCase chain = report_case(report_with("uses_chain no", "uses_chain yes"));
+  chain.request.reportable = false;
+  chain.request.not_reportable_reason = "iteration";
+  expect_refused(chain, StampError::kNoAttribution);
+}
+
+TEST(Validate, RefusesAStampedReportEditedOutOfTheGrammar) {
+  for (const bool reportable : {true, false}) {
+    StampCase test_case = report_case();
+    test_case.request.reportable = reportable;
+    test_case.request.not_reportable_reason = reportable ? "" : "test";
+    const auto out = test_case.run();
+    ASSERT_TRUE(out.has_value()) << out.error().detail;
+    auto file = parse_results_file(*out);
+    ASSERT_TRUE(file.has_value());
+    EXPECT_TRUE(validate_stamped(*file).has_value());
+    ResultsFile repeated = *file;
+    repeated.sections.front().body = report_with("row s2W4", "row s1");
+    EXPECT_FALSE(validate_stamped(repeated).has_value());
+    ResultsFile chain = *file;
+    chain.sections.front().body = report_with("uses_chain no", "uses_chain yes");
+    EXPECT_FALSE(validate_stamped(chain).has_value());
+    ResultsFile both = *file;
+    both.sections.push_back({.name = "benchmark_json", .body = "{}\n"});
+    EXPECT_FALSE(validate_stamped(both).has_value());
+  }
 }
 
 TEST(Validate, RefusesAFileEditedIntoReportable) {

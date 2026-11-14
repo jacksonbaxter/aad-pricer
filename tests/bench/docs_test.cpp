@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <initializer_list>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -239,6 +240,198 @@ TEST(Docs, RefusesARunWhoseFileNamesAnotherHost) {
   ASSERT_FALSE(docs.has_value());
   EXPECT_TRUE(has(docs.error(), "references/r.csv names host mac-m4max, not linux-zen1"))
       << docs.error();
+}
+
+// --- report files and the report_cell headline ---
+
+std::string report_text(std::string_view started = "2026-01-02T03:04:06Z",
+                        std::string_view error = "0.25", bool uses_chain = false,
+                        std::string_view claim = "result") {
+  std::string body(testing::kReportBody);
+  body.replace(body.find("row s1 0.25"), 11, "row s1 " + std::string(error));
+  if (uses_chain) {
+    body.replace(body.find("uses_chain no"), 13, "uses_chain yes");
+  }
+  ResultsFile raw = testing::raw_report_file(body);
+  testing::set_field(raw, "claim", claim);
+  testing::set_field(raw, "run_started_at", started);
+  if (uses_chain) {
+    raw.sections.insert(raw.sections.begin(),
+                        {.name = "attribution", .body = testing::attribution_body()});
+  }
+  testing::StampCase test_case;
+  test_case.raw = testing::text_of(raw);
+  const auto stamped = test_case.run();
+  EXPECT_TRUE(stamped.has_value()) << stamped.error().detail;
+  return stamped.value_or("");
+}
+
+constexpr std::string_view kReportRow =
+    "report_cell,SVI-6,linux-zen1,fit_error,s1/error,4,at most 4 bp,at_most,1,bp of F,on s1\n";
+constexpr std::string_view kReportHeading = "\n### SVI-6: fit error at most 4 bp of forward\n";
+
+DocsInputs report_inputs(std::string_view row = kReportRow) {
+  DocsInputs in = inputs();
+  in.spec += row;
+  in.benchmarks += kReportHeading;
+  in.files.push_back({.host_dir = "linux-zen1", .name = "r1.txt", .text = report_text()});
+  return in;
+}
+
+TEST(DocsReport, AReportCellAnswersItsTarget) {
+  const auto docs = render_docs(report_inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline,
+                  "| SVI-6: fit error at most 4 bp of forward | 0.25 bp of F on s1 | "
+                  "[linux-zen1](results/linux-zen1/r1.txt), Linux | met, by 3.75 bp of F |"))
+      << docs->headline;
+  EXPECT_TRUE(has(docs->results_md,
+                  "| `error` of row `s1` in report section `fit_error` of the latest result on "
+                  "the host |"))
+      << docs->results_md;
+  EXPECT_TRUE(has(docs->headline, " Rows were measured at commit `0123456`.")) << docs->headline;
+  EXPECT_FALSE(has(docs->headline, "NOTICE")) << docs->headline;
+}
+
+TEST(DocsReport, ResultsMdRendersTheReportUnderItsHost) {
+  const auto docs = render_docs(report_inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  const std::string& r = docs->results_md;
+  const auto benchmarks = r.find("\n### Benchmarks\n");
+  const auto reports = r.find("\n### Reports\n\n#### Fit error per slice\n");
+  ASSERT_NE(benchmarks, std::string::npos) << r;
+  ASSERT_NE(reports, std::string::npos) << r;
+  EXPECT_LT(benchmarks, reports);
+  EXPECT_TRUE(has(r, "| [r1.txt](results/linux-zen1/r1.txt) | result | `0123456` |")) << r;
+  EXPECT_TRUE(has(r, "| row | error (bp_of_F) | quotes (count) | class |\n")) << r;
+  EXPECT_TRUE(has(r, "commit `0123456789ab`, claim `result`")) << r;
+  // The report file is not a benchmark: the benchmark table has the one row it had.
+  EXPECT_EQ(r.find("| harness_selftest |", r.find("| harness_selftest |") + 1), std::string::npos);
+}
+
+TEST(DocsReport, NothingChangesWithoutAReportFile) {
+  const DocsInputs plain = inputs();
+  const auto before = render_docs(plain);
+  ASSERT_TRUE(before.has_value()) << before.error();
+  EXPECT_FALSE(has(before->results_md, "### Reports"));
+  EXPECT_TRUE(has(before->headline, " Benchmark rows were measured at commit `0123456`."));
+}
+
+TEST(DocsReport, TheLatestRunAnswersAndTiesAreRefused) {
+  DocsInputs in = report_inputs();
+  in.files.push_back({.host_dir = "linux-zen1",
+                      .name = "r0.txt",
+                      .text = report_text("2026-01-02T03:04:05Z", "9")});
+  in.files.push_back({.host_dir = "linux-zen1",
+                      .name = "r2.txt",
+                      .text = report_text("2026-01-02T03:04:08Z", "1.5")});
+  const auto docs = render_docs(in);
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline, "| 1.5 bp of F on s1 | [linux-zen1](results/linux-zen1/r2.txt)"))
+      << docs->headline;
+
+  // A tie between earlier runs, a1 and r0, read before the latest, does not stand in its way.
+  DocsInputs earlier = in;
+  earlier.files.push_back({.host_dir = "linux-zen1",
+                           .name = "a1.txt",
+                           .text = report_text("2026-01-02T03:04:05Z", "7")});
+  const auto past_tie = render_docs(earlier);
+  ASSERT_TRUE(past_tie.has_value()) << past_tie.error();
+  EXPECT_TRUE(
+      has(past_tie->headline, "| 1.5 bp of F on s1 | [linux-zen1](results/linux-zen1/r2.txt)"))
+      << past_tie->headline;
+
+  in.files.push_back({.host_dir = "linux-zen1",
+                      .name = "r3.txt",
+                      .text = report_text("2026-01-02T03:04:08Z", "2")});
+  const auto tie = render_docs(in);
+  ASSERT_FALSE(tie.has_value());
+  EXPECT_TRUE(has(tie.error(), "two runs of report section fit_error started at")) << tie.error();
+}
+
+TEST(DocsReport, OnlyAResultAnswers) {
+  DocsInputs in = report_inputs();
+  in.files.back().text = report_text("2026-01-02T03:04:06Z", "0.25", false, "none");
+  const auto docs = render_docs(in);
+  ASSERT_FALSE(docs.has_value());
+  EXPECT_TRUE(has(docs.error(), "no result on this host has report section fit_error"))
+      << docs.error();
+}
+
+TEST(DocsReport, RefusesACellThatIsMissingNotANumberOrNotForTheTarget) {
+  const std::string head = "report_cell,SVI-6,linux-zen1,fit_error,";
+  const std::string tail = ",4,at most 4 bp,at_most,1,bp of F,\n";
+  for (const auto& [detail, error] :
+       std::initializer_list<std::pair<std::string_view, std::string_view>>{
+           {"s9/error", "has no cell s9/error"},
+           {"s1/width", "has no cell s1/width"},
+           {"s1/class", "is not a number"},
+       }) {
+    std::string row = head;
+    row += detail;
+    row += tail;
+    const auto docs = render_docs(report_inputs(row));
+    ASSERT_FALSE(docs.has_value()) << detail;
+    EXPECT_TRUE(has(docs.error(), error)) << docs.error();
+  }
+  DocsInputs other =
+      report_inputs("report_cell,SVI-7,linux-zen1,fit_error,s1/error,15,15 ms,at_most,1,ms,\n");
+  other.benchmarks += "\n### SVI-7: calibration time: 15 ms per slice\n";
+  const auto docs = render_docs(other);
+  ASSERT_FALSE(docs.has_value());
+  EXPECT_TRUE(has(docs.error(), "report section fit_error's targets do not name SVI-7"))
+      << docs.error();
+  const auto wrong_text = render_docs(report_inputs(
+      "report_cell,SVI-6,linux-zen1,fit_error,s1/error,4,at most 3 bp,at_most,1,bp of F,\n"));
+  ASSERT_FALSE(wrong_text.has_value());
+  EXPECT_TRUE(has(wrong_text.error(), "the heading of SVI-6 does not say at most 3 bp"))
+      << wrong_text.error();
+}
+
+TEST(DocsReport, AnIntegerCellAnswersAndScaleDivides) {
+  const auto docs = render_docs(report_inputs(
+      "report_cell,SVI-6,linux-zen1,fit_error,s2W4/quotes,40,at most 4 bp,at_least,10,,\n"));
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline,
+                  "| 5.1 | [linux-zen1](results/linux-zen1/r1.txt), Linux | "
+                  "missed, by 34.90 |"))
+      << docs->headline;
+  EXPECT_TRUE(has(docs->results_md, ", divided by 10 |")) << docs->results_md;
+}
+
+TEST(DocsReport, ARowFromTheChainPointsToTheAttribution) {
+  DocsInputs in = report_inputs();
+  in.files.back().text = report_text("2026-01-02T03:04:06Z", "0.25", true);
+  const auto docs = render_docs(in);
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline, "the attribution is in [NOTICE](NOTICE)")) << docs->headline;
+  EXPECT_TRUE(has(docs->results_md, "    A synthetic attribution.\n")) << docs->results_md;
+}
+
+TEST(DocsReport, RefusesAReportFileOutOfTheGrammar) {
+  DocsInputs in = report_inputs();
+  std::string& text = in.files.back().text;
+  text.replace(text.find("row s2W4"), 8, "row s1");
+  const auto docs = render_docs(in);
+  ASSERT_FALSE(docs.has_value());
+  EXPECT_TRUE(has(docs.error(), "linux-zen1/r1.txt: ")) << docs.error();
+  EXPECT_TRUE(has(docs.error(), "repeated row key s1")) << docs.error();
+}
+
+TEST(HeadlineSpec, RefusesAReportCellWithoutRowAndColumn) {
+  const std::string header(kHeadlineSpecHeader);
+  for (const std::string_view detail : {"s1", "s1/", "/error", "s1/error/x", ""}) {
+    EXPECT_FALSE(parse_headline_spec(header + "\nreport_cell,SVI-6,linux-zen1,fit_error," +
+                                     std::string(detail) + ",4,4 bp,at_most,1,,\n")
+                     .has_value())
+        << detail;
+  }
+  EXPECT_TRUE(parse_headline_spec(header + "\nreport_cell,SVI-6,linux-zen1,fit_error,s1/error,4,"
+                                           "4 bp,at_most,1,,\n")
+                  .has_value());
+  EXPECT_FALSE(parse_headline_spec(header + "\nreport_cell,SVI-6,linux-zen1,Fit,s1/error,4,"
+                                            "4 bp,at_most,1,,\n")
+                   .has_value());
 }
 
 TEST(HeadlineSpec, RefusesWhatIsNotASpec) {

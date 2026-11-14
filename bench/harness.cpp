@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -21,19 +20,15 @@
 #include <utility>
 #include <vector>
 
-#include "build_info.hpp"
 #include "latency.hpp"
 #include "platform/affinity.hpp"
 #include "platform/cpu_info.hpp"
 #include "platform/fp_state.hpp"
-#include "platform/host_label.hpp"
 #include "platform/memory_info.hpp"
 #include "platform/perf_counters.hpp"
-#include "platform/simd_info.hpp"
 #include "platform/timer.hpp"
-#include "results/measure_line.hpp"
-#include "results/provenance.hpp"
 #include "results/results_file.hpp"
+#include "results/run_header.hpp"
 
 namespace aadp::bench {
 
@@ -45,24 +40,7 @@ namespace {
 using platform::read_ticks;
 
 std::string number(double value, const char* format = "%.3f") {
-  std::array<char, 64> text{};
-  std::snprintf(text.data(), text.size(), format, value);
-  return text.data();
-}
-
-std::string hex(std::uint64_t value) {
-  std::array<char, 32> text{};
-  std::snprintf(text.data(), text.size(), "0x%llx", static_cast<unsigned long long>(value));
-  return text.data();
-}
-
-std::string utc_now() {
-  const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::tm parts{};
-  gmtime_r(&now, &parts);
-  std::array<char, 32> text{};
-  std::strftime(text.data(), text.size(), "%FT%TZ", &parts);
-  return text.data();
+  return results::header_number(value, format);
 }
 
 template <typename T>
@@ -95,116 +73,6 @@ void run_batches(benchmark::State& state, WorkloadRun& run) {
   }
   run.call_counters.push_back(run.counters.stop());
   state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(run.units));
-}
-
-std::vector<results::HeaderField> build_header(
-    const std::string& claim, const HarnessOptions& options, const platform::CpuInfo& cpu,
-    const std::string& host_label, const platform::AffinityState& affinity,
-    const std::string& pin_method, const platform::FpState& fp, const platform::TimerReport& timer,
-    const results::Provenance& provenance, const std::string& started_at) {
-  std::vector<results::HeaderField> header;
-  const auto add = [&header](std::string_view key, std::string value) {
-    header.push_back({.key = std::string(key), .value = std::move(value)});
-  };
-  // "none" unless the benchmark says otherwise (RunExtras). Only a benchmark of the project's
-  // own code may claim "result"; the self-test claims nothing.
-  add("claim", claim);
-  add("host_label", host_label);
-  add("cpu_model", cpu.cpu_model);
-  add("logical_cpus", std::to_string(cpu.logical_cpus));
-  add("arch", cpu.arch);
-  add("kernel", cpu.kernel);
-  add("os", cpu.os);
-  add("compiler_id", std::string(build_info::compiler_id));
-  add("compiler_version", std::string(build_info::compiler_version));
-  add("cxx_standard", std::to_string(build_info::cxx_standard));
-  add("cxx_flags", std::string(build_info::cxx_flags));
-  add("build_type", std::string(build_info::build_type));
-  add("simd_cmake_target", std::string(build_info::simd_target));
-  add("simd_target", platform::simd_target_name());
-  add("simd_double_lanes", std::to_string(platform::simd_double_lanes()));
-  add("pinning_state", std::string(platform::pinning_state_text(affinity)));
-  add("pinned_cpus", affinity.pinned ? platform::format_cpu_list(affinity.cpus) : "none");
-  add(results::kMeantIdleCpusKey, options.meant_idle_cpus.empty()
-                                      ? "none"
-                                      : platform::format_cpu_list(options.meant_idle_cpus) +
-                                            std::string(results::kNotEnforced));
-  add("pin_method", pin_method);
-  add("observed_cpu", affinity.current ? std::to_string(*affinity.current) : "unavailable");
-  add("qos_class", affinity.qos_class);
-  add("process_nice", std::to_string(platform::process_nice()));
-  add("fp_register", std::string(fp.register_name));
-  add("fp_state", hex(fp.raw));
-  add("fp_ftz", fp.ftz ? "set" : "clear");
-  add("fp_daz", fp.daz ? "set" : "clear");
-  add("timer_source", timer.tick_source);
-  add("timer_calibrated_hz", number(timer.ticks_per_second, "%.1f"));
-  add("timer_calibration_spread", number(timer.calibration_spread, "%.6f"));
-  add("timer_granularity_ticks", std::to_string(timer.tick_reads.granularity));
-  add("timer_min_delta_ticks", std::to_string(timer.tick_reads.min_nonzero_delta));
-  add("timer_resolution_ns", number(timer.tick_resolution_ns));
-  add("timer_read_cost_ns", number(timer.tick_read_cost_ns));
-  add("timer_note", timer.tick_note);
-  add("clock_source", timer.clock_source);
-  add("clock_getres_ns", number(timer.clock_getres_ns, "%.1f"));
-  add("clock_resolution_ns", number(timer.clock_resolution_ns, "%.1f"));
-  add("repetitions", std::to_string(options.repetitions));
-  add("batches_per_repetition", std::to_string(options.batches));
-  add("warmup", "harness " + std::to_string(options.warmup_ms) +
-                    " ms, then Google Benchmark min_warmup_time " +
-                    number(options.gb_warmup_s, "%g") + " s; samples from both discarded");
-  add("commit", provenance.commit);
-  add("commit_source", provenance.source);
-  add("tree_state", provenance.tree_state);
-  add("run_started_at", started_at);
-  return header;
-}
-
-void add_late_fields(std::vector<results::HeaderField>& header, const platform::FrequencyInfo& freq,
-                     const platform::PerfCounterReport& perf, std::uint64_t peak_rss) {
-  const auto add = [&header](std::string_view key, std::string value) {
-    header.push_back({.key = std::string(key), .value = std::move(value)});
-  };
-  add("smt_siblings", freq.smt_siblings);
-  add("governor", freq.governor);
-  add("cpufreq_driver", freq.driver);
-  add("frequency_khz", freq.frequency_khz);
-  add("max_frequency_khz", freq.max_frequency_khz);
-  add("turbo", freq.turbo);
-  add("perf_counters_source", perf.source);
-  add("perf_counters_scope", perf.scope);
-  add("perf_cycles", perf.cycles ? std::to_string(*perf.cycles) : "missing");
-  add("perf_instructions", perf.instructions ? std::to_string(*perf.instructions) : "missing");
-  add("perf_counters_note", platform::describe_counters(perf));
-  add("peak_rss_bytes", std::to_string(peak_rss));
-}
-
-}  // namespace
-
-namespace {
-
-bool apply_pin_cpu(std::string_view text, HarnessOptions& options) {
-  int cpu = 0;
-  if (!parse_integer(text, cpu) || cpu < 0) {
-    return false;
-  }
-  options.pin_cpu = cpu;
-  return true;
-}
-
-// Recorded, not enforced: nothing stops another process from running there.
-bool apply_meant_idle_cpus(std::string_view text, HarnessOptions& options) {
-  auto cpus = results::expand_cpu_list(text);
-  if (!cpus) {
-    return false;
-  }
-  options.meant_idle_cpus = std::move(*cpus);
-  return true;
-}
-
-bool apply_source_root(std::string_view text, HarnessOptions& options) {
-  options.source_root = std::string(text);
-  return true;
 }
 
 bool apply_batches(std::string_view text, HarnessOptions& options) {
@@ -241,9 +109,6 @@ struct ValueOption {
 };
 
 constexpr auto kValueOptions = std::to_array<ValueOption>({
-    {.flag = "--pin-cpu=", .apply = apply_pin_cpu},
-    {.flag = "--meant-idle-cpus=", .apply = apply_meant_idle_cpus},
-    {.flag = "--source-root=", .apply = apply_source_root},
     {.flag = "--batches=", .apply = apply_batches},
     {.flag = "--repetitions=", .apply = apply_repetitions},
     {.flag = "--warmup-ms=", .apply = apply_warmup_ms},
@@ -260,8 +125,11 @@ std::expected<HarnessOptions, std::string> parse_harness_options(int argc, char*
   }
   for (int i = 1; i < argc; ++i) {
     const std::string_view arg = argv[i];
-    if (arg == "--reportable") {
-      options.reportable = true;
+    auto run_flag = results::apply_run_flag(arg, options);
+    if (!run_flag) {
+      return std::unexpected(run_flag.error());
+    }
+    if (*run_flag) {
       continue;
     }
     const auto* option = std::ranges::find_if(kValueOptions, [arg](const ValueOption& candidate) {
@@ -380,42 +248,13 @@ int harness_main(int argc, char* const* argv, std::vector<Workload> workloads,
   }
   HarnessOptions options = std::move(*parsed);
 
-  const auto fp_before = platform::check_fp_state();
-  if (!fp_before) {
-    std::cerr << "harness: refusing to run: " << fp_before.error() << "\n";
-    return kExitFpState;
+  auto started = results::start_run(options);
+  if (!started) {
+    std::cerr << "harness: " << started.error().message << "\n";
+    return started.error().exit_code;
   }
-
-  std::string pin_method = "none";
-  if (options.pin_cpu) {
-    auto pinned = platform::pin_to_cpu(*options.pin_cpu);
-    if (!pinned) {
-      std::cerr << "harness: " << pinned.error() << "\n";
-      return kExitPinFailed;
-    }
-    pin_method = "--pin-cpu, sched_setaffinity, read back";
-  }
-
-  const results::Provenance provenance = results::read_provenance(options.source_root);
-  if (options.reportable && provenance.tree_state != "clean" &&
-      provenance.tree_state != "exported") {
-    std::cerr << "harness: reportable run refused: tree is " << provenance.tree_state << "\n";
-    return kExitDirtyTree;
-  }
-
-  platform::AffinityState affinity = platform::read_affinity();
-  if (affinity.pinned && !options.pin_cpu) {
-    pin_method = "inherited mask, read back";
-  }
-
-  const std::string started_at = utc_now();
-  const platform::CpuInfo cpu = platform::read_cpu_info();
-  const std::string host_label(platform::classify_host(cpu.os_name, cpu.cpu_model));
-  const platform::TimerReport timer = platform::calibrate_timer();
-  if (const std::string problem = platform::timer_problem(timer); !problem.empty()) {
-    std::cerr << "harness: timer unusable: " << problem << "\n";
-    return kExitFailure;
-  }
+  const results::RunStart& start = *started;
+  const platform::TimerReport& timer = start.timer;
   const double seconds_per_tick = 1.0 / timer.ticks_per_second;
   const double gate_ns = min_batch_span_ns(timer.tick_resolution_ns);
   const double target_ns = target_batch_span_ns(timer.tick_resolution_ns);
@@ -486,13 +325,19 @@ int harness_main(int argc, char* const* argv, std::vector<Workload> workloads,
   }
 
   // Read last: the governor, frequency and CPU are the ones the run actually finished under.
-  affinity = platform::read_affinity();
+  const platform::AffinityState affinity = platform::read_affinity();
   const int report_cpu = affinity.current.value_or(0);
-  file.header = build_header(extras.claim, options, cpu, host_label, affinity, pin_method,
-                             *fp_after, timer, provenance, started_at);
+  const results::RunShape shape{.claim = extras.claim,
+                                .repetitions = options.repetitions,
+                                .batches_per_repetition = options.batches,
+                                .warmup = "harness " + std::to_string(options.warmup_ms) +
+                                          " ms, then Google Benchmark min_warmup_time " +
+                                          number(options.gb_warmup_s, "%g") +
+                                          " s; samples from both discarded"};
+  file.header = results::run_header_fields(start, shape, *fp_after, affinity);
   file.header.insert(file.header.end(), extras.header.begin(), extras.header.end());
-  add_late_fields(file.header, platform::read_frequency_info(report_cpu), perf,
-                  platform::peak_rss_bytes());
+  results::add_run_late_fields(file.header, platform::read_frequency_info(report_cpu), perf,
+                               platform::peak_rss_bytes());
   file.sections.insert(file.sections.end(), extras.sections.begin(), extras.sections.end());
 
   auto text = results::write_results_file(file);

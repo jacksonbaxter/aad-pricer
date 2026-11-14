@@ -4,7 +4,8 @@
 //   results/headline.csv   which result answers which target, the target's threshold, and the
 //                          oracle runs RESULTS.md shows side by side
 //   BENCHMARKS.md          each target's heading, quoted as the target's name
-//   results/<host>/*.txt   the stamped results files and fault-injection reports
+//   results/<host>/*.txt   the stamped results files, benchmark or report, and fault-injection
+//                          reports
 //   references/measured_results*.csv   the measured oracle runs the spec names
 //
 // The headline sits in README.md between kHeadlineBegin and kHeadlineEnd. `aadp_results_table
@@ -37,6 +38,9 @@ inline constexpr std::string_view kFaultReportMagic = "aadp-fault-injection 1";
 //   paths_per_second  detail "<variant>" of workload `source`: paths over mean time
 //   largest           the largest value of section key `source` in any AAD section of the host
 //   oracle_run        the run in `source`, which must be a measured_run: rows that pass
+//   report_cell       detail "<row key>/<column>" of report section `source` (results/report.hpp,
+//                     the name after report_), a number column, in the latest result on the host
+//                     by run_started_at; the section's targets must name the id
 // Every kind but measured_run is a headline row, in file order. `better` is below, at_most or
 // at_least; the target and the measured value are compared after dividing the value by `scale`.
 struct HeadlineRow {

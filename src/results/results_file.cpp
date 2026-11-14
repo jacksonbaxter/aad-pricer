@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "results/measure_line.hpp"
+#include "results/report.hpp"
 
 namespace aadp::results {
 namespace {
@@ -276,8 +277,15 @@ std::expected<void, std::string> validate_stamped(const ResultsFile& file) {
   if (reportable != "yes" && reportable != "no") {
     return std::unexpected("reportable must be yes or no");
   }
-  if (file.section(kBenchmarkSection) == nullptr) {
-    return std::unexpected("no benchmark section");
+  // A benchmark file or a report file, each by its own rules, and every rule below for both.
+  const auto kind = file_kind(file);
+  if (!kind) {
+    return std::unexpected(kind.error().detail);
+  }
+  if (*kind == FileKind::kReport) {
+    if (auto report = read_report(file); !report) {
+      return std::unexpected(report.error().detail);
+    }
   }
   if (reportable == "no") {
     return {};

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "results/aad_table.hpp"
+#include "results/report.hpp"
 #include "results/results_file.hpp"
 #include "results/table.hpp"
 
@@ -35,6 +36,7 @@ constexpr double kGroupFrom = 1000.0;
 constexpr double kGroupBelow = 1e15;
 constexpr std::string_view kMeasuredRunKind = "measured_run";
 constexpr std::string_view kOracleRunKind = "oracle_run";
+constexpr std::string_view kReportCellKind = "report_cell";
 
 std::vector<std::string_view> split(std::string_view text, char separator) {
   std::vector<std::string_view> out;
@@ -142,6 +144,12 @@ std::expected<void, std::string> check_headline_kind(const HeadlineRow& row,
   if (row.kind == "paths_per_second" && !is_plain_name(row.detail)) {
     return std::unexpected("paths_per_second's detail is one variant");
   }
+  if (row.kind == kReportCellKind) {
+    const std::vector<std::string_view> parts = split(row.detail, '/');
+    if (parts.size() != 2 || parts.front().empty() || parts.back().empty()) {
+      return std::unexpected("a report cell's detail is <row key>/<column>");
+    }
+  }
   if (row.kind != kOracleRunKind && !is_plain_name(row.source)) {
     return std::unexpected("the source must be a workload or a section key");
   }
@@ -171,8 +179,8 @@ std::expected<HeadlineRow, std::string> parse_spec_row(std::string_view line) {
                   .better = std::string(f[7]),
                   .unit = std::string(f[9]),
                   .label = std::string(f[10])};
-  constexpr std::array<std::string_view, 5> kKinds = {
-      kMeasuredRunKind, "multiple", "paths_per_second", "largest", kOracleRunKind};
+  constexpr std::array<std::string_view, 6> kKinds = {
+      kMeasuredRunKind, "multiple", "paths_per_second", "largest", kOracleRunKind, kReportCellKind};
   if (std::ranges::find(kKinds, row.kind) == kKinds.end()) {
     return std::unexpected("unknown kind " + row.kind);
   }
@@ -428,6 +436,7 @@ struct ResultsEntry {
   std::string name;
   ResultsFile file;
   std::vector<AadWorkload> workloads;
+  std::vector<ReportTable> reports;  // A report file's tables; empty for a benchmark file
 };
 
 struct FaultEntry {
@@ -470,8 +479,18 @@ std::expected<void, std::string> add_file(const DocsFile& in, Hosts& hosts) {
   if (!workloads) {
     return std::unexpected(where + ": " + workloads.error());
   }
-  host.results.push_back(
-      {.name = in.name, .file = std::move(*file), .workloads = std::move(*workloads)});
+  std::vector<ReportTable> reports;
+  if (file_kind(*file) == FileKind::kReport) {
+    auto tables = read_report(*file);
+    if (!tables) {
+      return std::unexpected(where + ": " + tables.error().detail);
+    }
+    reports = std::move(*tables);
+  }
+  host.results.push_back({.name = in.name,
+                          .file = std::move(*file),
+                          .workloads = std::move(*workloads),
+                          .reports = std::move(reports)});
   return {};
 }
 
@@ -492,7 +511,9 @@ struct Evaluated {
   std::string host;  // a link to the source, the label and the OS
   std::string verdict;
   std::string how;
-  std::string commit;  // a results file's, or empty
+  std::string commit;        // a results file's, or empty
+  bool from_report = false;  // a report_cell row
+  bool uses_chain = false;   // a report_cell row whose section is derived from the option chain
 };
 
 std::string link(std::string_view path) {
@@ -656,6 +677,77 @@ std::expected<Evaluated, std::string> evaluate_largest(const HeadlineRow& row,
   return out;
 }
 
+struct FoundCell {
+  const ResultsEntry* entry = nullptr;
+  const ReportTable* table = nullptr;
+};
+
+// The latest run on the host, by run_started_at, of a result that has report section `name`.
+// Two at that latest time is refused, as for a workload; a tie between earlier runs is not.
+std::expected<FoundCell, std::string> find_report(const HostFiles& host, std::string_view name) {
+  FoundCell found;
+  bool tied = false;
+  for (const ResultsEntry& entry : host.results) {
+    const auto table = std::ranges::find(entry.reports, name, &ReportTable::name);
+    if (table == entry.reports.end() || entry.file.required("claim") != "result") {
+      continue;
+    }
+    const std::string_view started = entry.file.required("run_started_at");
+    if (found.entry != nullptr && found.entry->file.required("run_started_at") == started) {
+      tied = true;
+    } else if (found.entry == nullptr || found.entry->file.required("run_started_at") < started) {
+      found = {.entry = &entry, .table = &*table};
+      tied = false;
+    }
+  }
+  if (found.entry == nullptr) {
+    return std::unexpected("no result on this host has report section " + std::string(name));
+  }
+  if (tied) {
+    return std::unexpected("two runs of report section " + std::string(name) + " started at " +
+                           std::string(found.entry->file.required("run_started_at")));
+  }
+  return found;
+}
+
+// One number cell of one report section: detail is "<row key>/<column>".
+std::expected<Evaluated, std::string> evaluate_report_cell(const HeadlineRow& row,
+                                                           const HostFiles& host,
+                                                           const Hosts& hosts) {
+  auto found = find_report(host, row.source);
+  if (!found) {
+    return std::unexpected(found.error());
+  }
+  const ReportTable& table = *found->table;
+  if (std::ranges::find(table.targets, row.id) == table.targets.end()) {
+    return std::unexpected("report section " + row.source + "'s targets do not name " + row.id);
+  }
+  const std::vector<std::string_view> parts = split(row.detail, '/');
+  const ReportRow* entry = table.row(parts.front());
+  const auto column = table.column(parts.back());
+  if (entry == nullptr || !column) {
+    return std::unexpected("report section " + row.source + " has no cell " + row.detail);
+  }
+  const auto number = read_number_cell(table.columns[*column], entry->cells[*column]);
+  if (!number) {
+    return std::unexpected("report cell " + row.detail + " of " + row.source + " is not a number");
+  }
+  const double value = *number / row.scale;
+  const std::string path = "results/" + row.host + "/" + found->entry->name;
+  Evaluated out;
+  out.measured = measured_text(row, value);
+  out.host = host_cell(row.host, path, hosts);
+  out.verdict = verdict(row, value);
+  out.how = "`" + std::string(parts.back()) + "` of row `" + std::string(parts.front()) +
+            "` in report section `" + row.source + "`" + (table.timing ? ", a timing," : "") +
+            " of the latest result on the host" +
+            (row.scale == 1.0 ? std::string() : ", divided by " + format("%g", row.scale));
+  out.commit = short_commit(found->entry->file.required("commit"));
+  out.from_report = true;
+  out.uses_chain = table.uses_chain;
+  return out;
+}
+
 using Runs = std::map<std::string, MeasuredRun, std::less<>>;
 
 Evaluated evaluate_oracle_run(const HeadlineRow& row, const MeasuredRun& run, const Hosts& hosts) {
@@ -693,8 +785,14 @@ std::expected<Evaluated, std::string> evaluate(const HeadlineRow& row, const Hos
   if (host == hosts.end()) {
     return std::unexpected("no results files for host " + row.host);
   }
-  auto out = row.kind == "largest" ? evaluate_largest(row, host->second, hosts)
-                                   : evaluate_workload(row, host->second, hosts);
+  std::expected<Evaluated, std::string> out;
+  if (row.kind == "largest") {
+    out = evaluate_largest(row, host->second, hosts);
+  } else if (row.kind == kReportCellKind) {
+    out = evaluate_report_cell(row, host->second, hosts);
+  } else {
+    out = evaluate_workload(row, host->second, hosts);
+  }
   if (out) {
     out->target = *heading;
   }
@@ -707,11 +805,15 @@ std::string hosts_note(const std::vector<HeadlineRow>& rows, const std::vector<E
                        const Hosts& hosts) {
   std::set<std::string, std::less<>> labels;
   std::set<std::string, std::less<>> commits;
+  bool any_report = false;
+  bool any_chain = false;
   for (std::size_t i = 0; i < rows.size(); ++i) {
     labels.insert(rows[i].host);
     if (!cells[i].commit.empty()) {
       commits.insert(cells[i].commit);
     }
+    any_report = any_report || cells[i].from_report;
+    any_chain = any_chain || cells[i].uses_chain;
   }
   std::string out = "Hosts:";
   std::string separator = " ";
@@ -729,11 +831,17 @@ std::string hosts_note(const std::vector<HeadlineRow>& rows, const std::vector<E
   out +=
       ". Each row's host cell links its source file. A results file's header records the "
       "pinning, compiler and flags.";
+  if (any_chain) {
+    out +=
+        " A row from a report section derived from the option chain keeps the chain's terms; "
+        "the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md.";
+  }
   if (commits.empty()) {
     return out + "\n";
   }
-  out += commits.size() == 1 ? " Benchmark rows were measured at commit"
-                             : " Benchmark rows were measured at commits";
+  const std::string_view rows_word = any_report ? " Rows" : " Benchmark rows";
+  out += std::string(rows_word) +
+         (commits.size() == 1 ? " were measured at commit" : " were measured at commits");
   separator = " ";
   for (const std::string& commit : commits) {
     out += separator;
@@ -850,16 +958,27 @@ std::expected<std::string, std::string> host_section(std::string_view label,
   if (host.results.empty()) {
     return out;
   }
-  std::vector<ResultsFile> files;
-  files.reserve(host.results.size());
+  std::vector<ResultsFile> benchmarks;
+  std::vector<ResultsFile> reports;
   for (const ResultsEntry& e : host.results) {
-    files.push_back(e.file);
+    (e.reports.empty() ? benchmarks : reports).push_back(e.file);
   }
-  auto table = render_host_table(files, {.iteration = false, .host_heading = false});
-  if (!table) {
-    return std::unexpected(std::string(label) + ": " + table.error());
+  const TableOptions options{.iteration = false, .host_heading = false};
+  if (!benchmarks.empty()) {
+    auto table = render_host_table(benchmarks, options);
+    if (!table) {
+      return std::unexpected(std::string(label) + ": " + table.error());
+    }
+    out += "\n### Benchmarks\n\n" + *table;
   }
-  return out + "\n### Benchmarks\n\n" + *table;
+  if (!reports.empty()) {
+    auto tables = render_report_tables(reports, options);
+    if (!tables) {
+      return std::unexpected(std::string(label) + ": " + tables.error());
+    }
+    out += "\n### Reports\n\n" + *tables;
+  }
+  return out;
 }
 
 constexpr std::string_view kResultsIntro =

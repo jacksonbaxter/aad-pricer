@@ -37,6 +37,9 @@ enum class StampError : std::uint8_t {
   kStaleCapture,   // The binary did not run between the two lines
   kNoReason,       // Not reportable, and not saying why
   kPrivateData,
+  kFileKind,         // Both a benchmark and a report file, or neither (results/report.hpp)
+  kMalformedReport,  // A report file that breaks a rule of results/report.hpp
+  kNoAttribution,    // A report section derived from the chain, without the attribution
 };
 
 struct StampRefusal {

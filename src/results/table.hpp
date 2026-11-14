@@ -24,9 +24,17 @@ struct TableOptions {
 };
 
 // One table. Refuses files from more than one host, and any file that is not reportable unless
-// options.iteration. Files with AAD sections get the AAD tables after it (results/aad_table.hpp).
+// options.iteration. Files with AAD sections get the AAD tables after it (results/aad_table.hpp),
+// and report files their tables after those (render_report_tables), with no benchmark table if
+// every file is a report file.
 std::expected<std::string, std::string> render_host_table(std::span<const ResultsFile> files,
                                                           const TableOptions& options = {});
+
+// The report sections of report files (results/report.hpp), each a table under `#### <title>`
+// with its commit, claim, targets and units, then the option chain's attribution, once for each
+// text the files carry, if a section is derived from the chain. Admits files as above.
+std::expected<std::string, std::string> render_report_tables(std::span<const ResultsFile> files,
+                                                             const TableOptions& options = {});
 
 // One table per host, in host-label order.
 std::expected<std::string, std::string> render_tables(std::span<const ResultsFile> files,

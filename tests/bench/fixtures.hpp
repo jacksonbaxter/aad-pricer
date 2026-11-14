@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 
+#include "results/report.hpp"
 #include "results/results_file.hpp"
 #include "results/stamp.hpp"
 
@@ -80,6 +81,37 @@ inline results::ResultsFile raw_file() {
   file.sections.push_back(
       {.name = "histogram_harness_selftest",
        .body = "unit ns\nbatches 60000\ngate_ns 200.0\np50 4100\np99 4300\nmax 90000\n"});
+  return file;
+}
+
+// A report section in the grammar of results/report.hpp, hand-written.
+inline constexpr std::string_view kReportBody =
+    "type table\n"
+    "title Fit error per slice\n"
+    "targets SVI-6,SVI-11\n"
+    "timing no\n"
+    "uses_chain no\n"
+    "column error real bp_of_F\n"
+    "column quotes integer count\n"
+    "column class text none\n"
+    "row s1 0.25 40 type-1\n"
+    "row s2W4 1.5 51 no-arbitrage\n";
+
+// Every line results/report.hpp requires of the attribution, in a made-up text around them.
+inline std::string attribution_body() {
+  std::string body = "A synthetic attribution.\n";
+  for (const std::string_view fragment : results::kAttributionFragments) {
+    body += "(" + std::string(fragment) + ")\n";
+  }
+  return body;
+}
+
+// raw_file() as a report emitter writes it: the same header, report sections in place of the
+// benchmark run.
+inline results::ResultsFile raw_report_file(std::string_view body = kReportBody) {
+  results::ResultsFile file = raw_file();
+  file.sections.clear();
+  file.sections.push_back({.name = "report_fit_error", .body = std::string(body)});
   return file;
 }
 

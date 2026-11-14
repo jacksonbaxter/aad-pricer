@@ -74,11 +74,23 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
       SOURCES tests/svi/svi_fit_tool_test.cpp
       LINK aadp_svi_chain
       LABELS svi)
+    # --report writes a report file through the bench area's run header, when that area is on.
+    if(TARGET aadp_run_header)
+      target_link_libraries(aadp_svi_fit PRIVATE aadp_run_header)
+      set(_aadp_svi_fit_report 1)
+    else()
+      set(_aadp_svi_fit_report 0)
+    endif()
+    target_compile_definitions(aadp_svi_fit PRIVATE AADP_SVI_FIT_REPORT=${_aadp_svi_fit_report})
     if(AADP_BUILD_TESTS AND TARGET aadp_svi_fit_tool_test)
       add_dependencies(aadp_svi_fit_tool_test aadp_svi_fit)
       target_compile_definitions(aadp_svi_fit_tool_test PRIVATE
         AADP_SVI_FIT_PATH="$<TARGET_FILE:aadp_svi_fit>"
-        AADP_SVI_FIT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/svi_fit")
+        AADP_SVI_FIT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/svi_fit"
+        AADP_SVI_FIT_REPORT=${_aadp_svi_fit_report})
+      if(TARGET aadp_results)
+        target_link_libraries(aadp_svi_fit_tool_test PRIVATE aadp_results)
+      endif()
     endif()
   endif()
 

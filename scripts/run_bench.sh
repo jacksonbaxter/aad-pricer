@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Runs one benchmark binary through measure.sh and stamps the output into a results file.
+# Runs one benchmark binary or report emitter through measure.sh and stamps the output into a
+# results file.
 #
 #   scripts/run_bench.sh <binary> <name> [args...]
+#
+# A report emitter, such as aadp_svi_fit --report, writes a report file (src/results/report.hpp)
+# with the same run header as a benchmark binary and takes the same run flags, read by the same
+# code (src/results/run_header.hpp), so it runs here unchanged and the stamp applies the same rules.
 #
 # measure.sh is looked for in this order: $AADP_MEASURE, ../.orchestrator/measure.sh next to
 # the repo, $HOME/quant-projects/bin/measure.sh. Without it the run is marked not reportable.
@@ -110,7 +115,8 @@ if [[ -n $measure ]]; then
 fi
 
 # Run from the source root, so --source-root needs no path. Google Benchmark still sees the
-# binary's full path in argv[0]; the stamp drops that.
+# binary's full path in argv[0]; the stamp drops that. Every writer of a results file takes these
+# run flags (src/results/run_header.hpp).
 harness_args=(--source-root=.)
 if [[ -n $pin ]]; then
   harness_args+=("--meant-idle-cpus=$idle_cpu")

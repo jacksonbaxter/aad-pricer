@@ -13,6 +13,7 @@
 #include "results/aad_table.hpp"
 #include "results/json_lite.hpp"
 #include "results/measure_line.hpp"
+#include "results/report.hpp"
 #include "results/results_file.hpp"
 
 namespace aadp::results {
@@ -52,6 +53,60 @@ std::expected<void, std::string> admit_file(const ResultsFile& file, std::string
     return std::unexpected("not reportable: " + std::string(file.required("reportable_reason")));
   }
   return {};
+}
+
+std::string list_text(const std::vector<std::string>& items, std::string_view none) {
+  if (items.empty()) {
+    return std::string(none);
+  }
+  std::string out;
+  for (const std::string& item : items) {
+    out += (out.empty() ? "" : ", ") + item;
+  }
+  return out;
+}
+
+// One report section as a table: its title, where it comes from, then a column per report column,
+// the unit in the header. Every cell is in a character set without `|`, so cell() is a guard only.
+std::string report_table(const ResultsFile& file, const ReportTable& table) {
+  std::string out = "#### " + cell(table.title) + "\n\n";
+  out += "`" + std::string(kReportPrefix) + table.name + "`, commit `" +
+         cell(file.required("commit").substr(0, kShortCommit)) + "`, claim `" +
+         cell(file.required("claim")) + "`, started " + cell(file.required("run_started_at")) +
+         ". Targets: " + list_text(table.targets, "none") +
+         ". Timings: " + (table.timing ? "yes" : "no") +
+         ". Derived from the option chain: " + (table.uses_chain ? "yes" : "no") + ".\n\n| row";
+  std::string rule = "|---";
+  for (const ReportColumn& column : table.columns) {
+    out +=
+        " | " + cell(column.name) + (column.unit == "none" ? "" : " (" + cell(column.unit) + ")");
+    rule += "|---";
+  }
+  out += " |\n" + rule + "|\n";
+  for (const ReportRow& row : table.rows) {
+    out += "| " + cell(row.key);
+    for (const std::string& value : row.cells) {
+      out += " | " + cell(value);
+    }
+    out += " |\n";
+  }
+  return out;
+}
+
+// The attribution as the file carries it, in an indented code block so that it reaches the
+// reader byte for byte.
+std::string attribution_block(std::string_view text) {
+  std::string out =
+      "The tables derived from the option chain keep its terms. The attribution their file "
+      "carries, as in `NOTICE`:\n\n";
+  std::string_view rest = text;
+  while (!rest.empty()) {
+    const std::size_t end = rest.find('\n');
+    const std::string_view line = rest.substr(0, end);
+    out += line.empty() ? "\n" : "    " + std::string(line) + "\n";
+    rest = end == std::string_view::npos ? std::string_view{} : rest.substr(end + 1);
+  }
+  return out;
 }
 
 // One table row per histogram in an admitted file.
@@ -127,6 +182,38 @@ std::optional<std::string> benchmark_mean_time(const JsonValue& root, std::strin
   return single;
 }
 
+std::expected<std::string, std::string> render_report_tables(std::span<const ResultsFile> files,
+                                                             const TableOptions& options) {
+  if (files.empty()) {
+    return std::unexpected("no results files");
+  }
+  std::string host;
+  std::string out;
+  std::vector<std::string> attributions;
+  for (const ResultsFile& file : files) {
+    if (auto admitted = admit_file(file, host, options); !admitted) {
+      return std::unexpected(admitted.error());
+    }
+    auto tables = read_report(file);
+    if (!tables) {
+      return std::unexpected(tables.error().detail);
+    }
+    for (const ReportTable& table : *tables) {
+      out += (out.empty() ? "" : "\n") + report_table(file, table);
+    }
+    const ResultsSection* attribution = file.section(kAttributionSection);
+    const bool uses_chain = std::ranges::any_of(*tables, &ReportTable::uses_chain);
+    if (uses_chain && attribution != nullptr &&
+        std::ranges::find(attributions, attribution->body) == attributions.end()) {
+      attributions.push_back(attribution->body);
+    }
+  }
+  for (const std::string& text : attributions) {
+    out += "\n" + attribution_block(text);
+  }
+  return out;
+}
+
 std::expected<std::string, std::string> render_host_table(std::span<const ResultsFile> files,
                                                           const TableOptions& options) {
   if (files.empty()) {
@@ -136,6 +223,8 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
   bool any_without_claim = false;
   std::string not_reportable;
   std::string rows;
+  std::vector<ResultsFile> benchmarks;
+  std::vector<ResultsFile> reports;
   for (const ResultsFile& file : files) {
     if (auto admitted = admit_file(file, host, options); !admitted) {
       return std::unexpected(admitted.error());
@@ -145,6 +234,12 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
       not_reportable += not_reportable.empty() ? "" : "; ";
       not_reportable += file.required("reportable_reason");
     }
+    // admit_file has validated the file, so it is one kind or the other.
+    if (file_kind(file) == FileKind::kReport) {
+      reports.push_back(file);
+      continue;
+    }
+    benchmarks.push_back(file);
     auto file_text = file_rows(file, options);
     if (!file_text) {
       return std::unexpected(file_text.error());
@@ -160,16 +255,26 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
   if (any_without_claim) {
     out += "Rows with claim `none` are harness self-tests, not performance results.\n\n";
   }
-  out +=
-      "| benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | "
-      "load1 start | load1 end | commit | claim |\n"
-      "|---|---|---|---|---|---|---|---|---|---|---|\n";
-  out += rows;
-  auto aad = render_aad_tables(files);
-  if (!aad) {
-    return std::unexpected(aad.error());
+  if (!benchmarks.empty()) {
+    out +=
+        "| benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | "
+        "load1 start | load1 end | commit | claim |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|\n";
+    out += rows;
+    auto aad = render_aad_tables(benchmarks);
+    if (!aad) {
+      return std::unexpected(aad.error());
+    }
+    out += *aad;
   }
-  return out + *aad;
+  if (!reports.empty()) {
+    auto tables = render_report_tables(reports, options);
+    if (!tables) {
+      return std::unexpected(tables.error());
+    }
+    out += (benchmarks.empty() ? "" : "\n") + *tables;
+  }
+  return out;
 }
 
 std::expected<std::string, std::string> render_tables(std::span<const ResultsFile> files,

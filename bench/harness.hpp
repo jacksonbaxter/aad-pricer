@@ -26,17 +26,19 @@
 
 #include "latency.hpp"
 #include "results/results_file.hpp"
+#include "results/run_header.hpp"
 
 namespace aadp::bench {
 
-// Exit codes. A shell script tells a refusal from a crash by these.
+// Exit codes. A shell script tells a refusal from a crash by these. A report emitter's refusals
+// share them (results/run_header.hpp).
 inline constexpr int kExitOk = 0;
-inline constexpr int kExitFailure = 1;
-inline constexpr int kExitUsage = 2;
-inline constexpr int kExitFpState = 3;
-inline constexpr int kExitDirtyTree = 4;
+inline constexpr int kExitFailure = results::kRunExitFailure;
+inline constexpr int kExitUsage = results::kRunExitUsage;
+inline constexpr int kExitFpState = results::kRunExitFpState;
+inline constexpr int kExitDirtyTree = results::kRunExitDirtyTree;
 inline constexpr int kExitHistogramRefused = 5;
-inline constexpr int kExitPinFailed = 6;
+inline constexpr int kExitPinFailed = results::kRunExitPinFailed;
 
 // units: 0 sizes the batch by doubling (15 timed trials per size). A workload that is already far
 // above the gate per unit, such as a whole pricing, gives its units here instead, and is timed
@@ -55,11 +57,9 @@ struct RunExtras {
   std::vector<results::ResultsSection> sections;
 };
 
-struct HarnessOptions {
-  std::optional<int> pin_cpu;
-  std::vector<int> meant_idle_cpus;  // --meant-idle-cpus=5: written to the header, not enforced
-  bool reportable = false;
-  std::filesystem::path source_root = ".";
+// The run flags (--pin-cpu, --meant-idle-cpus, --source-root, --reportable) are the ones every
+// writer of a results file takes (results/run_header.hpp); these are the harness's own.
+struct HarnessOptions : results::RunOptions {
   std::int64_t batches = 20'000;
   std::int64_t repetitions = 3;
   std::int64_t warmup_ms = 50;

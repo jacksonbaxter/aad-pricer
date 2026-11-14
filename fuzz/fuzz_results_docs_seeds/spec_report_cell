@@ -1,0 +1,6 @@
+# a synthetic spec with a report cell
+kind,id,host,source,detail,target,target_text,better,scale,unit,label
+report_cell,SVI-6,linux-zen1,fit_error,s1/svi6,4,at most 4 bp,at_most,1,bp of F,on s1
+report_cell,SVI-7,linux-zen1,fit_time,loop/median,15,15 ms,at_most,1,ms,
+### SVI-6: fit error at most 4 bp of forward
+### SVI-7: calibration time: 15 ms per slice

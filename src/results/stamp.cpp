@@ -14,6 +14,7 @@
 #include "results/json_lite.hpp"
 #include "results/measure_line.hpp"
 #include "results/privacy.hpp"
+#include "results/report.hpp"
 #include "results/results_file.hpp"
 
 namespace aadp::results {
@@ -215,8 +216,17 @@ std::expected<void, StampRefusal> check_raw_run(const ResultsFile& run) {
                     "header is missing " + std::string(missing.front()));
     }
   }
-  if (run.section(kBenchmarkSection) == nullptr) {
-    return refuse(StampError::kMalformedRun, "no benchmark section");
+  const auto kind = file_kind(run);
+  if (!kind) {
+    return refuse(StampError::kFileKind, kind.error().detail);
+  }
+  if (*kind == FileKind::kReport) {
+    if (auto report = read_report(run); !report) {
+      return refuse(report.error().problem == ReportProblem::kNoAttribution
+                        ? StampError::kNoAttribution
+                        : StampError::kMalformedReport,
+                    report.error().detail);
+    }
   }
   return {};
 }
