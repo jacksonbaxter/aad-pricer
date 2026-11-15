@@ -2,7 +2,7 @@
 // Nothing here comes from a TAIFEX file.
 
 #include <gtest/gtest.h>
-#include <sys/wait.h>
+#include <sys/wait.h>  // IWYU pragma: keep
 
 #include <algorithm>
 #include <array>
