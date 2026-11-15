@@ -348,7 +348,9 @@ class LocalVolPriceReport : public LocalVolReport {
       EXPECT_EQ(f[2], std::to_string(1024 * 33 * 4)) << f[1];
     }
     const auto ranges = Lines(Text().output, "range");
-    if (!ranges.empty()) EXPECT_EQ(Table("lv_floor_ranges").rows.size(), ranges.size());
+    if (!ranges.empty()) {
+      EXPECT_EQ(Table("lv_floor_ranges").rows.size(), ranges.size());
+    }
     for (const auto& f : ranges) {
       ASSERT_EQ(f.size(), 9U);
       const std::string key = f[1] + "." + f[2] + "." + f[3];
