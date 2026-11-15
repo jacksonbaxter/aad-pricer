@@ -9909,6 +9909,253 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] SviFitReport\\.TheTimedSectionHasEverySliceAndItsRepetitions",
       "timeout_s": 300
+    },
+    {
+      "id": "lv-report-file-attribution",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report carries the attribution",
+      "bug": "The report mode passes no attribution, so the emitter refuses its own file and no report is written.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "  auto text = session.finish(shape, tables, aadp::attribution_text());",
+          "replace": "  auto text = session.finish(shape, tables, std::nullopt);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolPriceReport\\.IsOneResultsFileWithTheAttributionFirst",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-uses-chain",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report's tables say they come from the chain",
+      "bug": "The tables are written as not derived from the chain.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "          .uses_chain = true,",
+          "replace": "          .uses_chain = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolPriceReport\\.IsOneResultsFileWithTheAttributionFirst",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-price-same-doubles",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report's price cells are the text's doubles",
+      "bug": "The price table writes twice the standard error.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "                                    real_cell(r.value.standard_error)}});",
+          "replace": "                                    real_cell(2.0 * r.value.standard_error)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolPriceReport\\.ThePricesAndSensitivitiesAreTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-sensitivity-slice",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report's sensitivities are keyed by their slice and parameter",
+      "bug": "The sensitivity rows name the slice by the parameter's index modulo 3, so most rows carry another slice's derivative.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "          {.key = std::string(p.contract.name) + \".\" + Expiry(i / 5) + \".\" + kParameterNames[i % 5],",
+          "replace": "          {.key = std::string(p.contract.name) + \".\" + Expiry(i % 3) + \".\" + kParameterNames[i % 5],"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolPriceReport\\.ThePricesAndSensitivitiesAreTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-derived-only",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report holds derived figures only, no forward or settlement",
+      "bug": "The price table gains the last slice's forward.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "    tables = PriceTables(prices.priced, s.terms.size(), o);\n",
+          "replace": "    tables = PriceTables(prices.priced, s.terms.size(), o);\n    tables.front().columns.push_back({.name = \"forward\", .kind = CellKind::kReal, .unit = \"index_points\"});\n    for (auto& row : tables.front().rows) row.cells.push_back(real_cell(s.terms.back().forward));\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolPriceReport\\.HoldsDerivedFiguresOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-range-segments",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report's floor ranges hold every segment the text prints",
+      "bug": "The range rows are written for no segment, only for all of them together.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "    aadp::tools::AddRangeRows(ranges, p.contract.name, r.floors, segments);",
+          "replace": "    aadp::tools::AddRangeRows(ranges, p.contract.name, r.floors, segments - segments);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolCrossingReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolCrossingReport\\.WritesWhereTheFloorsFellWithTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-bias-same-doubles",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report --mode bias's cells are the text's doubles",
+      "bug": "The Delta table writes the mean where its standard error belongs.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "                                      real_cell(row.delta[l].standard_error)}});",
+          "replace": "                                      real_cell(row.delta[l].mean)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolBiasReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolBiasReport\\.TheBiasTablesHoldTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-bias-ratio",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report --mode bias's ratios are the text's",
+      "bug": "The ratio table writes Delta(2n) / Delta(n), the inverse of the text's.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "real_cell(row.delta[l].mean / row.delta[l + 1].mean)}});",
+          "replace": "real_cell(row.delta[l + 1].mean / row.delta[l].mean)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolBiasReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolBiasReport\\.TheBiasTablesHoldTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-bias-verdict",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report --mode bias keeps the text's verdict on the bias left at n = 4",
+      "bug": "The report's verdict is turned: a bias not resolved at this N is written as resolved.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "row.Resolved() ? \"yes\" : \"no\"}});",
+          "replace": "row.Resolved() ? \"no\" : \"yes\"}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolBiasReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolBiasReport\\.TheBiasTablesHoldTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-timing-section",
+      "kind": "check",
+      "covers": "the AAD-1 local-vol timing is a timed section",
+      "bug": "The local-vol timing table is written as not a timing.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "            \"AAD-1\", true,",
+          "replace": "            \"AAD-1\", false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.TheTimingReportIsOneTimedAadOneTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.TheTimingReportIsOneTimedAadOneTable",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-timing-ratio",
+      "kind": "check",
+      "covers": "the AAD-1 local-vol ratio is the gradient's median over the price's",
+      "bug": "The timing table writes the price's median over the gradient's.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "real_cell(grad_median / price_median), CountCell(repetitions)}});",
+          "replace": "real_cell(price_median / grad_median), CountCell(repetitions)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.TheTimingReportIsOneTimedAadOneTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.TheTimingReportIsOneTimedAadOneTable",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-run-flags-text",
+      "kind": "check",
+      "covers": "aadp_local_vol_report's run flags are for the report mode only",
+      "bug": "The text report takes run flags it cannot use.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "  if (o.run_flags && !o.report) return std::nullopt;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.RunFlagsAreForTheReportOnly"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.RunFlagsAreForTheReportOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "lv-report-refusal-exit",
+      "kind": "check",
+      "covers": "aadp_local_vol_report --report refuses a reportable run from an unknown tree with the run's exit code",
+      "bug": "The run's refusal exits 1, the code of a failed fit, instead of its own.",
+      "edits": [
+        {
+          "file": "tools/local_vol_report/main.cpp",
+          "find": "      return begun.error().exit_code;",
+          "replace": "      return kExitFailure;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_local_vol_report_tool_test", "aadp_local_vol_report"],
+      "command": ["{build}/bin/aadp_svi_local_vol_report_tool_test", "--gtest_filter=LocalVolReportTool.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] LocalVolReportTool\\.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork",
+      "timeout_s": 300
     }
   ]
 }

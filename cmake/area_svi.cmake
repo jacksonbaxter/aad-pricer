@@ -187,6 +187,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
         AADP_LOCAL_VOL_REPORT_PATH="$<TARGET_FILE:aadp_local_vol_report>"
         AADP_LOCAL_VOL_REPORT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/local_vol_report")
     endif()
+    _aadp_report_mode(aadp_local_vol_report aadp_svi_local_vol_report_tool_test)
   endif()
 
   # Stage 8: the comparison plan's runner with the production estimator beside the reference one,
