@@ -12,8 +12,9 @@
 //
 // --report writes a report file instead (src/results/report.hpp), for scripts/run_bench.sh and
 // the stamp: the same fit's SVI-6, SVI-11 and SVI-9 figures, the same doubles as the text's
-// machine-readable lines, and SVI-7's per-slice fit time over --timing repetitions (default 50)
-// as a timed section. Derived figures only: no settlement and no per-strike row. Every section is
+// machine-readable lines, and SVI-7's per-slice fit time and SVI-8's surface time over --timing
+// repetitions (default 50), measured as the text's timing measures them, as timed sections.
+// Derived figures only: no settlement and no per-strike row. Every section is
 // derived from the chain, so the file carries the attribution. The run flags are those of
 // src/results/run_header.hpp, and only --report takes them.
 
@@ -391,6 +392,16 @@ std::vector<ReportTable> ReportTables(std::span<const ChainSlice> slices,
             {{.name = "median", .kind = CellKind::kReal, .unit = "ms"},
              {.name = "min", .kind = CellKind::kReal, .unit = "ms"},
              {.name = "repetitions", .kind = CellKind::kInteger, .unit = "count"}});
+  ReportTable surface_time =
+      Table("svi_fit_surface_time",
+            "Raw SVI surface time: the three fits and every check, one thread", {"SVI-8"}, true,
+            {{.name = "median", .kind = CellKind::kReal, .unit = "ms"},
+             {.name = "min", .kind = CellKind::kReal, .unit = "ms"},
+             {.name = "repetitions", .kind = CellKind::kInteger, .unit = "count"}});
+  surface_time.rows.push_back({.key = "surface",
+                               .cells = {real_cell(Median(times.surface)),
+                                         real_cell(*std::ranges::min_element(times.surface)),
+                                         Count(times.surface.size())}});
   for (std::size_t i = 0; i < slices.size(); ++i) {
     const SliceFit& r = surface.slices[i];
     const FitResult& fit = *r.fit;
@@ -422,7 +433,7 @@ std::vector<ReportTable> ReportTables(std::span<const ChainSlice> slices,
   }
   // A table has rows or is not written: one slice has no calendar, a clean fit no violations.
   std::vector<ReportTable> tables;
-  for (ReportTable* table : {&error, &arbitrage, &calendar, &violations, &timing}) {
+  for (ReportTable* table : {&error, &arbitrage, &calendar, &violations, &timing, &surface_time}) {
     if (!table->rows.empty()) tables.push_back(std::move(*table));
   }
   return tables;
@@ -439,7 +450,8 @@ int ReportMain(std::span<const ChainSlice> slices, aadp::results::ReportRun& ses
       return kExitFailure;
     }
   }
-  const FitTimes times = TimeFits(slices, repetitions, false);
+  // SVI-7 per slice and SVI-8 for the surface in the same repetitions, as the text's timing.
+  const FitTimes times = TimeFits(slices, repetitions, true);
   if (!times.all_fitted) {
     std::cerr << "aadp_svi_fit: a fit failed in the timed repetitions\n";
     return kExitFailure;
@@ -456,7 +468,8 @@ int ReportMain(std::span<const ChainSlice> slices, aadp::results::ReportRun& ses
                            "not tradable quotes; expiries 202411, 202411W4 and 202412, so "
                            "maturity reaches 33 days only"},
                  {.key = "report_timing",
-                  .value = "per slice, the fit alone, steady_clock, one thread, " +
+                  .value = "per slice, the fit alone, then the surface, the three fits and "
+                           "every check, steady_clock, one thread, " +
                            std::to_string(repetitions) + " repetitions after the untimed fit"}}};
   auto text = session.finish(shape, tables, aadp::attribution_text());
   if (!text) {

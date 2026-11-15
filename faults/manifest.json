@@ -6450,8 +6450,8 @@
       "edits": [
         {
           "file": "tools/essvi_report/main.cpp",
-          "find": "      diff.push_back(pe->value.batch_means[b] - pr->value.batch_means[b]);",
-          "replace": "      diff.push_back(pe->value.batch_means[b] + pr->value.batch_means[b]);"
+          "find": "    diff.push_back(pe->value.batch_means[b] - pr->value.batch_means[b]);",
+          "replace": "    diff.push_back(pe->value.batch_means[b] + pr->value.batch_means[b]);"
         }
       ],
       "preset": "release",
@@ -9657,6 +9657,258 @@
       "reason": "deadly signal(?:(?! in aadp::)[\\s\\S])*? in \\(anonymous namespace\\)::check_report_file\\(",
       "timeout_s": 300,
       "output_files": ["build/fuzz/fault-fuzz/fuzz-results-file-report-attribution/*", "build/fuzz/fault-fuzz/fuzz-results-file-report-attribution/corpus/*"]
+    },
+    {
+      "id": "essvi-report-attribution",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report carries the attribution",
+      "bug": "The report mode passes no attribution, so the emitter refuses its own file and no report is written.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "  auto text = session.finish(shape, tables, aadp::attribution_text());",
+          "replace": "  auto text = session.finish(shape, tables, std::nullopt);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFitReport\\.IsOneResultsFileWithTheRunHeaderAndTheAttributionFirst",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-uses-chain",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report's tables say they come from the chain",
+      "bug": "The tables are written as not derived from the chain.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "          .uses_chain = true,",
+          "replace": "          .uses_chain = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFitReport\\.IsOneResultsFileWithTheRunHeaderAndTheAttributionFirst",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-fit-same-doubles",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report's fit error cells are the text's doubles",
+      "bug": "eSSVI's Phi per degree of freedom divides by n - 5, raw SVI's count, instead of n - 3.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "real_cell(e.objective / (n - 3.0)),",
+          "replace": "real_cell(e.objective / (n - 5.0)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFitReport\\.TheErrorTablesHoldTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-constraint-flags",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report's constraint cells are the text's",
+      "bug": "The constraints table writes each constraint's active flag negated.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "         .cells = {real_cell(c.slack), Yes(c.active), Yes(c.violated)}});",
+          "replace": "         .cells = {real_cell(c.slack), Yes(!c.active), Yes(c.violated)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFitReport\\.TheCheckTablesHoldTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-derived-only",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report holds derived figures only, no forward or settlement",
+      "bug": "The error table gains the slice's forward, which with the discount and the fit gives back settlements.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "       {.name = \"raw_svi11\", .kind = CellKind::kReal, .unit = \"vol_points\"}});",
+          "replace": "       {.name = \"raw_svi11\", .kind = CellKind::kReal, .unit = \"vol_points\"},\n       {.name = \"forward\", .kind = CellKind::kReal, .unit = \"points\"}});"
+        },
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "                   real_cell(rs.svi11_vol_points)}});",
+          "replace": "                   real_cell(rs.svi11_vol_points), real_cell(slices[j].parity.forward)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviFitReport\\.HoldsDerivedFiguresOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-price-same-doubles",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report's price cells are the text's doubles",
+      "bug": "The price table writes the paired difference with its sign turned.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "real_cell(p.paired.mean),",
+          "replace": "real_cell(-p.paired.mean),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviPriceReport\\.ThePriceTableHoldsTheTextsDoubles",
+      "timeout_s": 300
+    },
+    {
+      "id": "floor-report-row",
+      "kind": "check",
+      "covers": "a report's floor row holds the text's counts (tools/common/floor_report.hpp)",
+      "bug": "The floor row writes the paths with a cap where the paths with a floor belong.",
+      "edits": [
+        {
+          "file": "tools/common/floor_report.hpp",
+          "find": "  row.cells.push_back(CountCell(t.paths_with_floor));",
+          "replace": "  row.cells.push_back(CountCell(t.paths_with_cap));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviPriceReport\\.TheFloorTablesHoldTheTextsCounts",
+      "timeout_s": 300
+    },
+    {
+      "id": "floor-report-range-row",
+      "kind": "check",
+      "covers": "a report's floor range rows hold the text's doubles (tools/common/floor_report.hpp)",
+      "bug": "The range row writes k_min twice and drops k_max.",
+      "edits": [
+        {
+          "file": "tools/common/floor_report.hpp",
+          "find": "results::real_cell(r.k_min), results::real_cell(r.k_max),",
+          "replace": "results::real_cell(r.k_min), results::real_cell(r.k_min),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviPriceReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviPriceReport\\.TheFloorTablesHoldTheTextsCounts",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-timing-section",
+      "kind": "check",
+      "covers": "SVI-8's eSSVI fit time is a timed section",
+      "bug": "The eSSVI fit-time table is written as not a timing.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "            \"SVI-8\", true,",
+          "replace": "            \"SVI-8\", false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.TheTimingReportIsOneTimedSviEightTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.TheTimingReportIsOneTimedSviEightTable",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-run-flags-text",
+      "kind": "check",
+      "covers": "aadp_essvi_report's run flags are for the report mode only",
+      "bug": "The text report takes run flags it cannot use.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "  if (o.run_flags && !o.report) return std::nullopt;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.RunFlagsAreForTheReportOnly"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.RunFlagsAreForTheReportOnly",
+      "timeout_s": 300
+    },
+    {
+      "id": "essvi-report-refusal-exit",
+      "kind": "check",
+      "covers": "aadp_essvi_report --report refuses a reportable run from an unknown tree with the run's exit code",
+      "bug": "The run's refusal exits 1, the code of a failed fit, instead of its own.",
+      "edits": [
+        {
+          "file": "tools/essvi_report/main.cpp",
+          "find": "      return begun.error().exit_code;",
+          "replace": "      return kExitFailure;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_essvi_report_tool_test", "aadp_essvi_report"],
+      "command": ["{build}/bin/aadp_svi_essvi_report_tool_test", "--gtest_filter=EssviReportTool.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] EssviReportTool\\.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-surface-time-section",
+      "kind": "check",
+      "covers": "SVI-8's raw SVI surface time is a timed section of aadp_svi_fit --report",
+      "bug": "The surface-time table is written as not a timing.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "one thread\", {\"SVI-8\"}, true,",
+          "replace": "one thread\", {\"SVI-8\"}, false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.WritesExactlyTheSviSixNineElevenAndSevenTables",
+      "timeout_s": 300
+    },
+    {
+      "id": "svi-fit-report-surface-time-row",
+      "kind": "check",
+      "covers": "SVI-8's surface row is the surface's time, not a slice's",
+      "bug": "The surface row's minimum is the first slice's fit alone.",
+      "edits": [
+        {
+          "file": "tools/svi_fit/main.cpp",
+          "find": "                                         real_cell(*std::ranges::min_element(times.surface)),",
+          "replace": "                                         real_cell(*std::ranges::min_element(times.per_slice[0])),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_fit_tool_test", "aadp_svi_fit"],
+      "command": ["{build}/bin/aadp_svi_fit_tool_test", "--gtest_filter=SviFitReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] SviFitReport\\.TheTimedSectionHasEverySliceAndItsRepetitions",
+      "timeout_s": 300
     }
   ]
 }

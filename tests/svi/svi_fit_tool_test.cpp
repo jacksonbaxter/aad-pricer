@@ -321,12 +321,14 @@ TEST_F(SviFitReport, WritesExactlyTheSviSixNineElevenAndSevenTables) {
   std::vector<std::string> expected = {"svi_fit_error", "svi_fit_arbitrage", "svi_fit_calendar"};
   if (!Lines(Text().output, "violation").empty()) expected.emplace_back("svi_fit_violations");
   expected.emplace_back("svi_fit_time");
+  expected.emplace_back("svi_fit_surface_time");
   EXPECT_EQ(names, expected);
   EXPECT_EQ(Table("svi_fit_error").targets, (std::vector<std::string>{"SVI-6", "SVI-11"}));
   EXPECT_EQ(Table("svi_fit_arbitrage").targets, (std::vector<std::string>{"SVI-9"}));
   EXPECT_EQ(Table("svi_fit_time").targets, (std::vector<std::string>{"SVI-7"}));
+  EXPECT_EQ(Table("svi_fit_surface_time").targets, (std::vector<std::string>{"SVI-8"}));
   for (const results::ReportTable& table : Tables()) {
-    EXPECT_EQ(table.timing, table.name == "svi_fit_time") << table.name;
+    EXPECT_EQ(table.timing, table.name.ends_with("_time")) << table.name;
   }
 }
 
@@ -344,7 +346,7 @@ TEST_F(SviFitReport, HoldsDerivedFiguresOnly) {
     return !any_violation && name.starts_with("svi_fit_violations.");
   });
   if (!any_violation) {
-    columns.insert(columns.end() - 3, {"svi_fit_violations.kind", "svi_fit_violations.k_begin",
+    columns.insert(columns.end() - 6, {"svi_fit_violations.kind", "svi_fit_violations.k_begin",
                                        "svi_fit_violations.k_end", "svi_fit_violations.k_worst",
                                        "svi_fit_violations.value", "svi_fit_violations.bound",
                                        "svi_fit_violations.points"});
@@ -373,11 +375,15 @@ TEST_F(SviFitReport, HoldsDerivedFiguresOnly) {
                                                "svi_fit_violations.points",
                                                "svi_fit_time.median",
                                                "svi_fit_time.min",
-                                               "svi_fit_time.repetitions"}));
+                                               "svi_fit_time.repetitions",
+                                               "svi_fit_surface_time.median",
+                                               "svi_fit_surface_time.min",
+                                               "svi_fit_surface_time.repetitions"}));
   EXPECT_EQ(Table("svi_fit_error").rows.size(), 3U);
   EXPECT_EQ(Table("svi_fit_arbitrage").rows.size(), 3U);
   EXPECT_EQ(Table("svi_fit_calendar").rows.size(), 2U);
   EXPECT_EQ(Table("svi_fit_time").rows.size(), 3U);
+  EXPECT_EQ(Table("svi_fit_surface_time").rows.size(), 1U);
   if (any_violation) {
     EXPECT_EQ(Table("svi_fit_violations").rows.size(), Lines(Text().output, "violation").size());
   }
@@ -465,6 +471,14 @@ TEST_F(SviFitReport, TheTimedSectionHasEverySliceAndItsRepetitions) {
     EXPECT_LE(Real("svi_fit_time", expiry, "min"), Real("svi_fit_time", expiry, "median"));
     EXPECT_EQ(Cell("svi_fit_time", expiry, "repetitions"), "2");
   }
+  // SVI-8, the surface: the three fits and every check, so longer than any one slice's fit.
+  const double surface = Real("svi_fit_surface_time", "surface", "min");
+  EXPECT_GT(surface, 0.0);
+  EXPECT_LE(surface, Real("svi_fit_surface_time", "surface", "median"));
+  for (const std::string expiry : {"202411", "202411W4", "202412"}) {
+    EXPECT_GT(surface, Real("svi_fit_time", expiry, "min")) << expiry;
+  }
+  EXPECT_EQ(Cell("svi_fit_surface_time", "surface", "repetitions"), "2");
 }
 
 TEST_F(SviFitTool, RunFlagsAreForTheReportOnly) {

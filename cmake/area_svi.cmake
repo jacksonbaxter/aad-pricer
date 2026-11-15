@@ -2,6 +2,28 @@
 # SVI templated on Real, and the static-arbitrage checks. See cmake/AadpTargets.cmake for the
 # helpers. aadp_lets_be_rational comes from cmake/AadpDependencies.cmake. The tape test needs the
 # pricer area's tape, and the price oracle the oracle area's closed form.
+
+# A report tool's --report mode writes a report file through the bench area's run header
+# (src/results/report_run.hpp), when that area is on: AADP_REPORT_MODE is 1 then, for the tool and
+# its test, which reads the file back, and 0 otherwise.
+function(_aadp_report_mode tool test)
+  if(NOT TARGET ${tool})
+    return()
+  endif()
+  set(_mode 0)
+  if(TARGET aadp_run_header)
+    target_link_libraries(${tool} PRIVATE aadp_run_header)
+    set(_mode 1)
+  endif()
+  target_compile_definitions(${tool} PRIVATE AADP_REPORT_MODE=${_mode})
+  if(TARGET ${test})
+    target_compile_definitions(${test} PRIVATE AADP_REPORT_MODE=${_mode})
+    if(TARGET aadp_results)
+      target_link_libraries(${test} PRIVATE aadp_results)
+    endif()
+  endif()
+endfunction()
+
 if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
   aadp_library(aadp_svi
     SOURCES src/svi/implied_vol.cpp src/svi/arbitrage.cpp src/svi/fit.cpp
@@ -333,6 +355,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
       SOURCES tests/svi/essvi_report_tool_test.cpp
       LINK aadp_svi_chain_essvi
       LABELS svi)
+    _aadp_report_mode(aadp_essvi_report aadp_svi_essvi_report_tool_test)
     if(AADP_BUILD_TESTS AND TARGET aadp_svi_essvi_report_tool_test)
       add_dependencies(aadp_svi_essvi_report_tool_test aadp_essvi_report)
       target_compile_definitions(aadp_svi_essvi_report_tool_test PRIVATE
