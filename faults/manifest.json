@@ -10156,6 +10156,429 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] LocalVolReportTool\\.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork",
       "timeout_s": 300
+    },
+    {
+      "id": "qs-report-file-attribution",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report carries the attribution",
+      "bug": "The report mode passes no attribution, so the emitter refuses its own file and no report is written.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "  auto text = session.finish(shape, tables, aadp::attribution_text());",
+          "replace": "  auto text = session.finish(shape, tables, std::nullopt);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.IsOneResultsFileOfSummaries",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-uses-chain",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's tables say they come from the chain",
+      "bug": "The tables are written as not derived from the chain.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "          .uses_chain = true,",
+          "replace": "          .uses_chain = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.IsOneResultsFileOfSummaries",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-target",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's tables name SVI-10",
+      "bug": "The tables name another target.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "          .targets = {\"SVI-10\"},",
+          "replace": "          .targets = {\"SVI-9\"},"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.IsOneResultsFileOfSummaries",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-derived-only",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report holds summaries only, no forward",
+      "bug": "The slice table gains the slice's parity forward.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "  slice_columns.push_back(TextColumn(\"gauss_newton\"));",
+          "replace": "  slice_columns.push_back(TextColumn(\"gauss_newton\"));\n  slice_columns.push_back(RealColumn(\"forward\", \"index_points\"));"
+        },
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "    slices.rows.push_back({.key = Expiry(j), .cells = std::move(cells)});",
+          "replace": "    cells.push_back(real_cell(s.chain->parity.forward));\n    slices.rows.push_back({.key = Expiry(j), .cells = std::move(cells)});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.HoldsSummariesOnly",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-slice-same-doubles",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's slice cells are the text's doubles",
+      "bug": "The slice table writes twice the Hessians' difference.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "                                      real_cell(HessianDifference(a)),",
+          "replace": "                                      real_cell(2.0 * HessianDifference(a)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.TheSliceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-gn-same-doubles",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's Gauss-Newton cells are the text's doubles",
+      "bug": "Gauss-Newton against exact is written halved.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "for (const double v : GaussNewtonAgainstExact(a)) gn.push_back(real_cell(v));",
+          "replace": "for (const double v : GaussNewtonAgainstExact(a)) gn.push_back(real_cell(0.5 * v));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.TheSliceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-multiplier-same-doubles",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's multiplier cells are the text's doubles",
+      "bug": "The multiplier's significance and quote distance are swapped.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "real_cell(c.significance), real_cell(c.quote_distance)}});",
+          "replace": "real_cell(c.quote_distance), real_cell(c.significance)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityBoundReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityBoundReport\\.TheMultipliersAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-price-same-doubles",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's price cells are the text's doubles",
+      "bug": "The price table writes twice the standard error.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "                                     real_cell(r.g.value.standard_error)}});",
+          "replace": "                                     real_cell(2.0 * r.g.value.standard_error)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.ThePriceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-market-order",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's d P / d(F, D) cells are the text's doubles",
+      "bug": "The truncation cell holds the rounding.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "    cells.push_back(real_cell(dm.select[w].truncation));",
+          "replace": "    cells.push_back(real_cell(dm.select[w].refit));"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.ThePriceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-bucket-edges",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's buckets carry their k edges",
+      "bug": "Each bucket's edges are written the wrong way round.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "kBucketFrom[b], kBucketTo[b]",
+          "replace": "kBucketTo[b], kBucketFrom[b]"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.ThePriceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-bucket-same-doubles",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's bucket cells are the text's doubles",
+      "bug": "A bucket's SE and largest sensitivity are swapped.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "                       real_cell(st.standard_error), real_cell(bucket.max_abs)}});",
+          "replace": "                       real_cell(bucket.max_abs), real_cell(st.standard_error)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.ThePriceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-total-version",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report's totals are each version's own",
+      "bug": "Every version's total is the first version's.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "    const aadp::BatchStatistics st = r.summary.Total(version);\n    totals.rows.push_back(",
+          "replace": "    const aadp::BatchStatistics st = r.summary.Total(0);\n    totals.rows.push_back("
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivitySummaryReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivitySummaryReport\\.ThePriceTablesAreTheTextsDoubles",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-verdict-cell",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report --mode check's verdict is the text's",
+      "bug": "The verdict cell says the opposite of the check.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "       .cells = {Passes(t) ? \"PASS\" : \"FAIL\",",
+          "replace": "       .cells = {Passes(t) ? \"FAIL\" : \"PASS\","
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityCheckReport\\.IsOneResultsFileWithTheVerdictInACell",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-contract-tally",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report's price comparisons by contract",
+      "bug": "Every price comparison is counted against the first contract.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "    t.price_by_contract[ci][c].Add(e);",
+          "replace": "    t.price_by_contract[ci][0].Add(e);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityCheckReport\\.TheCheckTablesHoldTheTextsCounts",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-tally-failed",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report --mode check counts as failed every comparison not passed",
+      "bug": "The failed cell counts only the unresolved comparisons.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "CountCell(n.unresolved), CountCell(n.comparisons - n.passed),",
+          "replace": "CountCell(n.unresolved), CountCell(n.unresolved),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityCheckReport\\.TheCheckTablesHoldTheTextsCounts",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-run-refit",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report --mode check says which refits it ran",
+      "bug": "The run table always says production refits.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "                      .cells = {CountCell(o.stride), RefitName(o.refit),",
+          "replace": "                      .cells = {CountCell(o.stride), RefitName(RefitKind::kProduction),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityCheckReport\\.TheCheckTablesHoldTheTextsCounts",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-timing-section",
+      "kind": "check",
+      "covers": "SVI-10's cost is a timed section",
+      "bug": "The timing table is written as not a timing.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "      \"Per contract, the price with 15 sensitivities, then the quote sensitivities on top\", true,",
+          "replace": "      \"Per contract, the price with 15 sensitivities, then the quote sensitivities on top\", false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.TheTimingReportIsOneTimedSviTenTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.TheTimingReportIsOneTimedSviTenTable",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-timing-ratio",
+      "kind": "check",
+      "covers": "SVI-10's implicit-function ratio is the price with the step over the price alone",
+      "bug": "The ratio leaves out the price itself.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "real_cell((grad + ift) / grad)",
+          "replace": "real_cell(ift / grad)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.TheTimingReportIsOneTimedSviTenTable"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.TheTimingReportIsOneTimedSviTenTable",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-run-flags-text",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report's run flags are for the report mode only",
+      "bug": "The text report takes run flags it cannot use.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "  if (o.run_flags && !o.report) return std::nullopt;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.RunFlagsAreForTheReportOnly"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.RunFlagsAreForTheReportOnly",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-report-refusal-exit",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report refuses a reportable run from an unknown tree with the run's exit code",
+      "bug": "The run's refusal exits 1, the code of a failed fit, instead of its own.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "      return begun.error().exit_code;",
+          "replace": "      return kExitFailure;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityReportTool.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityReportTool\\.AReportableReportFromATreeThatIsNotCleanIsRefusedBeforeAnyWork",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-verdict-failed-count",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report --mode check keeps a failed check's count",
+      "bug": "The verdict table writes no failed comparisons, whatever the check found.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "CountCell(req.failed)",
+          "replace": "CountCell(req.failed - req.failed)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityFailedCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityFailedCheckReport\\.AFailedCheckStaysAFailureWithItsCount",
+      "timeout_s": 600
+    },
+    {
+      "id": "qs-check-verdict-price-failed-count",
+      "kind": "check",
+      "covers": "aadp_quote_sensitivity_report --report --mode check keeps a failed check's price count",
+      "bug": "The verdict table writes no failed price comparisons, whatever the check found.",
+      "edits": [
+        {
+          "file": "tools/quote_sensitivity_report/main.cpp",
+          "find": "CountCell(req.price_failed)",
+          "replace": "CountCell(req.price_failed - req.price_failed)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_svi_quote_sensitivity_report_tool_test", "aadp_quote_sensitivity_report"],
+      "command": ["{build}/bin/aadp_svi_quote_sensitivity_report_tool_test", "--gtest_filter=QuoteSensitivityFailedCheckReport.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QuoteSensitivityFailedCheckReport\\.AFailedCheckStaysAFailureWithItsCount",
+      "timeout_s": 600
     }
   ]
 }

@@ -312,6 +312,7 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
         AADP_QUOTE_SENSITIVITY_REPORT_PATH="$<TARGET_FILE:aadp_quote_sensitivity_report>"
         AADP_QUOTE_SENSITIVITY_REPORT_TEST_SCRATCH="${PROJECT_BINARY_DIR}/svi_test_scratch/quote_sensitivity_report")
     endif()
+    _aadp_report_mode(aadp_quote_sensitivity_report aadp_svi_quote_sensitivity_report_tool_test)
   endif()
 
   # Stage 7c: the arbitrage-free eSSVI surface, Mingone's global parametrisation, fitted to all
