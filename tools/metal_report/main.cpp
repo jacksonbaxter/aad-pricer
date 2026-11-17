@@ -1,5 +1,5 @@
-// aadp_metal_report: the stage 9 measurements of docs/NOTES.md, "Stage 9". Iteration only: it
-// prints, and stamps nothing. AAD does not run on the GPU; every price here is a price.
+// aadp_metal_report: the stage 9 measurements of docs/NOTES.md, "Stage 9". AAD does not run on the
+// GPU; every figure here is a price or the time to price, never a Greek.
 //
 //   aadp_metal_report --mode=properties
 //       the property kernels: arithmetic and the constructed ties, contraction, denormals,
@@ -8,11 +8,20 @@
 //   aadp_metal_report --mode=batch
 //       asian252, paths per command buffer doubling from 2^14, one buffer at a time, until an
 //       error or a buffer over 2 s of GPU time; the safe batch by the registered rule
-//   aadp_metal_report --mode=table [--paths=<n>] [--threads=<n>]
+//   aadp_metal_report --mode=table [--paths=<n>] [--threads=<n>] [--report [run flags]]
 //       the four columns and their paired differences, GPU-2 and GPU-3, seed 20261202
 //   aadp_metal_report --mode=timing --paths-per-buffer=<n> [--paths=<n>] [--reps=<n>]
+//                     [--report [run flags]]
 //       GPU-1: GPU wall clock against the SIMD CPU (2 lanes) and the CPU float32 line, on 1 and
 //       16 threads, seed 20261203. Run it under measure.sh
+//
+// Without --report a mode prints text and stamps nothing. With it, the table and the timing write
+// a report file (results/report.hpp) on stdout, with the run header and the run flags
+// (results/run_header.hpp), for scripts/run_bench.sh to run through measure.sh and stamp; the
+// text, the same as without it, goes to stderr, and its "  = " lines give every cell at %.17g.
+// What is computed and what is timed are the same in both.
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -22,6 +31,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <expected>
+#include <initializer_list>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -36,6 +48,10 @@
 #include "metal/metal_backend.hpp"
 #include "metal/probes.hpp"
 #include "pricer/runner.hpp"
+#include "results/report.hpp"
+#include "results/report_run.hpp"
+#include "results/results_file.hpp"
+#include "results/run_header.hpp"
 #include "simd/simd_pricer.hpp"
 
 namespace {
@@ -44,6 +60,7 @@ using aadp::metal::Context;
 using aadp::metal::ProbeKernel;
 namespace f32 = aadp::f32;
 namespace probes = aadp::metal::probes;
+namespace results = aadp::results;
 using Clock = std::chrono::steady_clock;
 
 double Seconds(Clock::time_point from, Clock::time_point to) {
@@ -56,19 +73,31 @@ struct Options {
   std::uint64_t paths_per_buffer = 0;
   std::uint32_t threads = 16;
   int reps = 5;
+  bool report = false;
+  bool run_flags = false;
+  results::RunOptions run;
 };
 
-bool Parse(int argc, char** argv, Options& o) {
-  const std::span<char*> args(argv, static_cast<std::size_t>(argc));
-  for (std::size_t i = 1; i < args.size(); ++i) {
-    const std::string_view a = args[i];
+bool Parse(int argc, char* const* argv, Options& o) {
+  auto rest = results::take_run_flags(argc, argv, o.run);
+  if (!rest) {
+    std::fprintf(stderr, "%s\n", rest.error().c_str());
+    return false;
+  }
+  o.run_flags = static_cast<int>(rest->size()) + 1 != argc;
+  for (const std::string& arg : *rest) {
+    const std::string_view a = arg;
+    if (a == "--report") {
+      o.report = true;
+      continue;
+    }
     const std::size_t equals = a.find('=');
     if (equals == std::string_view::npos) {
-      std::fprintf(stderr, "unknown argument %s\n", args[i]);
+      std::fprintf(stderr, "unknown argument %s\n", arg.c_str());
       return false;
     }
     const std::string_view key = a.substr(0, equals + 1);
-    const char* value = args[i] + equals + 1;
+    const char* value = arg.c_str() + equals + 1;
     if (key == "--mode=") {
       o.mode = value;
     } else if (key == "--paths=") {
@@ -80,11 +109,29 @@ bool Parse(int argc, char** argv, Options& o) {
     } else if (key == "--reps=") {
       o.reps = static_cast<int>(std::strtol(value, nullptr, 10));
     } else {
-      std::fprintf(stderr, "unknown argument %s\n", args[i]);
+      std::fprintf(stderr, "unknown argument %s\n", arg.c_str());
       return false;
     }
   }
+  // The run flags belong to a report file's header, which the text has not got. Only the table
+  // and the timing write a report.
+  if (o.run_flags && !o.report) {
+    std::fprintf(stderr, "a run flag needs --report\n");
+    return false;
+  }
+  if (o.report && o.mode != "table" && o.mode != "timing") {
+    std::fprintf(stderr, "only --mode=table and --mode=timing write a report\n");
+    return false;
+  }
   return !o.mode.empty() && o.reps > 0 && o.threads > 0;
+}
+
+// One "  = <table> <key> <value>..." line of the text, every value at %.17g, so that a reader can
+// check each cell of the report against the text.
+void Values(std::string_view table, const std::string& key, std::initializer_list<double> values) {
+  std::printf("  = %s %s", std::string(table).c_str(), key.c_str());
+  for (const double v : values) std::printf(" %.17g", v);
+  std::printf("\n");
 }
 
 std::vector<std::uint32_t> Probe(Context& gpu, ProbeKernel kernel,
@@ -275,7 +322,6 @@ int Batch(Context& gpu) {
       longest, static_cast<unsigned long long>(safe));
   return safe == 0 ? 1 : 0;
 }
-
 void PrintEstimate(const char* name, const f32::Estimate& e) {
   std::printf("  %-30s %.9f  SE %.4e\n", name, e.mean, e.standard_error);
 }
@@ -285,7 +331,25 @@ void PrintDifference(const char* name, const f32::Difference& d, double base) {
               d.mean / base, d.standard_error / std::fabs(base));
 }
 
-int Table(Context& gpu, const Options& o) {
+// The four columns: A and B double on 32- and 23-bit uniforms, C float32 on the CPU, D float32 on
+// the GPU. The differences: B - A, C - B, D - B (GPU-2, GPU-3) and D - C, each against the mean
+// of the column it subtracts.
+constexpr std::array<std::string_view, 4> kColumns = {"A", "B", "C", "D"};
+constexpr std::array<std::string_view, 4> kPairs = {"B-A", "C-B", "D-B", "D-C"};
+
+struct TableRecord {
+  std::string workload;
+  std::array<f32::Estimate, 4> columns{};
+  std::array<f32::Difference, 4> differences{};
+  std::array<double, 4> bases{};
+  double ratio = 0.0;      // |D - B| / SE_B, GPU-2
+  bool pass = false;       // ratio <= kGpu2Factor
+  double cpu_ratio = 0.0;  // |C - B| / SE_B, not judged
+  std::size_t same = 0;    // Spans whose C and D sums are the same bits
+  std::size_t spans = 0;
+};
+
+int Table(Context& gpu, const Options& o, std::vector<TableRecord>& records) {
   std::printf("== the stage 9 table: N = %llu per contract, seed %llu, span %u, %u CPU threads\n",
               static_cast<unsigned long long>(o.paths),
               static_cast<unsigned long long>(f32::kTableSeed), f32::kSpan, o.threads);
@@ -308,28 +372,34 @@ int Table(Context& gpu, const Options& o) {
     }
     const f32::Column c = f32::FromFloat(c_spans, f32::kSpan, scale);
     const f32::Column d = f32::FromFloat(d_run->spans, f32::kSpan, scale);
-    const f32::Estimate ea = f32::ColumnEstimate(*a);
-    const f32::Estimate eb = f32::ColumnEstimate(*b);
-    const f32::Estimate ec = f32::ToEstimate(f32::Reduce(c_spans, f32::kSpan), scale);
-    const f32::Estimate ed = f32::ToEstimate(d_run->moments, scale);
-    std::printf("-- %s\n", std::string(w.name).c_str());
+    TableRecord r;
+    r.workload = std::string(w.name);
+    r.columns = {f32::ColumnEstimate(*a), f32::ColumnEstimate(*b),
+                 f32::ToEstimate(f32::Reduce(c_spans, f32::kSpan), scale),
+                 f32::ToEstimate(d_run->moments, scale)};
+    const f32::Estimate& ea = r.columns[0];
+    const f32::Estimate& eb = r.columns[1];
+    const f32::Estimate& ec = r.columns[2];
+    const f32::Estimate& ed = r.columns[3];
+    r.differences = {f32::PairedDifference(*b, *a), f32::PairedDifference(c, *b),
+                     f32::PairedDifference(d, *b), f32::PairedDifference(d, c)};
+    r.bases = {ea.mean, eb.mean, eb.mean, ec.mean};
+    std::printf("-- %s\n", r.workload.c_str());
     PrintEstimate("A double, 32-bit uniforms", ea);
     PrintEstimate("B double, 23-bit uniforms", eb);
     PrintEstimate("C CPU float32", ec);
     PrintEstimate("D GPU float32", ed);
-    PrintDifference("B - A", f32::PairedDifference(*b, *a), ea.mean);
-    PrintDifference("C - B", f32::PairedDifference(c, *b), eb.mean);
-    const f32::Difference db = f32::PairedDifference(d, *b);
-    PrintDifference("D - B (GPU-2, GPU-3)", db, eb.mean);
-    PrintDifference("D - C", f32::PairedDifference(d, c), ec.mean);
-    const double ratio = std::fabs(ed.mean - eb.mean) / eb.standard_error;
-    const bool pass = ratio <= f32::kGpu2Factor;
-    failures += pass ? 0 : 1;
-    std::printf("  GPU-2: |D - B| / SE_B = %.5f against %.2f: %s\n", ratio, f32::kGpu2Factor,
-                pass ? "pass" : "FAIL");
-    std::printf("  GPU-2 for the CPU line, not judged: |C - B| / SE_B = %.5f\n",
-                std::fabs(ec.mean - eb.mean) / eb.standard_error);
-    std::size_t same = 0;
+    PrintDifference("B - A", r.differences[0], r.bases[0]);
+    PrintDifference("C - B", r.differences[1], r.bases[1]);
+    PrintDifference("D - B (GPU-2, GPU-3)", r.differences[2], r.bases[2]);
+    PrintDifference("D - C", r.differences[3], r.bases[3]);
+    r.ratio = std::fabs(ed.mean - eb.mean) / eb.standard_error;
+    r.pass = r.ratio <= f32::kGpu2Factor;
+    failures += r.pass ? 0 : 1;
+    std::printf("  GPU-2: |D - B| / SE_B = %.5f against %.2f: %s\n", r.ratio, f32::kGpu2Factor,
+                r.pass ? "pass" : "FAIL");
+    r.cpu_ratio = std::fabs(ec.mean - eb.mean) / eb.standard_error;
+    std::printf("  GPU-2 for the CPU line, not judged: |C - B| / SE_B = %.5f\n", r.cpu_ratio);
     for (std::size_t s = 0; s < c_spans.size(); ++s) {
       const f32::SpanSum& cs = c_spans[s];
       const f32::SpanSum& ds = d_run->spans[s];
@@ -337,9 +407,21 @@ int Table(Context& gpu, const Options& o) {
           std::bit_cast<std::uint32_t>(cs.sum) == std::bit_cast<std::uint32_t>(ds.sum) &&
           std::bit_cast<std::uint32_t>(cs.sum_squares) ==
               std::bit_cast<std::uint32_t>(ds.sum_squares);
-      same += bits_equal ? 1 : 0;
+      r.same += bits_equal ? 1 : 0;
     }
-    std::printf("  spans whose C and D sums are the same bits: %zu of %zu\n", same, c_spans.size());
+    r.spans = c_spans.size();
+    std::printf("  spans whose C and D sums are the same bits: %zu of %zu\n", r.same, r.spans);
+    for (std::size_t i = 0; i < kColumns.size(); ++i) {
+      Values("price", r.workload + "." + std::string(kColumns[i]),
+             {r.columns[i].mean, r.columns[i].standard_error});
+    }
+    for (std::size_t i = 0; i < kPairs.size(); ++i) {
+      const f32::Difference& diff = r.differences[i];
+      Values("difference", r.workload + "." + std::string(kPairs[i]),
+             {diff.mean, diff.standard_error, r.bases[i]});
+    }
+    Values("gpu2", r.workload, {r.ratio, r.cpu_ratio});
+    records.push_back(std::move(r));
   }
   return failures == 0 ? 0 : 2;
 }
@@ -349,8 +431,13 @@ double Median(std::vector<double> v) {
   return v[v.size() / 2];
 }
 
+struct Timed {
+  double median_s = 0.0;
+  double min_s = 0.0;
+};
+
 template <class Run>
-void TimeIt(const char* label, int reps, Run run) {
+Timed TimeIt(const char* label, int reps, Run run) {
   run();  // warm-up
   std::vector<double> walls;
   for (int r = 0; r < reps; ++r) {
@@ -358,17 +445,46 @@ void TimeIt(const char* label, int reps, Run run) {
     run();
     walls.push_back(Seconds(start, Clock::now()));
   }
+  const Timed timed{.median_s = Median(walls), .min_s = std::ranges::min(walls)};
   std::printf("  %-44s median %.6f s  min %.6f s  (%d reps after 1 warm-up)\n", label,
-              Median(walls), std::ranges::min(walls), reps);
+              timed.median_s, timed.min_s, reps);
   std::fflush(stdout);
+  return timed;
 }
 
-int Timing(Context& gpu, const Options& o) {
+// One timed line of GPU-1: the GPU, or a CPU line on a number of threads.
+struct TimeRecord {
+  std::string workload;
+  std::string line;  // gpu, simd or f32
+  std::uint32_t threads = 0;
+  Timed timed;
+  double price = 0.0;
+};
+
+struct GpuRecord {
+  std::string workload;
+  std::size_t buffers = 0;
+  double gpu_s = 0.0;  // Median over the timed calls of the summed GPUStartTime to GPUEndTime
+  double price = 0.0;
+};
+
+struct TimingRecords {
+  aadp::metal::SetupTimes setup;
+  std::vector<TimeRecord> lines;
+  std::vector<GpuRecord> gpu;
+};
+
+std::string LineKey(const TimeRecord& r) {
+  return r.workload + "." + r.line + (r.line == "gpu" ? "" : "-" + std::to_string(r.threads));
+}
+
+int Timing(Context& gpu, const Options& o, TimingRecords& records) {
   if (o.paths_per_buffer == 0) {
     std::fprintf(stderr, "--paths-per-buffer is required: the safe batch from --mode=batch\n");
     return 1;
   }
   const aadp::metal::SetupTimes& setup = gpu.Setup();
+  records.setup = setup;
   std::printf("== GPU-1, iteration only: N = %llu, seed %llu, %llu paths per command buffer\n",
               static_cast<unsigned long long>(o.paths),
               static_cast<unsigned long long>(f32::kTimingSeed),
@@ -379,6 +495,7 @@ int Timing(Context& gpu, const Options& o) {
       gpu.DeviceName().c_str(), setup.device_s, setup.compile_s, setup.pipelines_s);
   std::printf("  SIMD CPU: %s, %zu double lanes (the ceiling), double, 52-bit uniforms\n",
               aadp::simd::TargetName().c_str(), aadp::simd::MaxLanes());
+  Values("setup", "setup", {setup.device_s, setup.compile_s, setup.pipelines_s});
   for (const f32::Workload& w : f32::kWorkloads) {
     const auto params = f32::MakeParams(w.contract, w.market, f32::kTimingSeed, f32::kSpan);
     if (!params) return 1;
@@ -386,7 +503,7 @@ int Timing(Context& gpu, const Options& o) {
     std::vector<double> gpu_sums;
     std::size_t buffers = 0;
     double checksum = 0.0;
-    TimeIt("GPU float32, allocation to host reduction", o.reps, [&] {
+    const Timed gpu_timed = TimeIt("GPU float32, allocation to host reduction", o.reps, [&] {
       const auto run = gpu.Price(*params, o.paths, o.paths_per_buffer, false);
       if (!run) throw std::runtime_error("GPU run failed: " + run.error());
       double total = 0.0;
@@ -399,40 +516,263 @@ int Timing(Context& gpu, const Options& o) {
         "    breakdown: %zu command buffers, summed GPUStartTime to GPUEndTime median "
         "%.6f s; price %.9f\n",
         buffers, Median(gpu_sums), checksum);
+    const std::string name(w.name);
+    records.lines.push_back(
+        {.workload = name, .line = "gpu", .threads = 0, .timed = gpu_timed, .price = checksum});
+    records.gpu.push_back(
+        {.workload = name, .buffers = buffers, .gpu_s = Median(gpu_sums), .price = checksum});
+    Values("time", LineKey(records.lines.back()), {gpu_timed.median_s, gpu_timed.min_s, checksum});
+    Values("breakdown", name, {Median(gpu_sums), checksum});
     for (const std::uint32_t threads : {1U, o.threads}) {
       const aadp::pricer::RunConfig config{
           .seed = f32::kTimingSeed, .paths = o.paths, .batches = 64, .threads = threads};
       const std::string simd_label = "SIMD CPU, 2 lanes, " + std::to_string(threads) + " thr";
       double simd_price = 0.0;
-      TimeIt(simd_label.c_str(), o.reps, [&] {
+      const Timed simd_timed = TimeIt(simd_label.c_str(), o.reps, [&] {
         const auto e = aadp::simd::PriceLanes(w.contract, w.market, config, 2);
         if (!e) throw std::runtime_error("the SIMD CPU run failed");
         simd_price = e->mean;
       });
       std::printf("    price %.9f\n", simd_price);
+      records.lines.push_back({.workload = name,
+                               .line = "simd",
+                               .threads = threads,
+                               .timed = simd_timed,
+                               .price = simd_price});
+      Values("time", LineKey(records.lines.back()),
+             {simd_timed.median_s, simd_timed.min_s, simd_price});
       const std::string f32_label = "CPU float32, " + std::to_string(threads) + " thr";
       double f32_price = 0.0;
-      TimeIt(f32_label.c_str(), o.reps, [&] {
+      const Timed f32_timed = TimeIt(f32_label.c_str(), o.reps, [&] {
         const auto spans = f32::PriceSpansCpu(*params, 0, o.paths / f32::kSpan, threads);
         f32_price = f32::ToEstimate(f32::Reduce(spans, f32::kSpan), f32::Scale(w.market)).mean;
       });
       std::printf("    price %.9f\n", f32_price);
+      records.lines.push_back({.workload = name,
+                               .line = "f32",
+                               .threads = threads,
+                               .timed = f32_timed,
+                               .price = f32_price});
+      Values("time", LineKey(records.lines.back()),
+             {f32_timed.median_s, f32_timed.min_s, f32_price});
     }
   }
   return 0;
 }
 
-}  // namespace
+// --- The report file -----------------------------------------------------------------------
 
-int main(int argc, char** argv) try {
+using results::CellKind;
+using results::HeaderField;
+using results::ReportColumn;
+using results::ReportTable;
+
+ReportColumn Real(std::string name, std::string unit = "none") {
+  return {.name = std::move(name), .kind = CellKind::kReal, .unit = std::move(unit)};
+}
+ReportColumn Integer(std::string name) {
+  return {.name = std::move(name), .kind = CellKind::kInteger, .unit = "count"};
+}
+ReportColumn Text(std::string name) {
+  return {.name = std::move(name), .kind = CellKind::kText, .unit = "none"};
+}
+std::string Cell(double x) { return results::real_cell(x); }
+std::string Cell(std::uint64_t n) { return results::integer_cell(static_cast<std::int64_t>(n)); }
+
+std::vector<ReportTable> TableTables(const std::vector<TableRecord>& records, std::uint64_t paths) {
+  ReportTable prices{
+      .name = "metal_prices",
+      .title =
+          "Stage 9 table, prices only: A and B double, C float32 on the CPU, D float32 on the "
+          "GPU, on the same uniforms",
+      .targets = {"GPU-2", "GPU-3"},
+      .timing = false,
+      .uses_chain = false,
+      .columns = {Text("workload"), Text("column"), Real("mean"), Real("standard_error"),
+                  Integer("paths")},
+      .rows = {}};
+  ReportTable differences{
+      .name = "metal_differences",
+      .title =
+          "Stage 9 table: paired differences of the prices, each relative to the mean of the "
+          "column it subtracts",
+      .targets = {"GPU-2", "GPU-3"},
+      .timing = false,
+      .uses_chain = false,
+      .columns = {Text("workload"), Text("pair"), Real("mean"), Real("standard_error"),
+                  Real("base"), Real("relative"), Real("relative_se")},
+      .rows = {}};
+  ReportTable gpu2{
+      .name = "metal_gpu2",
+      .title =
+          "GPU-2: abs(D - B) / SE_B against 0.01, and the CPU float32 line's abs(C - B) / SE_B, "
+          "not judged",
+      .targets = {"GPU-2"},
+      .timing = false,
+      .uses_chain = false,
+      .columns = {Text("workload"), Real("ratio"), Real("bound"), Text("verdict"),
+                  Real("cpu_ratio"), Integer("same_bit_spans"), Integer("spans")},
+      .rows = {}};
+  for (const TableRecord& r : records) {
+    for (std::size_t i = 0; i < kColumns.size(); ++i) {
+      const std::string column(kColumns[i]);
+      prices.rows.push_back({.key = r.workload + "." + column,
+                             .cells = {r.workload, column, Cell(r.columns[i].mean),
+                                       Cell(r.columns[i].standard_error), Cell(paths)}});
+    }
+    for (std::size_t i = 0; i < kPairs.size(); ++i) {
+      const std::string pair(kPairs[i]);
+      const f32::Difference& d = r.differences[i];
+      differences.rows.push_back(
+          {.key = r.workload + "." + pair,
+           .cells = {r.workload, pair, Cell(d.mean), Cell(d.standard_error), Cell(r.bases[i]),
+                     Cell(d.mean / r.bases[i]), Cell(d.standard_error / std::fabs(r.bases[i]))}});
+    }
+    gpu2.rows.push_back(
+        {.key = r.workload,
+         .cells = {r.workload, Cell(r.ratio), Cell(f32::kGpu2Factor), r.pass ? "pass" : "FAIL",
+                   Cell(r.cpu_ratio), Cell(static_cast<std::uint64_t>(r.same)),
+                   Cell(static_cast<std::uint64_t>(r.spans))}});
+  }
+  return {prices, differences, gpu2};
+}
+
+std::vector<ReportTable> TimingTables(const TimingRecords& records, const Options& o) {
+  ReportTable time{
+      .name = "metal_time",
+      .title =
+          "GPU-1, prices only: wall clock of one pricing of every path, the GPU in float32 "
+          "against the SIMD CPU in double and the CPU float32 line",
+      .targets = {"GPU-1"},
+      .timing = true,
+      .uses_chain = false,
+      .columns = {Text("workload"), Text("line"), Integer("threads"), Real("median", "s"),
+                  Real("min", "s"), Real("per_gpu"), Real("price"), Integer("paths"),
+                  Integer("repetitions")},
+      .rows = {}};
+  ReportTable breakdown{
+      .name = "metal_gpu_breakdown",
+      .title = "GPU-1 breakdown: command buffers and their summed GPU time, not in the headline",
+      .targets = {"GPU-1"},
+      .timing = true,
+      .uses_chain = false,
+      .columns = {Text("workload"), Integer("buffers"), Integer("paths_per_buffer"),
+                  Real("gpu_time", "s"), Real("price")},
+      .rows = {}};
+  ReportTable setup{
+      .name = "metal_setup",
+      .title = "GPU-1 setup, in no wall clock above: device and queue, library compile, pipelines",
+      .targets = {"GPU-1"},
+      .timing = true,
+      .uses_chain = false,
+      .columns = {Real("device", "s"), Real("compile", "s"), Real("pipelines", "s")},
+      .rows = {{.key = "setup",
+                .cells = {Cell(records.setup.device_s), Cell(records.setup.compile_s),
+                          Cell(records.setup.pipelines_s)}}}};
+  for (const TimeRecord& r : records.lines) {
+    double gpu_median = 0.0;
+    for (const TimeRecord& g : records.lines) {
+      if (g.workload == r.workload && g.line == "gpu") gpu_median = g.timed.median_s;
+    }
+    time.rows.push_back(
+        {.key = LineKey(r),
+         .cells = {r.workload, r.line, Cell(std::uint64_t{r.threads}), Cell(r.timed.median_s),
+                   Cell(r.timed.min_s), Cell(r.timed.median_s / gpu_median), Cell(r.price),
+                   Cell(o.paths), Cell(static_cast<std::uint64_t>(o.reps))}});
+  }
+  for (const GpuRecord& g : records.gpu) {
+    breakdown.rows.push_back({.key = g.workload,
+                              .cells = {g.workload, Cell(static_cast<std::uint64_t>(g.buffers)),
+                                        Cell(o.paths_per_buffer), Cell(g.gpu_s), Cell(g.price)}});
+  }
+  return {time, breakdown, setup};
+}
+
+std::vector<HeaderField> ReportHeader(const Options& o, Context& gpu) {
+  const bool table = o.mode == "table";
+  std::string tool = "aadp_metal_report --mode=" + o.mode +
+                     " --report --paths=" + std::to_string(o.paths) +
+                     " --threads=" + std::to_string(o.threads);
+  if (o.paths_per_buffer != 0) tool += " --paths-per-buffer=" + std::to_string(o.paths_per_buffer);
+  if (!table) tool += " --reps=" + std::to_string(o.reps);
+  std::vector<HeaderField> header{
+      {.key = "report_tool", .value = tool},
+      {.key = "report_inputs",
+       .value = "no market data: the stage 9 contracts asian12, asian252 and barrier156 under GBM "
+                "(src/f32/contracts.hpp)"},
+      {.key = "report_prices_only",
+       .value = "every figure is a price, a difference of prices or the time to price; AAD does "
+                "not run on the GPU, and no Greek is in this file"},
+      {.key = "metal_device", .value = gpu.DeviceName()},
+      {.key = "metal_seed",
+       .value = std::to_string(table ? f32::kTableSeed : f32::kTimingSeed) + ", span " +
+                std::to_string(f32::kSpan)},
+      {.key = "metal_paths", .value = std::to_string(o.paths) + " per contract"},
+  };
+  if (table) {
+    header.push_back(
+        {.key = "metal_columns",
+         .value = "A double on 32-bit uniforms and B double on 23-bit uniforms (the production "
+                  "double kernels), C float32 on the CPU, D float32 on the GPU; B, C and D on the "
+                  "same uniforms; " +
+                  std::to_string(o.threads) + " CPU threads"});
+  } else {
+    header.push_back(
+        {.key = "report_timing",
+         .value = "steady_clock; the GPU line from before buffer allocation to after the host "
+                  "reduction, across all command buffers; device, compile and pipelines apart and "
+                  "in no line; one warm-up call then " +
+                  std::to_string(o.reps) + " repetitions, median and min"});
+    header.push_back(
+        {.key = "metal_lines",
+         .value = "gpu: float32 on the GPU, " + std::to_string(o.paths_per_buffer) +
+                  " paths per command buffer; simd: simd::PriceLanes in double at 2 lanes on " +
+                  aadp::simd::TargetName() + " (ceiling " + std::to_string(aadp::simd::MaxLanes()) +
+                  "), 64 batches; f32: the float32 kernel on the CPU; the CPU lines on 1 and " +
+                  std::to_string(o.threads) + " threads"});
+  }
+  return header;
+}
+
+// Writes all of `text` to `fd`.
+bool WriteAll(int fd, std::string_view text) {
+  while (!text.empty()) {
+    const ssize_t wrote = ::write(fd, text.data(), text.size());
+    if (wrote <= 0) return false;
+    text.remove_prefix(static_cast<std::size_t>(wrote));
+  }
+  return true;
+}
+
+int Run(int argc, char* const* argv) {
   Options o;
   if (!Parse(argc, argv, o)) {
-    std::fprintf(stderr, "usage: aadp_metal_report --mode=properties|batch|table|timing ...\n");
+    std::fprintf(stderr,
+                 "usage: aadp_metal_report --mode=properties|batch|table|timing ...\n"
+                 "       aadp_metal_report --mode=table|timing ... --report [run flags]\n");
     return 2;
   }
   if (o.paths == 0 || o.paths % f32::kSpan != 0 || o.paths % 64 != 0) {
     std::fprintf(stderr, "--paths must be a positive multiple of 64\n");
     return 2;
+  }
+  std::optional<results::ReportRun> session;
+  int report_fd = -1;
+  if (o.report) {
+    // The run's refusals come before any work, as a benchmark binary's do. Then the text goes to
+    // stderr and stdout keeps the report alone.
+    auto begun = results::ReportRun::begin(o.run);
+    if (!begun) {
+      std::fprintf(stderr, "aadp_metal_report: %s\n", begun.error().message.c_str());
+      return begun.error().exit_code;
+    }
+    session.emplace(std::move(*begun));
+    std::fflush(stdout);
+    report_fd = ::dup(STDOUT_FILENO);
+    if (report_fd < 0 || ::dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {
+      std::fprintf(stderr, "aadp_metal_report: cannot keep stdout for the report\n");
+      return 1;
+    }
   }
   auto created = Context::Create();
   if (!created) {
@@ -443,10 +783,46 @@ int main(int argc, char** argv) try {
   std::printf("device %s\n", gpu.DeviceName().c_str());
   if (o.mode == "properties") return Properties(gpu);
   if (o.mode == "batch") return Batch(gpu);
-  if (o.mode == "table") return Table(gpu, o);
-  if (o.mode == "timing") return Timing(gpu, o);
-  std::fprintf(stderr, "unknown mode %s\n", o.mode.c_str());
-  return 2;
+  int status = 2;
+  std::vector<ReportTable> tables;
+  if (o.mode == "table") {
+    std::vector<TableRecord> records;
+    status = Table(gpu, o, records);
+    // A failed GPU-2 is in the file as its verdict; a column that failed leaves no file.
+    if (status != 1) tables = TableTables(records, o.paths);
+  } else if (o.mode == "timing") {
+    TimingRecords records;
+    status = Timing(gpu, o, records);
+    if (status == 0) tables = TimingTables(records, o);
+  } else {
+    std::fprintf(stderr, "unknown mode %s\n", o.mode.c_str());
+    return 2;
+  }
+  std::fflush(stdout);
+  if (!session || tables.empty()) return status;
+  const results::ReportShape shape{
+      .run = {.claim = "result",
+              .repetitions = o.mode == "table" ? 1 : o.reps,
+              .batches_per_repetition = 1,
+              .warmup = o.mode == "table" ? "none" : "one call of each line"},
+      .header = ReportHeader(o, gpu)};
+  auto text = session->finish(shape, tables, std::nullopt);
+  if (!text) {
+    std::fprintf(stderr, "aadp_metal_report: %s\n", text.error().message.c_str());
+    return text.error().exit_code;
+  }
+  if (!WriteAll(report_fd, *text)) {
+    std::fprintf(stderr, "aadp_metal_report: cannot write the report\n");
+    return 2;
+  }
+  return status;
+}
+
+}  // namespace
+
+// NOLINTNEXTLINE(misc-const-correctness): the standard fixes the signature of main.
+int main(int argc, char** argv) try {
+  return Run(argc, argv);
 } catch (const std::exception& error) {
   std::fprintf(stderr, "aadp_metal_report: %s\n", error.what());
   return 1;

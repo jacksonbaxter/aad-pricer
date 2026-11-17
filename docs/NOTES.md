@@ -2609,6 +2609,37 @@ What was done for the QuantLib items, as designed:
   - QuantLib tuned runs at 0.145 to 0.265 of ours, fastest, in paths/s on R1, R2.K100, R3, R4, R5.H095 and R7.H095. Its RMSE² × time over ours, fastest, is 66.6, 13.2, 13.9, 9.63, 3.93 and 6.65, and with SE² alone 7.98, 5.62, 5.08, 4.44, 3.93 and 6.65.
   - Ours is faster than at stage 10, whose figures were 0.20 to 0.43.
 - The gates. The Linux host was closed to this piece. So each of its commits had the Mac gates first: release and fuzz ctest, the `quantlib` ctest, both QuantLib builds, format, the repo scan, clang-tidy on the changed C++, the results docs check, the static fault check, and its new faults and those on the files it touched, each caught with `--only`. Then it was pushed to `jb-build` alone and waited for CI to pass in every job, which stood in for the GCC pre-commit and the libstdc++ tidy, before the next commit went on top of it. The diffs were read for GCC-only and libstdc++-only problems before each push.
+- b31045e, the QuantLib commit, passed CI in all 22 jobs on `jb-build` (run 44038139206) before anything went on top of it, and again on `main` (run 44043307227).
+- R11's QuantLib call, after the QuantLib commit (b31045e), iteration only, macOS, not a result. Its time moves with where its code and memory land, and not with anything this work changed in it. On the committed tree's binaries:
+  - `ql-tuned-nolto`'s R11 took 2.20 s and 2.21 s in text mode, and 2.44 s in report mode, from the same binary minutes apart. The F binary took 2.16 s.
+  - In the default report file, R11's QuantLib call went from 2.18 s (before the clang-tidy fixes) to 2.42 s (after them). Every other estimator stayed within 1%.
+  - So R11's QuantLib column carries about ±10% to ±17% from placement alone, on this Mac, in either build. The registered run keeps the column as it is and says so beside its figure.
+  - R11 is a speed-only row, with QuantLib at 0.29 to 0.33 of ours, scalar. A 17% shift does not come near changing which side is faster.
+  - No other estimator moves like this. The nearest is R10's QuantLib call, on the same grid, whose F binary gave 2.48 s in one run and 2.60 s in the next.
+
+What was done for Metal, as designed:
+- `aadp_metal_report --mode=table|timing --report [run flags]` writes a report file through the run header, so `scripts/run_bench.sh` runs and stamps it. The text, the same as without `--report`, goes to stderr through `dup2`. Its new `  = <table> <key> <values>` lines give every cell at `%.17g`. What is computed and what is timed are unchanged. The table runs the same four columns at the same seed, span and threads. The timing runs the same warm-up, repetitions and calls, timed by the same `TimeIt`, which now also returns the median and minimum it prints.
+  - Three untimed tables answer `GPU-2` and `GPU-3`:
+    - `metal_prices`: A, B, C and D per contract, with mean, SE and paths;
+    - `metal_differences`: B − A, C − B, D − B and D − C, each with its SE, the mean it is relative to, the relative difference and its SE;
+    - `metal_gpu2`: |D − B| / SE_B against 0.01 with its verdict, the CPU float32 line's ratio (not judged), and the spans whose C and D sums are the same bits.
+  - Three timed tables answer `GPU-1`:
+    - `metal_time`: the GPU line and the SIMD and float32 CPU lines on 1 and 16 threads, with median, minimum, price and time over the GPU's;
+    - `metal_gpu_breakdown`: the command buffers and their summed GPU time, never the headline;
+    - `metal_setup`: device, compile and pipelines, in no wall clock.
+  - A header field, `report_prices_only`, says that every figure is a price, a difference of prices or the time to price, that AAD does not run on the GPU and that no Greek is in the file. No title, column or field names a Greek or a tape.
+  - The run flags are refused without `--report`. `--report` is refused for the properties and the batch.
+- New ctest `Gpu.MetalReportThroughRunBench` (`tests/metal/run_bench_metal_test.sh`, `release` and every preset with Metal) runs both modes through `run_bench.sh` against a stand-in `measure.sh` at 2^16 paths. It checks:
+  - the header, the claim, the prices-only field and the device, and that stdout holds the file alone;
+  - 12 price, 12 difference and 3 `GPU-2` rows, and 15 time, 3 breakdown and 1 setup rows, each cell numerically the text's `%.17g` value;
+  - that the relative difference is the difference over its base, that the verdicts are the text's, the four command buffers a contract, and the GPU line at 1;
+  - the table tool's rendering and its refusal without `--iteration`, and the three refusals.
+
+  Named under `Gpu.` and exiting 77 with a `SKIP` line where `aadp_metal_info` finds no device, it falls under CI's existing allowance, which applies only where CI's own probe found none.
+- The two documented commands were run once each, iteration only, macOS, not a result, through `run_bench.sh` and `measure.sh`, at 2^20 paths per contract, a sixteenth of the registered size.
+  - The table took 5 s. |D − B| / SE_B was 0.000075, 0.00015 and 0.000043 on `asian12`, `asian252` and `barrier156`, all `pass`. (D − B) / B was −1.08e-7, +2.21e-7 and −1.26e-7, close to stage 9's 2^24 figures for the two Asians.
+  - The timing took 185 s. At 2^20 the GPU's fixed costs weigh more than at 2^24: `asian252` 0.0081 s on the GPU against 0.537 s for the SIMD CPU on 16 threads (66 times) and 6.01 s on 1 (738 times).
+  - Neither is a `GPU-1` figure; the reported run at G gives those.
 
 ### Rule slips
 
@@ -2655,6 +2686,7 @@ None affected a number.
   - One scratch file was written by mistake in the folder above the project's, outside it. It was deleted at once.
   - Some work ran on the Mac outside `heavy.sh`. Two small builds, of `aadp_qlcompare_test` (release) and `aadp_bench_quantlib` (`quantlib`), went through plain `ninja`, and they also reconfigured those two build trees. Runs of a few seconds also went outside it: the python tests, the static check, the runner's dry run, and the symbol and disassembly comparisons of the two LTO binaries.
   - One foreground 240 s sleep was refused by the tool. One foreground wait on the measurement batch ran past the tool's 600 s timeout and was moved to the background.
+  - One batch of iteration runs, started in the background without a time limit of its own, was stopped by the tool's 30-minute limit during its last run, which it left partial and which is not used. The wait on it was stopped the same way.
   - The first fault run named the new faults without `--source`, so it read the committed manifest and refused them ("no such fault") before building anything. The runs above used a copy of the working tree.
   - The Linux host was closed to this piece, so its commits had no GCC pre-commit and no libstdc++ tidy there. CI was their gate instead (above).
 

@@ -93,9 +93,23 @@ aadp_tool(aadp_metal_info
   SOURCES tools/metal_report/info.cpp
   LINK aadp_metal)
 
-# The stage 9 report: properties, batch size, the table and the GPU-1 timing. Iteration only.
-if(TARGET aadp_simd)
+# The stage 9 report: properties, batch size, the table and the GPU-1 timing. The table and the
+# timing also write report files (results/report.hpp) through the run header, so the tool links
+# aadp_run_header.
+if(TARGET aadp_simd AND TARGET aadp_run_header)
   aadp_tool(aadp_metal_report
     SOURCES tools/metal_report/main.cpp
-    LINK aadp_metal aadp_simd)
+    LINK aadp_metal aadp_simd aadp_run_header)
+  # The table and the timing as report files through scripts/run_bench.sh and the stamp, against a
+  # stand-in measure.sh, at a reduced size, rendered by the table tool. Not a result. Named under
+  # Gpu. like the GPU checks, so that CI allows its skip only where its probe found no device.
+  if(AADP_BUILD_TESTS AND TARGET aadp_results_stamp AND TARGET aadp_results_table)
+    add_test(NAME Gpu.MetalReportThroughRunBench
+      COMMAND bash "${PROJECT_SOURCE_DIR}/tests/metal/run_bench_metal_test.sh"
+        "$<TARGET_FILE:aadp_metal_report>" "$<TARGET_FILE:aadp_metal_info>"
+        "${PROJECT_BINARY_DIR}/bench-test-scratch/metal-script"
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(Gpu.MetalReportThroughRunBench PROPERTIES
+      LABELS "metal;cli" SKIP_RETURN_CODE 77 TIMEOUT 600)
+  endif()
 endif()

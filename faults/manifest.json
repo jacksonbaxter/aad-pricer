@@ -11199,6 +11199,186 @@
       "reason": "FAILED: R1 ours fastest RMSE\\^2 x time",
       "timeout_s": 120,
       "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-stdout",
+      "kind": "check",
+      "covers": "a Metal report run writes only the report on stdout",
+      "bug": "The report run leaves its text on stdout, so the stamp cannot read the file.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "  if (report_fd < 0 || ::dup2(STDERR_FILENO, STDOUT_FILENO) < 0) {",
+          "replace": "  if (report_fd < 0) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: metal-table: an iteration run completes and is stamped",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-run-flags-text",
+      "kind": "check",
+      "covers": "aadp_metal_report's run flags are for the report only",
+      "bug": "The text modes take run flags they cannot record.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "  if (o.run_flags && !o.report) {",
+          "replace": "  if (o.run_flags && o.report && !o.report) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: the text refuses a run flag",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-price-cells",
+      "kind": "check",
+      "covers": "GPU-2's and GPU-3's price table holds the text's figures",
+      "bug": "The price table writes each column's mean where its standard error goes.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "                     Cell(r.columns[i].standard_error), Cell(paths)}});",
+          "replace": "                     Cell(r.columns[i].mean), Cell(paths)}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: table: each price and SE is the text's",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-relative",
+      "kind": "check",
+      "covers": "GPU-3's relative difference is over the subtracted column's mean",
+      "bug": "The relative difference D - B is taken over C's mean, not B's.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "                     Cell(d.mean / r.bases[i]), Cell(d.standard_error / std::fabs(r.bases[i]))}});",
+          "replace": "                     Cell(d.mean / r.columns[i].mean), Cell(d.standard_error / std::fabs(r.bases[i]))}});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: table: a relative difference is the difference over its base",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-gpu2-ratio",
+      "kind": "check",
+      "covers": "GPU-2's ratio in the report is the GPU's, not the CPU line's",
+      "bug": "The GPU-2 table writes the CPU float32 line's ratio where the GPU's goes.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "         .cells = {r.workload, Cell(r.ratio), Cell(f32::kGpu2Factor), r.pass ? \"pass\" : \"FAIL\",",
+          "replace": "         .cells = {r.workload, Cell(r.cpu_ratio), Cell(f32::kGpu2Factor), r.pass ? \"pass\" : \"FAIL\","
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: table: each GPU-2 ratio is the text's",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-time-price",
+      "kind": "check",
+      "covers": "GPU-1's time table holds each line's own price",
+      "bug": "The time table writes the least time where the line's price goes.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "                   Cell(r.timed.min_s), Cell(r.timed.median_s / gpu_median), Cell(r.price),",
+          "replace": "                   Cell(r.timed.min_s), Cell(r.timed.median_s / gpu_median), Cell(r.timed.min_s),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: timing: each median, min and price is the text's",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-time-timed",
+      "kind": "check",
+      "covers": "GPU-1's time table is a timed table",
+      "bug": "The time table is written as not a timing, so the stamp and the table tool take its seconds for derived figures.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "the CPU float32 line\",\n      .targets = {\"GPU-1\"},\n      .timing = true,",
+          "replace": "the CPU float32 line\",\n      .targets = {\"GPU-1\"},\n      .timing = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: timing: three tables, timed",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-buffers",
+      "kind": "check",
+      "covers": "GPU-1's breakdown counts the command buffers",
+      "bug": "The breakdown writes one command buffer whatever the split.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "                              .cells = {g.workload, Cell(static_cast<std::uint64_t>(g.buffers)),",
+          "replace": "                              .cells = {g.workload, Cell(std::uint64_t{1}),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: timing: four command buffers a contract",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "metal-report-prices-only",
+      "kind": "check",
+      "covers": "a Metal report says it holds prices only and no AAD runs on the GPU",
+      "bug": "The header stops saying that AAD does not run on the GPU.",
+      "edits": [
+        {
+          "file": "tools/metal_report/main.cpp",
+          "find": "\"not run on the GPU, and no Greek is in this file\"}",
+          "replace": "\"run on the GPU as well\"}"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_metal_report", "aadp_metal_info", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/metal/run_bench_metal_test.sh", "{build}/bin/aadp_metal_report", "{build}/bin/aadp_metal_info", "{build}/bench-test-scratch/metal-fault"],
+      "detect": "test",
+      "reason": "FAILED: metal-table: it says it holds prices only",
+      "timeout_s": 600,
+      "mutated_exit": 1
     }
   ]
 }

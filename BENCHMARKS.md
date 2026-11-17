@@ -245,6 +245,16 @@ python3 -I scripts/quantlib_summary.py --accuracy references/quantlib_accuracy.c
 
 Each was run once, iteration only, on `mac-m4max`, on the tree of the commit that adds these lines before it was committed (`docs/NOTES.md`, "The QuantLib and Metal report emitters"): the two builds, into trees the same presets had configured earlier, and the `quantlib` ctest; the three speed runs with `AADP_NOT_REPORTABLE=iteration`, at full size, about 4.5, 2.5 and 2.5 minutes; the accuracy run at its registered size, 12.3 minutes on one thread; `curate`, which refused that output because its tree was not clean, as it must, and then wrote and checked a copy marked as an export, into the build tree and not `references/`; and the summary with `--iteration`, which it needs for files that are not reportable. The accuracy run fixes its seed, 20261112, and the speed runs theirs, 20261113, as the protocol registered them.
 
+The Metal reports on `mac-m4max`, from the `release` preset: `GPU-2`'s table at its registered 2^24 paths per contract with `GPU-3`'s paired differences, and `GPU-1`'s timing. Every figure in them is a float32 price on the GPU, a price on the CPU, a difference of prices or the time to price; AAD does not run on the GPU. `--paths-per-buffer=4194304` is the safe batch stage 9 found with `--mode=batch` (2^22 paths, 28 ms of GPU time):
+
+```sh
+M=build/release/bin/aadp_metal_report
+scripts/run_bench.sh $M metal-table --mode=table --report
+scripts/run_bench.sh $M metal-timing --mode=timing --report --paths-per-buffer=4194304
+```
+
+Each was run once, iteration only, on `mac-m4max`, on the tree of the commit that adds these lines before it was committed, at 2^20 paths per contract (`--paths=1048576`), a sixteenth of the registered size: the table in 5 s and the timing in 185 s of measurement, so about 1.5 and 50 minutes at the registered size.
+
 ## 2. Tape memory
 
 Tape memory is the main practical limit of AAD, so every AAD multiple is reported beside tape bytes per path and peak RSS.
