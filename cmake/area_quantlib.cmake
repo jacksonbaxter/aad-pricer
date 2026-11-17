@@ -4,16 +4,19 @@
 # AAD_PRICER_BUILD_QUANTLIB_COMPARE (cmake/AadpDependencies.cmake), in the quantlib and
 # quantlib-lto presets. See cmake/AadpTargets.cmake for the helpers.
 if(NOT TARGET aadp_simd_ad OR NOT TARGET aadp_local_vol OR NOT TARGET aadp_quadrature_lib
-   OR NOT TARGET aadp_oracle_lib)
+   OR NOT TARGET aadp_oracle_lib OR NOT TARGET aadp_run_header)
   if(AAD_PRICER_BUILD_QUANTLIB_COMPARE)
-    message(FATAL_ERROR "the QuantLib comparison needs the pricer, simd, svi and oracle areas")
+    message(FATAL_ERROR "the QuantLib comparison needs the bench, pricer, simd, svi and oracle areas")
   endif()
   return()
 endif()
 
+# The speed table (bench/quantlib/speed_report.hpp) is a report table, and the bench writes its
+# report file through the run header, so the library links aadp_run_header.
 aadp_library(aadp_qlcompare_lib
   SOURCES bench/quantlib/compare.cpp bench/quantlib/ours.cpp bench/quantlib/local_vol_rows.cpp
-  LINK aadp_simd_ad aadp_local_vol aadp_quadrature_lib aadp_oracle_lib)
+    bench/quantlib/speed_report.cpp
+  LINK aadp_simd_ad aadp_local_vol aadp_quadrature_lib aadp_oracle_lib aadp_run_header)
 target_include_directories(aadp_qlcompare_lib PUBLIC "${PROJECT_SOURCE_DIR}/bench")
 
 # The comparisons and their references, R3's control variate, the grid rule, the ceilings file and
@@ -29,6 +32,16 @@ if(AADP_BUILD_TESTS)
     COMMAND "${Python3_EXECUTABLE}" -I tests/bench/quantlib_flags_test.py
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_quantlib_flag_check_selftest PROPERTIES LABELS "unit;bench")
+  # The accuracy run's curation into references/ on a synthetic output, and the curated file
+  # itself once it is committed; the RMSE^2 x time summary on hand-worked inputs.
+  add_test(NAME aadp_quantlib_accuracy_curation
+    COMMAND "${Python3_EXECUTABLE}" -I tests/bench/quantlib_accuracy_curation_test.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_quantlib_accuracy_curation PROPERTIES LABELS "unit;bench;oracle")
+  add_test(NAME aadp_quantlib_summary
+    COMMAND "${Python3_EXECUTABLE}" -I tests/bench/quantlib_summary_test.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_quantlib_summary PROPERTIES LABELS "unit;bench")
 endif()
 
 if(NOT AAD_PRICER_BUILD_QUANTLIB_COMPARE OR NOT AADP_BUILD_BENCHMARKS)
@@ -78,4 +91,15 @@ if(AADP_BUILD_TESTS)
       "${PROJECT_BINARY_DIR}/compile_commands.json" "${quantlib_SOURCE_DIR}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_quantlib_flag_check PROPERTIES LABELS "bench;quantlib")
+  # The speed run as a report file, at a reduced size, through scripts/run_bench.sh and the stamp
+  # against a stand-in measure.sh, and rendered by the table tool. Not a result.
+  if(TARGET aadp_results_stamp AND TARGET aadp_results_table)
+    add_test(NAME aadp_run_bench_quantlib_script
+      COMMAND bash "${PROJECT_SOURCE_DIR}/tests/bench/run_bench_quantlib_test.sh"
+        "$<TARGET_FILE:aadp_bench_quantlib>"
+        "${PROJECT_BINARY_DIR}/bench-test-scratch/quantlib-script"
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(aadp_run_bench_quantlib_script PROPERTIES
+      LABELS "bench;quantlib;cli" TIMEOUT 600)
+  endif()
 endif()

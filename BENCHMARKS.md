@@ -227,6 +227,24 @@ build/release-avx2/bin/aadp_results_table build/release-avx2/results/linux-zen1
 
 So on `linux-zen1`, `release-avx2` (AVX2, 4 lanes) gives every lane figure, which is `price-lanes`, `tape-lanes` and the "x fastest primal" column of the five `-avx2` files, `SIMD-1` and `SIMD-2`, and every `aadp_bench_simd` and per-kernel `simd-math` number, `RNG-1`, `RNG-2` and `RNG-4` among them. `release` (SSE2) gives everything else: every other variant of `aadp_bench_aad`'s eight workloads, from the six files above and the two `aad8-*` files, `aadp_bench_implied_vol` and the reports. Each file records its preset's instruction set in `simd_target`, and `aadp_bench_simd`'s files in `bench_instruction_set` too. The stamp writes into the preset's own `results/linux-zen1/`, so the two presets' files stay apart until they are copied.
 
+The QuantLib comparison on `mac-m4max` (`QL-1`, `QL-2`, `QL-3`), from its own two presets: `quantlib` (QuantLib v1.44 and Boost 1.92.0 fetched pinned, the bench's flags, no LTO) and `quantlib-lto` (the same with ThinLTO on both sides). `QL-1`'s three columns are three report files: QuantLib's default column with ours, from `quantlib`; QuantLib tuned without LTO, from `quantlib`; QuantLib tuned, from `quantlib-lto`. `QL-2`'s accuracy run is a correctness run, not a timing, so it goes through `heavy.sh`, the machine's lock wrapper, which sits next to the repo as `measure.sh` does; its output is curated into `references/quantlib_accuracy.csv`, which `check` compares with the run's rows byte for byte. The summary reads the curated file and the three stamped files and prints `QL-1`'s paths/s and RMSE² × time ratios, its verdict on the strictly like-for-like rows, and the SE²-only supplement, which has no verdict. In the same checkout or export, after the commands above:
+
+```sh
+H=../.orchestrator/heavy.sh
+$H cmake --preset quantlib && $H cmake --build --preset quantlib -j 4
+$H cmake --preset quantlib-lto && $H cmake --build --preset quantlib-lto -j 4
+$H python3 -I scripts/run_tests.py ctest quantlib
+scripts/run_bench.sh build/quantlib/bin/aadp_bench_quantlib ql-speed-default speed --report --ql default --ours yes
+scripts/run_bench.sh build/quantlib/bin/aadp_bench_quantlib ql-speed-tuned-nolto speed --report --ql tuned --ours no
+scripts/run_bench.sh build/quantlib-lto/bin/aadp_bench_quantlib ql-speed-tuned speed --report --ql tuned --ours no
+$H build/quantlib/bin/aadp_bench_quantlib accuracy --ceilings bench/quantlib/ceilings.csv --out build/quantlib/ql-accuracy.txt
+python3 -I scripts/curate_quantlib_accuracy.py curate build/quantlib/ql-accuracy.txt references/quantlib_accuracy.csv
+python3 -I scripts/curate_quantlib_accuracy.py check build/quantlib/ql-accuracy.txt references/quantlib_accuracy.csv
+python3 -I scripts/quantlib_summary.py --accuracy references/quantlib_accuracy.csv --speed build/quantlib/results/mac-m4max/ql-speed-default-<UTC>.txt build/quantlib/results/mac-m4max/ql-speed-tuned-nolto-<UTC>.txt build/quantlib-lto/results/mac-m4max/ql-speed-tuned-<UTC>.txt
+```
+
+Each was run once, iteration only, on `mac-m4max`, on the tree of the commit that adds these lines before it was committed (`docs/NOTES.md`, "The QuantLib and Metal report emitters"): the two builds, into trees the same presets had configured earlier, and the `quantlib` ctest; the three speed runs with `AADP_NOT_REPORTABLE=iteration`, at full size, about 4.5, 2.5 and 2.5 minutes; the accuracy run at its registered size, 12.3 minutes on one thread; `curate`, which refused that output because its tree was not clean, as it must, and then wrote and checked a copy marked as an export, into the build tree and not `references/`; and the summary with `--iteration`, which it needs for files that are not reportable. The accuracy run fixes its seed, 20261112, and the speed runs theirs, 20261113, as the protocol registered them.
+
 ## 2. Tape memory
 
 Tape memory is the main practical limit of AAD, so every AAD multiple is reported beside tape bytes per path and peak RSS.

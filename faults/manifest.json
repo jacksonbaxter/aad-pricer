@@ -10813,6 +10813,392 @@
       "reason": "FAILED: a filtered run completes and is stamped",
       "timeout_s": 300,
       "mutated_exit": 1
+    },
+    {
+      "id": "ql-speed-report-cells",
+      "kind": "check",
+      "covers": "QL-1's speed table holds the timed call's own figures",
+      "bug": "The speed table writes the least time where the greatest goes.",
+      "edits": [
+        {
+          "file": "bench/quantlib/speed_report.cpp",
+          "find": "                   real_cell(t.max_s), real_cell(PathsPerSecond(t)),",
+          "replace": "                   real_cell(t.min_s), real_cell(PathsPerSecond(t)),"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareSpeedReport.EveryCellIsTheRecordsOwnDouble"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareSpeedReport\\.EveryCellIsTheRecordsOwnDouble",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-speed-report-timing",
+      "kind": "check",
+      "covers": "QL-1's speed table is a timed table",
+      "bug": "The speed table is written as not a timing, so the stamp and the table tool take its seconds for derived figures.",
+      "edits": [
+        {
+          "file": "bench/quantlib/speed_report.cpp",
+          "find": "      .timing = true,",
+          "replace": "      .timing = false,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareSpeedReport.EveryCellIsTheRecordsOwnDouble"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareSpeedReport\\.EveryCellIsTheRecordsOwnDouble",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-speed-line-text",
+      "kind": "check",
+      "covers": "the speed run's text line is the bench's line",
+      "bug": "The text line prints the least time twice and drops the median.",
+      "edits": [
+        {
+          "file": "bench/quantlib/speed_report.cpp",
+          "find": "\"speed,\" + record.row + \",\" + record.column + \",\" + std::to_string(t.paths) + \",\" +\n         std::to_string(t.steps) + \",\" + FormatNumber(t.median_s)",
+          "replace": "\"speed,\" + record.row + \",\" + record.column + \",\" + std::to_string(t.paths) + \",\" +\n         std::to_string(t.steps) + \",\" + FormatNumber(t.min_s)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareSpeedReport.TheTextLineIsTheBenchsLine"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareSpeedReport\\.TheTextLineIsTheBenchsLine",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-speed-report-scale-limit",
+      "kind": "check",
+      "covers": "the speed run's reduced size stops at 1/64",
+      "bug": "Any power of two scales the speed run, so a run can time 2^13 paths a row and still look like the registered one.",
+      "edits": [
+        {
+          "file": "bench/quantlib/speed_report.cpp",
+          "find": "  if (scale == 0 || scale > kMaxSpeedScale || !std::has_single_bit(scale)) return std::nullopt;",
+          "replace": "  if (scale == 0 || !std::has_single_bit(scale)) return std::nullopt;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_qlcompare_test"],
+      "command": ["{build}/bin/aadp_qlcompare_test", "--gtest_filter=QlCompareSpeedReport.ScaleIsAPowerOfTwoThatKeepsWholeBatches"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] QlCompareSpeedReport\\.ScaleIsAPowerOfTwoThatKeepsWholeBatches",
+      "timeout_s": 300
+    },
+    {
+      "id": "ql-speed-report-run-flags-text",
+      "kind": "check",
+      "covers": "aadp_bench_quantlib's run flags are for the report only",
+      "bug": "The text speed run takes run flags it cannot record.",
+      "edits": [
+        {
+          "file": "bench/quantlib/main.cpp",
+          "find": "  if (o.run_flags && !o.report) return std::nullopt;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_quantlib_test.sh", "{build}/bin/aadp_bench_quantlib", "{build}/bench-test-scratch/quantlib-fault"],
+      "detect": "test",
+      "reason": "FAILED: the text refuses a run flag",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-speed-report-stdout",
+      "kind": "check",
+      "covers": "a QuantLib speed report run writes only the report on stdout",
+      "bug": "The report run prints its text lines on stdout too, so the stamp cannot read the file.",
+      "edits": [
+        {
+          "file": "bench/quantlib/main.cpp",
+          "find": "  Output out(o.out, session != nullptr);",
+          "replace": "  Output out(o.out, false);"
+        }
+      ],
+      "preset": "quantlib",
+      "targets": ["aadp_bench_quantlib", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_quantlib_test.sh", "{build}/bin/aadp_bench_quantlib", "{build}/bench-test-scratch/quantlib-fault"],
+      "detect": "test",
+      "reason": "FAILED: an iteration run completes and is stamped",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-order",
+      "kind": "check",
+      "covers": "the QuantLib accuracy curation keeps the registered order",
+      "bug": "The curation and its validation take the 42 comparisons in any order.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if got != names:",
+          "replace": "    if sorted(got) != sorted(names):"
+        },
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if [row[0] if row else \"\" for row in rows] != names:",
+          "replace": "    if sorted(row[0] if row else \"\" for row in rows) != sorted(names):"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: curate refuses rows out of order",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-registered-run",
+      "kind": "check",
+      "covers": "the QuantLib accuracy curation takes the registered run only",
+      "bug": "The curation takes a run at any N and seed.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if REGISTERED not in lines:",
+          "replace": "    if False:"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: curate refuses another seed",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-tree",
+      "kind": "check",
+      "covers": "the QuantLib accuracy curation takes a clean or exported tree only",
+      "bug": "The curation and its validation take a run from a tree with uncommitted changes.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if not (tree == \"clean (git)\" or tree == \"exported (COMMIT file)\"):",
+          "replace": "    if not tree:"
+        },
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if not re.search(r\"^# Commit [0-9a-f]{40}, tree (clean|exported), host \", text, re.M):",
+          "replace": "    if not re.search(r\"^# Commit [0-9a-f]{40}, tree \\w+, host \", text, re.M):"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: curate refuses a dirty tree",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-verdict",
+      "kind": "check",
+      "covers": "a curated QuantLib accuracy row's verdict is the one its cells give",
+      "bug": "The curated file's verdicts are taken as written, so a pass beyond its bound validates.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if row[8] not in expected:",
+          "replace": "    if row[8] not in VERDICTS:"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: validate refuses a pass beyond the bound",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-check-bytes",
+      "kind": "check",
+      "covers": "the QuantLib accuracy check compares the rows byte for byte",
+      "bug": "The check compares the number of rows only.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "        if produced == committed:",
+          "replace": "        if len(produced.splitlines()) == len(committed.splitlines()):"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: check finds a changed row",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-chain",
+      "kind": "check",
+      "covers": "no QuantLib accuracy row is derived from the option chain",
+      "bug": "The curation takes an output that names the chain's data, with no attribution.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "    if CHAIN_WORDS.search(text):\n        raise Refused(\"the raw output names",
+          "replace": "    if False:\n        raise Refused(\"the raw output names"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: curate refuses anything naming the chain's data",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-curate-validate-if-present",
+      "kind": "check",
+      "covers": "the committed QuantLib accuracy file is validated when present",
+      "bug": "validate-if-present passes whether or not the file is there, without reading it.",
+      "edits": [
+        {
+          "file": "scripts/curate_quantlib_accuracy.py",
+          "find": "        if command == \"validate-if-present\" and not pathlib.Path(argv[2]).exists():",
+          "replace": "        if command == \"validate-if-present\":"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_accuracy_curation_test.py"],
+      "detect": "test",
+      "reason": "FAILED: validate-if-present refuses a present bad file",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-rmse-max",
+      "kind": "check",
+      "covers": "QL-1's RMSE^2 is max(SE^2, d^2), as registered",
+      "bug": "The summary takes SE^2 for RMSE^2 everywhere, so a distance beyond one SE goes unseen.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "    return a[\"se\"] ** 2 if se_only else max(a[\"se\"] ** 2, a[\"d\"] ** 2)",
+          "replace": "    return a[\"se\"] ** 2"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: R1 default RMSE\\^2 x time",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-fastest",
+      "kind": "check",
+      "covers": "ours, fastest, is the faster of scalar and lanes",
+      "bug": "The summary always takes our scalar time as the fastest.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "        fastest = lanes if lanes and lanes[\"paths_per_s\"] > scalar[\"paths_per_s\"] else scalar",
+          "replace": "        fastest = scalar"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: R1's fastest is the lanes",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-verdict-tuned",
+      "kind": "check",
+      "covers": "QL-1 is judged against QuantLib's tuned column",
+      "bug": "The verdict is taken against the default column, which is easier to beat.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "            tuned = entry[\"ql\"][\"ql-tuned\"]",
+          "replace": "            tuned = entry[\"ql\"][\"ql-default\"]"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: R3 does not meet QL-1",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-hosts",
+      "kind": "check",
+      "covers": "QL-1's summary never mixes hosts",
+      "bug": "The summary joins speed files from two hosts.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "    if len(hosts) != 1 or len(commits) != 1:",
+          "replace": "    if len(commits) != 1:"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: refuses two hosts",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-reportable",
+      "kind": "check",
+      "covers": "QL-1's summary takes reportable files unless told otherwise",
+      "bug": "The summary prints a file that is not reportable without the iteration banner.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "        if header[\"reportable\"] != \"yes\":",
+          "replace": "        if False:"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: refuses a file that is not reportable",
+      "timeout_s": 120,
+      "mutated_exit": 1
+    },
+    {
+      "id": "ql-summary-time-at-n",
+      "kind": "check",
+      "covers": "RMSE^2 x time takes the time of the accuracy run's N paths",
+      "bug": "The summary multiplies by the time of one timed call, not scaled to the accuracy run's N.",
+      "edits": [
+        {
+          "file": "scripts/quantlib_summary.py",
+          "find": "    return mse(accuracy, name, se_only) * record[\"median\"] * ACCURACY_N / record[\"paths\"]",
+          "replace": "    return mse(accuracy, name, se_only) * record[\"median\"]"
+        }
+      ],
+      "preset": "release",
+      "targets": [],
+      "command": ["python3", "-I", "tests/bench/quantlib_summary_test.py"],
+      "detect": "test",
+      "reason": "FAILED: R1 ours fastest RMSE\\^2 x time",
+      "timeout_s": 120,
+      "mutated_exit": 1
     }
   ]
 }

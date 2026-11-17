@@ -11,6 +11,7 @@
 #include <fstream>
 #include <ios>
 #include <map>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -25,6 +26,8 @@
 #include "quantlib/compare.hpp"
 #include "quantlib/local_vol_rows.hpp"
 #include "quantlib/ours.hpp"
+#include "quantlib/speed_report.hpp"
+#include "results/report.hpp"
 #include "svi/raw_svi.hpp"
 
 namespace aadp::qlcompare {
@@ -297,6 +300,84 @@ TEST(QlCompareMetrics, PathsStepsAndWorkNormalisedError) {
   EXPECT_DOUBLE_EQ(MeanSquaredError(0.1, 0.3), 0.09);
   // 0.01 squared error at 4000 paths, 2 ms per path: 0.01 * 8 s.
   EXPECT_DOUBLE_EQ(ErrorTimesTime(0.01, t, 4000), 0.08);
+}
+
+// Two records as the speed run makes them, one QuantLib column and one of ours on R9b.
+std::vector<SpeedRecord> TwoRecords() {
+  return {{.row = "R1",
+           .column = "ql-default",
+           .timing = {.median_s = 1.015819292,
+                      .min_s = 1.014555542,
+                      .max_s = 1.018719916,
+                      .paths = 1048576,
+                      .steps = 10}},
+          {.row = "R9b",
+           .column = "ours-lanes-ours-one-step",
+           .timing = {.median_s = 0.1 + 0.2,
+                      .min_s = 1.0 / 3.0,
+                      .max_s = 2.5e-3,
+                      .paths = 16384,
+                      .steps = 50}}};
+}
+
+TEST(QlCompareSpeedReport, TheTextLineIsTheBenchsLine) {
+  const std::vector<SpeedRecord> records = TwoRecords();
+  EXPECT_EQ(SpeedLineText(records[0]),
+            "speed,R1,ql-default,1048576,10,1.015819292,1.014555542,1.018719916,1032246.59,"
+            "96.87607689");
+  EXPECT_EQ(std::string(kSpeedTextHeader),
+            "speed,row,column,paths,steps,median_s,min_s,max_s,paths_per_s,ns_per_path_step");
+}
+
+TEST(QlCompareSpeedReport, EveryCellIsTheRecordsOwnDouble) {
+  const std::vector<SpeedRecord> records = TwoRecords();
+  const results::ReportTable table = SpeedTable(records, 3);
+  EXPECT_EQ(table.name, "ql_speed");
+  EXPECT_EQ(table.targets, (std::vector<std::string>{"QL-1", "QL-3"}));
+  EXPECT_TRUE(table.timing);
+  EXPECT_FALSE(table.uses_chain);
+  ASSERT_EQ(table.rows.size(), records.size());
+  const std::vector<std::string> names = {
+      "row",         "column",           "paths",      "steps", "median", "min", "max",
+      "paths_per_s", "ns_per_path_step", "repetitions"};
+  ASSERT_EQ(table.columns.size(), names.size());
+  for (std::size_t c = 0; c < names.size(); ++c) EXPECT_EQ(table.columns[c].name, names[c]);
+  for (std::size_t i = 0; i < records.size(); ++i) {
+    const SpeedRecord& r = records[i];
+    const results::ReportRow& row = table.rows[i];
+    EXPECT_EQ(row.key, r.row + "." + r.column);
+    ASSERT_EQ(row.cells.size(), names.size());
+    EXPECT_EQ(row.cells[0], r.row);
+    EXPECT_EQ(row.cells[1], r.column);
+    EXPECT_EQ(results::read_integer_cell(row.cells[2]), static_cast<std::int64_t>(r.timing.paths));
+    EXPECT_EQ(results::read_integer_cell(row.cells[3]), r.timing.steps);
+    const std::vector<double> reals = {r.timing.median_s, r.timing.min_s, r.timing.max_s,
+                                       PathsPerSecond(r.timing), NanosecondsPerPathStep(r.timing)};
+    for (std::size_t k = 0; k < reals.size(); ++k) {
+      const std::optional<double> cell = results::read_real_cell(row.cells[4 + k]);
+      ASSERT_TRUE(cell.has_value()) << row.cells[4 + k];
+      EXPECT_EQ(std::bit_cast<std::uint64_t>(cell.value_or(0.0)),
+                std::bit_cast<std::uint64_t>(reals[k]))
+          << r.row << " " << names[4 + k];
+    }
+    EXPECT_EQ(results::read_integer_cell(row.cells[9]), 3);
+  }
+  // The table is one a report file can hold, and reads back as the same table.
+  const auto section = results::write_report_section(table);
+  ASSERT_TRUE(section.has_value());
+  const auto back = results::parse_report_section(*section);
+  ASSERT_TRUE(back.has_value());
+  EXPECT_EQ(*back, table);
+}
+
+TEST(QlCompareSpeedReport, ScaleIsAPowerOfTwoThatKeepsWholeBatches) {
+  EXPECT_EQ(ScaledPaths(std::uint64_t{1} << 20, 1), std::uint64_t{1} << 20);
+  EXPECT_EQ(ScaledPaths(std::uint64_t{1} << 20, 64), std::uint64_t{1} << 14);
+  EXPECT_EQ(ScaledPaths(std::uint64_t{1} << 18, 64), std::uint64_t{1} << 12);
+  EXPECT_FALSE(ScaledPaths(std::uint64_t{1} << 20, 0).has_value());
+  EXPECT_FALSE(ScaledPaths(std::uint64_t{1} << 20, 3).has_value());
+  EXPECT_FALSE(ScaledPaths(std::uint64_t{1} << 20, 128).has_value());
+  EXPECT_FALSE(ScaledPaths(std::uint64_t{1} << 6, 2).has_value());
 }
 
 }  // namespace

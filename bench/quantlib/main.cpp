@@ -9,23 +9,28 @@
 //       every comparison at N = 2^22 on seed 20261112 by the section 10 rule (QL-2), every check,
 //       and the R10 to R12 sanity lines at 2^18.
 //   aadp_bench_quantlib speed --out <file> [--ql default|tuned|none] [--ours yes|no]
-//       [--repetitions <n>]: one timed call per repetition after one warm-up, single thread
-//       (QL-1), at 2^20 paths on R1 to R9 and 2^18 on R10 to R12, seed 20261113.
-//   Every mode also takes --commit <hash>, recorded in the header.
+//       [--repetitions <n>] [--scale <k>]: one timed call per repetition after one warm-up,
+//       single thread (QL-1), at 2^20 paths on R1 to R9 and 2^18 on R10 to R12, seed 20261113.
+//       --scale divides every row's paths by k, a power of two up to 64, for tests and
+//       iteration runs only.
+//   aadp_bench_quantlib speed --report [the speed flags but --out] [run flags]
+//       the same timed calls, written as a report file on stdout (results/report.hpp, table
+//       ql_speed), the text lines on stderr, for scripts/run_bench.sh to stamp. The run flags are
+//       those of results/run_header.hpp and are refused without --report.
+//   The header reads the commit and the tree's state from the working directory, the repo root.
 //
 // The checks, each a reason to mark the run INVALID: ours on lanes gives the scalar bits;
 // QuantLib's tuned column gives the default's estimate to rounding; GridModel's rule gives
 // FixedLocalVolSurface's volatility at 10,000 points.
 //
 // Exit: 0 every comparison passed and every check held, 3 a comparison failed, 4 a check failed,
-// 2 could not run.
+// 2 could not run; a refused report run exits with the run header's code.
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <exception>
 #include <expected>
 #include <fstream>
@@ -51,7 +56,13 @@
 #include "quantlib/local_vol_rows.hpp"
 #include "quantlib/ours.hpp"
 #include "quantlib/quantlib_side.hpp"
+#include "quantlib/speed_report.hpp"
 #include "quantlib_build.hpp"
+#include "results/provenance.hpp"
+#include "results/report.hpp"
+#include "results/report_run.hpp"
+#include "results/results_file.hpp"
+#include "results/run_header.hpp"
 #include "rng/philox.hpp"
 #include "simd/simd_pricer.hpp"
 
@@ -66,53 +77,84 @@ struct Options {
   std::string mode;
   std::string out;
   std::string ceilings;
-  std::string commit = "unrecorded";
   std::string ql = "default";
   bool ours = true;
   int repetitions = 3;
+  std::uint64_t scale = 1;
+  std::uint64_t speed_paths = kSpeedPaths;         // R1 to R9, divided by the scale
+  std::uint64_t local_vol_paths = kLocalVolPaths;  // R10 to R12, divided by the scale
+  bool report = false;
+  bool run_flags = false;
+  results::RunOptions run;
 };
 
-std::optional<Options> ParseOptions(int argc, const char* const* argv) {
-  if (argc < 2) return std::nullopt;
+std::optional<Options> ParseOptions(int argc, char* const* argv) {
   Options o;
-  o.mode = argv[1];
-  for (int i = 2; i + 1 < argc; i += 2) {
-    const std::string_view key = argv[i];
-    const std::string value = argv[i + 1];
+  auto rest = results::take_run_flags(argc, argv, o.run);
+  if (!rest || rest->empty()) return std::nullopt;
+  o.run_flags = static_cast<int>(rest->size()) + 1 != argc;
+  const std::vector<std::string>& args = *rest;
+  o.mode = args.front();
+  bool out_given = false;
+  for (std::size_t i = 1; i < args.size(); ++i) {
+    const std::string_view key = args[i];
+    if (key == "--report") {
+      o.report = true;
+      continue;
+    }
+    if (i + 1 >= args.size()) return std::nullopt;
+    const std::string& value = args[++i];
     if (key == "--out") {
       o.out = value;
+      out_given = true;
     } else if (key == "--ceilings") {
       o.ceilings = value;
-    } else if (key == "--commit") {
-      o.commit = value;
     } else if (key == "--ql") {
       o.ql = value;
     } else if (key == "--ours") {
       o.ours = value == "yes";
     } else if (key == "--repetitions") {
       o.repetitions = std::max(1, std::stoi(value));
+    } else if (key == "--scale") {
+      o.scale = std::stoull(value);
     } else {
       return std::nullopt;
     }
   }
-  if ((argc % 2) != 0) return std::nullopt;
+  // The run flags belong to a report file's header, which the text has not got; a report goes to
+  // stdout, so it takes no --out. Only the speed run writes one.
+  if (o.run_flags && !o.report) return std::nullopt;
+  if (o.report && (out_given || o.mode != "speed")) return std::nullopt;
+  if (o.ql != "default" && o.ql != "tuned" && o.ql != "none") return std::nullopt;
+  const std::optional<std::uint64_t> speed_paths = ScaledPaths(kSpeedPaths, o.scale);
+  const std::optional<std::uint64_t> local_vol_paths = ScaledPaths(kLocalVolPaths, o.scale);
+  if (!speed_paths || !local_vol_paths) return std::nullopt;
+  o.speed_paths = *speed_paths;
+  o.local_vol_paths = *local_vol_paths;
   return o;
 }
 
-std::string Format(double x) {
-  std::array<char, 40> buffer{};
-  std::snprintf(buffer.data(), buffer.size(), "%.10g", x);
-  return {buffer.data()};
-}
+std::string Format(double x) { return FormatNumber(x); }
 
 bool Lto() { return build_info::cxx_flags.contains("-flto"); }
+
+std::string_view Status(const Options& o) {
+  if (o.mode == "accuracy") {
+    return "The registered accuracy run (QL-2) at seed 20261112, N = 2^22, when its tree is clean "
+           "or exported";
+  }
+  if (o.mode == "smoke") return "A reduced size, never a result";
+  if (o.report) return "The text of a report run: its figures are those of the report file";
+  return "ITERATION ONLY, not a result";
+}
 
 std::string Header(const Options& o) {
   std::ostringstream h;
   const platform::CpuInfo cpu = platform::read_cpu_info();
-  h << "# aadp_bench_quantlib " << o.mode
-    << " (docs/NOTES.md, Stage 10). ITERATION ONLY, not a result\n"
-    << "# commit: " << o.commit << "\n"
+  const results::Provenance provenance = results::read_provenance(".");
+  h << "# aadp_bench_quantlib " << o.mode << " (docs/NOTES.md, Stage 10). " << Status(o) << "\n"
+    << "# commit: " << provenance.commit << "\n"
+    << "# tree: " << provenance.tree_state << " (" << provenance.source << ")\n"
     << "# host: " << platform::detect_host_label() << "\n"
     << "# cpu: " << cpu.cpu_model << "\n"
     << "# os: " << cpu.os << "; kernel " << cpu.kernel << "; " << cpu.arch << "\n"
@@ -130,14 +172,16 @@ std::string Header(const Options& o) {
   return h.str();
 }
 
+// The text, on stdout and in --out's file; on stderr in a report run, whose stdout is the report.
 class Output {
  public:
-  explicit Output(const std::string& path) {
+  explicit Output(const std::string& path, bool to_stderr = false)
+      : console_(to_stderr ? &std::cerr : &std::cout) {
     if (!path.empty()) file_.open(path, std::ios::binary);
   }
   [[nodiscard]] bool good() const { return !file_.is_open() || file_.good(); }
   void Line(const std::string& text) {
-    std::cout << text << '\n' << std::flush;
+    *console_ << text << '\n' << std::flush;
     if (file_.is_open()) file_ << text << '\n' << std::flush;
   }
   void Block(const std::string& text) {
@@ -147,6 +191,7 @@ class Output {
   }
 
  private:
+  std::ostream* console_;
   std::ofstream file_;
 };
 
@@ -449,7 +494,7 @@ int RunPilot(const Options& o) {
       "SE ceilings for the stage 10 accuracy run (docs/NOTES.md, \"Stage 10\"), "
       "committed before it.\n"
       "Pilot: aadp_bench_quantlib pilot, seed 20261111, N_pilot = 2^20 per comparison, commit " +
-      o.commit +
+      results::read_provenance(".").commit +
       ".\nceiling = factor * se_pilot * sqrt(N_pilot / 2^22), rounded up to 3 figures; factor "
       "1.65 against a reference, 3 on QuantLib's two bumps (references/comparison_plan.csv).";
   std::ofstream file(o.out, std::ios::binary);
@@ -490,18 +535,23 @@ double MeanOr(const std::expected<pricer::Estimate, std::string>& e) {
   return e ? e->mean : std::nan("");
 }
 
-void SpeedLine(Output& out, const std::string& row, std::string_view column, const TimedRun& run,
-               bool& ok) {
-  const Timing& t = run.timing;
+// Where the speed run's figures go: the text, and the records the report is written from.
+struct SpeedSink {
+  Output* out;
+  std::vector<SpeedRecord> records;
+  bool ok = true;
+};
+
+void SpeedLine(SpeedSink& sink, const std::string& row, std::string_view column,
+               const TimedRun& run) {
   if (!run.ok) {
-    ok = false;
-    out.Line("error,speed," + row + "," + std::string(column) + ",the estimator refused");
+    sink.ok = false;
+    sink.out->Line("error,speed," + row + "," + std::string(column) + ",the estimator refused");
     return;
   }
-  out.Line("speed," + row + "," + std::string(column) + "," + std::to_string(t.paths) + "," +
-           std::to_string(t.steps) + "," + Format(t.median_s) + "," + Format(t.min_s) + "," +
-           Format(t.max_s) + "," + Format(PathsPerSecond(t)) + "," +
-           Format(NanosecondsPerPathStep(t)));
+  SpeedRecord record{.row = row, .column = std::string(column), .timing = run.timing};
+  sink.out->Line(SpeedLineText(record));
+  sink.records.push_back(std::move(record));
 }
 
 std::string_view QlColumn(const Options& o) {
@@ -509,17 +559,17 @@ std::string_view QlColumn(const Options& o) {
   return Lto() ? "ql-tuned" : "ql-tuned-nolto";
 }
 
-void SpeedCase(Output& out, const Options& o, const Case& c, const std::vector<Engine>& ours,
-               bool& ok) {
+void SpeedCase(SpeedSink& sink, const Options& o, const Case& c, const std::vector<Engine>& ours) {
   const std::uint32_t steps = Steps(c.row);
+  const std::uint64_t paths = o.speed_paths;
   if (o.ql != "none" && c.row != Row::kR6) {
-    ql::Pricer pricer = ql::MakeCasePricer(c, ql::Settings{.tuned = o.ql == "tuned"}, kSpeedPaths);
+    ql::Pricer pricer = ql::MakeCasePricer(c, ql::Settings{.tuned = o.ql == "tuned"}, paths);
     pricer.SetSeed(100 * kSpeedSeed);
     const bool bump = c.row == Row::kR9a || c.row == Row::kR9b;
     const double h = c.row == Row::kR9a ? kAsianBumpStep : kBarrierBumpStep;
     const TimedRun t = Time([&] { return bump ? pricer.CentralBump(h) : pricer.Price().value; },
-                            kSpeedPaths, steps, o.repetitions);
-    SpeedLine(out, c.id, QlColumn(o), t, ok);
+                            paths, steps, o.repetitions);
+    SpeedLine(sink, c.id, QlColumn(o), t);
   }
   if (!o.ours) return;
   for (const Engine engine : ours) {
@@ -529,80 +579,152 @@ void SpeedCase(Output& out, const Options& o, const Case& c, const std::vector<E
     for (const OurVariant v : {OurVariant::kScalar, OurVariant::kLanes}) {
       if (v == OurVariant::kLanes && !HasLaneForm(comparison)) continue;
       const TimedRun t =
-          Time([&] { return MeanOr(RunOurs(comparison, v, kSpeedSeed, kSpeedPaths, kBatches)); },
-               kSpeedPaths, steps, o.repetitions);
-      SpeedLine(out, c.id, (v == OurVariant::kScalar ? "ours-scalar" : "ours-lanes") + suffix, t,
-                ok);
+          Time([&] { return MeanOr(RunOurs(comparison, v, kSpeedSeed, paths, kBatches)); }, paths,
+               steps, o.repetitions);
+      SpeedLine(sink, c.id, (v == OurVariant::kScalar ? "ours-scalar" : "ours-lanes") + suffix, t);
     }
   }
 }
 
-void SpeedLocalVol(Output& out, const Options& o, const LocalVolGrid& grid,
-                   const SyntheticSurface& surface, bool& ok) {
+void SpeedLocalVol(SpeedSink& sink, const Options& o, const LocalVolGrid& grid,
+                   const SyntheticSurface& surface) {
+  const std::uint64_t paths = o.local_vol_paths;
   const pricer::RunConfig config{
-      .seed = kSpeedSeed, .paths = kLocalVolPaths, .batches = kBatches, .threads = 1};
+      .seed = kSpeedSeed, .paths = paths, .batches = kBatches, .threads = 1};
   for (const LocalVolRow row : {LocalVolRow::kR10, LocalVolRow::kR11}) {
     const std::string name = row == LocalVolRow::kR10 ? "R10" : "R11";
     if (o.ql != "none") {
       ql::Pricer pricer =
-          ql::MakeLocalVolPricer(row, grid, ql::Settings{.tuned = o.ql == "tuned"}, kLocalVolPaths);
+          ql::MakeLocalVolPricer(row, grid, ql::Settings{.tuned = o.ql == "tuned"}, paths);
       pricer.SetSeed(100 * kSpeedSeed);
-      SpeedLine(out, name, QlColumn(o),
-                Time([&] { return pricer.Price().value; }, kLocalVolPaths, 50, o.repetitions), ok);
+      SpeedLine(sink, name, QlColumn(o),
+                Time([&] { return pricer.Price().value; }, paths, 50, o.repetitions));
     }
     if (o.ours) {
-      SpeedLine(out, name, "ours-scalar",
-                Time([&] { return MeanOr(PriceOnGrid(row, grid, config)); }, kLocalVolPaths, 50,
-                     o.repetitions),
-                ok);
+      SpeedLine(
+          sink, name, "ours-scalar",
+          Time([&] { return MeanOr(PriceOnGrid(row, grid, config)); }, paths, 50, o.repetitions));
     }
   }
   if (o.ql != "none") {
-    ql::Pricer pricer =
-        ql::MakeR12Pricer(surface, ql::Settings{.tuned = o.ql == "tuned"}, kLocalVolPaths);
+    ql::Pricer pricer = ql::MakeR12Pricer(surface, ql::Settings{.tuned = o.ql == "tuned"}, paths);
     pricer.SetSeed(100 * kSpeedSeed);
-    SpeedLine(out, "R12", QlColumn(o),
-              Time([&] { return pricer.Price().value; }, kLocalVolPaths, kR12Steps, o.repetitions),
-              ok);
+    SpeedLine(sink, "R12", QlColumn(o),
+              Time([&] { return pricer.Price().value; }, paths, kR12Steps, o.repetitions));
   }
   if (o.ours) {
-    SpeedLine(out, "R12", "ours-scalar",
-              Time([&] { return MeanOr(PriceR12(surface, config)); }, kLocalVolPaths, kR12Steps,
-                   o.repetitions),
-              ok);
+    SpeedLine(
+        sink, "R12", "ours-scalar",
+        Time([&] { return MeanOr(PriceR12(surface, config)); }, paths, kR12Steps, o.repetitions));
   }
 }
 
-int RunSpeed(const Options& o) {
-  Output out(o.out);
+std::string Joined(const std::vector<std::string>& parts) {
+  std::string text;
+  for (const std::string& part : parts) text += (text.empty() ? "" : "; ") + part;
+  return text;
+}
+
+// What the text header says about the build and QuantLib, as the report's header fields.
+std::vector<results::HeaderField> SpeedHeader(const Options& o, std::uint64_t paths,
+                                              std::uint64_t local_vol_paths) {
+  std::vector<std::string> record;
+  for (const auto& [key, value] : ql::VersionRecord()) {
+    std::string line = key;
+    line += ' ';
+    line += value;
+    record.push_back(std::move(line));
+  }
+  std::vector<std::string> cache;
+  for (const std::string_view line : decode::Lines(quantlib_build::kCacheValues)) {
+    if (!line.empty()) cache.emplace_back(line);
+  }
+  return {
+      {.key = "report_tool",
+       .value = "aadp_bench_quantlib speed --report --ql " + o.ql + " --ours " +
+                (o.ours ? "yes" : "no") + " --repetitions " + std::to_string(o.repetitions) +
+                " --scale " + std::to_string(o.scale)},
+      {.key = "report_inputs",
+       .value = "no market data: R1 to R9 on the protocol's GBM contracts, R10 to R12 on a "
+                "synthetic raw SVI surface written in the bench (docs/NOTES.md, Stage 10)"},
+      {.key = "report_timing",
+       .value = "one timed call is one NPV() for QuantLib (two for a bump row), the instrument and "
+                "engine built outside it, and one Price or PriceLanes call for ours, accumulation "
+                "included on both sides; steady_clock, one thread on both sides, one warm-up call "
+                "then " +
+                std::to_string(o.repetitions) + " repetitions, median with min and max; seed " +
+                std::to_string(kSpeedSeed) + ", " + std::to_string(paths) +
+                " paths on R1 to R9 and " + std::to_string(local_vol_paths) +
+                " on R10 to R12, 64 batches"},
+      {.key = "ql_column", .value = o.ql == "none" ? "none" : std::string(QlColumn(o))},
+      {.key = "ql_link",
+       .value = "QuantLib " + std::string(quantlib_build::kLinkMode) + " library; LTO " +
+                (Lto() ? "yes (-flto in CMAKE_CXX_FLAGS)" : "no")},
+      {.key = "ql_flags",
+       .value = "the bench's flags, the same for QuantLib (scripts/check_quantlib_flags.py)"},
+      {.key = "ql_version_record", .value = Joined(record)},
+      {.key = "ql_cache_values", .value = Joined(cache)},
+      {.key = "ours_lanes",
+       .value = simd::TargetName() + ", " + std::to_string(simd::MaxLanes()) +
+                " double lanes, the ceiling of this build"},
+  };
+}
+
+int RunSpeed(const Options& o, results::ReportRun* session) {
+  Output out(o.out, session != nullptr);
   if (!out.good()) return 2;
   out.Block(Header(o));
   out.Line("# seed " + std::to_string(kSpeedSeed) + ", " + std::to_string(o.repetitions) +
            " repetitions after one warm-up, median with min and max; QuantLib column " +
            std::string(QlColumn(o)));
-  bool ok = true;
-  out.Line("speed,row,column,paths,steps,median_s,min_s,max_s,paths_per_s,ns_per_path_step");
+  SpeedSink sink{.out = &out, .records = {}, .ok = true};
+  out.Line(std::string(kSpeedTextHeader));
   for (const Case& c : AccuracyCases()) {
     const bool first_strike = c.id == "R2.K100" || c.row != Row::kR2;
     const bool h95 = !IsBarrier(c.row) || c.barrier == 95.0;
     if (!first_strike || !h95) continue;
     std::vector<Engine> ours{Engine::kOurs};
     if (c.row == Row::kR9b) ours = {Engine::kOursOneStep, Engine::kOursSmoothed};
-    SpeedCase(out, o, c, ours, ok);
+    SpeedCase(sink, o, c, ours);
   }
   const SyntheticSurface surface = MakeSyntheticSurface();
   const auto grid = BuildGrid(surface);
   if (!grid) return 2;
-  SpeedLocalVol(out, o, *grid, surface, ok);
-  return ok ? 0 : 2;
+  SpeedLocalVol(sink, o, *grid, surface);
+  if (!sink.ok) return 2;
+  if (session == nullptr) return 0;
+  const std::vector<results::ReportTable> tables = {SpeedTable(sink.records, o.repetitions)};
+  const results::ReportShape shape{.run = {.claim = "result",
+                                           .repetitions = o.repetitions,
+                                           .batches_per_repetition = 1,
+                                           .warmup = "one call of each estimator"},
+                                   .header = SpeedHeader(o, o.speed_paths, o.local_vol_paths)};
+  auto text = session->finish(shape, tables, std::nullopt);
+  if (!text) {
+    std::cerr << "aadp_bench_quantlib: " << text.error().message << '\n';
+    return text.error().exit_code;
+  }
+  std::cout << *text;
+  std::cout.flush();
+  return std::cout ? 0 : 2;
 }
 
-int Run(int argc, const char* const* argv) {
+int Run(int argc, char* const* argv) {
   const std::optional<Options> o = ParseOptions(argc, argv);
   if (!o) {
     std::cerr << "usage: aadp_bench_quantlib smoke|pilot|accuracy|speed [--out f] [--ceilings f]"
-                 " [--commit h] [--ql default|tuned|none] [--ours yes|no] [--repetitions n]\n";
+                 " [--ql default|tuned|none] [--ours yes|no] [--repetitions n] [--scale k]\n"
+                 "       aadp_bench_quantlib speed --report [the same but --out] [run flags]\n";
     return 2;
+  }
+  if (o->report) {
+    // The run's refusals come before any work, as a benchmark binary's do.
+    auto session = results::ReportRun::begin(o->run);
+    if (!session) {
+      std::cerr << "aadp_bench_quantlib: " << session.error().message << '\n';
+      return session.error().exit_code;
+    }
+    return RunSpeed(*o, &*session);
   }
   if (o->mode == "smoke") return RunJudged(*o, kSmokeSeed, kSmokePaths, true);
   if (o->mode == "pilot") return RunPilot(*o);
@@ -610,7 +732,7 @@ int Run(int argc, const char* const* argv) {
     if (o->ceilings.empty()) return 2;
     return RunJudged(*o, kAccuracySeed, kAccuracyPaths, true);
   }
-  if (o->mode == "speed") return RunSpeed(*o);
+  if (o->mode == "speed") return RunSpeed(*o, nullptr);
   return 2;
 }
 
