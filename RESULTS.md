@@ -10,14 +10,28 @@ The README's headline rows, chosen in `results/headline.csv`, with how each valu
 
 | target | measured | host | verdict | computed as |
 |---|---|---|---|---|
-| AAD-1: barrier, general tape, single thread: multiple below 3.0 | 1.89 times one scalar pricing | [linux-zen1](results/linux-zen1/aad1-barrier-20261104T071749Z.txt), Linux | met, by 1.11 | mean time of `tape` over mean time of `price` on `aad1-barrier`, each the mean of 3 repetitions |
-| AAD-4: arithmetic Asian: multiple 2.8 | 1.91 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261104T085349Z.txt), Linux | met, by 0.89 | mean time of `tape` over mean time of `price` on `aad4-asian12`, each the mean of 3 repetitions |
-| AAD-5: within 1.25 times a hand-written adjoint | 1.87 times the hand-written adjoint | [linux-zen1](results/linux-zen1/aad4-asian12-20261104T085349Z.txt), Linux | missed, by 0.62 | mean time of `tape` over mean time of `hand` on `aad4-asian12`, each the mean of 3 repetitions |
-| MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 61,450 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261104T090220Z.txt), Linux | missed, by 17.0 times | paths (300000) over mean time of `price` on `mc-asian252`, the mean of 3 repetitions |
-| MEM-4: per-path tape below 50 MB in the worst case | 46.7 MB of tape chunks (`lw-worst`) | [linux-zen1](results/linux-zen1/lw-worst-20261104T103623Z.txt), Linux | met, by 3.33 MB | the largest `tape_allocated_bytes` of any valid AAD section on the host, divided by 1e+06 |
+| AAD-1: barrier, general tape, single thread: multiple below 3.0 | 2.18 times one scalar pricing | [linux-zen1](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), Linux | met, by 0.82 | mean time of `tape` over mean time of `price` on `aad1-barrier` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-3: barrier, multi-threaded: multiple 2.86, stretch 1.64 | 2.19 times one scalar pricing on 2 threads | [linux-zen1](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt), Linux | met, by 0.67 | mean time of `tape` over mean time of `price` on `aad3-barrier-mt` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-4: arithmetic Asian: multiple 2.8 | 1.79 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 1.01 | mean time of `tape` over mean time of `price` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-5: within 1.25 times a hand-written adjoint | 1.72 times the hand-written adjoint | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | missed, by 0.47 | mean time of `tape` over mean time of `hand` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-6: hand-written baseline: multiple below 2.0 | 1.04 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 0.96 | mean time of `hand` over mean time of `price` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 83,220 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 12.5 times | paths (300000) over mean time of `price` on `mc-asian252` in the `baseline` build (SSE2), the mean of 3 repetitions |
+| MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread | 48,940 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 4.0 times | paths (300000) over mean time of `tape` on `mc-asian252` in the `baseline` build (SSE2), the mean of 3 repetitions |
+| MEM-4: per-path tape below 50 MB in the worst case | 46.7 MB of tape chunks (`lw-worst`) | [linux-zen1](results/linux-zen1/lw-worst-20261117T083521Z.txt), Linux | met, by 3.33 MB | the largest `tape_allocated_bytes` of any valid AAD section on the host, divided by 1e+06 |
+| SVI-6: fit error at most 4 bp of forward | 0.287 bp of F on 202411 settlements (5 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 3.71 bp of F | `svi6` of row `202411` in report section `svi_fit_error` of the latest result on the host |
+| SVI-6: fit error at most 4 bp of forward | 1.13 bp of F on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 2.87 bp of F | `svi6` of row `202411W4` in report section `svi_fit_error` of the latest result on the host |
+| SVI-6: fit error at most 4 bp of forward | 1.23 bp of F on 202412 settlements (33 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 2.77 bp of F | `svi6` of row `202412` in report section `svi_fit_error` of the latest result on the host |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 0.958 vol points on 202411 settlements (5 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 0.23 vol points | `svi11` of row `202411` in report section `svi_fit_error` of the latest result on the host |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 0.41 vol points on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.32 vol points | `svi11` of row `202411W4` in report section `svi_fit_error` of the latest result on the host |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 1.4 vol points on 202412 settlements (33 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 0.67 vol points | `svi11` of row `202412` in report section `svi_fit_error` of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 237 ms median on 202411 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 222.35 ms | `median` of row `202411` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 112 ms median on 202411W4 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 97.38 ms | `median` of row `202411W4` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 170 ms median on 202412 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 155.02 ms | `median` of row `202412` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-8: surface time below 1.2 s | 0.524 s median: raw SVI with its three fits and every check | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.68 s | `median` of row `surface` in report section `svi_fit_surface_time`, a timing, of the latest result on the host, divided by 1000 |
+| SVI-8: surface time below 1.2 s | 0.0185 s median: eSSVI with its fit and every check | [linux-zen1](results/linux-zen1/essvi-timing-20261117T142319Z.txt), Linux | met, by 1.18 s | `median` of row `fit_and_checks` in report section `essvi_fit_time`, a timing, of the latest result on the host, divided by 1000 |
 | Oracle plan, run 2: all 147 registered comparisons pass the tolerance rule (`BENCHMARKS.md` section 10) | 145 of 147 pass | [mac-m4max](references/measured_results_run2.csv), macOS | 2 failed: P3.DB.d12.rho, P3.CB.d12.rho | rows with verdict `pass`, of the file's rows |
 
-Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. Benchmark rows were measured at commit `d1596e0`.
+Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. A row from a report section derived from the option chain keeps the chain's terms; the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md. Rows were measured at commit `8bb2116`.
 
 ## Oracle plan: measured runs
 
@@ -204,13 +218,46 @@ The header of run 2, `references/measured_results_run2.csv`:
 
 | file | claim | commit | started (UTC) | OS | CPU | pinning |
 |---|---|---|---|---|---|---|
-| [aad1-barrier-20261104T071749Z.txt](results/linux-zen1/aad1-barrier-20261104T071749Z.txt) | result | `d1596e0` | 2026-11-04T07:23:09Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
-| [aad3-barrier-mt-20261104T080704Z.txt](results/linux-zen1/aad3-barrier-mt-20261104T080704Z.txt) | result | `d1596e0` | 2026-11-04T08:09:14Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
-| [aad4-asian12-20261104T085349Z.txt](results/linux-zen1/aad4-asian12-20261104T085349Z.txt) | result | `d1596e0` | 2026-11-04T08:54:22Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt) | result | `8bb2116` | 2026-11-17T07:12:05Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad1-barrier-avx2-20261117T110605Z.txt](results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt) | result | `8bb2116` | 2026-11-17T11:09:17Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad3-barrier-mt-20261117T083620Z.txt](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt) | result | `8bb2116` | 2026-11-17T08:38:11Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
+| [aad3-barrier-mt-avx2-20261117T122533Z.txt](results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt) | result | `8bb2116` | 2026-11-17T12:27:15Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
+| [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt) | result | `8bb2116` | 2026-11-17T07:49:55Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad4-asian12-avx2-20261117T114352Z.txt](results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt) | result | `8bb2116` | 2026-11-17T11:44:03Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad8-asian12-20261117T104204Z.txt](results/linux-zen1/aad8-asian12-20261117T104204Z.txt) | result | `8bb2116` | 2026-11-17T10:42:11Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [aad8-barrier-20261117T133751Z.txt](results/linux-zen1/aad8-barrier-20261117T133751Z.txt) | result | `8bb2116` | 2026-11-17T13:42:18Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [essvi-fit-20261117T104708Z.txt](results/linux-zen1/essvi-fit-20261117T104708Z.txt) | result | `8bb2116` | 2026-11-17T10:47:08Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [essvi-price-20261117T104710Z.txt](results/linux-zen1/essvi-price-20261117T104710Z.txt) | result | `8bb2116` | 2026-11-17T10:47:10Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [essvi-timing-20261117T142319Z.txt](results/linux-zen1/essvi-timing-20261117T142319Z.txt) | result | `8bb2116` | 2026-11-17T14:23:20Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
 | [harness-selftest-20261030T221613Z.txt](results/linux-zen1/harness-selftest-20261030T221613Z.txt) | none | `93166a0` | 2026-10-30T22:16:13Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
-| [lw-worst-20261104T103623Z.txt](results/linux-zen1/lw-worst-20261104T103623Z.txt) | result | `d1596e0` | 2026-11-04T10:36:48Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
-| [mc-asian252-20261104T090220Z.txt](results/linux-zen1/mc-asian252-20261104T090220Z.txt) | result | `d1596e0` | 2026-11-04T09:06:35Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
-| [mc3-asian252-mt-20261104T095003Z.txt](results/linux-zen1/mc3-asian252-mt-20261104T095003Z.txt) | result | `d1596e0` | 2026-11-04T09:52:18Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
+| [lv-bias-20261117T142937Z.txt](results/linux-zen1/lv-bias-20261117T142937Z.txt) | result | `8bb2116` | 2026-11-17T14:29:37Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [lv-report-20261117T142322Z.txt](results/linux-zen1/lv-report-20261117T142322Z.txt) | result | `8bb2116` | 2026-11-17T14:23:23Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [lv-timing-20261117T144808Z.txt](results/linux-zen1/lv-timing-20261117T144808Z.txt) | result | `8bb2116` | 2026-11-17T14:48:09Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [lw-worst-20261117T083521Z.txt](results/linux-zen1/lw-worst-20261117T083521Z.txt) | result | `8bb2116` | 2026-11-17T08:35:22Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | result | `8bb2116` | 2026-11-17T07:59:57Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [mc-asian252-avx2-20261117T115010Z.txt](results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt) | result | `8bb2116` | 2026-11-17T11:53:20Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [mc3-asian252-mt-20261117T091647Z.txt](results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt) | result | `8bb2116` | 2026-11-17T09:18:37Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
+| [mc3-asian252-mt-avx2-20261117T130249Z.txt](results/linux-zen1/mc3-asian252-mt-avx2-20261117T130249Z.txt) | result | `8bb2116` | 2026-11-17T13:04:30Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4,6 |
+| [qs-timing-20261117T144925Z.txt](results/linux-zen1/qs-timing-20261117T144925Z.txt) | result | `8bb2116` | 2026-11-17T14:49:26Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-asian252-20261117T095540Z.txt](results/linux-zen1/simd-asian252-20261117T095540Z.txt) | result | `8bb2116` | 2026-11-17T09:55:59Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-barrier-onestep-20261117T100553Z.txt](results/linux-zen1/simd-barrier-onestep-20261117T100553Z.txt) | result | `8bb2116` | 2026-11-17T10:06:24Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt) | result | `8bb2116` | 2026-11-17T09:55:02Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-20261117T103815Z.txt](results/linux-zen1/simd-math-20261117T103815Z.txt) | result | `8bb2116` | 2026-11-17T10:38:16Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-exp-lanes-1-20261117T103952Z.txt](results/linux-zen1/simd-math-exp-lanes-1-20261117T103952Z.txt) | result | `8bb2116` | 2026-11-17T10:39:53Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-exp-scalar-20261117T103946Z.txt](results/linux-zen1/simd-math-exp-scalar-20261117T103946Z.txt) | result | `8bb2116` | 2026-11-17T10:39:47Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-inverse-normal-lanes-1-20261117T104035Z.txt](results/linux-zen1/simd-math-inverse-normal-lanes-1-20261117T104035Z.txt) | result | `8bb2116` | 2026-11-17T10:40:36Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-inverse-normal-lanes-4-20261117T104055Z.txt](results/linux-zen1/simd-math-inverse-normal-lanes-4-20261117T104055Z.txt) | result | `8bb2116` | 2026-11-17T10:40:56Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-inverse-normal-scalar-20261117T104027Z.txt](results/linux-zen1/simd-math-inverse-normal-scalar-20261117T104027Z.txt) | result | `8bb2116` | 2026-11-17T10:40:28Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-log-lanes-4-20261117T104021Z.txt](results/linux-zen1/simd-math-log-lanes-4-20261117T104021Z.txt) | result | `8bb2116` | 2026-11-17T10:40:22Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-normal-cdf-lanes-1-20261117T104118Z.txt](results/linux-zen1/simd-math-normal-cdf-lanes-1-20261117T104118Z.txt) | result | `8bb2116` | 2026-11-17T10:41:19Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-normal-cdf-lanes-4-20261117T104139Z.txt](results/linux-zen1/simd-math-normal-cdf-lanes-4-20261117T104139Z.txt) | result | `8bb2116` | 2026-11-17T10:41:40Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-normal-cdf-scalar-20261117T104104Z.txt](results/linux-zen1/simd-math-normal-cdf-scalar-20261117T104104Z.txt) | result | `8bb2116` | 2026-11-17T10:41:05Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-philox-lanes-1-20261117T104153Z.txt](results/linux-zen1/simd-math-philox-lanes-1-20261117T104153Z.txt) | result | `8bb2116` | 2026-11-17T10:41:54Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-philox-lanes-4-20261117T104157Z.txt](results/linux-zen1/simd-math-philox-lanes-4-20261117T104157Z.txt) | result | `8bb2116` | 2026-11-17T10:41:58Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-philox-scalar-20261117T104150Z.txt](results/linux-zen1/simd-math-philox-scalar-20261117T104150Z.txt) | result | `8bb2116` | 2026-11-17T10:41:50Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [simd-math-xoshiro256pp-scalar-20261117T104201Z.txt](results/linux-zen1/simd-math-xoshiro256pp-scalar-20261117T104201Z.txt) | result | `8bb2116` | 2026-11-17T10:42:01Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | result | `8bb2116` | 2026-11-17T10:46:15Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
+| [svi2-implied-vol-20261117T104552Z.txt](results/linux-zen1/svi2-implied-vol-20261117T104552Z.txt) | result | `8bb2116` | 2026-11-17T10:45:53Z | Linux, os-release VERSION_ID 13, name withheld | AMD Ryzen Embedded V1605B with Radeon Vega Gfx | pinned, CPUs 4 |
 
 ### Fault-injection reports
 
@@ -226,60 +273,168 @@ Rows with claim `none` are harness self-tests, not performance results.
 
 | benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
 |---|---|---|---|---|---|---|---|---|---|---|
-| aad1-barrier.price | 3 | 15 | 5.1605706924842281e+09 | 5154799615 | 5318377471 | 5318377471 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad1-barrier.tape | 3 | 15 | 9.7304817670175190e+09 | 9604956159 | 10871635967 | 10871635967 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad1-barrier.tape-skip | 3 | 15 | 9.0912041160732918e+09 | 9068085247 | 9311354879 | 9311354879 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad1-barrier.tape-record | 3 | 15 | 8.2573322454288549e+09 | 8241807359 | 8363442175 | 8363442175 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad1-barrier.bump-central | 3 | 15 | 5.6565001209225227e+10 | 56572772351 | 56874762239 | 56874762239 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad1-barrier.bump-forward | 3 | 15 | 3.0907553003130283e+10 | 30870077439 | 31104958463 | 31104958463 | 1.40 | 1.01 | d1596e0e0668 | result |
-| aad3-barrier-mt.price | 3 | 30 | 2.7286637414291153e+09 | 2722103295 | 2866806783 | 2866806783 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape | 3 | 30 | 5.1567465699868307e+09 | 5075107839 | 5444206591 | 5444206591 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-skip | 3 | 30 | 4.7753801117158899e+09 | 4773117951 | 4903141375 | 4903141375 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-record | 3 | 30 | 4.3838257774256744e+09 | 4383047679 | 4420796415 | 4420796415 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-central | 3 | 30 | 3.0080812558241058e+10 | 30081548287 | 30299652095 | 30299652095 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-forward | 3 | 30 | 1.6409767506203293e+10 | 16399728639 | 16567500799 | 16567500799 | 1.01 | 2.00 | d1596e0e0668 | result |
-| aad4-asian12.price | 3 | 60 | 2.3733981179472077e+08 | 237109247 | 239730687 | 240779263 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.tape | 3 | 60 | 4.5289310540291977e+08 | 447741951 | 499384319 | 503578623 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.tape-skip | 3 | 60 | 4.3474904586251706e+08 | 434372607 | 441188351 | 441712639 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.tape-record | 3 | 60 | 3.8813693563405085e+08 | 388235263 | 389545983 | 391905279 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.hand | 3 | 60 | 2.4211916732872173e+08 | 241827839 | 244318207 | 244973567 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.bump-central | 3 | 60 | 2.6248426620989218e+09 | 2619342847 | 2657091583 | 2747269119 | 1.43 | 1.00 | d1596e0e0668 | result |
-| aad4-asian12.bump-forward | 3 | 60 | 1.4336503936464493e+09 | 1429209087 | 1476395007 | 1482686463 | 1.43 | 1.00 | d1596e0e0668 | result |
+| aad1-barrier.price | 3 | 15 | 3.7563016468874793e+09 | 3758096383 | 3774873599 | 3774873599 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape | 3 | 15 | 8.1936321754779882e+09 | 8199864319 | 8220835839 | 8220835839 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-skip | 3 | 15 | 7.4962909083857164e+09 | 7491026943 | 7558135807 | 7558135807 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-record | 3 | 15 | 6.9658344343922348e+09 | 6954156031 | 7121928191 | 7121928191 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-central | 3 | 15 | 4.1708577213549240e+10 | 41406169087 | 45130711039 | 45130711039 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-forward | 3 | 15 | 2.2572134090498028e+10 | 22582132735 | 22632464383 | 22632464383 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price-lanes | 3 | 15 | 3.9022374640916524e+09 | 3902799871 | 3921674239 | 3921674239 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-lanes | 3 | 15 | 8.0141425384297256e+09 | 8015314943 | 8032092159 | 8032092159 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price | 3 | 15 | 3.5583049223312669e+09 | 3558866943 | 3565158399 | 3565158399 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape | 3 | 15 | 7.8428178460701590e+09 | 7851737087 | 7939817471 | 7939817471 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-skip | 3 | 15 | 7.3939197415536871e+09 | 7390363647 | 7449083903 | 7449083903 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-record | 3 | 15 | 6.7997289358644495e+09 | 6798966783 | 6828326911 | 6828326911 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-central | 3 | 15 | 3.9544919448799263e+10 | 39191576575 | 41775267839 | 41775267839 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-forward | 3 | 15 | 2.1384710294745274e+10 | 21357395967 | 21676163071 | 21676163071 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price-lanes | 3 | 15 | 2.3006296603758292e+09 | 2300575743 | 2308964351 | 2308964351 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-lanes | 3 | 15 | 5.4997437072991543e+09 | 5452595199 | 6090129407 | 6090129407 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price | 3 | 30 | 1.9919773790118377e+09 | 1991245823 | 2001731583 | 2001731583 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape | 3 | 30 | 4.3631983380141582e+09 | 4357881855 | 4471128063 | 4471128063 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-skip | 3 | 30 | 4.0133413728204303e+09 | 4013948927 | 4030726143 | 4030726143 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-record | 3 | 30 | 3.7140465952877297e+09 | 3714056191 | 3747610623 | 3747610623 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-central | 3 | 30 | 2.1964552878073383e+10 | 21961375743 | 22129147903 | 22129147903 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-forward | 3 | 30 | 1.1968916148272200e+10 | 11962155007 | 12138315775 | 12138315775 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price-lanes | 3 | 30 | 2.0778232752498429e+09 | 2079326207 | 2086666239 | 2086666239 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-lanes | 3 | 30 | 4.2579586272210407e+09 | 4257218559 | 4299161599 | 4299161599 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price | 3 | 30 | 1.8945495973651133e+09 | 1893728255 | 1911554047 | 1911554047 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape | 3 | 30 | 4.4252871310044899e+09 | 4232052735 | 5104467967 | 5104467967 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-skip | 3 | 30 | 3.9563873013996491e+09 | 3955228671 | 3990880255 | 3990880255 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-record | 3 | 30 | 3.6388634353854542e+09 | 3638558719 | 3670015999 | 3670015999 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-central | 3 | 30 | 2.0844457375773579e+10 | 20854079487 | 20921188351 | 20921188351 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-forward | 3 | 30 | 1.1379379512678516e+10 | 11374952447 | 11517558783 | 11517558783 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price-lanes | 3 | 30 | 1.2431650233490565e+09 | 1227882495 | 1589641215 | 1589641215 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-lanes | 3 | 30 | 2.7208777224846978e+09 | 2722103295 | 2734686207 | 2734686207 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad4-asian12.price | 3 | 60 | 1.7696690104316866e+08 | 176947199 | 178257919 | 178257919 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape | 3 | 60 | 3.1588802371239877e+08 | 315359231 | 324009983 | 324272127 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-skip | 3 | 60 | 3.0810759324155104e+08 | 301989887 | 352059391 | 463994879 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-record | 3 | 60 | 2.6239648039130238e+08 | 261488639 | 272891903 | 273154047 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.hand | 3 | 60 | 1.8364427840445772e+08 | 183500799 | 184942591 | 191365119 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-central | 3 | 60 | 1.9573139947881916e+09 | 1956642815 | 1970274303 | 1970274303 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-forward | 3 | 60 | 1.0702066795225841e+09 | 1068498943 | 1082130431 | 1110441983 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price-lanes | 3 | 60 | 1.8596782584214744e+08 | 185729023 | 189005823 | 193069055 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-lanes | 3 | 60 | 3.5078507897163028e+08 | 350748671 | 353107967 | 354156543 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price | 3 | 60 | 1.7167887810293391e+08 | 171704319 | 172490751 | 172621823 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape | 3 | 60 | 3.1782010413890207e+08 | 317980671 | 324796415 | 326369279 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-skip | 3 | 60 | 2.9594089777483898e+08 | 295960575 | 302514175 | 305397759 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-record | 3 | 60 | 2.5207280240439239e+08 | 251527167 | 260702207 | 263061503 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.hand | 3 | 60 | 1.7680206611079833e+08 | 176685055 | 179699711 | 184156159 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-central | 3 | 60 | 1.8906672802293031e+09 | 1890582527 | 1900019711 | 1936719871 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-forward | 3 | 60 | 1.0303102728831806e+09 | 1030225919 | 1038614527 | 1040187391 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price-lanes | 3 | 60 | 1.0370251676218079e+08 | 103612415 | 105512959 | 111345663 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-lanes | 3 | 60 | 2.1725363355268309e+08 | 217055231 | 220463103 | 221904895 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad8-asian12.price | 3 | 60 | 1.7720245551266357e+08 | 177209343 | 178520063 | 180486143 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.tape | 3 | 60 | 3.1775146160890877e+08 | 317456383 | 320602111 | 325582847 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.cond-price | 3 | 60 | 2.1712980631945476e+08 | 217186303 | 218103807 | 218497023 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.cond-tape | 3 | 60 | 3.8248082223068517e+08 | 382468095 | 387186687 | 389808127 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot | 3 | 60 | 7.5104063031793225e+08 | 750780415 | 755499007 | 759693311 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot-vol | 3 | 60 | 8.4775622229592144e+08 | 846725119 | 862453759 | 864550911 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.price | 3 | 15 | 8.8753358501063366e+09 | 8875147263 | 8933867519 | 8933867519 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.tape | 3 | 15 | 1.5171997111500298e+10 | 15141437439 | 15418261503 | 15418261503 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.cond-price | 3 | 15 | 9.1377794473965454e+09 | 9126805503 | 9311354879 | 9311354879 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.cond-tape | 3 | 15 | 1.6340336021893585e+10 | 16324231167 | 16559112191 | 16559112191 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot | 3 | 15 | 2.9099821413358688e+10 | 29058138111 | 29645340671 | 29645340671 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot-vol | 3 | 15 | 3.3124472999584988e+10 | 33118224383 | 33436991487 | 33436991487 | 1.22 | 1.00 | 8bb2116be2fb | result |
 | harness_selftest | 3 | 60000 | 2.1583937846322028e+03 | 2143 | 2353 | 63135 | 1.07 | 1.06 | 93166a082dda | none |
-| lw-worst.price | 3 | 600 | 1.3549500449969957e+05 | 134399 | 177791 | 183807 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.tape | 3 | 600 | 1.4403955845994098e+07 | 14114815 | 17186815 | 17448959 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.tape-skip | 3 | 600 | 1.5601629343495922e+07 | 15392767 | 18038783 | 18808831 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.tape-record | 3 | 600 | 7.9438487577421023e+06 | 7823359 | 10166271 | 10543103 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.hand | 3 | 600 | 4.3836301033668313e+05 | 432895 | 589823 | 649215 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.bump-central | 3 | 600 | 2.6564319835438136e+07 | 26427391 | 29818879 | 32587775 | 1.45 | 1.20 | d1596e0e0668 | result |
-| lw-worst.bump-forward | 3 | 600 | 1.3383922811242914e+07 | 13246463 | 16252927 | 17743871 | 1.45 | 1.20 | d1596e0e0668 | result |
-| mc-asian252.price | 3 | 15 | 4.8819908910473890e+09 | 4886364159 | 4903141375 | 4903141375 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.tape | 3 | 15 | 8.9273769319644032e+09 | 8917090303 | 9093251071 | 9093251071 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.tape-skip | 3 | 15 | 8.6906457021538925e+09 | 8673820671 | 8891924479 | 8891924479 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.tape-record | 3 | 15 | 7.9046901817041969e+09 | 7902068735 | 7960788991 | 7960788991 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.hand | 3 | 15 | 4.9027846327458963e+09 | 4903141375 | 4932501503 | 4932501503 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.bump-central | 3 | 15 | 5.3834581239558327e+10 | 53787754495 | 54727278591 | 54727278591 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc-asian252.bump-forward | 3 | 15 | 2.9339284259708790e+10 | 29326573567 | 29611786239 | 29611786239 | 1.00 | 1.00 | d1596e0e0668 | result |
-| mc3-asian252-mt.price | 3 | 30 | 2.5917419231658473e+09 | 2587885567 | 2623537151 | 2623537151 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape | 3 | 30 | 4.7284511274227495e+09 | 4726980607 | 4806672383 | 4806672383 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-skip | 3 | 30 | 4.6439610317648916e+09 | 4647288831 | 4672454655 | 4672454655 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-record | 3 | 30 | 4.2070329882881961e+09 | 4202692607 | 4282384383 | 4282384383 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.hand | 3 | 30 | 2.5977730538110986e+09 | 2596274175 | 2613051391 | 2613051391 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-central | 3 | 30 | 2.8548418000043182e+10 | 28538044415 | 28940697599 | 28940697599 | 1.00 | 2.20 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-forward | 3 | 30 | 1.5573828166896948e+10 | 15569256447 | 15737028607 | 15737028607 | 1.00 | 2.20 | d1596e0e0668 | result |
+| lw-worst.price | 3 | 600 | 4.6753403352258942e+05 | 479231 | 623103 | 760319 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape | 3 | 600 | 1.2098547088609131e+07 | 12107775 | 12804095 | 19578879 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape-skip | 3 | 600 | 1.3126970804936917e+07 | 13164543 | 13991935 | 14335999 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape-record | 3 | 600 | 4.8290479734757915e+06 | 4792319 | 5083135 | 5218303 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.hand | 3 | 600 | 2.9393064705069875e+05 | 291839 | 311807 | 349439 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.bump-central | 3 | 600 | 2.6613467006984245e+07 | 26542079 | 29294591 | 31195135 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.bump-forward | 3 | 600 | 1.3305300159019710e+07 | 13295615 | 13672447 | 14082047 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| mc-asian252.price | 3 | 15 | 3.6050516234136300e+09 | 3600809983 | 3638558719 | 3638558719 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape | 3 | 15 | 6.1295364763166590e+09 | 6123683839 | 6211764223 | 6211764223 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-skip | 3 | 15 | 5.8392797691154413e+09 | 5804916735 | 6085935103 | 6085935103 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-record | 3 | 15 | 5.1063641432039480e+09 | 5079302143 | 5318377471 | 5318377471 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.hand | 3 | 15 | 3.6365452390690150e+09 | 3634364415 | 3651141631 | 3651141631 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.bump-central | 3 | 15 | 3.9476824488090080e+10 | 39493566463 | 39560675327 | 39560675327 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.bump-forward | 3 | 15 | 2.1514669688002766e+10 | 21525168127 | 21558722559 | 21558722559 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.price-lanes | 3 | 15 | 3.8103480047863994e+09 | 3806330879 | 3841982463 | 3841982463 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-lanes | 3 | 15 | 7.1781647703512335e+09 | 7180648447 | 7201619967 | 7201619967 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.price | 3 | 15 | 3.4053759042247105e+09 | 3405774847 | 3414163455 | 3414163455 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape | 3 | 15 | 5.7130911563678522e+09 | 5687476223 | 5909774335 | 5909774335 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-skip | 3 | 15 | 5.6180980105988483e+09 | 5611978751 | 5700059135 | 5700059135 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-record | 3 | 15 | 4.8678468163888969e+09 | 4844421119 | 4970250239 | 4970250239 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.hand | 3 | 15 | 3.4622739822467752e+09 | 3458203647 | 3512729599 | 3512729599 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.bump-central | 3 | 15 | 3.7592140024573662e+10 | 37614518271 | 37782290431 | 37782290431 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.bump-forward | 3 | 15 | 2.0481556088638573e+10 | 20484980735 | 20552089599 | 20552089599 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.price-lanes | 3 | 15 | 2.1787238648926253e+09 | 2151677951 | 2564816895 | 2564816895 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-lanes | 3 | 15 | 4.4483115835268736e+09 | 4450156543 | 4462739455 | 4462739455 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price | 3 | 30 | 1.9046329239397469e+09 | 1905262591 | 1916796927 | 1916796927 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape | 3 | 30 | 3.2183979103694115e+09 | 3217031167 | 3254779903 | 3254779903 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-skip | 3 | 30 | 3.1178801536340604e+09 | 3099590655 | 3504340991 | 3504340991 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-record | 3 | 30 | 2.7050039403335910e+09 | 2690646015 | 3152019455 | 3152019455 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.hand | 3 | 30 | 1.9359940901800661e+09 | 1937768447 | 1949302783 | 1949302783 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-central | 3 | 30 | 2.1002490199137188e+10 | 21005074431 | 21139292159 | 21139292159 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-forward | 3 | 30 | 1.1448658779360968e+10 | 11450449919 | 11484004351 | 11484004351 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price-lanes | 3 | 30 | 2.0282296511328590e+09 | 2027945983 | 2045771775 | 2045771775 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-lanes | 3 | 30 | 3.7573938154129682e+09 | 3758096383 | 3774873599 | 3774873599 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price | 3 | 30 | 1.8144120350556314e+09 | 1812987903 | 1833959423 | 1833959423 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape | 3 | 30 | 3.0606382378320708e+09 | 3061841919 | 3097493503 | 3097493503 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-skip | 3 | 30 | 3.0136399342597671e+09 | 3001024511 | 3103784959 | 3103784959 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-record | 3 | 30 | 2.5981294038977528e+09 | 2598371327 | 2654994431 | 2654994431 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.hand | 3 | 30 | 1.8424838678509827e+09 | 1841299455 | 1852833791 | 1852833791 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-central | 3 | 30 | 2.0132047814066463e+10 | 19981664255 | 21575499775 | 21575499775 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-forward | 3 | 30 | 1.0893061845404572e+10 | 10888413183 | 10963910655 | 10963910655 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price-lanes | 3 | 30 | 1.1458588907361488e+09 | 1145044991 | 1164967935 | 1164967935 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-lanes | 3 | 30 | 2.3789218560478964e+09 | 2380267519 | 2394947583 | 2394947583 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| simd-asian252.scalar | 5 | 25 | 3.4179966200143375e+09 | 3414163455 | 3437232127 | 3437232127 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-1 | 5 | 25 | 9.6173694100134296e+09 | 9621733375 | 9697230847 | 9697230847 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-2 | 5 | 25 | 3.3235775140014248e+09 | 3319791615 | 3349151743 | 3349151743 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-4 | 5 | 25 | 2.1728858420754137e+09 | 2149580799 | 2732589055 | 2732589055 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-barrier-onestep.scalar | 5 | 50 | 8.1789855921213703e+09 | 8174698495 | 8317304831 | 8317304831 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-1 | 5 | 50 | 1.2691906826573812e+10 | 12599689215 | 14101250047 | 14101250047 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-2 | 5 | 50 | 6.1095238464525280e+09 | 6098518015 | 6543114239 | 6543114239 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-4 | 5 | 50 | 3.8078335061801362e+09 | 3800039423 | 4148166655 | 4148166655 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-european.scalar | 5 | 100 | 8.0683462866498873e+07 | 79953919 | 92733439 | 100859903 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-1 | 5 | 100 | 1.4061337838689858e+08 | 139984895 | 163971071 | 172883967 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-2 | 5 | 100 | 5.3785147609148525e+07 | 53739519 | 54493183 | 56623103 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-4 | 5 | 100 | 3.3739155937801436e+07 | 33587199 | 33751039 | 51085311 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-math.exp-scalar | 5 | 250 | 1.4133466752576012e+07 | 13148159 | 26492927 | 26689535 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-1 | 5 | 250 | 1.3238372017019808e+07 | 13230079 | 13385727 | 13959167 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-4 | 5 | 250 | 5.5816319305394059e+06 | 5582847 | 5648383 | 5664767 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-scalar | 5 | 250 | 1.9031198278111927e+07 | 18907135 | 20234239 | 37060607 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-lanes-1 | 5 | 250 | 1.6566288279922392e+07 | 16547839 | 17154047 | 17711103 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-lanes-4 | 5 | 250 | 6.9536040727837440e+06 | 6946815 | 7086079 | 7110655 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-scalar | 5 | 250 | 1.6171008333318854e+07 | 16048127 | 18513919 | 35160063 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-1 | 5 | 250 | 5.5143305718363926e+07 | 55115775 | 56131583 | 59310079 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-4 | 5 | 250 | 1.7560749949685361e+07 | 17547263 | 17858559 | 18333695 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | 5 | 250 | 3.7202991842916153e+07 | 37191679 | 37617663 | 37715967 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | 5 | 250 | 5.8392736853879914e+07 | 58294271 | 59998207 | 75366399 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-4 | 5 | 250 | 2.3374748433646455e+07 | 23347199 | 24051711 | 27377663 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-scalar | 5 | 250 | 1.3634362007438825e+06 | 1359871 | 1393663 | 1423359 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-1 | 5 | 250 | 3.1522542338185129e+06 | 3149823 | 3196927 | 3198975 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-4 | 5 | 250 | 1.4971780165506774e+06 | 1496063 | 1571839 | 1586175 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.xoshiro256pp-scalar | 5 | 250 | 5.6948100638205244e+05 | 570367 | 603647 | 618495 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-1 | 5 | 250 | 1.3297546779507112e+07 | 13238271 | 14852095 | 17170431 | 1.00 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-scalar | 5 | 250 | 1.3255855412491588e+07 | 13172735 | 14991359 | 24117247 | 1.00 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-1 | 5 | 250 | 5.5020801589145161e+07 | 54951935 | 57180159 | 62717951 | 1.06 | 1.04 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-4 | 5 | 250 | 1.8798267335228760e+07 | 17514495 | 38961151 | 39059455 | 1.04 | 1.04 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-scalar | 5 | 250 | 1.6465444145600894e+07 | 16326655 | 18808831 | 19546111 | 1.07 | 1.06 | 8bb2116be2fb | result |
+| simd-math.log-lanes-4 | 5 | 250 | 7.4595304138081940e+06 | 6918143 | 10600447 | 10641407 | 1.07 | 1.07 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | 5 | 250 | 5.8281478177879199e+07 | 58195967 | 60817407 | 62947327 | 1.03 | 1.02 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-4 | 5 | 250 | 2.3619115939669482e+07 | 23298047 | 31014911 | 37093375 | 1.02 | 1.02 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | 5 | 250 | 3.7431820923178010e+07 | 37421055 | 38699007 | 41680895 | 1.04 | 1.03 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-1 | 5 | 250 | 4.4230311510546710e+06 | 4032511 | 7045119 | 7077887 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-4 | 5 | 250 | 2.6442629308974165e+06 | 3233791 | 3444735 | 3473407 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| simd-math.philox-scalar | 5 | 250 | 3.7735951344048269e+06 | 2916351 | 12099583 | 12271615 | 1.02 | 1.01 | 8bb2116be2fb | result |
+| simd-math.xoshiro256pp-scalar | 5 | 250 | 1.2270993796002935e+06 | 1228799 | 1281023 | 1300479 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| bm_impliedvolatility | 5 | 100000 | 1.4300826033924855e+05 | 138623 | 237823 | 320255 | 1.00 | 1.12 | 8bb2116be2fb | result |
+| bm_black76price | 5 | 100000 | 2.7866601685057576e+04 | 27471 | 34335 | 120831 | 1.00 | 1.12 | 8bb2116be2fb | result |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad1-barrier (AAD-1)
 
@@ -287,48 +442,111 @@ up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, smoothed (h
 
 Paths 500000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 5161 | 9.689e+04 | 1 | no lane primal | 3.6 | 1.00 | - | value only |
-| tape | 9730 | 5.138e+04 | 1.89 | no lane primal | 3.7 | 1.03 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 1473 ms, 0.285 x primal |
-| tape-skip | 9091 | 5.5e+04 | 1.76 | no lane primal | 3.5 | 0.97 | 17794 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 8257 | 6.055e+04 | 1.6 | no lane primal | 3.7 | 1.02 | 17794 | record and rewind, no reverse sweep |
-| bump-central | 5.657e+04 | 8839 | 11 | no lane primal | 3.6 | 0.99 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 3.091e+04 | 1.618e+04 | 5.99 | no lane primal | 3.6 | 1.00 | - | 6 pricings expected (N + 1) |
+| price | 3756 | 1.331e+05 | 1 | 1 | 3.5 | 1.00 | - | value only |
+| price-lanes | 3902 | 1.281e+05 | 1.04 | 1.04 | 3.7 | 1.05 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.963 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath |
+| tape | 8194 | 6.102e+04 | 2.18 | 2.18 | 3.7 | 1.05 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 1228 ms, 0.327 x primal |
+| tape-lanes | 8014 | 6.239e+04 | 2.13 | 2.13 | 3.9 | 1.12 | 15165.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.02 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 7496 | 6.67e+04 | 2 | 2 | 3.8 | 1.08 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 6966 | 7.178e+04 | 1.85 | 1.85 | 3.8 | 1.07 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 4.171e+04 | 1.199e+04 | 11.1 | 11.1 | 3.5 | 0.98 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 2.257e+04 | 2.215e+04 | 6.01 | 6.01 | 3.4 | 0.97 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 0.00011 |
-| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 1.01e-05 |
-| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.122 |
-| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.774 |
-| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.782 |
-| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000405 |
-| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 5.9e-05 |
-| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.711 |
-| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 4.5 |
-| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 4.54 |
-| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00236 |
-| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 3.22e-05 |
-| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.388 |
-| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 2.46 |
-| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 2.48 |
-| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.00129 |
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 8.02e-05 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 8.55e-06 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.103 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.652 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.658 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000341 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 4.35e-05 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.524 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 3.32 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 3.35 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00174 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 2.35e-05 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.284 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 1.79 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 1.81 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.00094 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 8.36e-06 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.101 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.637 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.644 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000334 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway AVX2, 4 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 4 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 4 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad1-barrier (AAD-1)
+
+up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, smoothed (half-width 5), 3 years, 500,000 paths. Differences from the target: GBM at a flat 20% vol, not Dupire local vol on 60 times by 30 spots (stage 7); Philox pseudo-random draws, not Sobol; 5 inputs, not 1,801 sensitivities (1,081 active); r 3% and q 0, which the source does not state; a discrete barrier at the 156 dates with Savine's linear ramp of half-width 5, as the source.
+
+Paths 500000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
+
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 3558 | 1.405e+05 | 1 | 1.55 | 3.3 | 1.00 | - | value only |
+| price-lanes | 2301 | 2.173e+05 | 0.647 | 1 | 3.6 | 1.08 | - | value only, the lane primal at 4 lanes; price / price-lanes 1.55 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves |
+| tape | 7843 | 6.375e+04 | 2.2 | 3.41 | 3.9 | 1.19 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 1043 ms, 0.293 x primal |
+| tape-lanes | 5500 | 9.091e+04 | 1.55 | 2.39 | 4.6 | 1.38 | 13506.2 | value and every Greek on the vector tape at 4 lanes; tape / tape-lanes 1.43 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 7394 | 6.762e+04 | 2.08 | 3.21 | 3.6 | 1.10 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 6800 | 7.353e+04 | 1.91 | 2.96 | 4.0 | 1.20 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 3.954e+04 | 1.264e+04 | 11.1 | 17.2 | 3.4 | 1.02 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 2.138e+04 | 2.338e+04 | 6.01 | 9.3 | 3.6 | 1.10 | - | 6 pricings expected (N + 1) |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 7.6e-05 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 8.18e-06 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0985 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.624 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.63 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000327 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 4.12e-05 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.497 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 3.14 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 3.18 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00165 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 2.23e-05 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.269 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 1.7 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 1.72 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.00089 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 5.74e-06 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0691 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.437 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.442 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000229 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 2 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad3-barrier-mt (AAD-3)
 
@@ -336,48 +554,111 @@ the AAD-1 workload on --aadp-threads worker threads. Differences from the target
 
 Paths 500000 in 50 batches, 2 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 2729 | 1.832e+05 | 1 | no lane primal | 3.8 | 1.00 | - | value only |
-| tape | 5157 | 9.696e+04 | 1.89 | no lane primal | 4.0 | 1.05 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 772.9 ms, 0.283 x primal |
-| tape-skip | 4775 | 1.047e+05 | 1.75 | no lane primal | 4.0 | 1.05 | 17794 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 4384 | 1.141e+05 | 1.61 | no lane primal | 4.0 | 1.03 | 17794 | record and rewind, no reverse sweep |
-| bump-central | 3.008e+04 | 1.662e+04 | 11 | no lane primal | 3.7 | 0.97 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1.641e+04 | 3.047e+04 | 6.01 | no lane primal | 3.6 | 0.95 | - | 6 pricings expected (N + 1) |
+| price | 1992 | 2.51e+05 | 1 | 1 | 3.6 | 1.00 | - | value only |
+| price-lanes | 2078 | 2.406e+05 | 1.04 | 1.04 | 3.7 | 1.01 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.959 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath |
+| tape | 4363 | 1.146e+05 | 2.19 | 2.19 | 4.2 | 1.15 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 649.2 ms, 0.326 x primal |
+| tape-lanes | 4258 | 1.174e+05 | 2.14 | 2.14 | 4.6 | 1.25 | 15165.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.02 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 4013 | 1.246e+05 | 2.01 | 2.01 | 4.1 | 1.13 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 3714 | 1.346e+05 | 1.86 | 1.86 | 4.0 | 1.11 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 2.196e+04 | 2.276e+04 | 11 | 11 | 3.9 | 1.06 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1.197e+04 | 4.177e+04 | 6.01 | 6.01 | 3.8 | 1.05 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 5.83e-05 |
-| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 5.38e-06 |
-| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0648 |
-| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.41 |
-| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.414 |
-| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000215 |
-| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 3.14e-05 |
-| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.378 |
-| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 2.39 |
-| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 2.42 |
-| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00125 |
-| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 1.71e-05 |
-| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.206 |
-| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 1.3 |
-| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 1.32 |
-| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.000683 |
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 4.26e-05 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 4.55e-06 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0548 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.347 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.35 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000182 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 2.29e-05 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.276 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 1.75 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 1.76 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.000915 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 1.25e-05 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.15 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 0.952 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 0.961 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.000498 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 4.44e-06 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0535 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.339 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.342 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000177 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 2 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway AVX2, 4 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 4 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 4 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad3-barrier-mt (AAD-3)
+
+the AAD-1 workload on --aadp-threads worker threads. Differences from the target: GBM at a flat 20% vol, not Dupire local vol on 60 times by 30 spots (stage 7); Philox pseudo-random draws, not Sobol; 5 inputs, not 1,801 sensitivities (1,081 active); r 3% and q 0, which the source does not state; a discrete barrier at the 156 dates with Savine's linear ramp of half-width 5, as the source.
+
+Paths 500000 in 50 batches, 2 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
+
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 1895 | 2.639e+05 | 1 | 1.52 | 3.7 | 1.00 | - | value only |
+| price-lanes | 1243 | 4.022e+05 | 0.656 | 1 | 3.8 | 1.03 | - | value only, the lane primal at 4 lanes; price / price-lanes 1.52 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves |
+| tape | 4425 | 1.13e+05 | 2.34 | 3.56 | 4.2 | 1.14 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 786.4 ms, 0.415 x primal |
+| tape-lanes | 2721 | 1.838e+05 | 1.44 | 2.19 | 5.3 | 1.45 | 13506.2 | value and every Greek on the vector tape at 4 lanes; tape / tape-lanes 1.63 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 3956 | 1.264e+05 | 2.09 | 3.18 | 4.1 | 1.12 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 3639 | 1.374e+05 | 1.92 | 2.93 | 4.2 | 1.13 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 2.084e+04 | 2.399e+04 | 11 | 16.8 | 3.7 | 1.01 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1.138e+04 | 4.394e+04 | 6.01 | 9.15 | 3.8 | 1.02 | - | 6 pricings expected (N + 1) |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 4.05e-05 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 4.62e-06 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0556 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.352 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.355 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000184 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 2.17e-05 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.262 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 1.66 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 1.67 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.000868 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 1.19e-05 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.143 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 0.905 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 0.914 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.000474 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 2.84e-06 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0342 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.216 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.219 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000113 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad4-asian12 (AAD-4, AAD-5, AAD-6)
 
@@ -385,54 +666,263 @@ arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, 300,000 paths. Differen
 
 Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.523697; tape 63 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (3.554e-06 of its bound); central-vs-tape pass (0.07015 of its bound); forward-vs-tape pass (0.6515 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (3.554e-06 of its bound); central-vs-tape pass (0.07015 of its bound); forward-vs-tape pass (0.6515 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 237.3 | 1.264e+06 | 1 | no lane primal | 3.5 | 1.00 | - | value only |
-| tape | 452.9 | 6.624e+05 | 1.91 | no lane primal | 3.6 | 1.02 | 1239 | value and every Greek; reverse sweep (tape - tape-record) 64.76 ms, 0.273 x primal |
-| tape-skip | 434.7 | 6.901e+05 | 1.83 | no lane primal | 3.6 | 1.03 | 1239 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 388.1 | 7.729e+05 | 1.64 | no lane primal | 3.7 | 1.06 | 1239 | record and rewind, no reverse sweep |
-| hand | 242.1 | 1.239e+06 | 1.02 | no lane primal | 3.7 | 1.04 | - | hand-written adjoint |
-| bump-central | 2625 | 1.143e+05 | 11.1 | no lane primal | 3.6 | 1.03 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1434 | 2.093e+05 | 6.04 | no lane primal | 3.6 | 1.02 | - | 6 pricings expected (N + 1) |
+| price | 177 | 1.695e+06 | 1 | 1 | 3.7 | 1.00 | - | value only |
+| price-lanes | 186 | 1.613e+06 | 1.05 | 1.05 | 3.4 | 0.93 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.952 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath |
+| tape | 315.9 | 9.497e+05 | 1.79 | 1.79 | 3.7 | 1.00 | 1239 | value and every Greek; reverse sweep (tape - tape-record) 53.49 ms, 0.302 x primal |
+| tape-lanes | 350.8 | 8.552e+05 | 1.98 | 1.98 | 4.0 | 1.08 | 1071.0 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 0.901 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 308.1 | 9.737e+05 | 1.74 | 1.74 | 3.8 | 1.04 | 1239 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 262.4 | 1.143e+06 | 1.48 | 1.48 | 3.7 | 0.99 | 1239 | record and rewind, no reverse sweep |
+| hand | 183.6 | 1.634e+06 | 1.04 | 1.04 | 3.5 | 0.94 | - | hand-written adjoint |
+| bump-central | 1957 | 1.533e+05 | 11.1 | 11.1 | 3.5 | 0.94 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1070 | 2.803e+05 | 6.05 | 6.05 | 3.5 | 0.94 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 4.44e-05 |
-| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 3.96e-07 |
-| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00221 |
-| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000831 |
-| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.00123 |
-| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 2.68e-05 |
-| delta | hand | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 2.12e-07 |
-| vega | hand | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00118 |
-| rho | hand | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000444 |
-| dividend-rho | hand | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000658 |
-| theta | hand | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.43e-05 |
-| delta | bump-central | 0.56428426 | 0.0009349 | 3.03e-11 | 1.8e-11 | 2.384e-05 | 2.29e-06 |
-| vega | bump-central | 23.569722 | 0.06991 | 3.85e-10 | 2.4e-10 | 1.907e-06 | 0.0128 |
-| rho | bump-central | 25.616229 | 0.04283 | 9.32e-07 | 1.9e-09 | 4.768e-07 | 0.00482 |
-| dividend-rho | bump-central | -31.222745 | 0.05214 | -9.31e-07 | 1.9e-09 | 4.768e-07 | 0.00714 |
-| theta | bump-central | -3.125459 | 0.007685 | 5.67e-08 | 6.1e-08 | 0.0001221 | 0.000155 |
-| delta | bump-forward | 0.5642844 | 0.0009349 | 2.98e-07 | 3e-07 | 9.537e-05 | 1.25e-06 |
-| vega | bump-forward | 23.569718 | 0.06991 | -3.45e-06 | 8.4e-08 | 1.907e-06 | 0.00701 |
-| rho | bump-forward | 25.616221 | 0.04284 | 1.85e-05 | 5.2e-05 | 1.907e-06 | 0.00263 |
-| dividend-rho | bump-forward | -31.22274 | 0.05214 | 3.83e-06 | 6.5e-09 | 4.768e-07 | 0.0039 |
-| theta | bump-forward | -3.1254541 | 0.007685 | 4.86e-06 | 1.2e-08 | 7.629e-06 | 8.47e-05 |
+| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 3.31e-05 |
+| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 2.76e-07 |
+| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00154 |
+| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.00058 |
+| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000859 |
+| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.87e-05 |
+| delta | hand | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.61e-07 |
+| vega | hand | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000898 |
+| rho | hand | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000337 |
+| dividend-rho | hand | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000499 |
+| theta | hand | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.08e-05 |
+| delta | bump-central | 0.56428426 | 0.0009349 | 3.03e-11 | 1.8e-11 | 2.384e-05 | 1.71e-06 |
+| vega | bump-central | 23.569722 | 0.06991 | 3.85e-10 | 2.4e-10 | 1.907e-06 | 0.00957 |
+| rho | bump-central | 25.616229 | 0.04283 | 9.32e-07 | 1.9e-09 | 4.768e-07 | 0.00359 |
+| dividend-rho | bump-central | -31.222745 | 0.05214 | -9.31e-07 | 1.9e-09 | 4.768e-07 | 0.00532 |
+| theta | bump-central | -3.125459 | 0.007685 | 5.67e-08 | 6.1e-08 | 0.0001221 | 0.000116 |
+| delta | bump-forward | 0.5642844 | 0.0009349 | 2.98e-07 | 3e-07 | 9.537e-05 | 9.35e-07 |
+| vega | bump-forward | 23.569718 | 0.06991 | -3.45e-06 | 8.4e-08 | 1.907e-06 | 0.00523 |
+| rho | bump-forward | 25.616221 | 0.04284 | 1.85e-05 | 5.2e-05 | 1.907e-06 | 0.00196 |
+| dividend-rho | bump-forward | -31.22274 | 0.05214 | 3.83e-06 | 6.5e-09 | 4.768e-07 | 0.00291 |
+| theta | bump-forward | -3.1254541 | 0.007685 | 4.86e-06 | 1.2e-08 | 7.629e-06 | 6.32e-05 |
+| delta | tape-lanes | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 3.07e-07 |
+| vega | tape-lanes | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00171 |
+| rho | tape-lanes | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000644 |
+| dividend-rho | tape-lanes | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000954 |
+| theta | tape-lanes | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 2.07e-05 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway AVX2, 4 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 4 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 4 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad4-asian12 (AAD-4, AAD-5, AAD-6)
+
+arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, 300,000 paths. Differences from the target: one asset on GBM, not a best-of on up to 20 assets in local vol; a full tape of the path, not Capriotti's Tapenade payout adjoint with a separate state tangent; delta, vega, rho, dividend rho and theta, not delta and vega alone.
+
+Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.523697; tape 63 statements per path.
+
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (3.554e-06 of its bound); central-vs-tape pass (0.07015 of its bound); forward-vs-tape pass (0.6515 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 171.7 | 1.747e+06 | 1 | 1.66 | 3.3 | 1.00 | - | value only |
+| price-lanes | 103.7 | 2.893e+06 | 0.604 | 1 | 3.5 | 1.04 | - | value only, the lane primal at 4 lanes; price / price-lanes 1.66 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves |
+| tape | 317.8 | 9.439e+05 | 1.85 | 3.06 | 3.6 | 1.09 | 1239 | value and every Greek; reverse sweep (tape - tape-record) 65.75 ms, 0.383 x primal |
+| tape-lanes | 217.3 | 1.381e+06 | 1.27 | 2.09 | 4.3 | 1.29 | 931.5 | value and every Greek on the vector tape at 4 lanes; tape / tape-lanes 1.46 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 295.9 | 1.014e+06 | 1.72 | 2.85 | 3.9 | 1.18 | 1239 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 252.1 | 1.19e+06 | 1.47 | 2.43 | 3.9 | 1.16 | 1239 | record and rewind, no reverse sweep |
+| hand | 176.8 | 1.697e+06 | 1.03 | 1.7 | 3.7 | 1.10 | - | hand-written adjoint |
+| bump-central | 1891 | 1.587e+05 | 11 | 18.2 | 3.3 | 1.00 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1030 | 2.912e+05 | 6 | 9.94 | 3.7 | 1.11 | - | 6 pricings expected (N + 1) |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 3.21e-05 |
+| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 2.78e-07 |
+| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00155 |
+| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000583 |
+| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000864 |
+| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.88e-05 |
+| delta | hand | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.55e-07 |
+| vega | hand | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000864 |
+| rho | hand | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000324 |
+| dividend-rho | hand | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000481 |
+| theta | hand | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.04e-05 |
+| delta | bump-central | 0.56428426 | 0.0009349 | 3.03e-11 | 1.8e-11 | 2.384e-05 | 1.65e-06 |
+| vega | bump-central | 23.569722 | 0.06991 | 3.85e-10 | 2.4e-10 | 1.907e-06 | 0.00924 |
+| rho | bump-central | 25.616229 | 0.04283 | 9.32e-07 | 1.9e-09 | 4.768e-07 | 0.00347 |
+| dividend-rho | bump-central | -31.222745 | 0.05214 | -9.31e-07 | 1.9e-09 | 4.768e-07 | 0.00514 |
+| theta | bump-central | -3.125459 | 0.007685 | 5.67e-08 | 6.1e-08 | 0.0001221 | 0.000112 |
+| delta | bump-forward | 0.5642844 | 0.0009349 | 2.98e-07 | 3e-07 | 9.537e-05 | 9.01e-07 |
+| vega | bump-forward | 23.569718 | 0.06991 | -3.45e-06 | 8.4e-08 | 1.907e-06 | 0.00504 |
+| rho | bump-forward | 25.616221 | 0.04284 | 1.85e-05 | 5.2e-05 | 1.907e-06 | 0.00189 |
+| dividend-rho | bump-forward | -31.22274 | 0.05214 | 3.83e-06 | 6.5e-09 | 4.768e-07 | 0.0028 |
+| theta | bump-forward | -3.1254541 | 0.007685 | 4.86e-06 | 1.2e-08 | 7.629e-06 | 6.09e-05 |
+| delta | tape-lanes | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.9e-07 |
+| vega | tape-lanes | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00106 |
+| rho | tape-lanes | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000399 |
+| dividend-rho | tape-lanes | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000591 |
+| theta | tape-lanes | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.28e-05 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad8-asian12 (AAD-8 (proposed): second order on AAD-4's contract)
+
+arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, 300,000 paths; gamma, vanna and volga by forward over reverse on the conditional kernels. Differences from the target: AAD-4's contract and paths; the second-order and cond-* variants price the last step's expectation in closed form, so their primal is cond-price, not price.
+
+Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.523697; tape 63 statements per path.
+
+Checks: value-bits pass (0 of its bound); for-gradient-bits pass (0 of its bound); spot-row-bits pass (0 of its bound); vanna-symmetry pass (7.533e-08 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 177.2 | 1.693e+06 | 1 | no lane primal | 3.5 | 1.00 | - | value only |
+| tape | 317.8 | 9.441e+05 | 1.79 | no lane primal | 3.9 | 1.13 | 1239 | value and every Greek |
+| cond-price | 217.1 | 1.382e+06 | 1.23 | no lane primal | 3.8 | 1.11 | - | value only, conditional kernels (last step in closed form) |
+| cond-tape | 382.5 | 7.844e+05 | 2.16 | no lane primal | 3.8 | 1.09 | - | value and every Greek, conditional kernels, one reverse sweep per path, 1.76 x cond-price |
+| for-spot | 751 | 3.994e+05 | 4.24 | no lane primal | 4.0 | 1.15 | - | value, every Greek and the spot Hessian row (gamma, vanna) in one forward-over-reverse sweep per path, 1 tangent lane, 1.96 x cond-tape, 3.46 x cond-price |
+| for-spot-vol | 847.8 | 3.539e+05 | 4.78 | no lane primal | 4.0 | 1.15 | - | value, every Greek and the spot and vol Hessian rows (gamma, vanna, volga) in one forward-over-reverse sweep per path, 2 tangent lanes, 2.22 x cond-tape, 3.9 x cond-price |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 3.32e-05 |
+| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 2.78e-07 |
+| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00155 |
+| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000583 |
+| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000864 |
+| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.88e-05 |
+| value | cond-price | 5.6071115 | 0.01351 | 0 (pathwise) | - | - | 3.96e-05 |
+| delta | cond-tape | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 3.18e-07 |
+| vega | cond-tape | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.00182 |
+| rho | cond-tape | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.000664 |
+| dividend-rho | cond-tape | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.000995 |
+| theta | cond-tape | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 2.21e-05 |
+| delta | for-spot | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 6.25e-07 |
+| vega | for-spot | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.00358 |
+| rho | for-spot | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.0013 |
+| dividend-rho | for-spot | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.00195 |
+| theta | for-spot | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 4.33e-05 |
+| gamma | for-spot | 0.031528051 | 0.0002719 | 0 (pathwise) | - | - | 5.55e-08 |
+| vanna | for-spot | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 9.82e-06 |
+| d2V/dS.dr | for-spot | 1.4554065 | 0.01475 | 0 (pathwise) | - | - | 0.000163 |
+| d2V/dS.dq | for-spot | -2.0197248 | 0.01466 | 0 (pathwise) | - | - | 0.000161 |
+| d2V/dS.dT | for-spot | 0.027930275 | 0.0001093 | 0 (pathwise) | - | - | 8.97e-09 |
+| delta | for-spot-vol | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 7.05e-07 |
+| vega | for-spot-vol | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.00404 |
+| rho | for-spot-vol | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.00147 |
+| dividend-rho | for-spot-vol | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.00221 |
+| theta | for-spot-vol | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 4.89e-05 |
+| gamma | for-spot-vol | 0.031528051 | 0.0002719 | 0 (pathwise) | - | - | 6.27e-08 |
+| vanna | for-spot-vol | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 1.11e-05 |
+| d2V/dS.dr | for-spot-vol | 1.4554065 | 0.01475 | 0 (pathwise) | - | - | 0.000185 |
+| d2V/dS.dq | for-spot-vol | -2.0197248 | 0.01466 | 0 (pathwise) | - | - | 0.000182 |
+| d2V/dS.dT | for-spot-vol | 0.027930275 | 0.0001093 | 0 (pathwise) | - | - | 1.01e-08 |
+| d2V/dsigma.dS | for-spot-vol | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 1.11e-05 |
+| volga | for-spot-vol | 1.1854906 | 0.09456 | 0 (pathwise) | - | - | 0.00758 |
+| d2V/dsigma.dr | for-spot-vol | -29.516513 | 0.1771 | 0 (pathwise) | - | - | 0.0266 |
+| d2V/dsigma.dq | for-spot-vol | 5.9436859 | 0.1979 | 0 (pathwise) | - | - | 0.0332 |
+| d2V/dsigma.dT | for-spot-vol | 11.019467 | 0.04091 | 0 (pathwise) | - | - | 0.00142 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad8-barrier (AAD-8 (proposed): second order on AAD-1's contract)
+
+up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, one-step survival, 3 years, 500,000 paths; gamma, vanna and volga by forward over reverse on the conditional kernels. Differences from the target: AAD-1's contract with one-step survival (Gerstner, Harrach, Roth, arXiv 1804.03975v3) in place of Savine's smoothing, which has no unbiased second derivative; price and tape run the production one-step kernel.
+
+Paths 500000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.286480; tape 1408 statements per path.
+
+Checks: value-bits pass (0 of its bound); for-gradient-bits pass (0 of its bound); spot-row-bits pass (0 of its bound); vanna-symmetry pass (4.563e-21 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 8875 | 5.634e+04 | 1 | no lane primal | 3.4 | 1.00 | - | value only |
+| tape | 1.517e+04 | 3.296e+04 | 1.71 | no lane primal | 4.0 | 1.15 | 27664 | value and every Greek |
+| cond-price | 9138 | 5.472e+04 | 1.03 | no lane primal | 3.7 | 1.09 | - | value only, conditional kernels (last step in closed form) |
+| cond-tape | 1.634e+04 | 3.06e+04 | 1.84 | no lane primal | 4.1 | 1.20 | - | value and every Greek, conditional kernels, one reverse sweep per path, 1.79 x cond-price |
+| for-spot | 2.91e+04 | 1.718e+04 | 3.28 | no lane primal | 4.1 | 1.21 | - | value, every Greek and the spot Hessian row (gamma, vanna) in one forward-over-reverse sweep per path, 1 tangent lane, 1.78 x cond-tape, 3.18 x cond-price |
+| for-spot-vol | 3.312e+04 | 1.509e+04 | 3.73 | no lane primal | 4.1 | 1.20 | - | value, every Greek and the spot and vol Hessian rows (gamma, vanna, volga) in one forward-over-reverse sweep per path, 2 tangent lanes, 2.03 x cond-tape, 3.63 x cond-price |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 1.0517117 | 0.004605 | 0 (pathwise) | - | - | 0.000188 |
+| delta | tape | 0.007542749 | 0.0006427 | 0 (pathwise) | - | - | 6.27e-06 |
+| vega | tape | -9.3179342 | 0.06673 | 0 (pathwise) | - | - | 0.0676 |
+| rho | tape | 4.0281558 | 0.1775 | 0 (pathwise) | - | - | 0.478 |
+| dividend-rho | tape | -7.1832908 | 0.1789 | 0 (pathwise) | - | - | 0.485 |
+| theta | tape | 0.27031625 | 0.003859 | 0 (pathwise) | - | - | 0.000226 |
+| value | cond-price | 1.0523743 | 0.004219 | 0 (pathwise) | - | - | 0.000163 |
+| delta | cond-tape | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 5.61e-06 |
+| vega | cond-tape | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.0662 |
+| rho | cond-tape | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.424 |
+| dividend-rho | cond-tape | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.434 |
+| theta | cond-tape | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000214 |
+| delta | for-spot | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 1e-05 |
+| vega | for-spot | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.118 |
+| rho | for-spot | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.756 |
+| dividend-rho | for-spot | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.774 |
+| theta | for-spot | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000381 |
+| gamma | for-spot | -0.0014686582 | 0.0001619 | 0 (pathwise) | - | - | 7.63e-07 |
+| vanna | for-spot | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.0133 |
+| d2V/dS.dr | for-spot | -0.23757152 | 0.04468 | 0 (pathwise) | - | - | 0.0581 |
+| d2V/dS.dq | for-spot | 0.21524992 | 0.04464 | 0 (pathwise) | - | - | 0.058 |
+| d2V/dS.dT | for-spot | -0.013018485 | 0.001139 | 0 (pathwise) | - | - | 3.77e-05 |
+| delta | for-spot-vol | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 1.14e-05 |
+| vega | for-spot-vol | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.134 |
+| rho | for-spot-vol | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.86 |
+| dividend-rho | for-spot-vol | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.881 |
+| theta | for-spot-vol | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000433 |
+| gamma | for-spot-vol | -0.0014686582 | 0.0001619 | 0 (pathwise) | - | - | 8.68e-07 |
+| vanna | for-spot-vol | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.0151 |
+| d2V/dS.dr | for-spot-vol | -0.23757152 | 0.04468 | 0 (pathwise) | - | - | 0.0661 |
+| d2V/dS.dq | for-spot-vol | 0.21524992 | 0.04464 | 0 (pathwise) | - | - | 0.066 |
+| d2V/dS.dT | for-spot-vol | -0.013018485 | 0.001139 | 0 (pathwise) | - | - | 4.3e-05 |
+| d2V/dsigma.dS | for-spot-vol | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.0151 |
+| volga | for-spot-vol | 84.518743 | 2.996 | 0 (pathwise) | - | - | 297 |
+| d2V/dsigma.dr | for-spot-vol | -92.824531 | 5.806 | 0 (pathwise) | - | - | 1.12e+03 |
+| d2V/dsigma.dq | for-spot-vol | 120.80654 | 5.795 | 0 (pathwise) | - | - | 1.11e+03 |
+| d2V/dsigma.dT | for-spot-vol | 0.33449014 | 0.1534 | 0 (pathwise) | - | - | 0.78 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### lw-worst (B34 (Hogan's LW: Adept 32 to 33 times, hand 2.1))
 
@@ -444,33 +934,33 @@ Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound)
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 0.1355 | 7380 | 1 | no lane primal | 3.4 | 1.00 | - | value only |
-| tape | 14.4 | 69.43 | 106 | no lane primal | 43.1 | 12.62 | 29801875 | value and every Greek; reverse sweep (tape - tape-record) 6.46 ms, 47.7 x primal |
-| tape-skip | 15.6 | 64.1 | 115 | no lane primal | 44.2 | 12.94 | 29801875 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 7.944 | 125.9 | 58.6 | no lane primal | 44.0 | 12.88 | 29801875 | record and rewind, no reverse sweep |
-| hand | 0.4384 | 2281 | 3.24 | no lane primal | 3.3 | 0.96 | - | hand-written adjoint |
-| bump-central | 26.56 | 37.64 | 196 | no lane primal | 3.3 | 0.96 | - | 201 pricings expected (2N + 1) |
-| bump-forward | 13.38 | 74.72 | 98.8 | no lane primal | 3.6 | 1.04 | - | 101 pricings expected (N + 1) |
+| price | 0.4675 | 2139 | 1 | no lane primal | 3.5 | 1.00 | - | value only |
+| tape | 12.1 | 82.65 | 25.9 | no lane primal | 43.8 | 12.53 | 29801875 | value and every Greek; reverse sweep (tape - tape-record) 7.269 ms, 15.5 x primal |
+| tape-skip | 13.13 | 76.18 | 28.1 | no lane primal | 42.9 | 12.28 | 29801875 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 4.829 | 207.1 | 10.3 | no lane primal | 43.7 | 12.50 | 29801875 | record and rewind, no reverse sweep |
+| hand | 0.2939 | 3402 | 0.629 | no lane primal | 3.4 | 0.97 | - | hand-written adjoint |
+| bump-central | 26.61 | 37.57 | 56.9 | no lane primal | 3.5 | 0.99 | - | 201 pricings expected (2N + 1) |
+| bump-forward | 13.31 | 75.16 | 28.5 | no lane primal | 3.2 | 0.93 | - | 101 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
 | gradient (worst input) | tape | - | 0 | 0 (pathwise) | - | - | 0 |
 | gradient (worst input) | hand | - | 0 | 0 (pathwise) | - | - | 0 |
-| gradient (worst input) | bump-central | - | 0 | 1.67e-12 | 0 | 0.0625 | 7.39e-26 |
-| gradient (worst input) | bump-forward | - | 0 | 4.09e-12 | 0 | 0.0625 | 2.24e-25 |
+| gradient (worst input) | bump-central | - | 0 | 1.67e-12 | 0 | 0.0625 | 7.4e-26 |
+| gradient (worst input) | bump-forward | - | 0 | 4.09e-12 | 0 | 0.0625 | 2.23e-25 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### mc-asian252 (MC-1, MC-2, AAD-4 at 252 fixings, AAD-5, AAD-6)
 
@@ -478,54 +968,123 @@ arithmetic Asian call, S0 = K = 100, 252 fixings, 1 year, 300,000 paths. Differe
 
 Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 4882 | 6.145e+04 | 1 | no lane primal | 3.4 | 1.00 | - | value only |
-| tape | 8927 | 3.36e+04 | 1.83 | no lane primal | 3.5 | 1.04 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 1023 ms, 0.209 x primal |
-| tape-skip | 8691 | 3.452e+04 | 1.78 | no lane primal | 3.5 | 1.05 | 25479 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 7905 | 3.795e+04 | 1.62 | no lane primal | 3.8 | 1.13 | 25479 | record and rewind, no reverse sweep |
-| hand | 4903 | 6.119e+04 | 1 | no lane primal | 3.7 | 1.11 | - | hand-written adjoint |
-| bump-central | 5.383e+04 | 5573 | 11 | no lane primal | 3.4 | 1.01 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 2.934e+04 | 1.023e+04 | 6.01 | no lane primal | 3.6 | 1.06 | - | 6 pricings expected (N + 1) |
+| price | 3605 | 8.322e+04 | 1 | 1 | 3.5 | 1.00 | - | value only |
+| price-lanes | 3810 | 7.873e+04 | 1.06 | 1.06 | 3.5 | 1.00 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.946 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath |
+| tape | 6130 | 4.894e+04 | 1.7 | 1.7 | 3.6 | 1.04 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 1023 ms, 0.284 x primal |
+| tape-lanes | 7178 | 4.179e+04 | 1.99 | 1.99 | 3.8 | 1.08 | 21820.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 0.854 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 5839 | 5.138e+04 | 1.62 | 1.62 | 3.7 | 1.04 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 5106 | 5.875e+04 | 1.42 | 1.42 | 3.7 | 1.04 | 25479 | record and rewind, no reverse sweep |
+| hand | 3637 | 8.25e+04 | 1.01 | 1.01 | 3.5 | 0.99 | - | hand-written adjoint |
+| bump-central | 3.948e+04 | 7599 | 11 | 11 | 3.4 | 0.97 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 2.151e+04 | 1.394e+04 | 5.97 | 5.97 | 3.3 | 0.94 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.00093 |
-| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 8.21e-06 |
-| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0433 |
-| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.0142 |
-| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0222 |
-| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000525 |
-| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 4.51e-06 |
-| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0238 |
-| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00778 |
-| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0122 |
-| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000288 |
-| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 4.95e-05 |
-| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.261 |
-| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0855 |
-| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.134 |
-| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00316 |
-| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 2.7e-05 |
-| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.142 |
-| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0466 |
-| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0729 |
-| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.00172 |
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000687 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 5.64e-06 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0297 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00973 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0152 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.00036 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 3.35e-06 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0176 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00577 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00903 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000214 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 3.63e-05 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.191 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0627 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.098 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00232 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.98e-05 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.104 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0342 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0534 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.00126 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 6.6e-06 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0348 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.0114 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0178 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000422 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway AVX2, 4 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 4 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 4 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### mc-asian252 (MC-1, MC-2, AAD-4 at 252 fixings, AAD-5, AAD-6)
+
+arithmetic Asian call, S0 = K = 100, 252 fixings, 1 year, 300,000 paths. Differences from the target: one spot, not a ladder of seven; Philox draws generated inline, not cached (the source's 0.197 million paths/s is cached, 0.127 fresh); the five Greeks are delta, vega, rho, dividend rho and theta, not delta, strike, vega, rho and maturity; q 0, which the source does not state.
+
+Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
+
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 3405 | 8.81e+04 | 1 | 1.56 | 3.5 | 1.00 | - | value only |
+| price-lanes | 2179 | 1.377e+05 | 0.64 | 1 | 3.7 | 1.05 | - | value only, the lane primal at 4 lanes; price / price-lanes 1.56 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves |
+| tape | 5713 | 5.251e+04 | 1.68 | 2.62 | 3.9 | 1.11 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 845.2 ms, 0.248 x primal |
+| tape-lanes | 4448 | 6.744e+04 | 1.31 | 2.04 | 4.5 | 1.28 | 18991.5 | value and every Greek on the vector tape at 4 lanes; tape / tape-lanes 1.28 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 5618 | 5.34e+04 | 1.65 | 2.58 | 3.7 | 1.05 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 4868 | 6.163e+04 | 1.43 | 2.23 | 3.9 | 1.10 | 25479 | record and rewind, no reverse sweep |
+| hand | 3462 | 8.665e+04 | 1.02 | 1.59 | 3.5 | 1.01 | - | hand-written adjoint |
+| bump-central | 3.759e+04 | 7980 | 11 | 17.3 | 3.5 | 0.99 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 2.048e+04 | 1.465e+04 | 6.01 | 9.4 | 3.8 | 1.07 | - | 6 pricings expected (N + 1) |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000649 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 5.26e-06 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0277 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00907 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0142 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000336 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 3.18e-06 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0168 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.0055 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0086 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000203 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 3.46e-05 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.182 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0597 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0933 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00221 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.88e-05 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0992 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0325 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0509 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.0012 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 4.09e-06 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0216 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00706 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.011 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000261 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 2 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### mc3-asian252-mt (MC-3)
 
@@ -533,41 +1092,573 @@ the MC-1 workload on --aadp-threads worker threads. Differences from the target:
 
 Paths 300000 in 50 batches, 2 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 2592 | 1.158e+05 | 1 | no lane primal | 3.7 | 1.00 | - | value only |
-| tape | 4728 | 6.345e+04 | 1.82 | no lane primal | 4.0 | 1.09 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 521.4 ms, 0.201 x primal |
-| tape-skip | 4644 | 6.46e+04 | 1.79 | no lane primal | 3.9 | 1.06 | 25479 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 4207 | 7.131e+04 | 1.62 | no lane primal | 4.0 | 1.07 | 25479 | record and rewind, no reverse sweep |
-| hand | 2598 | 1.155e+05 | 1 | no lane primal | 3.7 | 1.00 | - | hand-written adjoint |
-| bump-central | 2.855e+04 | 1.051e+04 | 11 | no lane primal | 3.7 | 1.01 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1.557e+04 | 1.926e+04 | 6.01 | no lane primal | 3.8 | 1.02 | - | 6 pricings expected (N + 1) |
+| price | 1905 | 1.575e+05 | 1 | 1 | 3.7 | 1.00 | - | value only |
+| price-lanes | 2028 | 1.479e+05 | 1.06 | 1.06 | 3.7 | 1.00 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.939 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath |
+| tape | 3218 | 9.321e+04 | 1.69 | 1.69 | 4.1 | 1.11 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 513.4 ms, 0.27 x primal |
+| tape-lanes | 3757 | 7.984e+04 | 1.97 | 1.97 | 4.6 | 1.25 | 21820.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 0.857 x, lane ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 3118 | 9.622e+04 | 1.64 | 1.64 | 4.1 | 1.11 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 2705 | 1.109e+05 | 1.42 | 1.42 | 4.1 | 1.10 | 25479 | record and rewind, no reverse sweep |
+| hand | 1936 | 1.55e+05 | 1.02 | 1.02 | 3.8 | 1.03 | - | hand-written adjoint |
+| bump-central | 2.1e+04 | 1.428e+04 | 11 | 11 | 3.8 | 1.03 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1.145e+04 | 2.62e+04 | 6.01 | 6.01 | 3.8 | 1.01 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000494 |
-| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 4.35e-06 |
-| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0229 |
-| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00751 |
-| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0117 |
-| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000278 |
-| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.39e-06 |
-| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0126 |
-| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00412 |
-| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00645 |
-| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000153 |
-| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 2.63e-05 |
-| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.138 |
-| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0453 |
-| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0709 |
-| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00168 |
-| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.43e-05 |
-| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0755 |
-| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0247 |
-| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0387 |
-| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.000915 |
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000363 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.96e-06 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0156 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00511 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00799 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000189 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 1.78e-06 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00938 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00307 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00481 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000114 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 1.93e-05 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.102 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0334 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0522 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00123 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.05e-05 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0555 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0182 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0284 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.000673 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 3.46e-06 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0182 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00597 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00933 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000221 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 2 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway AVX2, 4 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 4 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 4 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### mc3-asian252-mt (MC-3)
+
+the MC-1 workload on --aadp-threads worker threads. Differences from the target: one spot, not a ladder of seven; Philox draws generated inline, not cached (the source's 0.197 million paths/s is cached, 0.127 fresh); the five Greeks are delta, vega, rho, dividend rho and theta, not delta, strike, vega, rho and maturity; q 0, which the source does not state.
+
+Paths 300000 in 50 batches, 2 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
+
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 1814 | 1.653e+05 | 1 | 1.58 | 3.8 | 1.00 | - | value only |
+| price-lanes | 1146 | 2.618e+05 | 0.632 | 1 | 3.9 | 1.04 | - | value only, the lane primal at 4 lanes; price / price-lanes 1.58 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves |
+| tape | 3061 | 9.802e+04 | 1.69 | 2.67 | 4.2 | 1.10 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 462.5 ms, 0.255 x primal |
+| tape-lanes | 2379 | 1.261e+05 | 1.31 | 2.08 | 5.1 | 1.35 | 18991.5 | value and every Greek on the vector tape at 4 lanes; tape / tape-lanes 1.29 x, lane ceiling: 4 double lanes on AVX2, at most 4 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath, which runs each 256-bit operation as two 128-bit halves; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 3014 | 9.955e+04 | 1.66 | 2.63 | 4.1 | 1.09 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 2598 | 1.155e+05 | 1.43 | 2.27 | 4.1 | 1.09 | 25479 | record and rewind, no reverse sweep |
+| hand | 1842 | 1.628e+05 | 1.02 | 1.61 | 3.7 | 0.99 | - | hand-written adjoint |
+| bump-central | 2.013e+04 | 1.49e+04 | 11.1 | 17.6 | 3.6 | 0.96 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1.089e+04 | 2.754e+04 | 6 | 9.51 | 3.6 | 0.96 | - | 6 pricings expected (N + 1) |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000346 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.82e-06 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0148 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00486 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0076 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.00018 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 1.69e-06 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00893 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00293 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00457 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000108 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 1.85e-05 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.0976 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.032 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.05 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00118 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1e-05 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0528 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0173 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0271 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.00064 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.19e-06 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0115 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00378 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00591 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.00014 |
+
+### Reports
+
+#### eSSVI beside raw SVI per slice: the cost in fit error, settlements
+
+`report_essvi_fit_error`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | essvi_phi | essvi_phi_per_dof | raw_phi | raw_phi_per_dof | phi_ratio | essvi_svi6 (bp_of_F) | raw_svi6 (bp_of_F) | essvi_svi11 (vol_points) | raw_svi11 (vol_points) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 202411 | 65 | 26.83572112999456 | 0.4328342117741058 | 12.423749901759981 | 0.20706249836266635 | 2.1600339142526477 | 0.4496134448968316 | 0.2867787219631387 | 1.8932130607256097 | 0.9576399476640635 |
+| 202411W4 | 51 | 109.30652884292431 | 2.2772193508942564 | 106.88795417077621 | 2.3236511776255697 | 1.022627195841768 | 1.1735751310850575 | 1.1317032806279566 | 1.0203616502975057 | 0.40959497040346426 |
+| 202412 | 64 | 312.87787096477933 | 5.12914542565212 | 191.0341596577926 | 3.2378671128439422 | 1.6378111198816505 | 1.60270838314882 | 1.2311502876082472 | 2.4976354511124987 | 1.3972751718303673 |
+
+#### eSSVI beside raw SVI over the surface: the cost in fit error
+
+`report_essvi_fit_surface`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | essvi_phi | essvi_phi_per_dof | raw_phi | raw_phi_per_dof | phi_ratio |
+|---|---|---|---|---|---|---|
+| surface | 180 | 449.02012093769815 | 2.625848660454375 | 310.3458637303288 | 1.8808840226080534 | 1.446837781372426 |
+
+#### Butterfly checks of both surfaces' slices, nothing repaired
+
+`report_essvi_fit_arbitrage`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | model_triples (count) | model_non_convex (count) | grid_points (count) | min_g | k_min_g (log_moneyness) | martini_mingone | violations (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.essvi | 61 | 0 | 14002 | 0.25408881120552673 | -3 | no-arbitrage | 0 |
+| 202411.raw | 61 | 0 | 14002 | -28.86045054341379 | 0.13350154976993137 | type-1 | 4 |
+| 202411W4.essvi | 47 | 0 | 14002 | 0.2616579514665288 | -3 | no-arbitrage | 0 |
+| 202411W4.raw | 47 | 0 | 14002 | -24.879862102808183 | 0.17500000000000002 | type-1 | 4 |
+| 202412.essvi | 60 | 0 | 14002 | 0.2615713143568765 | -3.2996873379439755 | no-arbitrage | 0 |
+| 202412.raw | 60 | 0 | 14002 | -3.261889685463337 | 0.8670000200934154 | type-1 | 4 |
+
+#### Calendar checks of both surfaces' adjacent slices
+
+`report_essvi_fit_calendar`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | grid_points (count) | min_gap (total_variance) | k_min_gap (log_moneyness) | violations (count) |
+|---|---|---|---|---|
+| 202411-202411W4.essvi | 22003 | 0.0002863422657946304 | 0.42086726235789157 | 0 |
+| 202411W4-202412.essvi | 22003 | 0.002502207889821754 | 0.07549338384102873 | 0 |
+| 202411-202411W4.raw | 22003 | -0.15159471657250378 | 3 | 4 |
+| 202411W4-202412.raw | 22003 | -1.8145667442438906 | 6.0899909235311345 | 2 |
+
+#### Every violation of either surface's slices and pairs
+
+`report_essvi_fit_violations`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | kind | k_begin (log_moneyness) | k_end (log_moneyness) | k_worst (log_moneyness) | value | bound | points (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.raw.1 | density | 0.12037321723261338 | 3 | 0.13350154976993137 | -28.86045054341379 | -4.951109240015759e-13 | 6809 |
+| 202411.raw.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.raw.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411W4.raw.1 | density | 0.1605186108022837 | 3 | 0.17500000000000002 | -24.879862102808183 | -4.555447908497429e-13 | 6753 |
+| 202411W4.raw.2 | d-plus-limit | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202411W4.raw.3 | right-wing | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202411W4.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 3.9999999999999996 | 0 |
+| 202412.raw.1 | density | 0.682675347704515 | 6.0899909235311345 | 0.8670000200934154 | -3.261889685463337 | -8.738579642202582e-14 | 6250 |
+| 202412.raw.2 | d-plus-limit | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202412.raw.3 | right-wing | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202412.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 3.9999999999999996 | 0 |
+| 202411-202411W4.raw.1 | calendar-crossing | -3 | -0.733 | -3 | -0.0037361594559504052 | -8.901649742998386e-14 | 2268 |
+| 202411-202411W4.raw.2 | calendar-crossing | 0.07136439113672857 | 3 | 3 | -0.15159471657250378 | -8.154701515975693e-14 | 11990 |
+| 202411-202411W4.raw.3 | calendar-right-wing | +inf | +inf | +inf | -0.15159781166922848 | 0 | 0 |
+| 202411-202411W4.raw.4 | calendar-left-wing | -inf | -inf | -inf | -0.0016475042905273914 | 1 | 0 |
+| 202411W4-202412.raw.1 | calendar-crossing | 0.12664229626954387 | 6.0899909235311345 | 6.0899909235311345 | -1.8145667442438906 | -1.628679595557671e-13 | 11419 |
+| 202411W4-202412.raw.2 | calendar-right-wing | +inf | +inf | +inf | -1.8180454554748238 | 0 | 0 |
+
+#### eSSVI constraints B1, B2, N and S on the fitted slices
+
+`report_essvi_fit_constraints`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | slack | active | violated |
+|---|---|---|---|
+| 202411.B1 | 0.9933811558394444 | no | no |
+| 202411.B2 | 0.7876068367637525 | no | no |
+| 202411W4.B1 | 0.9923221925712051 | no | no |
+| 202411W4.B2 | 0.901192532143705 | no | no |
+| 202412.B1 | 0.9831158280807096 | no | no |
+| 202412.B2 | 0.8186933407826398 | no | no |
+| 202411W4.N-theta | 1.8175724331630096 | no | no |
+| 202411W4.N-psi | 0.029517579348889322 | no | no |
+| 202411W4.S | 0.5989540107988865 | no | no |
+| 202412.N-theta | 1.88861577943903 | no | no |
+| 202412.N-psi | 1.1990877051654052 | no | no |
+| 202412.S | 0.16558628203350134 | no | no |
+
+#### eSSVI surface fit: convergence, starts and constraints
+
+`report_essvi_fit_convergence`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:08Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | converged | stop | iterations (count) | scaled_gradient | starts_at_best (count) | starts (count) | constraints_violated (count) | constraints_active (count) |
+|---|---|---|---|---|---|---|---|---|
+| surface | yes | stationary | 10 | 2.97500330167994e-11 | 16 | 16 | 0 | 0 |
+
+#### 7a's contracts off raw SVI and eSSVI on the same uniforms
+
+`report_essvi_price`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:10Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | paths (count) | raw (index_points) | raw_se (index_points) | essvi (index_points) | essvi_se (index_points) | paired_difference (index_points) | paired_se (index_points) | paired_batches (count) |
+|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 1048576 | 336.79435007497824 | 0.4403286076332576 | 336.94497422538115 | 0.4358835949977715 | 0.15062415040299726 | 0.044182270528543816 | 64 |
+| down-out-call-discrete-one-step | 1048576 | 570.3559156267366 | 0.8285018873893021 | 570.3300347333528 | 0.8487811574740726 | -0.025880893383753545 | 0.1284170460582489 | 64 |
+| down-out-call-continuous-bridge | 1048576 | 552.8382676021347 | 0.8198867527346113 | 552.756392424702 | 0.8381388868955469 | -0.08187517743258255 | 0.12854060656570482 | 64 |
+
+#### Local-variance floors and caps per contract and surface
+
+`report_essvi_price_floors`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:10Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | path_steps (count) | paths (count) | non_finite (count) | non_positive_variance (count) | calendar (count) | butterfly (count) | below_floor (count) | capped (count) | paths_with_floor (count) | paths_with_cap (count) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| asian-arithmetic-call.raw | 138412032 | 1048576 | 0 | 0 | 521609 | 0 | 11325 | 52 | 34156 | 8 |
+| down-out-call-discrete-one-step.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| down-out-call-discrete-one-step.raw | 138412032 | 1048576 | 0 | 0 | 523536 | 0 | 11366 | 0 | 34297 | 0 |
+| down-out-call-continuous-bridge.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| down-out-call-continuous-bridge.raw | 138412032 | 1048576 | 0 | 0 | 521609 | 0 | 11325 | 52 | 34156 | 8 |
+
+#### Where the floors and caps fell, in k and t, by segment
+
+`report_essvi_price_floor_ranges`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:47:10Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | count (count) | k_min (log_moneyness) | k_max (log_moneyness) | t_min (years) | t_max (years) |
+|---|---|---|---|---|---|
+| asian-arithmetic-call.raw.floored.all | 532934 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.floored.seg2 | 181408 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| asian-arithmetic-call.raw.floored.seg3 | 351526 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.capped.all | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.capped.seg3 | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.raw.floored.all | 534902 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.raw.floored.seg2 | 181434 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-discrete-one-step.raw.floored.seg3 | 353468 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.floored.all | 532934 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.floored.seg2 | 181408 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-continuous-bridge.raw.floored.seg3 | 351526 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.capped.all | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.capped.seg3 | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+
+#### eSSVI surface fit time, alone and with every check, one thread
+
+`report_essvi_fit_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:23:20Z. Targets: SVI-8. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| fit | 13.4990245 | 13.160896 | 50 |
+| fit_and_checks | 18.484136 | 18.042804 | 50 |
+
+#### Euler bias plan: V(n) on coupled draws, n = 1 to 16
+
+`report_lv_bias_levels`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:29:37Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | draws | value (index_points) | value_se (index_points) |
+|---|---|---|---|---|
+| asian-arithmetic-call.n1 | 1 | coarse | 337.9761819556941 | 0.4556849706649654 |
+| asian-arithmetic-call.n2 | 2 | production | 337.43153818472155 | 0.4468889990624186 |
+| asian-arithmetic-call.n4 | 4 | production | 336.79435007497824 | 0.4403286076332576 |
+| asian-arithmetic-call.n8 | 8 | production | 336.6120512218133 | 0.46880110443495193 |
+| asian-arithmetic-call.n16 | 16 | production | 336.51698673630705 | 0.43960808253266753 |
+| down-out-call-discrete-one-step.n1 | 1 | coarse | 570.6440592237326 | 0.8684854792428418 |
+| down-out-call-discrete-one-step.n2 | 2 | production | 570.3803827272947 | 0.8761095392216862 |
+| down-out-call-discrete-one-step.n4 | 4 | production | 570.3559156267366 | 0.8285018873893021 |
+| down-out-call-discrete-one-step.n8 | 8 | production | 570.2242337895534 | 0.8123293972561577 |
+| down-out-call-discrete-one-step.n16 | 16 | production | 570.4839856079312 | 0.7733473673238701 |
+| down-out-call-discrete-hard.n1 | 1 | coarse | 570.7124098052143 | 0.8841375227675836 |
+| down-out-call-discrete-hard.n2 | 2 | production | 570.6155677266152 | 0.8717121202812264 |
+| down-out-call-discrete-hard.n4 | 4 | production | 570.4089206874289 | 0.8366854201195032 |
+| down-out-call-discrete-hard.n8 | 8 | production | 570.2015155445551 | 0.8149070538529087 |
+| down-out-call-discrete-hard.n16 | 16 | production | 570.5100892141551 | 0.7770108619142859 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | coarse | 569.8425528778199 | 0.8870507348570751 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | production | 569.7347802611226 | 0.876779464148873 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | production | 569.5763963556985 | 0.8303315851727775 |
+| down-out-call-discrete-smoothed-0.005.n8 | 8 | production | 569.3008288549956 | 0.8157709981071914 |
+| down-out-call-discrete-smoothed-0.005.n16 | 16 | production | 569.6630567341743 | 0.7735643518657617 |
+| down-out-call-continuous-bridge.n1 | 1 | coarse | 554.0071492124423 | 0.8715741826396753 |
+| down-out-call-continuous-bridge.n2 | 2 | production | 553.1843456922716 | 0.8620627853411191 |
+| down-out-call-continuous-bridge.n4 | 4 | production | 552.8382676021347 | 0.8198867527346113 |
+| down-out-call-continuous-bridge.n8 | 8 | production | 552.4811345323047 | 0.8118712335931262 |
+| down-out-call-continuous-bridge.n16 | 16 | production | 552.5806867734848 | 0.7835760136791456 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | coarse | 553.9700959381913 | 0.869235223499741 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | production | 553.1775661450291 | 0.8710041942334245 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | production | 552.8169268157845 | 0.8220823730578279 |
+| down-out-call-continuous-sampled-crossing.n8 | 8 | production | 552.3897521338383 | 0.8220956266394323 |
+| down-out-call-continuous-sampled-crossing.n16 | 16 | production | 552.6068374013294 | 0.7853988315322372 |
+
+#### Euler bias plan: Delta(n) = V(n) - V(2n) on coupled draws
+
+`report_lv_bias_delta`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:29:37Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | delta (index_points) | delta_se (index_points) |
+|---|---|---|---|
+| asian-arithmetic-call.n1 | 1 | 0.5446437709725246 | 0.031030031824388234 |
+| asian-arithmetic-call.n2 | 2 | 0.3253620253340137 | 0.022104282798613786 |
+| asian-arithmetic-call.n4 | 4 | 0.1777352125736657 | 0.015023005528584071 |
+| asian-arithmetic-call.n8 | 8 | 0.10416111936771855 | 0.011693225917296083 |
+| down-out-call-discrete-one-step.n1 | 1 | 0.26367649643805063 | 0.07281046301069397 |
+| down-out-call-discrete-one-step.n2 | 2 | 0.10680538790762154 | 0.06091292100048849 |
+| down-out-call-discrete-one-step.n4 | 4 | 0.0655631191965427 | 0.057147102439916726 |
+| down-out-call-discrete-one-step.n8 | 8 | -0.04716600345664176 | 0.041677084144765585 |
+| down-out-call-discrete-hard.n1 | 1 | 0.09684207859869054 | 0.09826741308799035 |
+| down-out-call-discrete-hard.n2 | 2 | 0.13308079465493633 | 0.07543026444755688 |
+| down-out-call-discrete-hard.n4 | 4 | -0.059196623868626376 | 0.05607921632082395 |
+| down-out-call-discrete-hard.n8 | 8 | 0.012380977918160448 | 0.048297691020048446 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | 0.10777261669748713 | 0.06772155326653849 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | 0.08235217717942242 | 0.05220283778306679 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | 0.0307308792743128 | 0.035806033779726194 |
+| down-out-call-discrete-smoothed-0.005.n8 | 8 | 0.01146744733439796 | 0.02813828859718187 |
+| down-out-call-continuous-bridge.n1 | 1 | 0.8228035201705503 | 0.08385302810851346 |
+| down-out-call-continuous-bridge.n2 | 2 | 0.462718532516675 | 0.06990887767469502 |
+| down-out-call-continuous-bridge.n4 | 4 | 0.16336134164027416 | 0.054162274573306024 |
+| down-out-call-continuous-bridge.n8 | 8 | 0.07131174607509463 | 0.04462078283532976 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | 0.7925297931619759 | 0.10870309415325825 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | 0.5461317099358117 | 0.11502139095022812 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | 0.34162667094221844 | 0.08470581004121636 |
+| down-out-call-continuous-sampled-crossing.n8 | 8 | 0.05029746017939471 | 0.06092996868708274 |
+
+#### Euler bias plan: the ratios Delta(n) / Delta(2n)
+
+`report_lv_bias_ratio`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:29:37Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | ratio |
+|---|---|---|
+| asian-arithmetic-call.n1 | 1 | 1.6739623206285315 |
+| asian-arithmetic-call.n2 | 2 | 1.8305996916573934 |
+| asian-arithmetic-call.n4 | 4 | 1.7063489107313599 |
+| down-out-call-discrete-one-step.n1 | 1 | 2.468756507547265 |
+| down-out-call-discrete-one-step.n2 | 2 | 1.6290467753287374 |
+| down-out-call-discrete-one-step.n4 | 4 | -1.3900503411702636 |
+| down-out-call-discrete-hard.n1 | 1 | 0.7276938708533508 |
+| down-out-call-discrete-hard.n2 | 2 | -2.2481146044794595 |
+| down-out-call-discrete-hard.n4 | 4 | -4.7812559120872535 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | 1.3086796292304532 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | 2.6797859066876297 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | 2.679836094135083 |
+| down-out-call-continuous-bridge.n1 | 1 | 1.7781944364653233 |
+| down-out-call-continuous-bridge.n2 | 2 | 2.8324848943490744 |
+| down-out-call-continuous-bridge.n4 | 4 | 2.2908055212706047 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | 1.4511697063976088 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | 1.5986214086551298 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | 6.79212568037724 |
+
+#### Euler bias left at n = 4, 2 Delta(4), resolved if beyond 2 SE
+
+`report_lv_bias_left`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:29:37Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | bias (index_points) | bias_se (index_points) | resolved |
+|---|---|---|---|
+| asian-arithmetic-call | 0.3554704251473314 | 0.030046011057168143 | yes |
+| down-out-call-discrete-one-step | 0.1311262383930854 | 0.11429420487983345 | no |
+| down-out-call-discrete-hard | -0.11839324773725275 | 0.1121584326416479 | no |
+| down-out-call-discrete-smoothed-0.005 | 0.0614617585486256 | 0.07161206755945239 | no |
+| down-out-call-continuous-bridge | 0.3267226832805483 | 0.10832454914661205 | yes |
+| down-out-call-continuous-sampled-crossing | 0.6832533418844369 | 0.1694116200824327 | yes |
+
+#### Local-volatility prices of the svi-surface contracts, n = 4
+
+`report_lv_price`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:23:23Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | paths (count) | price (index_points) | price_se (index_points) |
+|---|---|---|---|
+| asian-arithmetic-call | 1048576 | 336.79435007497824 | 0.4403286076332576 |
+| down-out-call-discrete-one-step | 1048576 | 570.3559156267366 | 0.8285018873893021 |
+| down-out-call-continuous-bridge | 1048576 | 552.8382676021347 | 0.8198867527346113 |
+
+#### The 15 raw SVI parameter sensitivities of each price, by tape
+
+`report_lv_sensitivities`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:23:23Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | derivative (index_points/parameter) | derivative_se (index_points/parameter) |
+|---|---|---|
+| asian-arithmetic-call.202411.a | 35314.97590227064 | 590.2925763272218 |
+| asian-arithmetic-call.202411.b | 56.83851766786511 | 0.9267600925847786 |
+| asian-arithmetic-call.202411.rho | -8193.751445653343 | 95.90548591310687 |
+| asian-arithmetic-call.202411.m | 339.79558139459914 | 6.992039829905034 |
+| asian-arithmetic-call.202411.sigma | 6812.861507409012 | 180.6866397074791 |
+| asian-arithmetic-call.202411W4.a | 51787.36844421595 | 231.12966481215904 |
+| asian-arithmetic-call.202411W4.b | 88.33695125863116 | 0.3649511428569414 |
+| asian-arithmetic-call.202411W4.rho | -15568.592298465683 | 54.892633146917504 |
+| asian-arithmetic-call.202411W4.m | 584.5619187954418 | 2.0607217699846645 |
+| asian-arithmetic-call.202411W4.sigma | 7903.882051033275 | 49.375064253674516 |
+| asian-arithmetic-call.202412.a | 17247.349292592575 | 59.01297851055708 |
+| asian-arithmetic-call.202412.b | 635.7748094152346 | 2.1561871873184653 |
+| asian-arithmetic-call.202412.rho | -20639.5101886687 | 64.56986955350378 |
+| asian-arithmetic-call.202412.m | 330.62980933117933 | 0.6778452597197188 |
+| asian-arithmetic-call.202412.sigma | 8002.182420569819 | 29.963837708052814 |
+| down-out-call-discrete-one-step.202411.a | -3806.8072922550664 | 911.2405616899741 |
+| down-out-call-discrete-one-step.202411.b | -5.8849029059262925 | 1.4569512631617685 |
+| down-out-call-discrete-one-step.202411.rho | 485.9988500052212 | 152.32134555070098 |
+| down-out-call-discrete-one-step.202411.m | 54.85410071551787 | 12.360377926966596 |
+| down-out-call-discrete-one-step.202411.sigma | -1299.1281226626713 | 285.15854448165794 |
+| down-out-call-discrete-one-step.202411W4.a | 2367.61478763601 | 412.0127450697998 |
+| down-out-call-discrete-one-step.202411W4.b | 2.618290528712263 | 0.6772242458916264 |
+| down-out-call-discrete-one-step.202411W4.rho | -358.230556619085 | 99.53992022216687 |
+| down-out-call-discrete-one-step.202411W4.m | 41.36900723905685 | 7.964963563582364 |
+| down-out-call-discrete-one-step.202411W4.sigma | 391.10124459262295 | 100.71075042744751 |
+| down-out-call-discrete-one-step.202412.a | 56777.870791773035 | 164.3142882042684 |
+| down-out-call-discrete-one-step.202412.b | 2088.9433781592265 | 5.994256190212067 |
+| down-out-call-discrete-one-step.202412.rho | -67091.84389116186 | 175.7604193174559 |
+| down-out-call-discrete-one-step.202412.m | 1015.6456486345324 | 1.799707797244256 |
+| down-out-call-discrete-one-step.202412.sigma | 26654.340097244 | 85.30279718191835 |
+| down-out-call-continuous-bridge.202411.a | -2342.4975526460366 | 1024.5257171653975 |
+| down-out-call-continuous-bridge.202411.b | -4.561141466688044 | 1.6584156111659458 |
+| down-out-call-continuous-bridge.202411.rho | 440.4003845824248 | 197.32721732449855 |
+| down-out-call-continuous-bridge.202411.m | 61.31018354435348 | 13.340642549828491 |
+| down-out-call-continuous-bridge.202411.sigma | -898.1711143340232 | 295.95765096603185 |
+| down-out-call-continuous-bridge.202411W4.a | 660.8768741910079 | 499.7394408372352 |
+| down-out-call-continuous-bridge.202411W4.b | -2.1574133976251555 | 0.8429291225659292 |
+| down-out-call-continuous-bridge.202411W4.rho | 770.9104439659491 | 138.2242805174129 |
+| down-out-call-continuous-bridge.202411W4.m | 3.5599611582944015 | 8.888791919920038 |
+| down-out-call-continuous-bridge.202411W4.sigma | 388.8978716369374 | 107.24743416584262 |
+| down-out-call-continuous-bridge.202412.a | 50695.53778247281 | 152.4397779886853 |
+| down-out-call-continuous-bridge.202412.b | 1863.2674920664533 | 5.563287243575557 |
+| down-out-call-continuous-bridge.202412.rho | -59513.91016853344 | 164.61654162265393 |
+| down-out-call-continuous-bridge.202412.m | 874.1315074752849 | 2.2164777746196127 |
+| down-out-call-continuous-bridge.202412.sigma | 23940.00178211677 | 78.91279918209325 |
+
+#### Local-variance floors and caps per contract, nothing repaired
+
+`report_lv_floors`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:23:23Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | path_steps (count) | paths (count) | non_finite (count) | non_positive_variance (count) | calendar (count) | butterfly (count) | below_floor (count) | capped (count) | paths_with_floor (count) | paths_with_cap (count) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 138412032 | 1048576 | 0 | 0 | 521609 | 0 | 11325 | 52 | 34156 | 8 |
+| down-out-call-discrete-one-step | 138412032 | 1048576 | 0 | 0 | 523536 | 0 | 11366 | 0 | 34297 | 0 |
+| down-out-call-continuous-bridge | 138412032 | 1048576 | 0 | 0 | 521609 | 0 | 11325 | 52 | 34156 | 8 |
+
+#### Where the floors and caps fell, in k and t, by segment
+
+`report_lv_floor_ranges`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:23:23Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | count (count) | k_min (log_moneyness) | k_max (log_moneyness) | t_min (years) | t_max (years) |
+|---|---|---|---|---|---|
+| asian-arithmetic-call.floored.all | 532934 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| asian-arithmetic-call.floored.seg2 | 181408 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| asian-arithmetic-call.floored.seg3 | 351526 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| asian-arithmetic-call.capped.all | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| asian-arithmetic-call.capped.seg3 | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.floored.all | 534902 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.floored.seg2 | 181434 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-discrete-one-step.floored.seg3 | 353468 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.floored.all | 532934 | 0.07125787892823965 | 0.13444149657336624 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.floored.seg2 | 181408 | 0.07125787892823965 | 0.11337763940256984 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-continuous-bridge.floored.seg3 | 351526 | 0.12634915602928132 | 0.13444149657336624 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.capped.all | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.capped.seg3 | 52 | -1.201307399977333 | -1.0012986310818572 | 0.07600339871315899 | 0.08969770478760204 |
+
+#### Local-vol price alone and with the 15 sensitivities by tape, one thread
+
+`report_lv_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:48:09Z. Targets: AAD-1. Timings: yes. Derived from the option chain: yes.
+
+| row | price_median (ms) | price_min (ms) | gradient_median (ms) | gradient_min (ms) | ratio | repetitions (count) |
+|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 588.312122 | 586.294818 | 3972.529029 | 3959.4482 | 6.75241743361528 | 5 |
+| down-out-call-discrete-one-step | 782.342285 | 781.486476 | 4180.187828 | 4172.628489 | 5.343170001350496 | 5 |
+| down-out-call-continuous-bridge | 841.082192 | 840.493336 | 4616.796532 | 4595.104998 | 5.489114590598775 | 5 |
+
+#### Per contract, the price with 15 sensitivities, then the quote sensitivities on top
+
+`report_qs_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T14:49:26Z. Targets: SVI-10. Timings: yes. Derived from the option chain: yes.
+
+| row | gradient_median (ms) | implicit_median (ms) | implicit_ratio | parity_median (ms) | parity_ratio | repetitions (count) |
+|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 4012.439904 | 1.034807 | 1.0002578996881595 | 7076.205969 | 2.7638247413860833 | 5 |
+| down-out-call-discrete-one-step | 4210.083082 | 0.998776 | 1.0002372342731836 | 9391.970311 | 3.2310650179705878 | 5 |
+| down-out-call-continuous-bridge | 4613.655018 | 0.97966 | 1.0002123392399687 | 10108.51704 | 3.19121209985536 | 5 |
+
+#### Raw SVI fit error per slice, against settlements
+
+`report_svi_fit_error`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-6, SVI-11. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | svi6 (bp_of_F) | svi11 (vol_points) | objective_per_dof |
+|---|---|---|---|---|
+| 202411 | 65 | 0.2867787219631387 | 0.9576399476640635 | 0.20706249836266635 |
+| 202411W4 | 51 | 1.1317032806279566 | 0.40959497040346426 | 2.3236511776255697 |
+| 202412 | 64 | 1.2311502876082472 | 1.3972751718303673 | 3.2378671128439422 |
+
+#### Fitted slices: butterfly checks, nothing repaired
+
+`report_svi_fit_arbitrage`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | model_triples (count) | model_non_convex (count) | grid_points (count) | min_g | k_min_g (log_moneyness) | martini_mingone | violations (count) |
+|---|---|---|---|---|---|---|---|
+| 202411 | 61 | 0 | 14002 | -28.86045054341379 | 0.13350154976993137 | type-1 | 4 |
+| 202411W4 | 47 | 0 | 14002 | -24.879862102808183 | 0.17500000000000002 | type-1 | 4 |
+| 202412 | 60 | 0 | 14002 | -3.261889685463337 | 0.8670000200934154 | type-1 | 4 |
+
+#### Adjacent fitted slices: calendar checks, nothing repaired
+
+`report_svi_fit_calendar`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | grid_points (count) | min_gap (total_variance) | k_min_gap (log_moneyness) | violations (count) |
+|---|---|---|---|---|
+| 202411-202411W4 | 22003 | -0.15159471657250378 | 3 | 4 |
+| 202411W4-202412 | 22003 | -1.8145667442438906 | 6.0899909235311345 | 2 |
+
+#### Every violation of the fitted slices and pairs
+
+`report_svi_fit_violations`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | kind | k_begin (log_moneyness) | k_end (log_moneyness) | k_worst (log_moneyness) | value | bound | points (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.1 | density | 0.12037321723261338 | 3 | 0.13350154976993137 | -28.86045054341379 | -4.951109240015759e-13 | 6809 |
+| 202411.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411W4.1 | density | 0.1605186108022837 | 3 | 0.17500000000000002 | -24.879862102808183 | -4.555447908497429e-13 | 6753 |
+| 202411W4.2 | d-plus-limit | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202411W4.3 | right-wing | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202411W4.4 | martini-mingone | +inf | +inf | +inf | 1 | 3.9999999999999996 | 0 |
+| 202412.1 | density | 0.682675347704515 | 6.0899909235311345 | 0.8670000200934154 | -3.261889685463337 | -8.738579642202582e-14 | 6250 |
+| 202412.2 | d-plus-limit | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202412.3 | right-wing | +inf | +inf | +inf | 3.9999999999999996 | 2 | 0 |
+| 202412.4 | martini-mingone | +inf | +inf | +inf | 1 | 3.9999999999999996 | 0 |
+| 202411-202411W4.1 | calendar-crossing | -3 | -0.733 | -3 | -0.0037361594559504052 | -8.901649742998386e-14 | 2268 |
+| 202411-202411W4.2 | calendar-crossing | 0.07136439113672857 | 3 | 3 | -0.15159471657250378 | -8.154701515975693e-14 | 11990 |
+| 202411-202411W4.3 | calendar-right-wing | +inf | +inf | +inf | -0.15159781166922848 | 0 | 0 |
+| 202411-202411W4.4 | calendar-left-wing | -inf | -inf | -inf | -0.0016475042905273914 | 1 | 0 |
+| 202411W4-202412.1 | calendar-crossing | 0.12664229626954387 | 6.0899909235311345 | 6.0899909235311345 | -1.8145667442438906 | -1.628679595557671e-13 | 11419 |
+| 202411W4-202412.2 | calendar-right-wing | +inf | +inf | +inf | -1.8180454554748238 | 0 | 0 |
+
+#### Raw SVI fit time per slice, one thread
+
+`report_svi_fit_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-7. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| 202411 | 237.3535475 | 235.380885 | 50 |
+| 202411W4 | 112.38074 | 111.81158 | 50 |
+| 202412 | 170.0175505 | 169.249938 | 50 |
+
+#### Raw SVI surface time: the three fits and every check, one thread
+
+`report_svi_fit_surface_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-17T10:46:15Z. Targets: SVI-8. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| surface | 523.7240495000001 | 521.667478 | 50 |
+
+The tables derived from the option chain keep its terms. The attribution their file carries, as in `NOTICE`:
+
+    金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+    此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+    政府資料開放授權條款：https://data.gov.tw/license
+
+    Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+    The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+    Open Government Data License: https://data.gov.tw/license
+
+    Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+    "提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+    Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+    sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+    Fitted parameters, tables and figures here are derived works and are not endorsed by the
+    Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+    金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+    此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+    政府資料開放授權條款：https://data.gov.tw/license
+
+    Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+    The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+    Open Government Data License: https://data.gov.tw/license
 
 ## mac-m4max
 

@@ -1,0 +1,2566 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -march=x86-64-v3 -maes -mpclmul -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: avx2
+simd_target: AVX2
+simd_double_lanes: 4
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fa0
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961209.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 20
+timer_resolution_ns: 10.010
+timer_read_cost_ns: 19.894
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 5
+batches_per_repetition: 50
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T10:38:16Z
+bench_workloads: simd-math
+bench_scale: 1 (the workloads' full sizes)
+bench_seed: 20261119
+bench_mc_batches: 50
+bench_threads: 1 for every variant
+bench_instruction_set: AVX2 (AADP_SIMD_TARGET=avx2, Highway static dispatch); scalar variants are the scalar pricer and kernels of the same binary
+simd_lane_widths_timed: 1,2,4
+simd_lane_ceiling: 4 double lanes on AVX2: no SIMD speedup over one lane can exceed 4. NEON is 2 wide, SSE2 2, AVX2 4, AVX-512 8; Zen 1 runs each 256-bit AVX2 operation as two 128-bit halves, so about 2 lanes' throughput there
+simd_check: pass
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3536160
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 257186316995
+perf_instructions: 322986024966
+perf_counters_note: time_enabled_ns=72461560107 time_running_ns=72461560107 not multiplexed
+peak_rss_bytes: 155914240
+measure_start: measure.sh: start load1=1.01 at=2026-11-17T10:38:16Z cpus=4 governor=performance freq_khz=cpu4:2000000 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.00 exit=0 at=2026-11-17T10:39:45Z cpus=4 governor=performance freq_khz=cpu4:2618840 perf_event_paranoid=2
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-17T03:38:18-07:00",
+    "num_cpus": 8,
+    "mhz_per_cpu": 1368,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": true,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 4194304,
+        "num_sharing": 8
+      }
+    ],
+    "load_avg": [
+      1.01074,
+      1.06494,
+      1.08643
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7597028732113343e+07,
+      "cpu_time": 1.7592742420000002e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6827775599131130e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3639247387573404e+07,
+      "cpu_time": 1.3637068579999989e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.3317828439059696e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3128031656551557e+07,
+      "cpu_time": 1.3123470180000005e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.6172881522642356e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3145812382143423e+07,
+      "cpu_time": 1.3143010700000010e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.6069851822801539e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3157213604498327e+07,
+      "cpu_time": 1.3155634400000000e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.6003934424087291e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4133466752576012e+07,
+      "cpu_time": 1.4130385256000003e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.1678454361544397e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3157213604498327e+07,
+      "cpu_time": 1.3155634400000002e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.6003934424087291e+01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.9480724745067761e+06,
+      "cpu_time": 1.9474473156741932e+06,
+      "time_unit": "ns",
+      "items_per_second": 8.3878518109679927e+00
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 1.3783401543373736e-01,
+      "cpu_time": 1.3781983154686273e-01,
+      "time_unit": "ns",
+      "items_per_second": 1.1702054523469313e-01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3239793586161010e+07,
+      "cpu_time": 1.3236937300000004e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5529878429921837e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3231688523896910e+07,
+      "cpu_time": 1.3229832019999996e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5576144208198642e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3244124200770106e+07,
+      "cpu_time": 1.3240110280000009e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5505181380121229e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3248970140699528e+07,
+      "cpu_time": 1.3247717659999978e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5477564624294743e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3227283633571481e+07,
+      "cpu_time": 1.3225373079999976e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5601312234807750e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3238372017019808e+07,
+      "cpu_time": 1.3235994067999994e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5538016175468826e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3239793586161012e+07,
+      "cpu_time": 1.3236937300000004e+07,
+      "time_unit": "ns",
+      "items_per_second": 7.5529878429921837e+01
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 8.8748243637991873e+03,
+      "cpu_time": 8.7471669504309757e+03,
+      "time_unit": "ns",
+      "items_per_second": 5.0643051696234072e-02
+    },
+    {
+      "name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 6.7038638530397376e-04,
+      "cpu_time": 6.6086210869333690e-04,
+      "time_unit": "ns",
+      "items_per_second": 6.7043131737262306e-04
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5783761716333870e+06,
+      "cpu_time": 5.5782882800000170e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7926363680619141e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5811614108937904e+06,
+      "cpu_time": 5.5799893800000083e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7917417655187577e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5806132521031788e+06,
+      "cpu_time": 5.5793754000000106e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7919177603341851e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5859132549022464e+06,
+      "cpu_time": 5.5844103000000082e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7902175604363194e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5820955631644242e+06,
+      "cpu_time": 5.5819045400000177e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7914419212004890e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5816319305394059e+06,
+      "cpu_time": 5.5807935800000131e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7915910751103331e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time_median",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5811614108937904e+06,
+      "cpu_time": 5.5799893800000083e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.7917417655187577e+02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.7569799606824599e+03,
+      "cpu_time": 2.4108813679192126e+03,
+      "time_unit": "ns",
+      "items_per_second": 8.8471148377563605e-02
+    },
+    {
+      "name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 4.9393797279929691e-04,
+      "cpu_time": 4.3199615491229244e-04,
+      "time_unit": "ns",
+      "items_per_second": 4.9381329035765151e-04
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.8927360466312606e+07,
+      "cpu_time": 1.8922112700000007e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2833568726068556e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.9010707429833163e+07,
+      "cpu_time": 1.9006433879999988e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2601935182628601e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.9358165827364191e+07,
+      "cpu_time": 1.9354219640000030e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.1657786637328343e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.8923497128042907e+07,
+      "cpu_time": 1.8919309640000038e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2844354995995459e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.8936260539006766e+07,
+      "cpu_time": 1.8933388799999945e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2808736864393154e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.9031198278111927e+07,
+      "cpu_time": 1.9027092932000004e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2549276481282824e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.8936260539006766e+07,
+      "cpu_time": 1.8933388799999945e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.2808736864393154e+01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.8622745254070440e+05,
+      "cpu_time": 1.8631776016759433e+05,
+      "time_unit": "ns",
+      "items_per_second": 5.0811912515651203e-01
+    },
+    {
+      "name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 9.7853771380695155e-03,
+      "cpu_time": 9.7922347272631841e-03,
+      "time_unit": "ns",
+      "items_per_second": 9.6693838465596298e-03
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6605134399482328e+07,
+      "cpu_time": 1.6602579099999987e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0222337015903669e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6550831443292500e+07,
+      "cpu_time": 1.6548879579999961e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0419925332830729e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6555619324036641e+07,
+      "cpu_time": 1.6551431160000050e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0402451906352297e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6570168755661942e+07,
+      "cpu_time": 1.6565496939999988e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0349415551866670e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6549687477138536e+07,
+      "cpu_time": 1.6547205439999999e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0424101747019897e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.6566288279922392e+07,
+      "cpu_time": 1.6563118444000000e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0363646310794650e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.6555619324036639e+07,
+      "cpu_time": 1.6551431160000052e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0402451906352297e+01
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.3197015801659305e+04,
+      "cpu_time": 2.3212939100557272e+04,
+      "time_unit": "ns",
+      "items_per_second": 8.4408076722793407e-02
+    },
+    {
+      "name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 1.4002542639423379e-03,
+      "cpu_time": 1.4014836142747127e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.3983263417885834e-03
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 6.9556853944737306e+06,
+      "cpu_time": 6.9543948200000478e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4376728435626154e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 6.9537057764600161e+06,
+      "cpu_time": 6.9524712400000514e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4380821279284538e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 6.9524803272425821e+06,
+      "cpu_time": 6.9513851399999987e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4383356053257748e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 6.9486534261167487e+06,
+      "cpu_time": 6.9485386399999522e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4391277542228056e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 6.9574954396256367e+06,
+      "cpu_time": 6.9549964199999440e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4372988220798709e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 6.9536040727837440e+06,
+      "cpu_time": 6.9523572519999994e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4381034306239042e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time_median",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 6.9537057764600161e+06,
+      "cpu_time": 6.9524712400000514e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.4380821279284538e+02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.3636544820637887e+03,
+      "cpu_time": 2.5815055536317627e+03,
+      "time_unit": "ns",
+      "items_per_second": 6.9577256683242564e-02
+    },
+    {
+      "name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.log-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 4.8372821444192656e-04,
+      "cpu_time": 3.7131370843883712e-04,
+      "time_unit": "ns",
+      "items_per_second": 4.8381260486290122e-04
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6183555043378776e+07,
+      "cpu_time": 1.6025716199999990e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.1791120512123385e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6047019659821555e+07,
+      "cpu_time": 1.6044297999999983e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.2316867630180255e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6401375288358925e+07,
+      "cpu_time": 1.6399287879999988e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.0970496828382572e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6047681334329581e+07,
+      "cpu_time": 1.6044930620000031e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.2314298194641751e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.6175410340705423e+07,
+      "cpu_time": 1.6173919540000057e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.1822233806551409e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.6171008333318854e+07,
+      "cpu_time": 1.6137630448000010e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.1843003394375877e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.6175410340705425e+07,
+      "cpu_time": 1.6044930620000031e+07,
+      "time_unit": "ns",
+      "items_per_second": 6.1822233806551409e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4476573438852429e+05,
+      "cpu_time": 1.5780566591940256e+05,
+      "time_unit": "ns",
+      "items_per_second": 5.5024017930449620e-01
+    },
+    {
+      "name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 6,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 8.9521773413626920e-03,
+      "cpu_time": 9.7787383611179380e-03,
+      "time_unit": "ns",
+      "items_per_second": 8.8973715554464174e-03
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5138753998361006e+07,
+      "cpu_time": 5.5129347579999998e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8136064518790629e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5077297549933292e+07,
+      "cpu_time": 5.5070739439999983e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8156301134662534e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5155241205345795e+07,
+      "cpu_time": 5.5147513419999972e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8130643219870052e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5197893885296300e+07,
+      "cpu_time": 5.5185924879999965e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8116633255573934e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.5147341952883281e+07,
+      "cpu_time": 5.5137675440000035e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8133240235846340e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5143305718363926e+07,
+      "cpu_time": 5.5134240151999988e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8134576472948698e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5147341952883288e+07,
+      "cpu_time": 5.5137675440000042e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.8133240235846340e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 4.3348620108485455e+04,
+      "cpu_time": 4.1579952021670448e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.4259998827284570e-02
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 7.8610847760709069e-04,
+      "cpu_time": 7.5415843053315632e-04,
+      "time_unit": "ns",
+      "items_per_second": 7.8634308601340506e-04
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7546653579909276e+07,
+      "cpu_time": 1.7544290600000069e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6990923964270259e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7563139785873644e+07,
+      "cpu_time": 1.7560432239999954e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6937427600748151e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7564570244076319e+07,
+      "cpu_time": 1.7562067500000041e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6932790617934515e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7566538250252984e+07,
+      "cpu_time": 1.7564876980000008e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6926412350230621e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.7562847888314586e+07,
+      "cpu_time": 1.7558971580000106e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6938373910608682e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.7560749949685361e+07,
+      "cpu_time": 1.7558127780000038e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6945185688758443e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time_median",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.7563139785873644e+07,
+      "cpu_time": 1.7560432239999957e+07,
+      "time_unit": "ns",
+      "items_per_second": 5.6937427600748151e+01
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 8.0143523997629791e+03,
+      "cpu_time": 8.0399499200497576e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.6003144621670089e-02
+    },
+    {
+      "name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.inverse-normal-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 4.5637870949278984e-04,
+      "cpu_time": 4.5790473909227585e-04,
+      "time_unit": "ns",
+      "items_per_second": 4.5663464447712518e-04
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.7231511235456921e+07,
+      "cpu_time": 3.7224045680000022e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6858968836259962e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.7185345574389212e+07,
+      "cpu_time": 3.7177865179999970e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6892314285462319e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.7186859517696232e+07,
+      "cpu_time": 3.7181699739999913e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6891219451433557e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.7205297313102134e+07,
+      "cpu_time": 3.7198942320000015e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6877892994228063e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.7205945573936298e+07,
+      "cpu_time": 3.7200064879999958e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6877424685062305e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.7202991842916153e+07,
+      "cpu_time": 3.7196523559999980e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6879564050489240e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.7205297313102141e+07,
+      "cpu_time": 3.7198942320000015e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.6877892994228063e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.8701859414191076e+04,
+      "cpu_time": 1.8328524356440914e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.3508784415393991e-02
+    },
+    {
+      "name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 9,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 5.0269772638600590e-04,
+      "cpu_time": 4.9274831630101207e-04,
+      "time_unit": "ns",
+      "items_per_second": 5.0256709483902941e-04
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8631372558045730e+07,
+      "cpu_time": 5.8622168919999927e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7055715334141095e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8384810413702376e+07,
+      "cpu_time": 5.8374893379999831e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7127742522656359e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8323489703645736e+07,
+      "cpu_time": 5.8314046979999997e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7145750452882986e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8373119696237430e+07,
+      "cpu_time": 5.8361936240000039e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7131172793296113e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8250891897768252e+07,
+      "cpu_time": 5.8241205140000142e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7167119119051854e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.8392736853879914e+07,
+      "cpu_time": 5.8382850131999992e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7125500044405680e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.8373119696237430e+07,
+      "cpu_time": 5.8361936240000032e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7131172793296113e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4344844023144071e+05,
+      "cpu_time": 1.4367616412817047e+05,
+      "time_unit": "ns",
+      "items_per_second": 4.1980176851365375e-02
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 10,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 2.4566144346068485e-03,
+      "cpu_time": 2.4609309720804579e-03,
+      "time_unit": "ns",
+      "items_per_second": 2.4513256104938598e-03
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 2.3327521570794418e+07,
+      "cpu_time": 2.3325418080000021e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2867820182491208e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 2.3344647629021309e+07,
+      "cpu_time": 2.3339625540000100e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2836371569679741e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 2.3340272168696690e+07,
+      "cpu_time": 2.3337453739999887e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2844401846400565e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 2.3355828626880355e+07,
+      "cpu_time": 2.3351412579999927e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2815864766583125e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 2.3505472172839500e+07,
+      "cpu_time": 2.3346354219999909e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2543284927307141e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.3374748433646455e+07,
+      "cpu_time": 2.3340052831999972e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2781548658492355e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time_median",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.3344647629021309e+07,
+      "cpu_time": 2.3339625540000100e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.2836371569679741e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 7.3776186766392115e+04,
+      "cpu_time": 9.8725020767415626e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.3448610666845495e-01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 11,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 3.1562344713920438e-03,
+      "cpu_time": 4.2298542114720664e-04,
+      "time_unit": "ns",
+      "items_per_second": 3.1435539592547866e-03
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3630148512220704e+06,
+      "cpu_time": 1.3631599400000027e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3366772130428831e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3625649926382494e+06,
+      "cpu_time": 1.3627108800000087e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3390994587624220e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3643502124833474e+06,
+      "cpu_time": 1.3641747799999849e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3294964214490903e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3630060422422362e+06,
+      "cpu_time": 1.3631447200000936e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3367246292975574e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.3642449051335074e+06,
+      "cpu_time": 1.3643899999999576e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3300621921849006e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3634362007438825e+06,
+      "cpu_time": 1.3635160640000098e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3344119829473709e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3630148512220704e+06,
+      "cpu_time": 1.3631599400000027e+06,
+      "time_unit": "ns",
+      "items_per_second": 7.3366772130428831e+02
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 8.0792876655729037e+02,
+      "cpu_time": 7.2641462688664888e+02,
+      "time_unit": "ns",
+      "items_per_second": 4.3455567713669024e-01
+    },
+    {
+      "name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 12,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 5.9256807624477733e-04,
+      "cpu_time": 5.3275105887321894e-04,
+      "time_unit": "ns",
+      "items_per_second": 5.9248877503341696e-04
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.1503024041320891e+06,
+      "cpu_time": 3.1495779799999469e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1742984377891833e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.1550009938533641e+06,
+      "cpu_time": 3.1537774800000302e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1695711093220569e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.1525669125618204e+06,
+      "cpu_time": 3.1527500400000005e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1720183194696602e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.1504383427072633e+06,
+      "cpu_time": 3.1506236600000649e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1741614696724105e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 3.1529625158380228e+06,
+      "cpu_time": 3.1526957799999877e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1716203252553129e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.1522542338185129e+06,
+      "cpu_time": 3.1518849880000064e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1723339323017245e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.1525669125618199e+06,
+      "cpu_time": 3.1526957799999882e+06,
+      "time_unit": "ns",
+      "items_per_second": 3.1720183194696602e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.9526406319890452e+03,
+      "cpu_time": 1.7248520825499777e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.9647653777941462e-01
+    },
+    {
+      "name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 13,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 6.1944262332663943e-04,
+      "cpu_time": 5.4724461365719549e-04,
+      "time_unit": "ns",
+      "items_per_second": 6.1934380797313714e-04
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.4916095400707452e+06,
+      "cpu_time": 1.4909420199998636e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.7041673650905409e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.4976214686037099e+06,
+      "cpu_time": 1.4973926199999710e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.6772547066405139e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.5032261820234158e+06,
+      "cpu_time": 1.5034127200001990e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.6523588529701578e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.5039767471461331e+06,
+      "cpu_time": 1.5037306400000716e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.6490389688374319e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 1.4894561449093819e+06,
+      "cpu_time": 1.4896150600000622e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.7138599778031050e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4971780165506774e+06,
+      "cpu_time": 1.4970186120000337e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.6793359742683504e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time_median",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4976214686037099e+06,
+      "cpu_time": 1.4973926199999710e+06,
+      "time_unit": "ns",
+      "items_per_second": 6.6772547066405139e+02
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 6.5885302793500541e+03,
+      "cpu_time": 6.6673340160609077e+03,
+      "time_unit": "ns",
+      "items_per_second": 2.9404549294168132e+00
+    },
+    {
+      "name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 14,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.philox-lanes-4/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 4.4006325276731324e-03,
+      "cpu_time": 4.4537415651454554e-03,
+      "time_unit": "ns",
+      "items_per_second": 4.4023162493168465e-03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.7035081305907515e+05,
+      "cpu_time": 5.7051863999987522e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7533068720223307e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.6857280056111445e+05,
+      "cpu_time": 5.6838806000001798e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7587897258066473e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.7084992184833495e+05,
+      "cpu_time": 5.7062877999982226e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7517739106666338e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.6627645968152815e+05,
+      "cpu_time": 5.6645610000003898e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7659218971637924e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.7135503676020913e+05,
+      "cpu_time": 5.7154550000007020e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7502252289055921e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.6948100638205244e+05,
+      "cpu_time": 5.6950741599996504e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7560035269129994e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.7035081305907504e+05,
+      "cpu_time": 5.7051863999987522e+05,
+      "time_unit": "ns",
+      "items_per_second": 1.7533068720223307e+03
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.0758396154698667e+03,
+      "cpu_time": 2.0613893843265405e+03,
+      "time_unit": "ns",
+      "items_per_second": 6.4165275219287565e+00
+    },
+    {
+      "name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 15,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.xoshiro256pp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 3.6451428444607878e-03,
+      "cpu_time": 3.6196005994181247e-03,
+      "time_unit": "ns",
+      "items_per_second": 3.6540516141267756e-03
+    }
+  ]
+}
+@section histogram_simd-math.exp-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 12959744
+p50 13148159
+p90 15491071
+p99 26492927
+p99.9 26689535
+p99.99 26689535
+max 26689535
+@section histogram_simd-math.exp-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 13164544
+p50 13230079
+p90 13279231
+p99 13385727
+p99.9 13959167
+p99.99 13959167
+max 13959167
+@section histogram_simd-math.exp-lanes-4
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 5537792
+p50 5582847
+p90 5607423
+p99 5648383
+p99.9 5664767
+p99.99 5664767
+max 5664767
+@section histogram_simd-math.log-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 18743296
+p50 18907135
+p90 19152895
+p99 20234239
+p99.9 37060607
+p99.99 37060607
+max 37060607
+@section histogram_simd-math.log-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 16474112
+p50 16547839
+p90 16629759
+p99 17154047
+p99.9 17711103
+p99.99 17711103
+max 17711103
+@section histogram_simd-math.log-lanes-4
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 6852608
+p50 6946815
+p90 7000063
+p99 7086079
+p99.9 7110655
+p99.99 7110655
+max 7110655
+@section histogram_simd-math.inverse-normal-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 15794176
+p50 16048127
+p90 16162815
+p99 18513919
+p99.9 35160063
+p99.99 35160063
+max 35160063
+@section histogram_simd-math.inverse-normal-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 54820864
+p50 55115775
+p90 55279615
+p99 56131583
+p99.9 59310079
+p99.99 59310079
+max 59310079
+@section histogram_simd-math.inverse-normal-lanes-4
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 17498112
+p50 17547263
+p90 17612799
+p99 17858559
+p99.9 18333695
+p99.99 18333695
+max 18333695
+@section histogram_simd-math.normal-cdf-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 37027840
+p50 37191679
+p90 37355519
+p99 37617663
+p99.9 37715967
+p99.99 37715967
+max 37715967
+@section histogram_simd-math.normal-cdf-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 57966592
+p50 58294271
+p90 58523647
+p99 59998207
+p99.9 75366399
+p99.99 75366399
+max 75366399
+@section histogram_simd-math.normal-cdf-lanes-4
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 23248896
+p50 23347199
+p90 23396351
+p99 24051711
+p99.9 27377663
+p99.99 27377663
+max 27377663
+@section histogram_simd-math.philox-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 1350656
+p50 1359871
+p90 1374207
+p99 1393663
+p99.9 1423359
+p99.99 1423359
+max 1423359
+@section histogram_simd-math.philox-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 3135488
+p50 3149823
+p90 3170303
+p99 3196927
+p99.9 3198975
+p99.99 3198975
+max 3198975
+@section histogram_simd-math.philox-lanes-4
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 1434624
+p50 1496063
+p90 1527807
+p99 1571839
+p99.9 1586175
+p99.99 1586175
+max 1586175
+@section histogram_simd-math.xoshiro256pp-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 553472
+p50 570367
+p90 582655
+p99 603647
+p99.9 618495
+p99.99 618495
+max 618495
+@section simd_simd-math
+each math kernel over 2^20 doubles: exp on [-5, 5], log on (0, 4], inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]; and the pricer's Philox4x32-10 generator alone, its raw words, 2^18 blocks of 16 bytes (2^20 32-bit words), and xoshiro256++ over as many bytes
+targets: RNG-1, RNG-2, RNG-4, SIMD-1, SIMD-2
+values per call: 1048576; time per call, so ns per value is the time over 1048576
+check exp-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check exp-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check log-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check log-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check inverse-normal-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check inverse-normal-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check normal-cdf-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check normal-cdf-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+philox: 262144 Philox4x32-10 blocks a call, counters 0 to 262144 - 1, key the seed, 4194304 bytes a call; time per byte is the time over 4194304
+check philox-lanes-1-bits: pass, 1048576 words, 1 lanes against the scalar generator
+check philox-lanes-4-bits: pass, 1048576 words, 4 lanes against the scalar generator
+xoshiro256pp: 524288 outputs of 64 bits a call from the state (1, 2, 3, 4), 4194304 bytes a call; time per 64 bits is the time over 524288
+check xoshiro256pp-kat: pass, the first 4 outputs against the published ones

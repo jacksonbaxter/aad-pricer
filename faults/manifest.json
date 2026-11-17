@@ -887,8 +887,8 @@
       "edits": [
         {
           "file": "README.md",
-          "find": "| 1.89 times one scalar pricing |",
-          "replace": "| 1.79 times one scalar pricing |"
+          "find": "| 2.18 times one scalar pricing |",
+          "replace": "| 2.08 times one scalar pricing |"
         }
       ],
       "preset": "release",
@@ -910,8 +910,8 @@
       "edits": [
         {
           "file": "RESULTS.md",
-          "find": "| aad1-barrier.tape | 3 | 15 | 9.7304817670175190e+09 |",
-          "replace": "| aad1-barrier.tape | 3 | 15 | 9.6304817670175190e+09 |"
+          "find": "| aad1-barrier.tape | 3 | 15 | 8.1936321754779882e+09 |",
+          "replace": "| aad1-barrier.tape | 3 | 15 | 8.0936321754779882e+09 |"
         }
       ],
       "preset": "release",

@@ -1,0 +1,202 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961251.8
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 23.847
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 1
+batches_per_repetition: 1
+warmup: none
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T14:29:37Z
+report_tool: aadp_local_vol_report --report --mode bias
+report_inputs: TAIFEX TXO and TX daily settlement prices of trade date 2024-11-15, not tradable quotes; the raw SVI surface of expiries 202411, 202411W4 and 202412, so maturity reaches 33 days only
+report_run: seed 20261115, paths 1048576, batches 64, threads 8, 33 dates, n 1 to 16, coupled draws
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3593454
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 446889216040
+perf_instructions: 545283477130
+perf_counters_note: time_enabled_ns=126194936879 time_running_ns=126194936879 not multiplexed
+peak_rss_bytes: 8663040
+measure_start: measure.sh: start load1=1.44 at=2026-11-17T14:29:37Z cpus=4 governor=performance freq_khz=cpu4:1977758 perf_event_paranoid=2
+measure_end: measure.sh: end load1=8.06 exit=0 at=2026-11-17T14:46:23Z cpus=4 governor=performance freq_khz=cpu4:3174836 perf_event_paranoid=2
+
+@section attribution
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+@section report_lv_bias_levels
+type table
+title Euler bias plan: V(n) on coupled draws, n = 1 to 16
+targets none
+timing no
+uses_chain yes
+column substeps integer count
+column draws text none
+column value real index_points
+column value_se real index_points
+row asian-arithmetic-call.n1 1 coarse 337.9761819556941 0.4556849706649654
+row asian-arithmetic-call.n2 2 production 337.43153818472155 0.4468889990624186
+row asian-arithmetic-call.n4 4 production 336.79435007497824 0.4403286076332576
+row asian-arithmetic-call.n8 8 production 336.6120512218133 0.46880110443495193
+row asian-arithmetic-call.n16 16 production 336.51698673630705 0.43960808253266753
+row down-out-call-discrete-one-step.n1 1 coarse 570.6440592237326 0.8684854792428418
+row down-out-call-discrete-one-step.n2 2 production 570.3803827272947 0.8761095392216862
+row down-out-call-discrete-one-step.n4 4 production 570.3559156267366 0.8285018873893021
+row down-out-call-discrete-one-step.n8 8 production 570.2242337895534 0.8123293972561577
+row down-out-call-discrete-one-step.n16 16 production 570.4839856079312 0.7733473673238701
+row down-out-call-discrete-hard.n1 1 coarse 570.7124098052143 0.8841375227675836
+row down-out-call-discrete-hard.n2 2 production 570.6155677266152 0.8717121202812264
+row down-out-call-discrete-hard.n4 4 production 570.4089206874289 0.8366854201195032
+row down-out-call-discrete-hard.n8 8 production 570.2015155445551 0.8149070538529087
+row down-out-call-discrete-hard.n16 16 production 570.5100892141551 0.7770108619142859
+row down-out-call-discrete-smoothed-0.005.n1 1 coarse 569.8425528778199 0.8870507348570751
+row down-out-call-discrete-smoothed-0.005.n2 2 production 569.7347802611226 0.876779464148873
+row down-out-call-discrete-smoothed-0.005.n4 4 production 569.5763963556985 0.8303315851727775
+row down-out-call-discrete-smoothed-0.005.n8 8 production 569.3008288549956 0.8157709981071914
+row down-out-call-discrete-smoothed-0.005.n16 16 production 569.6630567341743 0.7735643518657617
+row down-out-call-continuous-bridge.n1 1 coarse 554.0071492124423 0.8715741826396753
+row down-out-call-continuous-bridge.n2 2 production 553.1843456922716 0.8620627853411191
+row down-out-call-continuous-bridge.n4 4 production 552.8382676021347 0.8198867527346113
+row down-out-call-continuous-bridge.n8 8 production 552.4811345323047 0.8118712335931262
+row down-out-call-continuous-bridge.n16 16 production 552.5806867734848 0.7835760136791456
+row down-out-call-continuous-sampled-crossing.n1 1 coarse 553.9700959381913 0.869235223499741
+row down-out-call-continuous-sampled-crossing.n2 2 production 553.1775661450291 0.8710041942334245
+row down-out-call-continuous-sampled-crossing.n4 4 production 552.8169268157845 0.8220823730578279
+row down-out-call-continuous-sampled-crossing.n8 8 production 552.3897521338383 0.8220956266394323
+row down-out-call-continuous-sampled-crossing.n16 16 production 552.6068374013294 0.7853988315322372
+@section report_lv_bias_delta
+type table
+title Euler bias plan: Delta(n) = V(n) - V(2n) on coupled draws
+targets none
+timing no
+uses_chain yes
+column substeps integer count
+column delta real index_points
+column delta_se real index_points
+row asian-arithmetic-call.n1 1 0.5446437709725246 0.031030031824388234
+row asian-arithmetic-call.n2 2 0.3253620253340137 0.022104282798613786
+row asian-arithmetic-call.n4 4 0.1777352125736657 0.015023005528584071
+row asian-arithmetic-call.n8 8 0.10416111936771855 0.011693225917296083
+row down-out-call-discrete-one-step.n1 1 0.26367649643805063 0.07281046301069397
+row down-out-call-discrete-one-step.n2 2 0.10680538790762154 0.06091292100048849
+row down-out-call-discrete-one-step.n4 4 0.0655631191965427 0.057147102439916726
+row down-out-call-discrete-one-step.n8 8 -0.04716600345664176 0.041677084144765585
+row down-out-call-discrete-hard.n1 1 0.09684207859869054 0.09826741308799035
+row down-out-call-discrete-hard.n2 2 0.13308079465493633 0.07543026444755688
+row down-out-call-discrete-hard.n4 4 -0.059196623868626376 0.05607921632082395
+row down-out-call-discrete-hard.n8 8 0.012380977918160448 0.048297691020048446
+row down-out-call-discrete-smoothed-0.005.n1 1 0.10777261669748713 0.06772155326653849
+row down-out-call-discrete-smoothed-0.005.n2 2 0.08235217717942242 0.05220283778306679
+row down-out-call-discrete-smoothed-0.005.n4 4 0.0307308792743128 0.035806033779726194
+row down-out-call-discrete-smoothed-0.005.n8 8 0.01146744733439796 0.02813828859718187
+row down-out-call-continuous-bridge.n1 1 0.8228035201705503 0.08385302810851346
+row down-out-call-continuous-bridge.n2 2 0.462718532516675 0.06990887767469502
+row down-out-call-continuous-bridge.n4 4 0.16336134164027416 0.054162274573306024
+row down-out-call-continuous-bridge.n8 8 0.07131174607509463 0.04462078283532976
+row down-out-call-continuous-sampled-crossing.n1 1 0.7925297931619759 0.10870309415325825
+row down-out-call-continuous-sampled-crossing.n2 2 0.5461317099358117 0.11502139095022812
+row down-out-call-continuous-sampled-crossing.n4 4 0.34162667094221844 0.08470581004121636
+row down-out-call-continuous-sampled-crossing.n8 8 0.05029746017939471 0.06092996868708274
+@section report_lv_bias_ratio
+type table
+title Euler bias plan: the ratios Delta(n) / Delta(2n)
+targets none
+timing no
+uses_chain yes
+column substeps integer count
+column ratio real none
+row asian-arithmetic-call.n1 1 1.6739623206285315
+row asian-arithmetic-call.n2 2 1.8305996916573934
+row asian-arithmetic-call.n4 4 1.7063489107313599
+row down-out-call-discrete-one-step.n1 1 2.468756507547265
+row down-out-call-discrete-one-step.n2 2 1.6290467753287374
+row down-out-call-discrete-one-step.n4 4 -1.3900503411702636
+row down-out-call-discrete-hard.n1 1 0.7276938708533508
+row down-out-call-discrete-hard.n2 2 -2.2481146044794595
+row down-out-call-discrete-hard.n4 4 -4.7812559120872535
+row down-out-call-discrete-smoothed-0.005.n1 1 1.3086796292304532
+row down-out-call-discrete-smoothed-0.005.n2 2 2.6797859066876297
+row down-out-call-discrete-smoothed-0.005.n4 4 2.679836094135083
+row down-out-call-continuous-bridge.n1 1 1.7781944364653233
+row down-out-call-continuous-bridge.n2 2 2.8324848943490744
+row down-out-call-continuous-bridge.n4 4 2.2908055212706047
+row down-out-call-continuous-sampled-crossing.n1 1 1.4511697063976088
+row down-out-call-continuous-sampled-crossing.n2 2 1.5986214086551298
+row down-out-call-continuous-sampled-crossing.n4 4 6.79212568037724
+@section report_lv_bias_left
+type table
+title Euler bias left at n = 4, 2 Delta(4), resolved if beyond 2 SE
+targets none
+timing no
+uses_chain yes
+column bias real index_points
+column bias_se real index_points
+column resolved text none
+row asian-arithmetic-call 0.3554704251473314 0.030046011057168143 yes
+row down-out-call-discrete-one-step 0.1311262383930854 0.11429420487983345 no
+row down-out-call-discrete-hard -0.11839324773725275 0.1121584326416479 no
+row down-out-call-discrete-smoothed-0.005 0.0614617585486256 0.07161206755945239 no
+row down-out-call-continuous-bridge 0.3267226832805483 0.10832454914661205 yes
+row down-out-call-continuous-sampled-crossing 0.6832533418844369 0.1694116200824327 yes

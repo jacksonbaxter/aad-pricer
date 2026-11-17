@@ -1,0 +1,934 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961213.1
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 20
+timer_resolution_ns: 10.010
+timer_read_cost_ns: 19.189
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 3
+batches_per_repetition: 5
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T13:42:18Z
+bench_workloads: aad8-barrier
+bench_scale: 1 (the targets' path counts)
+bench_seed: 20261103
+bench_mc_batches: 50
+bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 8
+bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+bench_instruction_set: price-lanes and tape-lanes: Highway SSE2, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+bench_lane_ceiling: 2 double lanes on SSE2, at most 2 doubles of arithmetic per instruction; Zen 1: 128-bit FP datapath
+bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+gradient_check: pass
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3525077
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 5940123574839
+perf_instructions: 9621417231517
+perf_counters_note: time_enabled_ns=1675876901960 time_running_ns=1675876901960 not multiplexed
+peak_rss_bytes: 5611520
+measure_start: measure.sh: start load1=1.22 at=2026-11-17T13:37:52Z cpus=4 governor=performance freq_khz=cpu4:1875089 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.00 exit=0 at=2026-11-17T14:23:19Z cpus=4 governor=performance freq_khz=cpu4:3123228 perf_event_paranoid=2
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-17T06:46:01-07:00",
+    "num_cpus": 8,
+    "mhz_per_cpu": 2000,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": true,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 4194304,
+        "num_sharing": 8
+      }
+    ],
+    "load_avg": [
+      1,
+      1.16162,
+      1.56494
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 8.8864965445787754e+09,
+      "cpu_time": 8.8838072480000038e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.1253028625888029e-01
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 8.8710090467245426e+09,
+      "cpu_time": 8.8683417582000065e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.1272674785166989e-01
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 8.8685019590156956e+09,
+      "cpu_time": 8.8674838636000118e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.1275861522287907e-01
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 8.8753358501063366e+09,
+      "cpu_time": 8.8732109566000080e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.1267188311114308e-01
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 8.8710090467245426e+09,
+      "cpu_time": 8.8683417582000065e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.1272674785166989e-01
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 9.7463941038824320e+06,
+      "cpu_time": 9.1866772746318523e+06,
+      "time_unit": "ns",
+      "items_per_second": 1.2365732393530797e-04
+    },
+    {
+      "name": "aad8-barrier.price/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.0981436948964201e-03,
+      "cpu_time": 1.0353272698648830e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.0974993984375720e-03
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5194327906700512e+10,
+      "cpu_time": 1.5189357446600002e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.5814033114226275e-02
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5182198237795200e+10,
+      "cpu_time": 1.5178732829000000e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.5866614592777359e-02
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5139465190005184e+10,
+      "cpu_time": 1.5135960037599987e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.6052531410434684e-02
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.5171997111500298e+10,
+      "cpu_time": 1.5168016771066664e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.5911059705812763e-02
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time_median",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.5182198237795198e+10,
+      "cpu_time": 1.5178732829000000e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.5866614592777359e-02
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.8818859348274186e+07,
+      "cpu_time": 2.8265637179100379e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.2530716411224968e-04
+    },
+    {
+      "name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.8994769862188830e-03,
+      "cpu_time": 1.8635025004071543e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.9011553549820822e-03
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 9.1212837271002693e+09,
+      "cpu_time": 9.1185449311999931e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.0963369081798184e-01
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 9.1331071157855282e+09,
+      "cpu_time": 9.1318621420000000e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.0949176302461346e-01
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 9.1589474993038368e+09,
+      "cpu_time": 9.1561491403999748e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.0918285098544445e-01
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 9.1377794473965454e+09,
+      "cpu_time": 9.1355187378666553e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.0943610160934658e-01
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time_median",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 9.1331071157855282e+09,
+      "cpu_time": 9.1318621419999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.0949176302461346e-01
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.9261696347170323e+07,
+      "cpu_time": 1.9066912634284701e+07,
+      "time_unit": "ns",
+      "items_per_second": 2.3051634109513586e-04
+    },
+    {
+      "name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-price/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 2.1079187189901151e-03,
+      "cpu_time": 2.0871187703061121e-03,
+      "time_unit": "ns",
+      "items_per_second": 2.1064012488128344e-03
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.6326560000707499e+10,
+      "cpu_time": 1.6321346508600027e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.1249889747544230e-02
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.6320704055194864e+10,
+      "cpu_time": 1.6316975529399998e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.1271866496574394e-02
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.6373744009778393e+10,
+      "cpu_time": 1.6370019338999964e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.1073386722230442e-02
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.6340336021893585e+10,
+      "cpu_time": 1.6336113792333326e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.1198380988783024e-02
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time_median",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.6326560000707499e+10,
+      "cpu_time": 1.6321346508600027e+10,
+      "time_unit": "ns",
+      "items_per_second": 6.1249889747544230e-02
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.9079946101959895e+07,
+      "cpu_time": 2.9444285285978477e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.0880450072312797e-04
+    },
+    {
+      "name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 3,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.cond-tape/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.7796418667888564e-03,
+      "cpu_time": 1.8024045167827445e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.7778983522958004e-03
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.9127970150664448e+10,
+      "cpu_time": 2.9120887185599987e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.4331262866155766e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.9021592233710197e+10,
+      "cpu_time": 2.9012893752599983e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.4457103247369184e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.9149901855701427e+10,
+      "cpu_time": 2.9142660109200005e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.4305432826162677e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.9099821413358688e+10,
+      "cpu_time": 2.9092147015799988e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.4364599646562542e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time_median",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.9127970150664448e+10,
+      "cpu_time": 2.9120887185599979e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.4331262866155766e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 6.8630192575200140e+07,
+      "cpu_time": 6.9493343900206923e+07,
+      "time_unit": "ns",
+      "items_per_second": 8.1144838794264157e-05
+    },
+    {
+      "name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 4,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 2.3584403354343086e-03,
+      "cpu_time": 2.3887320472588350e-03,
+      "time_unit": "ns",
+      "items_per_second": 2.3612915508643500e-03
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 3.3151383756234688e+10,
+      "cpu_time": 3.3143675524200081e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.0164653377762335e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 3.3073609321483501e+10,
+      "cpu_time": 3.3064596079600048e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.0235587240562634e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 3.3148425921036785e+10,
+      "cpu_time": 3.3139326365999931e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.0167344970832420e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 3.3124472999584988e+10,
+      "cpu_time": 3.3115865989933353e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.0189195196385799e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time_median",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 3.3148425921036785e+10,
+      "cpu_time": 3.3139326365999928e+10,
+      "time_unit": "ns",
+      "items_per_second": 3.0167344970832420e-02
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 4.4074057110096462e+07,
+      "cpu_time": 4.4454263839980982e+07,
+      "time_unit": "ns",
+      "items_per_second": 4.0199222509028475e-05
+    },
+    {
+      "name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 5,
+      "per_family_instance_index": 0,
+      "run_name": "aad8-barrier.for-spot-vol/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 1.3305587415880901e-03,
+      "cpu_time": 1.3423856665410563e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.3315764877972322e-03
+    }
+  ]
+}
+@section histogram_aad8-barrier.price
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 8858370048
+p50 8875147263
+p90 8900313087
+p99 8933867519
+p99.9 8933867519
+p99.99 8933867519
+max 8933867519
+@section histogram_aad8-barrier.tape
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 15116271616
+p50 15141437439
+p90 15376318463
+p99 15418261503
+p99.9 15418261503
+p99.99 15418261503
+max 15418261503
+@section histogram_aad8-barrier.cond-price
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 9101639680
+p50 9126805503
+p90 9168748543
+p99 9311354879
+p99.9 9311354879
+p99.99 9311354879
+max 9311354879
+@section histogram_aad8-barrier.cond-tape
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 16290676736
+p50 16324231167
+p90 16374562815
+p99 16559112191
+p99.9 16559112191
+p99.99 16559112191
+max 16559112191
+@section histogram_aad8-barrier.for-spot
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 28974252032
+p50 29058138111
+p90 29343350783
+p99 29645340671
+p99.9 29645340671
+p99.99 29645340671
+max 29645340671
+@section histogram_aad8-barrier.for-spot-vol
+unit ns
+batch_units 1
+batches 15
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 33000783872
+p50 33118224383
+p90 33285996543
+p99 33436991487
+p99.9 33436991487
+p99.99 33436991487
+max 33436991487
+@section aad_aad8-barrier
+workload aad8-barrier
+targets AAD-8 (proposed): second order on AAD-1's contract
+description up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, one-step survival, 3 years, 500,000 paths; gamma, vanna and volga by forward over reverse on the conditional kernels
+differences AAD-1's contract with one-step survival (Gerstner, Harrach, Roth, arXiv 1804.03975v3) in place of Savine's smoothing, which has no unbiased second derivative; price and tape run the production one-step kernel
+kind pricer
+paths 500000
+batches 50
+threads 1
+seed 20261103
+steps 156
+inputs 5
+tape_setup_statements 18
+tape_statements_per_path 1408
+tape_mean_statements_per_path 1408.0
+tape_operands_per_path 2188
+tape_bytes_per_path 27664
+tape_adjoint_bytes_per_path 11264
+tape_allocated_bytes 172032
+tape_paths_sampled 1024
+nonzero_payoff_fraction 0.286480
+rounding_count 21314.0
+critical_value 4.0205
+valid yes
+check value-bits pass 0
+check for-gradient-bits pass 0
+check spot-row-bits pass 0
+check vanna-symmetry pass 4.563e-21
+peak_rss idle 3690496
+peak_rss price 3596288
+peak_rss tape 4149248
+peak_rss cond-price 3907584
+peak_rss cond-tape 4325376
+peak_rss for-spot 4349952
+peak_rss for-spot-vol 4300800
+variant price aad8-barrier.price
+estimate price value 1.0517116567808882 0.0046051975829303204
+variant tape aad8-barrier.tape
+estimate tape value 1.0517116567808882 0.0046051975829303204
+estimate tape delta 0.0075427490391341643 0.00064270960971904987
+estimate tape vega -9.3179342274301433 0.066732885331851524
+estimate tape rho 4.0281558210029393 0.17753010556888607
+estimate tape dividend-rho -7.1832907913456054 0.178853083088994
+estimate tape theta 0.27031624937097531 0.0038590460618132165
+variant cond-price aad8-barrier.cond-price
+estimate cond-price value 1.0523742862342831 0.0042192023759310649
+variant cond-tape aad8-barrier.cond-tape
+estimate cond-tape value 1.0523742862342831 0.0042192023759310649
+estimate cond-tape delta 0.0074405321054111873 0.00058612874723153879
+estimate cond-tape vega -9.3273358159004474 0.063658171662733729
+estimate cond-tape rho 4.0027008612128911 0.16113181620617409
+estimate cond-tape dividend-rho -7.1598237199157415 0.16304170885644101
+estimate cond-tape theta 0.27088418525121921 0.0036164799737939237
+variant for-spot aad8-barrier.for-spot
+estimate for-spot value 1.0523742862342831 0.0042192023759310649
+estimate for-spot delta 0.0074405321054111873 0.00058612874723153879
+estimate for-spot vega -9.3273358159004474 0.063658171662733729
+estimate for-spot rho 4.0027008612128911 0.16113181620617409
+estimate for-spot dividend-rho -7.1598237199157415 0.16304170885644101
+estimate for-spot theta 0.27088418525121921 0.0036164799737939237
+estimate for-spot gamma -0.0014686582008583209 0.00016188966081822259
+estimate for-spot vanna -0.31928309319267872 0.021364312173887162
+estimate for-spot d2V/dS.dr -0.23757151813242913 0.044679120503701493
+estimate for-spot d2V/dS.dq 0.21524992181619546 0.044638289642779598
+estimate for-spot d2V/dS.dT -0.013018484954413578 0.0011389236297708644
+variant for-spot-vol aad8-barrier.for-spot-vol
+estimate for-spot-vol value 1.0523742862342831 0.0042192023759310649
+estimate for-spot-vol delta 0.0074405321054111873 0.00058612874723153879
+estimate for-spot-vol vega -9.3273358159004474 0.063658171662733729
+estimate for-spot-vol rho 4.0027008612128911 0.16113181620617409
+estimate for-spot-vol dividend-rho -7.1598237199157415 0.16304170885644101
+estimate for-spot-vol theta 0.27088418525121921 0.0036164799737939237
+estimate for-spot-vol gamma -0.0014686582008583209 0.00016188966081822259
+estimate for-spot-vol vanna -0.31928309319267872 0.021364312173887162
+estimate for-spot-vol d2V/dS.dr -0.23757151813242913 0.044679120503701493
+estimate for-spot-vol d2V/dS.dq 0.21524992181619546 0.044638289642779598
+estimate for-spot-vol d2V/dS.dT -0.013018484954413578 0.0011389236297708644
+estimate for-spot-vol d2V/dsigma.dS -0.31928309319268844 0.021364312173887106
+estimate for-spot-vol volga 84.518742523424748 2.9960193753983408
+estimate for-spot-vol d2V/dsigma.dr -92.82453081570597 5.806043095246725
+estimate for-spot-vol d2V/dsigma.dq 120.80653826340767 5.7953922443497055
+estimate for-spot-vol d2V/dsigma.dT 0.33449013997369137 0.15342511554513202

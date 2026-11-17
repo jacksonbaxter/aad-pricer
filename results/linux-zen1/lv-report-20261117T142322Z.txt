@@ -1,0 +1,196 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961178.4
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 24.438
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 1
+batches_per_repetition: 1
+warmup: none
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T14:23:23Z
+report_tool: aadp_local_vol_report --report --mode report
+report_inputs: TAIFEX TXO and TX daily settlement prices of trade date 2024-11-15, not tradable quotes; the raw SVI surface of expiries 202411, 202411W4 and 202412, so maturity reaches 33 days only
+report_run: seed 20261115, paths 1048576, batches 64, threads 8, 33 dates, n 4
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3524189
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 92143118664
+perf_instructions: 251808539109
+perf_counters_note: time_enabled_ns=26468680461 time_running_ns=26468680461 not multiplexed
+peak_rss_bytes: 9351168
+measure_start: measure.sh: start load1=1.08 at=2026-11-17T14:23:23Z cpus=4 governor=performance freq_khz=cpu4:2681089 perf_event_paranoid=2
+measure_end: measure.sh: end load1=7.81 exit=0 at=2026-11-17T14:26:51Z cpus=4 governor=performance freq_khz=cpu4:3313075 perf_event_paranoid=2
+
+@section attribution
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+@section report_lv_price
+type table
+title Local-volatility prices of the svi-surface contracts, n = 4
+targets none
+timing no
+uses_chain yes
+column paths integer count
+column price real index_points
+column price_se real index_points
+row asian-arithmetic-call 1048576 336.79435007497824 0.4403286076332576
+row down-out-call-discrete-one-step 1048576 570.3559156267366 0.8285018873893021
+row down-out-call-continuous-bridge 1048576 552.8382676021347 0.8198867527346113
+@section report_lv_sensitivities
+type table
+title The 15 raw SVI parameter sensitivities of each price, by tape
+targets none
+timing no
+uses_chain yes
+column derivative real index_points/parameter
+column derivative_se real index_points/parameter
+row asian-arithmetic-call.202411.a 35314.97590227064 590.2925763272218
+row asian-arithmetic-call.202411.b 56.83851766786511 0.9267600925847786
+row asian-arithmetic-call.202411.rho -8193.751445653343 95.90548591310687
+row asian-arithmetic-call.202411.m 339.79558139459914 6.992039829905034
+row asian-arithmetic-call.202411.sigma 6812.861507409012 180.6866397074791
+row asian-arithmetic-call.202411W4.a 51787.36844421595 231.12966481215904
+row asian-arithmetic-call.202411W4.b 88.33695125863116 0.3649511428569414
+row asian-arithmetic-call.202411W4.rho -15568.592298465683 54.892633146917504
+row asian-arithmetic-call.202411W4.m 584.5619187954418 2.0607217699846645
+row asian-arithmetic-call.202411W4.sigma 7903.882051033275 49.375064253674516
+row asian-arithmetic-call.202412.a 17247.349292592575 59.01297851055708
+row asian-arithmetic-call.202412.b 635.7748094152346 2.1561871873184653
+row asian-arithmetic-call.202412.rho -20639.5101886687 64.56986955350378
+row asian-arithmetic-call.202412.m 330.62980933117933 0.6778452597197188
+row asian-arithmetic-call.202412.sigma 8002.182420569819 29.963837708052814
+row down-out-call-discrete-one-step.202411.a -3806.8072922550664 911.2405616899741
+row down-out-call-discrete-one-step.202411.b -5.8849029059262925 1.4569512631617685
+row down-out-call-discrete-one-step.202411.rho 485.9988500052212 152.32134555070098
+row down-out-call-discrete-one-step.202411.m 54.85410071551787 12.360377926966596
+row down-out-call-discrete-one-step.202411.sigma -1299.1281226626713 285.15854448165794
+row down-out-call-discrete-one-step.202411W4.a 2367.61478763601 412.0127450697998
+row down-out-call-discrete-one-step.202411W4.b 2.618290528712263 0.6772242458916264
+row down-out-call-discrete-one-step.202411W4.rho -358.230556619085 99.53992022216687
+row down-out-call-discrete-one-step.202411W4.m 41.36900723905685 7.964963563582364
+row down-out-call-discrete-one-step.202411W4.sigma 391.10124459262295 100.71075042744751
+row down-out-call-discrete-one-step.202412.a 56777.870791773035 164.3142882042684
+row down-out-call-discrete-one-step.202412.b 2088.9433781592265 5.994256190212067
+row down-out-call-discrete-one-step.202412.rho -67091.84389116186 175.7604193174559
+row down-out-call-discrete-one-step.202412.m 1015.6456486345324 1.799707797244256
+row down-out-call-discrete-one-step.202412.sigma 26654.340097244 85.30279718191835
+row down-out-call-continuous-bridge.202411.a -2342.4975526460366 1024.5257171653975
+row down-out-call-continuous-bridge.202411.b -4.561141466688044 1.6584156111659458
+row down-out-call-continuous-bridge.202411.rho 440.4003845824248 197.32721732449855
+row down-out-call-continuous-bridge.202411.m 61.31018354435348 13.340642549828491
+row down-out-call-continuous-bridge.202411.sigma -898.1711143340232 295.95765096603185
+row down-out-call-continuous-bridge.202411W4.a 660.8768741910079 499.7394408372352
+row down-out-call-continuous-bridge.202411W4.b -2.1574133976251555 0.8429291225659292
+row down-out-call-continuous-bridge.202411W4.rho 770.9104439659491 138.2242805174129
+row down-out-call-continuous-bridge.202411W4.m 3.5599611582944015 8.888791919920038
+row down-out-call-continuous-bridge.202411W4.sigma 388.8978716369374 107.24743416584262
+row down-out-call-continuous-bridge.202412.a 50695.53778247281 152.4397779886853
+row down-out-call-continuous-bridge.202412.b 1863.2674920664533 5.563287243575557
+row down-out-call-continuous-bridge.202412.rho -59513.91016853344 164.61654162265393
+row down-out-call-continuous-bridge.202412.m 874.1315074752849 2.2164777746196127
+row down-out-call-continuous-bridge.202412.sigma 23940.00178211677 78.91279918209325
+@section report_lv_floors
+type table
+title Local-variance floors and caps per contract, nothing repaired
+targets SVI-9
+timing no
+uses_chain yes
+column path_steps integer count
+column paths integer count
+column non_finite integer count
+column non_positive_variance integer count
+column calendar integer count
+column butterfly integer count
+column below_floor integer count
+column capped integer count
+column paths_with_floor integer count
+column paths_with_cap integer count
+row asian-arithmetic-call 138412032 1048576 0 0 521609 0 11325 52 34156 8
+row down-out-call-discrete-one-step 138412032 1048576 0 0 523536 0 11366 0 34297 0
+row down-out-call-continuous-bridge 138412032 1048576 0 0 521609 0 11325 52 34156 8
+@section report_lv_floor_ranges
+type table
+title Where the floors and caps fell, in k and t, by segment
+targets SVI-9
+timing no
+uses_chain yes
+column count integer count
+column k_min real log_moneyness
+column k_max real log_moneyness
+column t_min real years
+column t_max real years
+row asian-arithmetic-call.floored.all 532934 0.07125787892823965 0.13444149657336624 0.013694306074443061 0.08969770478760204
+row asian-arithmetic-call.floored.seg2 181408 0.07125787892823965 0.11337763940256984 0.013694306074443061 0.03218161927494119
+row asian-arithmetic-call.floored.seg3 351526 0.12634915602928132 0.13444149657336624 0.039713487615884877 0.08969770478760204
+row asian-arithmetic-call.capped.all 52 -1.201307399977333 -1.0012986310818572 0.07600339871315899 0.08969770478760204
+row asian-arithmetic-call.capped.seg3 52 -1.201307399977333 -1.0012986310818572 0.07600339871315899 0.08969770478760204
+row down-out-call-discrete-one-step.floored.all 534902 0.07125787892823965 0.13444149657336624 0.013694306074443061 0.08969770478760204
+row down-out-call-discrete-one-step.floored.seg2 181434 0.07125787892823965 0.11337763940256984 0.013694306074443061 0.03218161927494119
+row down-out-call-discrete-one-step.floored.seg3 353468 0.12634915602928132 0.13444149657336624 0.039713487615884877 0.08969770478760204
+row down-out-call-continuous-bridge.floored.all 532934 0.07125787892823965 0.13444149657336624 0.013694306074443061 0.08969770478760204
+row down-out-call-continuous-bridge.floored.seg2 181408 0.07125787892823965 0.11337763940256984 0.013694306074443061 0.03218161927494119
+row down-out-call-continuous-bridge.floored.seg3 351526 0.12634915602928132 0.13444149657336624 0.039713487615884877 0.08969770478760204
+row down-out-call-continuous-bridge.capped.all 52 -1.201307399977333 -1.0012986310818572 0.07600339871315899 0.08969770478760204
+row down-out-call-continuous-bridge.capped.seg3 52 -1.201307399977333 -1.0012986310818572 0.07600339871315899 0.08969770478760204

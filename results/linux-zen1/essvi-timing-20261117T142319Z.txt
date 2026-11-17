@@ -1,0 +1,99 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961213.1
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 23.987
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 50
+batches_per_repetition: 1
+warmup: none
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T14:23:20Z
+report_tool: aadp_essvi_report --report --mode timing
+report_inputs: TAIFEX TXO and TX daily settlement prices of trade date 2024-11-15, not tradable quotes; expiries 202411, 202411W4 and 202412, so maturity reaches 33 days only
+report_timing: the eSSVI surface fit alone, then the chain's fit with every check, steady_clock, one thread, 50 repetitions
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3517810
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 5632613251
+perf_instructions: 12646253647
+perf_counters_note: time_enabled_ns=2016292579 time_running_ns=2016292579 not multiplexed
+peak_rss_bytes: 8474624
+measure_start: measure.sh: start load1=1.00 at=2026-11-17T14:23:20Z cpus=4 governor=performance freq_khz=cpu4:2049798 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.00 exit=0 at=2026-11-17T14:23:22Z cpus=4 governor=performance freq_khz=cpu4:3343623 perf_event_paranoid=2
+
+@section attribution
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+@section report_essvi_fit_time
+type table
+title eSSVI surface fit time, alone and with every check, one thread
+targets SVI-8
+timing yes
+uses_chain yes
+column median real ms
+column min real ms
+column repetitions integer count
+row fit 13.4990245 13.160896 50
+row fit_and_checks 18.484136 18.042804 50

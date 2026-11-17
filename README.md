@@ -11,14 +11,28 @@ It also fits an SVI volatility surface to one trade date of TAIFEX index-option 
 <!-- BEGIN GENERATED HEADLINE: aadp_results_table --docs . --write; do not edit -->
 | target | measured | host | verdict |
 |---|---|---|---|
-| AAD-1: barrier, general tape, single thread: multiple below 3.0 | 1.89 times one scalar pricing | [linux-zen1](results/linux-zen1/aad1-barrier-20261104T071749Z.txt), Linux | met, by 1.11 |
-| AAD-4: arithmetic Asian: multiple 2.8 | 1.91 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261104T085349Z.txt), Linux | met, by 0.89 |
-| AAD-5: within 1.25 times a hand-written adjoint | 1.87 times the hand-written adjoint | [linux-zen1](results/linux-zen1/aad4-asian12-20261104T085349Z.txt), Linux | missed, by 0.62 |
-| MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 61,450 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261104T090220Z.txt), Linux | missed, by 17.0 times |
-| MEM-4: per-path tape below 50 MB in the worst case | 46.7 MB of tape chunks (`lw-worst`) | [linux-zen1](results/linux-zen1/lw-worst-20261104T103623Z.txt), Linux | met, by 3.33 MB |
+| AAD-1: barrier, general tape, single thread: multiple below 3.0 | 2.18 times one scalar pricing | [linux-zen1](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), Linux | met, by 0.82 |
+| AAD-3: barrier, multi-threaded: multiple 2.86, stretch 1.64 | 2.19 times one scalar pricing on 2 threads | [linux-zen1](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt), Linux | met, by 0.67 |
+| AAD-4: arithmetic Asian: multiple 2.8 | 1.79 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 1.01 |
+| AAD-5: within 1.25 times a hand-written adjoint | 1.72 times the hand-written adjoint | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | missed, by 0.47 |
+| AAD-6: hand-written baseline: multiple below 2.0 | 1.04 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 0.96 |
+| MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 83,220 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 12.5 times |
+| MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread | 48,940 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 4.0 times |
+| MEM-4: per-path tape below 50 MB in the worst case | 46.7 MB of tape chunks (`lw-worst`) | [linux-zen1](results/linux-zen1/lw-worst-20261117T083521Z.txt), Linux | met, by 3.33 MB |
+| SVI-6: fit error at most 4 bp of forward | 0.287 bp of F on 202411 settlements (5 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 3.71 bp of F |
+| SVI-6: fit error at most 4 bp of forward | 1.13 bp of F on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 2.87 bp of F |
+| SVI-6: fit error at most 4 bp of forward | 1.23 bp of F on 202412 settlements (33 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 2.77 bp of F |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 0.958 vol points on 202411 settlements (5 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 0.23 vol points |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 0.41 vol points on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.32 vol points |
+| SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 1.4 vol points on 202412 settlements (33 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 0.67 vol points |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 237 ms median on 202411 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 222.35 ms |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 112 ms median on 202411W4 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 97.38 ms |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 170 ms median on 202412 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 155.02 ms |
+| SVI-8: surface time below 1.2 s | 0.524 s median: raw SVI with its three fits and every check | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.68 s |
+| SVI-8: surface time below 1.2 s | 0.0185 s median: eSSVI with its fit and every check | [linux-zen1](results/linux-zen1/essvi-timing-20261117T142319Z.txt), Linux | met, by 1.18 s |
 | Oracle plan, run 2: all 147 registered comparisons pass the tolerance rule (`BENCHMARKS.md` section 10) | 145 of 147 pass | [mac-m4max](references/measured_results_run2.csv), macOS | 2 failed: P3.DB.d12.rho, P3.CB.d12.rho |
 
-Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. Benchmark rows were measured at commit `d1596e0`.
+Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. A row from a report section derived from the option chain keeps the chain's terms; the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md. Rows were measured at commit `8bb2116`.
 <!-- END GENERATED HEADLINE -->
 
 The table is generated by `aadp_results_table --docs . --write` from the files its host column links, and the rows are chosen in [`results/headline.csv`](results/headline.csv). It is never typed by hand: `scripts/check.sh` fails if it, or [RESULTS.md](RESULTS.md), differs from a fresh generation. [RESULTS.md](RESULTS.md) has every stamped results file by host, each host in its own tables, and measured oracle runs 1 and 2 side by side. [docs/NOTES.md](docs/NOTES.md) explains each miss.
@@ -38,7 +52,7 @@ The table is generated by `aadp_results_table --docs . --write` from the files i
 - cp950 and TAIFEX file readers, and libFuzzer targets on every parser, decoder and pricer entry point, plus a tape fuzzer against finite differences.
 - A fault-injection runner that plants one bug at a time in a copy of the code, to show each oracle and check can fail.
 
-Only the scalar pricer and tape have measured runs so far: the headline and [RESULTS.md](RESULTS.md) hold all of them. The SIMD lanes, second-order Greeks, the surfaces, the GPU backend and the QuantLib comparison have iteration-only numbers in `docs/NOTES.md`, which are not results; their measured runs come at stage 11. [docs/TASKS.md](docs/TASKS.md) has the plan, [BENCHMARKS.md](BENCHMARKS.md) the published targets with what has been measured against them, and [docs/NOTES.md](docs/NOTES.md) the findings and decisions.
+On `linux-zen1` the reported run at 8bb2116 is in: the AAD bench's eight workloads, the SIMD bench with one run per kernel, the implied-vol bench, the SVI fit, eSSVI and local-vol reports, and the quote-sensitivity timing, each a documented command of `BENCHMARKS.md` run once. Five steps are still to run there: the quote-sensitivity report and its check, which were deferred, and three of the per-kernel runs (`exp` at 4 lanes, `log` scalar and `log` at 1 lane), withdrawn because other activity on the host fell in them. The headline and [RESULTS.md](RESULTS.md) hold its files. The SIMD files' timings are in RESULTS.md's benchmark table, but their sections have no rendered table yet, so `BENCHMARKS.md` quotes those files' own lines. On `mac-m4max` the files are still the stage 3b runs at d1596e0: the Mac's reported run at 8bb2116, and the QuantLib and Metal runs at c5f3473, are still to be read, so the GPU backend and the QuantLib comparison have iteration-only numbers in `docs/NOTES.md`, which are not results. [docs/TASKS.md](docs/TASKS.md) has the plan, [BENCHMARKS.md](BENCHMARKS.md) the published targets with what has been measured against them, and [docs/NOTES.md](docs/NOTES.md) the findings and decisions.
 
 ## Build and run
 
@@ -107,7 +121,7 @@ build/release/bin/aadp_results_table --docs . --write        # regenerate RESULT
 build/release/bin/aadp_results_table --docs . --check        # fail if either differs from a fresh generation
 ```
 
-`--docs` reads `results/headline.csv`, which says which result answers which target and the target's threshold, the target headings in `BENCHMARKS.md`, every file in `results/<host>/`, and the measured oracle runs in `references/`. It holds no number of its own. A row's value comes from the latest run of its workload on its host. No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. The plain table leaves out a fault-injection report in a host directory, judged by the report's first line; `RESULTS.md` lists those reports in their own table. `results/` holds the stage 3b AAD and bump-and-revalue runs at d1596e0, beside harness self-tests and fault-injection reports.
+`--docs` reads `results/headline.csv`, which says which result answers which target and the target's threshold, the target headings in `BENCHMARKS.md`, every file in `results/<host>/`, and the measured oracle runs in `references/`. It holds no number of its own. A row's value comes from the latest run of its workload on its host, in the build it names if it names one (`<workload>@<build>`, the files' `simd_cmake_target`). No file holds numbers from two hosts, and the tool refuses a file filed under another host's directory. The plain table leaves out a fault-injection report in a host directory, judged by the report's first line; `RESULTS.md` lists those reports in their own table. `results/linux-zen1/` holds the reported run at 8bb2116, and `results/mac-m4max/` the stage 3b AAD and bump-and-revalue runs at d1596e0, each beside harness self-tests and fault-injection reports.
 
 ## Data
 

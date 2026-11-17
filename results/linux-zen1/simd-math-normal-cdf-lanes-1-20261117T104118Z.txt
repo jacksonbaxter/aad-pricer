@@ -1,0 +1,286 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -march=x86-64-v3 -maes -mpclmul -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: avx2
+simd_target: AVX2
+simd_double_lanes: 4
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fa0
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961211.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 20
+timer_resolution_ns: 10.010
+timer_read_cost_ns: 19.390
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 5
+batches_per_repetition: 50
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T10:41:19Z
+bench_workloads: simd-math
+bench_scale: 1 (the workloads' full sizes)
+bench_seed: 20261119
+bench_mc_batches: 50
+bench_threads: 1 for every variant
+bench_instruction_set: AVX2 (AADP_SIMD_TARGET=avx2, Highway static dispatch); scalar variants are the scalar pricer and kernels of the same binary
+simd_lane_widths_timed: 1,2,4
+simd_lane_ceiling: 4 double lanes on AVX2: no SIMD speedup over one lane can exceed 4. NEON is 2 wide, SSE2 2, AVX2 4, AVX-512 8; Zen 1 runs each 256-bit AVX2 operation as two 128-bit halves, so about 2 lanes' throughput there
+simd_check: pass
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3593459
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 52200400449
+perf_instructions: 62358391738
+perf_counters_note: time_enabled_ns=14568588990 time_running_ns=14568588990 not multiplexed
+peak_rss_bytes: 155906048
+measure_start: measure.sh: start load1=1.03 at=2026-11-17T10:41:19Z cpus=4 governor=performance freq_khz=cpu4:2775150 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.02 exit=0 at=2026-11-17T10:41:39Z cpus=4 governor=performance freq_khz=cpu4:2174674 perf_event_paranoid=2
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-17T03:41:20-07:00",
+    "num_cpus": 8,
+    "mhz_per_cpu": 2000,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": true,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 4194304,
+        "num_sharing": 8
+      }
+    ],
+    "load_avg": [
+      1.02734,
+      1.04443,
+      1.07471
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8282537497744024e+07,
+      "cpu_time": 5.8272194060000010e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7157797908828311e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8280168282579154e+07,
+      "cpu_time": 5.8265662840000018e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7158495410503395e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8363457787441701e+07,
+      "cpu_time": 5.8352431759999990e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7134008811506263e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8263142726821363e+07,
+      "cpu_time": 5.8251243500000030e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7163509436638254e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 5.8218084594809741e+07,
+      "cpu_time": 5.8209506219999984e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7176793207125748e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.8281478177879199e+07,
+      "cpu_time": 5.8270207676000014e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7158120954920395e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.8280168282579161e+07,
+      "cpu_time": 5.8265662840000018e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.7158495410503395e+01
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.2627059363198830e+04,
+      "cpu_time": 5.2032941437103371e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.5486516499434935e-02
+    },
+    {
+      "name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.normal-cdf-lanes-1/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 9.0298086130515291e-04,
+      "cpu_time": 8.9295960169598625e-04,
+      "time_unit": "ns",
+      "items_per_second": 9.0257648492645119e-04
+    }
+  ]
+}
+@section histogram_simd-math.normal-cdf-lanes-1
+unit ns
+batch_units 1
+batches 250
+gate_ns 100.1
+timer_resolution_ns 10.010
+min 57966592
+p50 58195967
+p90 58589183
+p99 60817407
+p99.9 62947327
+p99.99 62947327
+max 62947327
+@section simd_simd-math
+each math kernel over 2^20 doubles: exp on [-5, 5], log on (0, 4], inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]; and the pricer's Philox4x32-10 generator alone, its raw words, 2^18 blocks of 16 bytes (2^20 32-bit words), and xoshiro256++ over as many bytes
+targets: RNG-1, RNG-2, RNG-4, SIMD-1, SIMD-2
+values per call: 1048576; time per call, so ns per value is the time over 1048576
+check exp-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check exp-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check log-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check log-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check inverse-normal-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check inverse-normal-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+check normal-cdf-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check normal-cdf-lanes-4-bits: pass, 1048576 values, 4 lanes against the scalar kernel
+philox: 262144 Philox4x32-10 blocks a call, counters 0 to 262144 - 1, key the seed, 4194304 bytes a call; time per byte is the time over 4194304
+check philox-lanes-1-bits: pass, 1048576 words, 1 lanes against the scalar generator
+check philox-lanes-4-bits: pass, 1048576 words, 4 lanes against the scalar generator
+xoshiro256pp: 524288 outputs of 64 bits a call from the state (1, 2, 3, 4), 4194304 bytes a call; time per 64 bits is the time over 524288
+check xoshiro256pp-kat: pass, the first 4 outputs against the published ones

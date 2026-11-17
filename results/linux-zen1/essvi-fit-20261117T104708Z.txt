@@ -1,0 +1,219 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961158.0
+timer_calibration_spread: 0.000001
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 23.579
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 1
+batches_per_repetition: 1
+warmup: none
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T10:47:08Z
+report_tool: aadp_essvi_report --report --mode fit
+report_inputs: TAIFEX TXO and TX daily settlement prices of trade date 2024-11-15, not tradable quotes; expiries 202411, 202411W4 and 202412, so maturity reaches 33 days only
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3593463
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 1964127518
+perf_instructions: 3722395588
+perf_counters_note: time_enabled_ns=555371312 time_running_ns=555371312 not multiplexed
+peak_rss_bytes: 8368128
+measure_start: measure.sh: start load1=1.05 at=2026-11-17T10:47:08Z cpus=4 governor=performance freq_khz=cpu4:2000000 perf_event_paranoid=2
+measure_end: measure.sh: end load1=1.05 exit=0 at=2026-11-17T10:47:09Z cpus=4 governor=performance freq_khz=cpu4:2009048 perf_event_paranoid=2
+
+@section attribution
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+@section report_essvi_fit_error
+type table
+title eSSVI beside raw SVI per slice: the cost in fit error, settlements
+targets SVI-9
+timing no
+uses_chain yes
+column quotes integer count
+column essvi_phi real none
+column essvi_phi_per_dof real none
+column raw_phi real none
+column raw_phi_per_dof real none
+column phi_ratio real none
+column essvi_svi6 real bp_of_F
+column raw_svi6 real bp_of_F
+column essvi_svi11 real vol_points
+column raw_svi11 real vol_points
+row 202411 65 26.83572112999456 0.4328342117741058 12.423749901759981 0.20706249836266635 2.1600339142526477 0.4496134448968316 0.2867787219631387 1.8932130607256097 0.9576399476640635
+row 202411W4 51 109.30652884292431 2.2772193508942564 106.88795417077621 2.3236511776255697 1.022627195841768 1.1735751310850575 1.1317032806279566 1.0203616502975057 0.40959497040346426
+row 202412 64 312.87787096477933 5.12914542565212 191.0341596577926 3.2378671128439422 1.6378111198816505 1.60270838314882 1.2311502876082472 2.4976354511124987 1.3972751718303673
+@section report_essvi_fit_surface
+type table
+title eSSVI beside raw SVI over the surface: the cost in fit error
+targets SVI-9
+timing no
+uses_chain yes
+column quotes integer count
+column essvi_phi real none
+column essvi_phi_per_dof real none
+column raw_phi real none
+column raw_phi_per_dof real none
+column phi_ratio real none
+row surface 180 449.02012093769815 2.625848660454375 310.3458637303288 1.8808840226080534 1.446837781372426
+@section report_essvi_fit_arbitrage
+type table
+title Butterfly checks of both surfaces' slices, nothing repaired
+targets SVI-9
+timing no
+uses_chain yes
+column model_triples integer count
+column model_non_convex integer count
+column grid_points integer count
+column min_g real none
+column k_min_g real log_moneyness
+column martini_mingone text none
+column violations integer count
+row 202411.essvi 61 0 14002 0.25408881120552673 -3 no-arbitrage 0
+row 202411.raw 61 0 14002 -28.86045054341379 0.13350154976993137 type-1 4
+row 202411W4.essvi 47 0 14002 0.2616579514665288 -3 no-arbitrage 0
+row 202411W4.raw 47 0 14002 -24.879862102808183 0.17500000000000002 type-1 4
+row 202412.essvi 60 0 14002 0.2615713143568765 -3.2996873379439755 no-arbitrage 0
+row 202412.raw 60 0 14002 -3.261889685463337 0.8670000200934154 type-1 4
+@section report_essvi_fit_calendar
+type table
+title Calendar checks of both surfaces' adjacent slices
+targets SVI-9
+timing no
+uses_chain yes
+column grid_points integer count
+column min_gap real total_variance
+column k_min_gap real log_moneyness
+column violations integer count
+row 202411-202411W4.essvi 22003 0.0002863422657946304 0.42086726235789157 0
+row 202411W4-202412.essvi 22003 0.002502207889821754 0.07549338384102873 0
+row 202411-202411W4.raw 22003 -0.15159471657250378 3 4
+row 202411W4-202412.raw 22003 -1.8145667442438906 6.0899909235311345 2
+@section report_essvi_fit_violations
+type table
+title Every violation of either surface's slices and pairs
+targets SVI-9
+timing no
+uses_chain yes
+column kind text none
+column k_begin text log_moneyness
+column k_end text log_moneyness
+column k_worst text log_moneyness
+column value real none
+column bound real none
+column points integer count
+row 202411.raw.1 density 0.12037321723261338 3 0.13350154976993137 -28.86045054341379 -4.951109240015759e-13 6809
+row 202411.raw.2 d-plus-limit +inf +inf +inf 4 2 0
+row 202411.raw.3 right-wing +inf +inf +inf 4 2 0
+row 202411.raw.4 martini-mingone +inf +inf +inf 1 4 0
+row 202411W4.raw.1 density 0.1605186108022837 3 0.17500000000000002 -24.879862102808183 -4.555447908497429e-13 6753
+row 202411W4.raw.2 d-plus-limit +inf +inf +inf 3.9999999999999996 2 0
+row 202411W4.raw.3 right-wing +inf +inf +inf 3.9999999999999996 2 0
+row 202411W4.raw.4 martini-mingone +inf +inf +inf 1 3.9999999999999996 0
+row 202412.raw.1 density 0.682675347704515 6.0899909235311345 0.8670000200934154 -3.261889685463337 -8.738579642202582e-14 6250
+row 202412.raw.2 d-plus-limit +inf +inf +inf 3.9999999999999996 2 0
+row 202412.raw.3 right-wing +inf +inf +inf 3.9999999999999996 2 0
+row 202412.raw.4 martini-mingone +inf +inf +inf 1 3.9999999999999996 0
+row 202411-202411W4.raw.1 calendar-crossing -3 -0.733 -3 -0.0037361594559504052 -8.901649742998386e-14 2268
+row 202411-202411W4.raw.2 calendar-crossing 0.07136439113672857 3 3 -0.15159471657250378 -8.154701515975693e-14 11990
+row 202411-202411W4.raw.3 calendar-right-wing +inf +inf +inf -0.15159781166922848 0 0
+row 202411-202411W4.raw.4 calendar-left-wing -inf -inf -inf -0.0016475042905273914 1 0
+row 202411W4-202412.raw.1 calendar-crossing 0.12664229626954387 6.0899909235311345 6.0899909235311345 -1.8145667442438906 -1.628679595557671e-13 11419
+row 202411W4-202412.raw.2 calendar-right-wing +inf +inf +inf -1.8180454554748238 0 0
+@section report_essvi_fit_constraints
+type table
+title eSSVI constraints B1, B2, N and S on the fitted slices
+targets SVI-9
+timing no
+uses_chain yes
+column slack real none
+column active text none
+column violated text none
+row 202411.B1 0.9933811558394444 no no
+row 202411.B2 0.7876068367637525 no no
+row 202411W4.B1 0.9923221925712051 no no
+row 202411W4.B2 0.901192532143705 no no
+row 202412.B1 0.9831158280807096 no no
+row 202412.B2 0.8186933407826398 no no
+row 202411W4.N-theta 1.8175724331630096 no no
+row 202411W4.N-psi 0.029517579348889322 no no
+row 202411W4.S 0.5989540107988865 no no
+row 202412.N-theta 1.88861577943903 no no
+row 202412.N-psi 1.1990877051654052 no no
+row 202412.S 0.16558628203350134 no no
+@section report_essvi_fit_convergence
+type table
+title eSSVI surface fit: convergence, starts and constraints
+targets SVI-9
+timing no
+uses_chain yes
+column converged text none
+column stop text none
+column iterations integer count
+column scaled_gradient real none
+column starts_at_best integer count
+column starts integer count
+column constraints_violated integer count
+column constraints_active integer count
+row surface yes stationary 10 2.97500330167994e-11 16 16 0 0
