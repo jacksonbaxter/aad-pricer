@@ -9253,6 +9253,44 @@
       "timeout_s": 300
     },
     {
+      "id": "docs-workload-build",
+      "kind": "check",
+      "covers": "a multiple or paths_per_second headline row that names a build reads only that build's files",
+      "bug": "The build after @ is ignored, so linux-zen1's AAD-1 row reads the later release-avx2 run, not the release run BENCHMARKS.md names.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "          (!build.empty() && entry.file.required(\"simd_cmake_target\") != build)) {",
+          "replace": "          (!build.empty() && false)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Docs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Docs\\.AWorkloadRowCanNameItsBuild",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-workload-build-spec",
+      "kind": "check",
+      "covers": "headline.csv takes workload@build only as a plain workload and a plain build, on a workload's row",
+      "bug": "Any workload source with an @ is taken, so a row with an empty workload or build, or a build in capitals, is read.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  return is_plain_name(source.workload) && is_plain_name(source.build);",
+          "replace": "  return !source.workload.empty() || !source.build.empty();"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=HeadlineSpec.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] HeadlineSpec\\.RefusesWhatIsNotASpec",
+      "timeout_s": 300
+    },
+    {
       "id": "docs-report-cell-latest",
       "kind": "check",
       "covers": "the report_cell headline reads the latest run by run_started_at",

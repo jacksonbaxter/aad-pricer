@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
 #include <initializer_list>
 #include <string>
 #include <string_view>
@@ -75,12 +76,16 @@ std::string benchmark_json(std::string_view price_ns) {
 
 std::string results_text(std::string_view label, const std::string& aad,
                          std::string_view started = "2026-01-02T03:04:06Z",
-                         std::string_view price_ns = "2e6") {
+                         std::string_view price_ns = "2e6",
+                         std::pair<std::string_view, std::string_view> build = {"baseline",
+                                                                                "SSE2"}) {
   ResultsFile raw = testing::raw_file();
   testing::set_field(raw, "claim", "result");
   testing::set_field(raw, "host_label", label);
   testing::set_field(raw, "os", label == "mac-m4max" ? "macOS 27.2" : "Linux, synthetic");
   testing::set_field(raw, "run_started_at", started);
+  testing::set_field(raw, "simd_cmake_target", build.first);
+  testing::set_field(raw, "simd_target", build.second);
   for (ResultsSection& s : raw.sections) {
     if (s.name == kBenchmarkSection) {
       s.body = benchmark_json(price_ns);
@@ -183,6 +188,49 @@ TEST(Docs, TheLatestRunOfAWorkloadAnswersItsTarget) {
   ASSERT_TRUE(docs.has_value()) << docs.error();
   EXPECT_TRUE(has(docs->headline, "| 4 times one pricing | [linux-zen1](results/linux-zen1/b.txt)"))
       << docs->headline;
+}
+
+// a.txt is the baseline build's run; b.txt, later, is another build's. A row naming the baseline
+// build takes a.txt, a row naming none takes b.txt, and a build no file has is refused.
+TEST(Docs, AWorkloadRowCanNameItsBuild) {
+  DocsInputs in = inputs();
+  in.files.push_back({.host_dir = "linux-zen1",
+                      .name = "b.txt",
+                      .text = results_text("linux-zen1", section(), "2026-01-02T03:04:08Z", "1e6",
+                                           {"avx2", "AVX2"})});
+  const std::string bare = in.spec;
+  const auto replace_source = [&bare](std::string_view source) {
+    std::string spec = bare;
+    for (std::size_t at = spec.find(",linux-zen1,w,"); at != std::string::npos;
+         at = spec.find(",linux-zen1,w,", at + 1)) {
+      spec.replace(at, 14, ",linux-zen1," + std::string(source) + ",");
+    }
+    return spec;
+  };
+  in.spec = replace_source("w@baseline");
+  const auto docs = render_docs(in);
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline, "| 2 times one pricing | [linux-zen1](results/linux-zen1/a.txt)"))
+      << docs->headline;
+  EXPECT_TRUE(has(docs->headline, "| 500,000 paths/s | [linux-zen1](results/linux-zen1/a.txt)"))
+      << docs->headline;
+  EXPECT_TRUE(has(docs->results_md,
+                  "mean time of `tape` over mean time of `price` on `w` in the `baseline` build "
+                  "(SSE2), each the mean of"))
+      << docs->results_md;
+
+  in.spec = bare;
+  const auto latest = render_docs(in);
+  ASSERT_TRUE(latest.has_value()) << latest.error();
+  EXPECT_TRUE(
+      has(latest->headline, "| 4 times one pricing | [linux-zen1](results/linux-zen1/b.txt)"))
+      << latest->headline;
+
+  in.spec = replace_source("w@avx512");
+  const auto none = render_docs(in);
+  ASSERT_FALSE(none.has_value());
+  EXPECT_TRUE(has(none.error(), "no result on this host has workload w in build avx512"))
+      << none.error();
 }
 
 TEST(Docs, RefusesTwoRunsOfAWorkloadStartedTogether) {
@@ -451,6 +499,20 @@ TEST(HeadlineSpec, RefusesWhatIsNotASpec) {
   EXPECT_FALSE(
       parse_headline_spec(header + "\nmultiple,AAD-1,linux-zen1,w,tape/price,3,3,below,0,,\n")
           .has_value());
+  // A build only after a workload, and only for a workload's row.
+  for (const std::string_view source : {"w@", "@baseline", "w@base@line", "w@Base"}) {
+    EXPECT_FALSE(parse_headline_spec(header + "\nmultiple,AAD-1,linux-zen1," + std::string(source) +
+                                     ",tape/price,3,3,below,1,,\n")
+                     .has_value())
+        << source;
+  }
+  EXPECT_TRUE(parse_headline_spec(
+                  header + "\nmultiple,AAD-1,linux-zen1,w@baseline,tape/price,3,3,below,1,,\n")
+                  .has_value());
+  EXPECT_FALSE(parse_headline_spec(header +
+                                   "\nlargest,MEM-4,linux-zen1,tape_allocated_bytes@baseline,,50,"
+                                   "below 50 MB,below,1e6,MB,\n")
+                   .has_value());
   // An oracle run that is not also a measured run, and a path out of references/.
   EXPECT_FALSE(
       parse_headline_spec(header + "\noracle_run,run 1,linux-zen1,references/r.csv,,,,,,,\n")

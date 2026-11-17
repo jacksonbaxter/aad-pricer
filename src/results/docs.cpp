@@ -128,6 +128,34 @@ bool is_reference_path(std::string_view path) {
 
 // --- results/headline.csv ---
 
+bool is_workload_kind(std::string_view kind) {
+  return kind == "multiple" || kind == "paths_per_second";
+}
+
+// A workload row's source: the workload, then optionally `@` and a build's simd_cmake_target.
+// The build picks one preset's files where a host ran the workload under two (linux-zen1 runs
+// the first-order workloads in its release and release-avx2 presets).
+struct WorkloadSource {
+  std::string_view workload;
+  std::string_view build;  // empty: every build
+};
+
+WorkloadSource workload_source(std::string_view source) {
+  const std::size_t at = source.find('@');
+  if (at == std::string_view::npos) {
+    return {.workload = source, .build = {}};
+  }
+  return {.workload = source.substr(0, at), .build = source.substr(at + 1)};
+}
+
+bool is_plain_source(const HeadlineRow& row) {
+  if (!is_workload_kind(row.kind) || !row.source.contains('@')) {
+    return is_plain_name(row.source);
+  }
+  const WorkloadSource source = workload_source(row.source);
+  return is_plain_name(source.workload) && is_plain_name(source.build);
+}
+
 std::expected<void, std::string> check_headline_kind(const HeadlineRow& row,
                                                      std::string_view target,
                                                      std::string_view scale) {
@@ -150,8 +178,8 @@ std::expected<void, std::string> check_headline_kind(const HeadlineRow& row,
       return std::unexpected("a report cell's detail is <row key>/<column>");
     }
   }
-  if (row.kind != kOracleRunKind && !is_plain_name(row.source)) {
-    return std::unexpected("the source must be a workload or a section key");
+  if (row.kind != kOracleRunKind && !is_plain_source(row)) {
+    return std::unexpected("the source must be a workload, workload@build, or a section key");
   }
   if (row.kind != kOracleRunKind && row.better != "below" && row.better != "at_most" &&
       row.better != "at_least") {
@@ -567,14 +595,17 @@ struct Found {
   const AadWorkload* workload = nullptr;
 };
 
-// The latest run of the workload on the host, by run_started_at. Two at the same time is refused.
-std::expected<Found, std::string> find_workload(const HostFiles& host, std::string_view name) {
+// The latest run of the workload on the host, by run_started_at, in the source's build if it
+// names one. Two at the same time is refused.
+std::expected<Found, std::string> find_workload(const HostFiles& host, std::string_view source) {
+  const auto [name, build] = workload_source(source);
   Found found;
   for (const ResultsEntry& entry : host.results) {
     for (const AadWorkload& w : entry.workloads) {
       const auto field = w.fields.find("workload");
       if (field == w.fields.end() || field->second != name ||
-          entry.file.required("claim") != "result") {
+          entry.file.required("claim") != "result" ||
+          (!build.empty() && entry.file.required("simd_cmake_target") != build)) {
         continue;
       }
       const std::string_view started = entry.file.required("run_started_at");
@@ -588,7 +619,8 @@ std::expected<Found, std::string> find_workload(const HostFiles& host, std::stri
     }
   }
   if (found.entry == nullptr) {
-    return std::unexpected("no result on this host has workload " + std::string(name));
+    return std::unexpected("no result on this host has workload " + std::string(name) +
+                           (build.empty() ? "" : " in build " + std::string(build)));
   }
   return found;
 }
@@ -609,7 +641,8 @@ std::expected<Evaluated, std::string> evaluate_workload(const HeadlineRow& row,
   }
   const AadWorkload& w = *found->workload;
   if (!names_target(w.fields.at("targets"), row.id)) {
-    return std::unexpected(row.source + "'s targets do not name " + row.id);
+    return std::unexpected(std::string(workload_source(row.source).workload) +
+                           "'s targets do not name " + row.id);
   }
   const std::vector<std::string_view> parts = split(row.detail, '/');
   auto numerator = workload_time(w, parts.front());
@@ -618,20 +651,26 @@ std::expected<Evaluated, std::string> evaluate_workload(const HeadlineRow& row,
     return std::unexpected(!numerator ? numerator.error() : denominator.error());
   }
   const std::string path = "results/" + row.host + "/" + found->entry->name;
-  const std::string repetitions(found->entry->file.required("repetitions"));
+  const ResultsFile& file = found->entry->file;
+  const std::string repetitions(file.required("repetitions"));
+  const auto [name, build] = workload_source(row.source);
+  const std::string on = "`" + std::string(name) + "`" +
+                         (build.empty() ? std::string()
+                                        : " in the `" + std::string(build) + "` build (" +
+                                              std::string(file.required("simd_target")) + ")");
   Evaluated out;
   out.host = host_cell(row.host, path, hosts);
-  out.commit = short_commit(found->entry->file.required("commit"));
+  out.commit = short_commit(file.required("commit"));
   double value = 0.0;
   if (row.kind == "multiple") {
     value = *numerator / *denominator / row.scale;
     out.how = "mean time of `" + std::string(parts.front()) + "` over mean time of `" +
-              std::string(parts.back()) + "` on `" + row.source + "`, each the mean of " +
-              repetitions + " repetitions";
+              std::string(parts.back()) + "` on " + on + ", each the mean of " + repetitions +
+              " repetitions";
   } else {
     value = w.paths * kNanosecondsPerSecond / *numerator / row.scale;
-    out.how = "paths (" + format("%.0f", w.paths) + ") over mean time of `" + row.detail +
-              "` on `" + row.source + "`, the mean of " + repetitions + " repetitions";
+    out.how = "paths (" + format("%.0f", w.paths) + ") over mean time of `" + row.detail + "` on " +
+              on + ", the mean of " + repetitions + " repetitions";
   }
   if (!w.valid) {
     out.measured = "INVALID";

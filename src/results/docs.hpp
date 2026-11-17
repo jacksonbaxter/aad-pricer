@@ -36,6 +36,9 @@ inline constexpr std::string_view kFaultReportMagic = "aadp-fault-injection 1";
 //   measured_run      an oracle run for RESULTS.md: source is its CSV under references/
 //   multiple          detail "<variant>/<base>" of workload `source`: mean time over mean time
 //   paths_per_second  detail "<variant>" of workload `source`: paths over mean time
+//                     For both, `source` may be "<workload>@<build>": only files whose
+//                     simd_cmake_target is <build> answer, so "aad1-barrier@baseline" takes the
+//                     release preset's run on a host that also ran release-avx2.
 //   largest           the largest value of section key `source` in any AAD section of the host
 //   oracle_run        the run in `source`, which must be a measured_run: rows that pass
 //   report_cell       detail "<row key>/<column>" of report section `source` (results/report.hpp,
