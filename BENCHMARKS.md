@@ -157,6 +157,76 @@ There `run_bench.sh` adds `taskset -c 4`, or `taskset -c 4,6` with `AADP_PIN_CPU
 
 An iteration run, which is never a result: `AADP_NOT_REPORTABLE="iteration" scripts/run_bench.sh $B aad-iteration --aadp-scale=50 --batches=1 --repetitions=3`, rendered with `aadp_results_table --iteration <file>`, which prints it under an ITERATION ONLY banner.
 
+The other reported runs, each one stamped file. The SVI fit, eSSVI, local-vol and quote-sensitivity reports read the chain from `data/`, which `scripts/fetch_data.sh` fetches and checks; it is never committed. `aadp_metal_report` and the QuantLib runs get their commands with their emitters. Each command below was run once at 3e11d29, whose code the commit that adds these lines does not change, on the host it is listed for, as an iteration run (`AADP_NOT_REPORTABLE=iteration`), at a reduced size where the binary has one (`--aadp-scale=50` for `aadp_bench_aad`, `--aadp-scale=10` for `aadp_bench_simd`) and at full size for the rest, except that on `linux-zen1` the per-kernel runs ran at full size, with 20 batches and 3 repetitions, for their cycle counts, and the quote-sensitivity report and check at `--paths 65536` and `--stride 20`: `run_bench.sh` pins a run there to one CPU, and those two run 8 threads by default. Nothing from those runs is a result (`docs/NOTES.md`, "The RNG benches and the bench commands").
+
+On `mac-m4max`, after the commands above, all from the `release` preset (NEON, 2 lanes):
+
+```sh
+scripts/fetch_data.sh
+B=build/release/bin/aadp_bench_aad
+scripts/run_bench.sh $B aad8-asian12 --aadp-workload=aad8-asian12 --aadp-require-valid --batches=20 --repetitions=3
+scripts/run_bench.sh $B aad8-barrier --aadp-workload=aad8-barrier --aadp-require-valid --batches=5 --repetitions=3
+S=build/release/bin/aadp_bench_simd
+scripts/run_bench.sh $S simd-european --aadp-workload=simd-european --aadp-require-valid --batches=20 --repetitions=5
+scripts/run_bench.sh $S simd-asian252 --aadp-workload=simd-asian252 --aadp-require-valid --batches=5 --repetitions=5
+scripts/run_bench.sh $S simd-barrier-onestep --aadp-workload=simd-barrier-onestep --aadp-require-valid --batches=10 --repetitions=5
+scripts/run_bench.sh $S simd-math --aadp-workload=simd-math --aadp-require-valid --batches=50 --repetitions=5
+for k in exp-scalar exp-lanes-1 exp-lanes-2 log-scalar log-lanes-1 log-lanes-2 inverse-normal-scalar inverse-normal-lanes-1 inverse-normal-lanes-2 normal-cdf-scalar normal-cdf-lanes-1 normal-cdf-lanes-2 philox-scalar philox-lanes-1 philox-lanes-2 xoshiro256pp-scalar; do
+  scripts/run_bench.sh $S simd-math-$k --aadp-workload=simd-math --aadp-require-valid --batches=50 --repetitions=5 "--benchmark_filter=^simd-math\.$k/"
+done
+scripts/run_bench.sh build/release/bin/aadp_bench_implied_vol svi2-implied-vol --repetitions=5
+scripts/run_bench.sh build/release/bin/aadp_svi_fit svi-fit-report --report
+for m in fit price timing; do scripts/run_bench.sh build/release/bin/aadp_essvi_report essvi-$m --report --mode $m; done
+for m in report bias timing; do scripts/run_bench.sh build/release/bin/aadp_local_vol_report lv-$m --report --mode $m; done
+Q=build/release/bin/aadp_quote_sensitivity_report
+scripts/run_bench.sh $Q qs-report --report --mode report
+scripts/run_bench.sh $Q qs-check --report --mode check --refit production
+scripts/run_bench.sh $Q qs-timing --report --mode timing
+```
+
+`RNG-1`, `RNG-2` and `RNG-4` need a cycle count per kernel, and the harness writes one `perf_cycles` per file, over every benchmark in it. So each `simd-math` benchmark also gets a run of its own, the benchmark filter passed through, one stamped file each. The filter must end in `/`, since Google Benchmark appends the iteration count to the name. The lane widths in the names are the build's: 1 and 2 on `mac-m4max`, 1 and 4 under `release-avx2` on `linux-zen1`. Each file names where its counts come from in `perf_counters_source`, `perf_event_open` on `linux-zen1` and `proc_pid_rusage` on `mac-m4max`.
+
+On `linux-zen1`, the `release` preset is SSE2 at 2 lanes, and every file from it says so (`simd_target: SSE2`). In the same export, after the commands above, from `release`:
+
+```sh
+scripts/fetch_data.sh
+B=build/release/bin/aadp_bench_aad
+scripts/run_bench.sh $B aad8-asian12 --aadp-workload=aad8-asian12 --aadp-require-valid --batches=20 --repetitions=3
+scripts/run_bench.sh $B aad8-barrier --aadp-workload=aad8-barrier --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh build/release/bin/aadp_bench_implied_vol svi2-implied-vol --repetitions=5
+scripts/run_bench.sh build/release/bin/aadp_svi_fit svi-fit-report --report
+for m in fit price timing; do scripts/run_bench.sh build/release/bin/aadp_essvi_report essvi-$m --report --mode $m; done
+for m in report bias timing; do scripts/run_bench.sh build/release/bin/aadp_local_vol_report lv-$m --report --mode $m; done
+Q=build/release/bin/aadp_quote_sensitivity_report
+scripts/run_bench.sh $Q qs-report --report --mode report
+scripts/run_bench.sh $Q qs-check --report --mode check --refit production
+scripts/run_bench.sh $Q qs-timing --report --mode timing
+```
+
+Then, in the same export, from the `release-avx2` preset (AVX2, 4 lanes), built beside `release`: all four `aadp_bench_simd` workloads, the per-kernel runs, and the five first-order pricer workloads of `aadp_bench_aad` again, for their lane variants:
+
+```sh
+$HOME/quant-projects/bin/heavy.sh cmake --preset release-avx2
+$HOME/quant-projects/bin/heavy.sh cmake --build --preset release-avx2 -j 2
+S=build/release-avx2/bin/aadp_bench_simd
+scripts/run_bench.sh $S simd-european --aadp-workload=simd-european --aadp-require-valid --batches=20 --repetitions=5
+scripts/run_bench.sh $S simd-asian252 --aadp-workload=simd-asian252 --aadp-require-valid --batches=5 --repetitions=5
+scripts/run_bench.sh $S simd-barrier-onestep --aadp-workload=simd-barrier-onestep --aadp-require-valid --batches=10 --repetitions=5
+scripts/run_bench.sh $S simd-math --aadp-workload=simd-math --aadp-require-valid --batches=50 --repetitions=5
+for k in exp-scalar exp-lanes-1 exp-lanes-4 log-scalar log-lanes-1 log-lanes-4 inverse-normal-scalar inverse-normal-lanes-1 inverse-normal-lanes-4 normal-cdf-scalar normal-cdf-lanes-1 normal-cdf-lanes-4 philox-scalar philox-lanes-1 philox-lanes-4 xoshiro256pp-scalar; do
+  scripts/run_bench.sh $S simd-math-$k --aadp-workload=simd-math --aadp-require-valid --batches=50 --repetitions=5 "--benchmark_filter=^simd-math\.$k/"
+done
+B=build/release-avx2/bin/aadp_bench_aad
+scripts/run_bench.sh $B aad1-barrier-avx2 --aadp-workload=aad1-barrier --aadp-require-valid --batches=5 --repetitions=3
+scripts/run_bench.sh $B aad4-asian12-avx2 --aadp-workload=aad4-asian12 --aadp-require-valid --batches=20 --repetitions=3
+scripts/run_bench.sh $B mc-asian252-avx2 --aadp-workload=mc-asian252 --aadp-require-valid --batches=5 --repetitions=3
+AADP_PIN_CPUS=4,6 scripts/run_bench.sh $B aad3-barrier-mt-avx2 --aadp-workload=aad3-barrier-mt --aadp-threads=2 --aadp-require-valid --batches=10 --repetitions=3
+AADP_PIN_CPUS=4,6 scripts/run_bench.sh $B mc3-asian252-mt-avx2 --aadp-workload=mc3-asian252-mt --aadp-threads=2 --aadp-require-valid --batches=10 --repetitions=3
+build/release-avx2/bin/aadp_results_table build/release-avx2/results/linux-zen1
+```
+
+So on `linux-zen1`, `release-avx2` (AVX2, 4 lanes) gives every lane figure, which is `price-lanes`, `tape-lanes` and the "x fastest primal" column of the five `-avx2` files, `SIMD-1` and `SIMD-2`, and every `aadp_bench_simd` and per-kernel `simd-math` number, `RNG-1`, `RNG-2` and `RNG-4` among them. `release` (SSE2) gives everything else: every other variant of `aadp_bench_aad`'s eight workloads, from the six files above and the two `aad8-*` files, `aadp_bench_implied_vol` and the reports. Each file records its preset's instruction set in `simd_target`, and `aadp_bench_simd`'s files in `bench_instruction_set` too. The stamp writes into the preset's own `results/linux-zen1/`, so the two presets' files stay apart until they are copied.
+
 ## 2. Tape memory
 
 Tape memory is the main practical limit of AAD, so every AAD multiple is reported beside tape bytes per path and peak RSS.

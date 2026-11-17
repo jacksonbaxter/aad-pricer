@@ -10793,6 +10793,26 @@
       "reason": "check xoshiro256pp-kat FAILED",
       "timeout_s": 300,
       "mutated_exit": 9
+    },
+    {
+      "id": "harness-filtered-run-refused",
+      "kind": "check",
+      "covers": "a harness run of one benchmark alone through scripts/run_bench.sh, RNG-4's per-kernel runs",
+      "bug": "The harness treats a benchmark the filter left out as one that ran short, so a run of one benchmark alone is refused and no file holds one kernel's cycles.",
+      "edits": [
+        {
+          "file": "bench/harness.cpp",
+          "find": "      continue;  // Filtered out by --benchmark_filter\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_implied_vol", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_implied_vol_test.sh", "{build}/bin/aadp_bench_implied_vol", "{build}/bench-test-scratch/implied-vol-fault"],
+      "detect": "test",
+      "reason": "FAILED: a filtered run completes and is stamped",
+      "timeout_s": 300,
+      "mutated_exit": 1
     }
   ]
 }

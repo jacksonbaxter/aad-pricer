@@ -85,6 +85,19 @@ done
 check "the table tool without --iteration refuses it" test $? -ne 0
 check "and says why" grep -q 'not reportable: iteration' "$scratch/table-plain.err"
 
+# One benchmark of a binary alone, the filter passed through: the file holds that benchmark and
+# its histogram only, so its perf counts are that benchmark's (RNG-4's per-kernel runs).
+AADP_NOT_REPORTABLE=iteration AADP_MEASURE=$scratch/measure_ok.sh \
+  "$script" "$binary" svi2-filtered "${fast[@]}" '--benchmark_filter=^bm_black76price/' \
+  >/dev/null 2>"$scratch/filtered.err"
+check "a filtered run completes and is stamped" test $? -eq 0
+filtered=$(ls -t "$AADP_RESULTS_DIR"/svi2-filtered-*.txt 2>/dev/null | head -1)
+filtered=${filtered:-/nonexistent}
+check "it holds the benchmark it names" grep -q '^@section histogram_bm_black76price$' "$filtered"
+check "and no other" test "$(grep -c '^@section histogram_' "$filtered")" = 1
+check "nor the other's timing" \
+  test "$(grep -c '"run_name": "bm_impliedvolatility/' "$filtered")" = 0
+
 if ((failures)); then
   echo "$failures check(s) failed"
   exit 1
