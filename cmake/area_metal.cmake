@@ -110,6 +110,6 @@ if(TARGET aadp_simd AND TARGET aadp_run_header)
         "${PROJECT_BINARY_DIR}/bench-test-scratch/metal-script"
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
     set_tests_properties(Gpu.MetalReportThroughRunBench PROPERTIES
-      LABELS "metal;cli" SKIP_RETURN_CODE 77 TIMEOUT 600)
+      LABELS "metal;cli" SKIP_RETURN_CODE 77 TIMEOUT 900)
   endif()
 endif()

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # aadp_metal_report's table (GPU-2, GPU-3) and timing (GPU-1) as report files through
-# scripts/run_bench.sh, against a stand-in measure.sh, at a reduced size: each is stamped with the
+# scripts/run_bench.sh, against a stand-in measure.sh, at a reduced size, 2^12 paths, small enough
+# for a Debug build on a CI runner: each is stamped with the
 # run header, its tables hold every figure of the text bit for bit, it says it holds prices only,
 # the table tool renders it, and the run flags belong to the report alone. Needs a Metal device;
 # without one it skips with the reason (exit 77), as the Gpu tests do.
@@ -114,8 +115,8 @@ matches() {
 }
 
 # The table: GPU-2's and GPU-3's figures.
-run metal-table --mode=table --report --paths=65536 --threads=4
-check "table: the text went to stderr" grep -q '^== the stage 9 table: N = 65536' "$raw/stderr.txt"
+run metal-table --mode=table --report --paths=4096 --threads=4
+check "table: the text went to stderr" grep -q '^== the stage 9 table: N = 4096' "$raw/stderr.txt"
 check "table: three tables, untimed" test "$(grep -c '^timing no$' "$file")" = 3
 check "table: no timed table" test "$(grep -c '^timing yes$' "$file")" = 0
 check "table: the prices name GPU-2 and GPU-3" grep -q '^targets GPU-2,GPU-3$' "$file"
@@ -134,12 +135,12 @@ check "table: the verdicts are the text's" \
   test "$(rows "$file" metal_gpu2 | awk '{ print $6 }' | tr '\n' ' ')" = \
   "$(grep '^  GPU-2: ' "$raw/stderr.txt" | awk '{ print $NF }' | tr '\n' ' ')"
 check "table: the reduced size is in the header" \
-  grep -q '^report_tool: aadp_metal_report --mode=table --report --paths=65536 --threads=4$' "$file"
+  grep -q '^report_tool: aadp_metal_report --mode=table --report --paths=4096 --threads=4$' "$file"
 table_file=$file
 
 # The timing: GPU-1's.
-run metal-timing --mode=timing --report --paths=65536 --paths-per-buffer=16384 --reps=1 --threads=2
-check "timing: the text went to stderr" grep -q '^== GPU-1, iteration only: N = 65536' \
+run metal-timing --mode=timing --report --paths=4096 --paths-per-buffer=1024 --reps=1 --threads=2
+check "timing: the text went to stderr" grep -q '^== GPU-1, iteration only: N = 4096' \
   "$raw/stderr.txt"
 check "timing: three tables, timed" test "$(grep -c '^timing yes$' "$file")" = 3
 check "timing: they name GPU-1" test "$(grep -c '^targets GPU-1$' "$file")" = 3
@@ -165,7 +166,7 @@ check "the table tool without --iteration refuses it" test $? -ne 0
 
 # The run flags belong to the report file's header; the text has none, and only the table and the
 # timing write a report.
-"$binary" --mode=table --paths=65536 --reportable >/dev/null 2>"$scratch/flags.err"
+"$binary" --mode=table --paths=4096 --reportable >/dev/null 2>"$scratch/flags.err"
 check "the text refuses a run flag" test $? -eq 2
 "$binary" --mode=properties --report >/dev/null 2>"$scratch/properties.err"
 check "the properties write no report" test $? -eq 2

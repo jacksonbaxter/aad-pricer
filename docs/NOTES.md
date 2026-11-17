@@ -2610,6 +2610,7 @@ What was done for the QuantLib items, as designed:
   - Ours is faster than at stage 10, whose figures were 0.20 to 0.43.
 - The gates. The Linux host was closed to this piece. So each of its commits had the Mac gates first: release and fuzz ctest, the `quantlib` ctest, both QuantLib builds, format, the repo scan, clang-tidy on the changed C++, the results docs check, the static fault check, and its new faults and those on the files it touched, each caught with `--only`. Then it was pushed to `jb-build` alone and waited for CI to pass in every job, which stood in for the GCC pre-commit and the libstdc++ tidy, before the next commit went on top of it. The diffs were read for GCC-only and libstdc++-only problems before each push.
 - b31045e, the QuantLib commit, passed CI in all 22 jobs on `jb-build` (run 44038139206) before anything went on top of it, and again on `main` (run 44043307227).
+- f1c765a, the Metal commit, failed CI on `jb-build` (run 44053795021) in one job of 22, `macos-clang-debug`. The new `Gpu.MetalReportThroughRunBench` timed out at 600 s in the Debug build on the runner's paravirtual GPU, after the table's checks had passed and while the timing ran, at 2^16 paths; in Release on the same runner it passed in 18 s. The next commit runs it at 2^12 paths with a 900 s limit: 32 s in a Debug build on the Mac and under a second in Release. f1c765a went to `main` only with that commit on top.
 - R11's QuantLib call, after the QuantLib commit (b31045e), iteration only, macOS, not a result. Its time moves with where its code and memory land, and not with anything this work changed in it. On the committed tree's binaries:
   - `ql-tuned-nolto`'s R11 took 2.20 s and 2.21 s in text mode, and 2.44 s in report mode, from the same binary minutes apart. The F binary took 2.16 s.
   - In the default report file, R11's QuantLib call went from 2.18 s (before the clang-tidy fixes) to 2.42 s (after them). Every other estimator stayed within 1%.
@@ -2629,7 +2630,7 @@ What was done for Metal, as designed:
     - `metal_setup`: device, compile and pipelines, in no wall clock.
   - A header field, `report_prices_only`, says that every figure is a price, a difference of prices or the time to price, that AAD does not run on the GPU and that no Greek is in the file. No title, column or field names a Greek or a tape.
   - The run flags are refused without `--report`. `--report` is refused for the properties and the batch.
-- New ctest `Gpu.MetalReportThroughRunBench` (`tests/metal/run_bench_metal_test.sh`, `release` and every preset with Metal) runs both modes through `run_bench.sh` against a stand-in `measure.sh` at 2^16 paths. It checks:
+- New ctest `Gpu.MetalReportThroughRunBench` (`tests/metal/run_bench_metal_test.sh`, `release` and every preset with Metal) runs both modes through `run_bench.sh` against a stand-in `measure.sh` at 2^12 paths, a size a Debug build on a CI runner finishes well inside its time limit. It checks:
   - the header, the claim, the prices-only field and the device, and that stdout holds the file alone;
   - 12 price, 12 difference and 3 `GPU-2` rows, and 15 time, 3 breakdown and 1 setup rows, each cell numerically the text's `%.17g` value;
   - that the relative difference is the difference over its base, that the verdicts are the text's, the four command buffers a contract, and the GPU line at 1;
