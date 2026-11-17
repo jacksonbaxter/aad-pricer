@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <span>
 #include <string>
@@ -21,6 +22,7 @@
 #include "simd/lane_math.hpp"
 #include "simd/lane_real.hpp"
 #include "simd/lane_runner.hpp"
+#include "simd/philox_lanes.hpp"
 
 HWY_BEFORE_NAMESPACE();
 
@@ -88,6 +90,32 @@ void ApplyAt(std::span<const double> in, std::span<double> out, const Kernel& ke
   for (; i < n; ++i) hn::StoreU(kernel(d1, hn::LoadU(d1, in.data() + i)), d1, out.data() + i);
 }
 
+// Philox blocks over an array: L blocks a vector, each word stored interleaved into place, then
+// the rest one block at a time.
+template <std::size_t L>
+void PhiloxAt(std::uint64_t seed, std::uint64_t first, std::span<std::uint32_t> out) {
+  const std::size_t blocks = out.size() / 4;
+  const hn::FixedTag<double, L> d;
+  const hn::RebindToUnsigned<decltype(d)> du;
+  const hn::Rebind<std::uint32_t, decltype(d)> d32;
+  const auto low = hn::Set(du, std::uint64_t{0xffffffffU});
+  const auto zero = hn::Zero(du);
+  const PhiloxKeyWords<decltype(du)> key = {hn::Set(du, seed & 0xffffffffU),
+                                            hn::Set(du, seed >> 32)};
+  std::size_t b = 0;
+  for (; b + L <= blocks; b += L) {
+    const auto c = hn::Add(hn::Set(du, first + b), hn::Iota(du, 0));
+    const auto w =
+        Philox4x32_10Lanes(du, {hn::And(c, low), hn::ShiftRight<32>(c), zero, zero}, key);
+    hn::StoreInterleaved4(hn::TruncateTo(d32, w[0]), hn::TruncateTo(d32, w[1]),
+                          hn::TruncateTo(d32, w[2]), hn::TruncateTo(d32, w[3]), d32,
+                          out.data() + (4 * b));
+  }
+  if constexpr (L > 1) {
+    if (b < blocks) PhiloxAt<1>(seed, first + b, out.subspan(4 * b));
+  }
+}
+
 template <class Kernel>
 bool Apply(std::span<const double> in, std::span<double> out, std::size_t lanes,
            const Kernel& kernel) {
@@ -144,6 +172,17 @@ bool InverseNormalArray(std::span<const double> in, std::span<double> out, std::
 }
 bool NormalCdfArray(std::span<const double> in, std::span<double> out, std::size_t lanes) {
   return Apply(in, out, lanes, [](auto d, auto v) { return vmath::NormalCdf(d, v); });
+}
+bool PhiloxArray(std::uint64_t seed, std::uint64_t first, std::span<std::uint32_t> out,
+                 std::size_t lanes) {
+  if (lanes == 1) {
+    PhiloxAt<1>(seed, first, out);
+  } else if (lanes == kMaxLanes) {
+    PhiloxAt<kMaxLanes>(seed, first, out);
+  } else {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace aadp::simd

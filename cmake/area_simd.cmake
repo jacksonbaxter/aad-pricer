@@ -24,6 +24,11 @@ aadp_test(aadp_simd_philox_lanes_test
   SOURCES tests/simd/philox_lanes_test.cpp
   LINK aadp_simd
   LABELS simd fast)
+# RNG-1's throughput kernel against the scalar generator.
+aadp_test(aadp_simd_philox_array_test
+  SOURCES tests/simd/philox_array_test.cpp
+  LINK aadp_simd
+  LABELS simd fast)
 # Check 1, path by path, on every product and treatment.
 aadp_test(aadp_simd_path_agreement_test
   SOURCES tests/simd/path_agreement_test.cpp

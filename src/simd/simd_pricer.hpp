@@ -49,6 +49,14 @@ bool LogArray(std::span<const double> in, std::span<double> out, std::size_t lan
 bool InverseNormalArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
 bool NormalCdfArray(std::span<const double> in, std::span<double> out, std::size_t lanes);
 
+// RNG-1's throughput kernel: Philox4x32-10 (rng/philox.hpp) over out.size() / 4 blocks, block b
+// with counter (first + b as two words, 0, 0) and the seed as its key, its four words at
+// out[4 b] to out[4 b + 3], at lanes = 1 or MaxLanes(); a tail shorter than a vector goes through
+// the one-lane instantiation. The lane form is the pricer's (simd/philox_lanes.hpp). False, and
+// nothing written, for any other lane count.
+bool PhiloxArray(std::uint64_t seed, std::uint64_t first, std::span<std::uint32_t> out,
+                 std::size_t lanes);
+
 }  // namespace aadp::simd
 
 #endif  // AADP_SIMD_SIMD_PRICER_HPP_

@@ -44,6 +44,7 @@
 #include "pricer/normal_cdf.hpp"
 #include "pricer/pricer.hpp"
 #include "pricer/runner.hpp"
+#include "rng/philox.hpp"
 #include "simd/simd_pricer.hpp"
 
 namespace {
@@ -124,9 +125,11 @@ const std::vector<Workload>& Workloads() {
        .market = {.spot = 100.0, .sigma = 0.2, .r = 0.03, .q = 0.0, .maturity = 3.0},
        .paths = 500'000},
       {.id = "simd-math",
-       .targets = "RNG-4, SIMD-1, SIMD-2",
+       .targets = "RNG-1, RNG-4, SIMD-1, SIMD-2",
        .description = "each math kernel over 2^20 doubles: exp on [-5, 5], log on (0, 4], "
-                      "inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]",
+                      "inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]; and the "
+                      "pricer's Philox4x32-10 generator alone, its raw words, 2^18 blocks of 16 "
+                      "bytes (2^20 32-bit words)",
        .kind = Kind::kMath,
        .contract = {},
        .market = {},
@@ -309,6 +312,60 @@ std::vector<std::size_t> MathWidths() {
   return widths;
 }
 
+// Philox4x32-10 blocks first, first + 1, ... into out, four words each, as rng/philox.hpp gives
+// them: the scalar generator the lane form is checked against.
+void PhiloxScalar(std::uint64_t seed, std::uint64_t first, std::span<std::uint32_t> out) {
+  const aadp::Philox4x32Key key = {static_cast<std::uint32_t>(seed),
+                                   static_cast<std::uint32_t>(seed >> 32)};
+  for (std::size_t b = 0; b < out.size() / 4; ++b) {
+    const std::uint64_t c = first + b;
+    const aadp::Philox4x32Output words = aadp::Philox4x32_10(
+        {static_cast<std::uint32_t>(c), static_cast<std::uint32_t>(c >> 32), 0U, 0U}, key);
+    std::ranges::copy(words, out.begin() + static_cast<std::ptrdiff_t>(4 * b));
+  }
+}
+
+// RNG-1: the generator alone over the same number of 32-bit words as the math kernels have
+// values, scalar and on lanes at 1 and the ceiling, the lane words checked against the scalar.
+void AddPhilox(const Workload& w, std::size_t n, Prepared& out, std::string& body) {
+  const std::size_t blocks = n / 4;
+  const std::size_t words = 4 * blocks;
+  body += "philox: " + std::to_string(blocks) + " Philox4x32-10 blocks a call, counters 0 to " +
+          std::to_string(blocks) + " - 1, key the seed, " + std::to_string(16 * blocks) +
+          " bytes a call; time per byte is the time over " + std::to_string(16 * blocks) + "\n";
+  const auto out_scalar = std::make_shared<std::vector<std::uint32_t>>(words);
+  PhiloxScalar(kSeed, 0, *out_scalar);
+  const std::string name = std::string(w.id) + ".philox";
+  out.timed.push_back({.name = name + "-scalar",
+                       .run =
+                           [out_scalar](std::uint64_t units) {
+                             for (std::uint64_t u = 0; u < units; ++u) {
+                               PhiloxScalar(kSeed, 0, *out_scalar);
+                               benchmark::DoNotOptimize(out_scalar->data());
+                               benchmark::ClobberMemory();
+                             }
+                           },
+                       .units = 1});
+  for (const std::size_t lanes : MathWidths()) {
+    const auto out_lanes = std::make_shared<std::vector<std::uint32_t>>(words);
+    const std::string suffix = "-lanes-" + std::to_string(lanes);
+    Record(out, body, w.id, "philox" + suffix + "-bits",
+           aadp::simd::PhiloxArray(kSeed, 0, *out_lanes, lanes) && *out_lanes == *out_scalar,
+           std::to_string(words) + " words, " + std::to_string(lanes) +
+               " lanes against the scalar generator");
+    out.timed.push_back({.name = name + suffix,
+                         .run =
+                             [out_lanes, lanes](std::uint64_t units) {
+                               for (std::uint64_t u = 0; u < units; ++u) {
+                                 aadp::simd::PhiloxArray(kSeed, 0, *out_lanes, lanes);
+                                 benchmark::DoNotOptimize(out_lanes->data());
+                                 benchmark::ClobberMemory();
+                               }
+                             },
+                         .units = 1});
+  }
+}
+
 std::optional<int> PrepareMath(const Options& options, const Workload& w, Prepared& out) {
   const std::size_t n = kMathValues / options.scale;
   if (n == 0) return aadp::bench::kExitUsage;
@@ -374,6 +431,7 @@ std::optional<int> PrepareMath(const Options& options, const Workload& w, Prepar
                            .units = 1});
     }
   }
+  AddPhilox(w, n, out, body);
   out.extras.sections.push_back({.name = "simd_" + std::string(w.id), .body = body});
   return std::nullopt;
 }

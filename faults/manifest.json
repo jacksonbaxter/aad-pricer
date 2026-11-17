@@ -10677,6 +10677,64 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] RunOraclesTool\\.AProductionRunWithoutTheChainCarriesNoAttribution",
       "timeout_s": 600
+    },
+    {
+      "id": "rng1-philox-array-counter",
+      "kind": "check",
+      "covers": "simd::PhiloxArray, RNG-1's kernel, against the scalar generator",
+      "bug": "Each lane's counter is one past its block, so every block holds its neighbour's words.",
+      "edits": [
+        {
+          "file": "src/simd/simd_pricer.cpp",
+          "find": "    const auto c = hn::Add(hn::Set(du, first + b), hn::Iota(du, 0));\n",
+          "replace": "    const auto c = hn::Add(hn::Set(du, first + b), hn::Iota(du, 1));\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_philox_array_test"],
+      "command": ["{build}/bin/aadp_simd_philox_array_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] PhiloxArray\\.EveryWordIsTheScalarGenerators",
+      "timeout_s": 300
+    },
+    {
+      "id": "rng1-philox-array-tail",
+      "kind": "check",
+      "covers": "simd::PhiloxArray writes the blocks after the last whole vector",
+      "bug": "The blocks after the last whole vector are never generated.",
+      "edits": [
+        {
+          "file": "src/simd/simd_pricer.cpp",
+          "find": "    if (b < blocks) PhiloxAt<1>(seed, first + b, out.subspan(4 * b));\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_simd_philox_array_test"],
+      "command": ["{build}/bin/aadp_simd_philox_array_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] PhiloxArray\\.EveryWordIsTheScalarGenerators",
+      "timeout_s": 300
+    },
+    {
+      "id": "rng1-bench-philox-bits",
+      "kind": "check",
+      "covers": "aadp_bench_simd checks the lane Philox words against the scalar generator before timing",
+      "bug": "The lane kernel the bench times is keyed by another seed than the scalar one it is compared with.",
+      "edits": [
+        {
+          "file": "bench/simd_bench.cpp",
+          "find": "aadp::simd::PhiloxArray(kSeed, 0, *out_lanes, lanes) && *out_lanes == *out_scalar,",
+          "replace": "aadp::simd::PhiloxArray(kSeed + 1, 0, *out_lanes, lanes) && *out_lanes == *out_scalar,"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_simd"],
+      "command": ["{build}/bin/aadp_bench_simd", "--aadp-workload=simd-math", "--aadp-scale=500", "--aadp-require-valid", "--batches=1", "--repetitions=1", "--warmup-ms=0", "--gb-warmup-s=0.001"],
+      "detect": "test",
+      "reason": "check philox-lanes-1-bits FAILED",
+      "timeout_s": 300,
+      "mutated_exit": 9
     }
   ]
 }
