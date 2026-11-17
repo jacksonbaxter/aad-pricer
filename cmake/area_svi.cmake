@@ -366,16 +366,28 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
     endif()
   endif()
 
-  # SVI-2, iteration only: no measurement plan or results file yet.
+  # SVI-2, through the harness main: a benchmark results file that scripts/run_bench.sh stamps.
   aadp_bench(aadp_bench_implied_vol
     SOURCES bench/implied_vol_bench.cpp
-    LINK aadp_svi)
+    LINK aadp_svi aadp_bench_harness
+    CUSTOM_MAIN)
   if(AADP_BUILD_TESTS AND TARGET aadp_bench_implied_vol)
     # Every benchmark once, briefly: each quote must invert before the timing starts. Not a result.
     add_test(NAME aadp_bench_implied_vol_smoke_not_a_result
-      COMMAND aadp_bench_implied_vol --benchmark_min_time=0.001s)
+      COMMAND aadp_bench_implied_vol --batches=1 --repetitions=1 --warmup-ms=0
+        --gb-warmup-s=0.001)
     set_tests_properties(aadp_bench_implied_vol_smoke_not_a_result PROPERTIES
       LABELS "bench;svi"
       FAIL_REGULAR_EXPRESSION "ERROR OCCURRED")
+    # Through scripts/run_bench.sh and the stamp, and rendered by the table tool, as the other
+    # harness binaries are, against a stand-in measure.sh.
+    if(TARGET aadp_results_stamp AND TARGET aadp_results_table)
+      add_test(NAME aadp_run_bench_implied_vol_script
+        COMMAND bash "${PROJECT_SOURCE_DIR}/tests/bench/run_bench_implied_vol_test.sh"
+          "$<TARGET_FILE:aadp_bench_implied_vol>"
+          "${PROJECT_BINARY_DIR}/bench-test-scratch/implied-vol-script"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+      set_tests_properties(aadp_run_bench_implied_vol_script PROPERTIES LABELS "bench;svi;cli")
+    endif()
   endif()
 endif()

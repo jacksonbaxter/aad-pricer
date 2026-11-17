@@ -10579,6 +10579,66 @@
       "detect": "test",
       "reason": "\\[  FAILED  \\] QuoteSensitivityFailedCheckReport\\.AFailedCheckStaysAFailureWithItsCount",
       "timeout_s": 600
+    },
+    {
+      "id": "iv-bench-batch-units",
+      "kind": "check",
+      "covers": "aadp_bench_implied_vol times one pass over the quotes a batch, as before the harness",
+      "bug": "The inversion workload gives two units, so a batch, and a Google Benchmark iteration, is two passes over the 400 quotes and no longer the iteration the bench timed before the harness.",
+      "edits": [
+        {
+          "file": "bench/implied_vol_bench.cpp",
+          "find": ".run = [quotes](std::uint64_t units) { InvertAll(*quotes, units); },\n                       .units = 1});",
+          "replace": ".run = [quotes](std::uint64_t units) { InvertAll(*quotes, units); },\n                       .units = 2});"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_implied_vol", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_implied_vol_test.sh", "{build}/bin/aadp_bench_implied_vol", "{build}/bench-test-scratch/implied-vol-fault"],
+      "detect": "test",
+      "reason": "FAILED: bm_impliedvolatility times one set of quotes a batch",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "iv-bench-inversion-unrecorded",
+      "kind": "check",
+      "covers": "aadp_bench_implied_vol records that every quote inverted",
+      "bug": "The header loses the line that says every benchmark quote inverted before the timing.",
+      "edits": [
+        {
+          "file": "bench/implied_vol_bench.cpp",
+          "find": "  add(\"bench_inversion_check\", \"pass: every quote inverts with status ok\");\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_implied_vol", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_implied_vol_test.sh", "{build}/bin/aadp_bench_implied_vol", "{build}/bench-test-scratch/implied-vol-fault"],
+      "detect": "test",
+      "reason": "FAILED: every quote inverted",
+      "timeout_s": 300,
+      "mutated_exit": 1
+    },
+    {
+      "id": "iv-bench-name",
+      "kind": "check",
+      "covers": "aadp_bench_implied_vol keeps the bench's names",
+      "bug": "The price workload is renamed, so its figures no longer line up with the bench's before the harness.",
+      "edits": [
+        {
+          "file": "bench/implied_vol_bench.cpp",
+          "find": "{.name = \"bm_black76price\",",
+          "replace": "{.name = \"black76price\","
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_implied_vol", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["bash", "tests/bench/run_bench_implied_vol_test.sh", "{build}/bin/aadp_bench_implied_vol", "{build}/bench-test-scratch/implied-vol-fault"],
+      "detect": "test",
+      "reason": "FAILED: bm_black76price has its histogram",
+      "timeout_s": 300,
+      "mutated_exit": 1
     }
   ]
 }
