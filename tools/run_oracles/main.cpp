@@ -10,6 +10,8 @@
 // aadp_run_oracles fingerprint --plan <file> --references <file> --out <file> [--data <dir>]
 //     [--threads <n>]
 //
+// run --estimator production --data opens its output with the chain's attribution (NOTICE).
+//
 // run exits non-zero on any failed, skipped or unresolved run row, or if the row count differs
 // from K. The reference estimator runs the rows of run 1 and lists the others; the production
 // estimator runs every row and refuses a plan with an awaiting row.
@@ -32,6 +34,7 @@
 #include <thread>
 #include <utility>
 
+#include "data/attribution.hpp"
 #include "oracle/plan.hpp"
 #include "oracle/references.hpp"
 #include "production.hpp"
@@ -153,7 +156,14 @@ int Run(const Arguments& arguments, std::uint32_t threads) {
   }
   if (estimator != "production") throw std::runtime_error("unknown --estimator " + estimator);
   const auto surface = LoadSurface(arguments);
-  if (!surface) std::cout << "NO DATA: the surface rows are skipped and the run fails.\n";
+  // The surface rows are priced off the fitted chain, so the output carries the whole attribution
+  // first, before any line the chain could have shaped.
+  if (surface) {
+    aadp::write_attribution(std::cout);
+    std::cout << '\n';
+  } else {
+    std::cout << "NO DATA: the surface rows are skipped and the run fails.\n";
+  }
   ProductionOptions options;
   options.smoke = arguments.contains("smoke");
   options.threads = threads;

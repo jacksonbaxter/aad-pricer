@@ -228,6 +228,18 @@ if(TARGET aadp_math AND TARGET aadp_lets_be_rational)
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
       set_tests_properties(aadp_compare_measured_curation PROPERTIES LABELS "oracle")
     endif()
+    # The runner itself at smoke size on a synthetic chain: a run on the chain carries its
+    # attribution.
+    aadp_test(aadp_run_oracles_tool_test
+      SOURCES tests/oracle/run_oracles_tool_test.cpp
+      LINK aadp_svi_chain
+      LABELS oracle)
+    if(AADP_BUILD_TESTS AND TARGET aadp_run_oracles_tool_test)
+      add_dependencies(aadp_run_oracles_tool_test aadp_run_oracles)
+      target_compile_definitions(aadp_run_oracles_tool_test PRIVATE
+        AADP_RUN_ORACLES_PATH="$<TARGET_FILE:aadp_run_oracles>"
+        AADP_RUN_ORACLES_TEST_SCRATCH="${PROJECT_BINARY_DIR}/oracle_test_scratch/run_oracles")
+    endif()
 
     aadp_test(aadp_knock_in_rows_test
       SOURCES tests/oracle/knock_in_rows_test.cpp

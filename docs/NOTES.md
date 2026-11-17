@@ -2532,6 +2532,13 @@ Before its push, on 2026-11-16, after a pause in the work, the quote-sensitivity
 
 Gates of the implied-vol commit, on the Mac through `heavy.sh`: release 892 of 892 (1 new) and fuzz 20 of 20, 0 skipped; format, scan, the static fault check 523 of 523, the results docs check and clang-tidy on the bench source, clean after a first run found two findings (a loop for `std::ranges::all_of`, a `const`). On the Linux host, its window free: the GCC pre-commit, release-gcc 880 of 880.
 
+`aadp_run_oracles run --estimator production --data <dir>`, the chain's attribution:
+- Its surface rows are priced off the fit to the chain, and its output did not carry the attribution. It now opens with the whole attribution (`aadp::write_attribution`, the text of `NOTICE`), written once the chain has loaded and before any line the chain could have shaped. A run without `--data`, or with the reference estimator, which never reads the chain, derives nothing from it and prints none.
+- No committed file changes. `references/measured_results_run2.csv` was curated from this path's raw output at stage 8b, and `scripts/compare_measured.py` rebuilds its rows from such output by the row shape alone (an id, then `estimate=`, `reference=`, `se=`, `bound=`, a verdict and `condition=`), which no line of the attribution has; its comment header is the curator's and already carries the attribution line. Run 1's rows (`references/measured_results.csv`, the full check's measured-plan step) come from the reference estimator without `--data`, whose output is unchanged, and the run-2 fingerprints come from the `fingerprint` command, which already wrote its own attribution line.
+- Tests and faults: `tests/oracle/run_oracles_tool_test.cpp`, three tests of `RunOraclesTool` that run the real binary at smoke size (about 2 s) on a synthetic chain from hand-written SVI parameters: a production run on the chain opens with the whole attribution, once, and prints the surface rows; the attribution holds no line of the row shape the curation reads; a production run without the chain prints `NO DATA` first and no attribution. Two faults, each caught with `--only`: `runner-data-attribution` (the attribution dropped) and `runner-no-data-attribution` (written without the chain too).
+
+Gates of the runner commit, on the Mac through `heavy.sh`: release 895 of 895 (3 new) and fuzz 20 of 20, 0 skipped; format, scan, the static fault check 525 of 525, the results docs check and clang-tidy on the two changed files, clean after a first run found one finding (a `std::string_view`). On the Linux host, its window free: the GCC pre-commit, release-gcc 883 of 883.
+
 ### Rule slips
 
 None affected a number.

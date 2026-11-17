@@ -10639,6 +10639,44 @@
       "reason": "FAILED: bm_black76price has its histogram",
       "timeout_s": 300,
       "mutated_exit": 1
+    },
+    {
+      "id": "runner-data-attribution",
+      "kind": "check",
+      "covers": "attribution on output, aadp_run_oracles run --data",
+      "bug": "A production run on the chain prints its surface rows without the attribution that the data licence requires on derived output.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/main.cpp",
+          "find": "  if (surface) {\n    aadp::write_attribution(std::cout);\n    std::cout << '\\n';\n  } else {",
+          "replace": "  if (surface) {\n  } else {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_oracles_tool_test", "aadp_run_oracles"],
+      "command": ["{build}/bin/aadp_run_oracles_tool_test", "--gtest_filter=RunOraclesTool.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RunOraclesTool\\.AProductionRunOnTheChainOpensWithTheWholeAttribution",
+      "timeout_s": 600
+    },
+    {
+      "id": "runner-no-data-attribution",
+      "kind": "check",
+      "covers": "aadp_run_oracles run without --data carries no attribution",
+      "bug": "A production run without the chain prints the attribution too, so the attribution no longer says the output was derived from the chain.",
+      "edits": [
+        {
+          "file": "tools/run_oracles/main.cpp",
+          "find": "  } else {\n    std::cout << \"NO DATA: the surface rows are skipped and the run fails.\\n\";",
+          "replace": "  } else {\n    aadp::write_attribution(std::cout);\n    std::cout << \"NO DATA: the surface rows are skipped and the run fails.\\n\";"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_run_oracles_tool_test", "aadp_run_oracles"],
+      "command": ["{build}/bin/aadp_run_oracles_tool_test", "--gtest_filter=RunOraclesTool.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] RunOraclesTool\\.AProductionRunWithoutTheChainCarriesNoAttribution",
+      "timeout_s": 600
     }
   ]
 }
