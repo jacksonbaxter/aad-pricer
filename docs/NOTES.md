@@ -2642,6 +2642,87 @@ What was done for Metal, as designed:
   - The timing took 185 s. At 2^20 the GPU's fixed costs weigh more than at 2^24: `asian252` 0.0081 s on the GPU against 0.537 s for the SIMD CPU on 16 threads (66 times) and 6.01 s on 1 (738 times).
   - Neither is a `GPU-1` figure; the reported run at G gives those.
 
+#### The reported run at 8bb2116 on linux-zen1
+
+The run's records are in the research cache, `reported/linux/`: the status file, each step's command, record and per-CPU snapshots, and the stamped files as the host wrote them. The review of the run, written before its files were read for figures, is `reported/linux/REVIEW.md` with `review/steps.csv` and `review/disturbances.csv`; this piece's scratch tables are in `evidence/stage11-r/`. All times are UTC, on 2026-11-17.
+
+What ran:
+- F = 8bb2116, exported on the host. In the preparation, 05:48:02Z to 06:14:51Z, with the host's measurement window free: both presets, `release` (SSE2, 2 lanes) and `release-avx2` (AVX2, 4 lanes), configured and built through `heavy.sh` at `-j 2`, `scripts/fetch_data.sh` (both CSVs already present at their pinned sha256), and the documented ctest, `release` 888 of 888. A plumbing proof ran after it, iteration only, and is not used.
+- The window was taken at 06:44:13Z and held 8 h 8 min 32 s. The settle step waited out the per-commit verification's last commit and returned at 07:08:35Z.
+- 44 steps were listed. 42 ran, each once, every one with exit 0, 26,392 s of steps in all, none over its estimate. In order: the six first-order and Lax-Wendroff workloads from `release` (`aad1-barrier`, `aad4-asian12`, `mc-asian252`, `lw-worst`, `aad3-barrier-mt`, `mc3-asian252-mt`), 07:08:36Z to 09:54:31Z; the four `aadp_bench_simd` workloads and the 16 per-kernel runs from `release-avx2`, 09:55:01Z to 10:42:03Z; five `release` steps that the runner's fit rule pulled forward because the next long step would not end before 10:50Z (`aad8-asian12`, `svi2-implied-vol`, `svi-fit-report`, `essvi-fit`, `essvi-price`), 10:42:04Z to 10:48:22Z; then, after the gap, the five `-avx2` workloads of `aadp_bench_aad`, 11:06:05Z to 13:37:21Z; and the rest from `release` (`aad8-barrier`, `essvi-timing`, `lv-report`, `lv-bias`, `lv-timing`, `qs-timing`), 13:37:51Z to 14:52:45Z.
+- The gap: after a 90 s load-wait that followed `essvi-price`, the runner found at 10:49:52Z no pending step that would end before 10:50Z and slept until 11:06:00Z. No step was in flight from 10:49:52Z to 11:06:05Z, nor in the load-wait before it from 10:48:22Z. The host did not restart: it has been up since 11:02:15Z on 2026-11-14.
+- The two deferred steps. At 10:51:00Z, in the gap, the lead's login installed the runner's second version and wrote `exit deferred` end lines for g5-01 `qs-report` and g5-02 `qs-check`, at the orchestrator's request, so that the window could be released to another project's waiting runs after the last other step. Their estimates are 3,640 s and 23,580 s. They are pending: they run later by the runner's `--g5` mode in a window of this project's own, before 03:16Z of a day, so that they end before the 10:50Z gap (the review's section 6 gives the command, and the change the fetch script needs first).
+- The review found every file fit by every mechanical check: commit F from the export's COMMIT file, tree `exported`, `reportable: yes`, host `linux-zen1`, the preset's `simd_target`, pinned to cpu4 (cpus 4 and 6 for the four two-thread steps) and observed there, governor `performance` in the header and both `measure.sh` lines, `perf_cycles` from `perf_event_open` and not multiplexed, `valid yes` wherever the file has it, and 309 in-run checks over the 42 files, none failing. Every command was the documented `linux-zen1` command character for character. In the two-thread files `perf_cycles` counts the calling thread only, as their headers say.
+
+The per-CPU record, from the review, which recomputed every share from each step's `/proc/stat` snapshots taken just before and after its `run_bench.sh`:
+- cpu5, the SMT sibling of the measured cpu4: median 0.50% busy over the 42 steps, mean 0.95%, largest 10.0%. 31 steps under 1%, seven from 1% to 2%, four over 2%: g2-07 `simd-math-exp-lanes-4` 3.1%, g2-08 `simd-math-log-scalar` 2.6%, g2-09 `simd-math-log-lanes-1` 10.0% (with every unpinned CPU 6% to 10%), and g4-05 `essvi-fit` 4.2% of a 1-second step, 5 jiffies.
+- A burst of activity of unknown origin, at nice 0, ran on the unpinned CPUs from 10:39:59Z to 10:40:21Z, across g2-07, g2-08 and g2-09: 4.42 s of user and system time over the seven unpinned CPUs in g2-09's 8 s, against 0.33 to 0.90 s in the other per-kernel steps. No login of ours or of the orchestrator's falls in it.
+- In the seven steps that run more than one thread, cpu0 shows 5% to 9%, nearly all softirq; cpu0's core shares nothing with cpus 4 to 7. In seven long steps a process at nice above 0, not ours, used 75.5 to 83.8 s of CPU spread over every unpinned CPU, cpu5 included, while each unpinned CPU stayed at or under 1.5% for the step and cpu5 at or under 1.1%. No process list was taken, so what it was is not known.
+- Logins to the host between the first step and the release: 33, by kind 15 reads by the per-commit check's watch, 12 probes by the run's keeper, 2 by the orchestrator, 2 by the lead, 1 copy of the first step's records and 1 waiting session at the end. 30 fell inside steps. No step with a login shows cpu5 above 1.1%, and every cpu5 share over 2% came in a step with no known login. The host gives this user no login record of its own to check them against: there is no `last`, and the journal shows only the measurement wrapper's `sudo` lines, 387 of them, 9 for each of the 42 steps and 9 for the proof, so no other `measure.sh` run touched the governors during the window. The first step's own polls have no count in their records.
+
+Three steps withdrawn. The lead decided on the per-CPU record alone, without looking at any figure in the files: a timed step in which cpu5 was more than 2% busy is withdrawn. The rule was applied to every step, and the only timed steps above it are g2-07, g2-08 and g2-09, so `simd-math-exp-lanes-4`, `simd-math-log-scalar` and `simd-math-log-lanes-1` are withdrawn for foreign activity on the host during the step. The review had judged g2-09 unfit and the other two doubtful. g4-05, `essvi-fit`, has no timing in it, a one-second fit whose figures contention cannot change, so it stays. The three will run again once, whole, in a later window of this project's own, with the two deferred steps. Their files are not in `results/`, and no figure from them is quoted anywhere. The 13 other per-kernel files and the unfiltered `simd-math` file, which ran before the burst with cpu5 at 0.4%, are used.
+
+So 39 of the 42 files are in `results/linux-zen1/`, byte for byte as stamped: all 17 from `release` and 22 of the 25 from `release-avx2`. They replace the six d1596e0 files of this host, which are removed (`aad1-barrier`, `aad3-barrier-mt`, `aad4-asian12`, `mc-asian252`, `mc3-asian252-mt`, `lw-worst`); the harness self-test and the fault-injection report stay. `mac-m4max` keeps its six d1596e0 files until the Mac's run at 8bb2116 is read, and every line that sets the two hosts side by side says which commit each comes from.
+
+Where the headline reads them. linux-zen1 has two runs of each of the five first-order workloads, one a preset, and `aadp_results_table --docs` took the latest, the AVX2 one, while `BENCHMARKS.md` takes every non-lane figure from `release`. A `multiple` or `paths_per_second` row may now name the build, `<workload>@baseline` (8385204), and the AAD, `MC-1` and `MC-2` rows do. New `report_cell` rows give `SVI-6` and `SVI-11` per slice, `SVI-7` per slice and `SVI-8` for the raw SVI surface and for eSSVI. Changed checks, each value taken from the new file: `check-results-docs-readme` finds `AAD-1`'s headline cell "2.18 times one scalar pricing", where it found the d1596e0 file's 1.89, and writes 2.08 (it wrote 1.79); `check-results-docs-results-md` finds `aad1-barrier.tape`'s mean batch 8.1936321754779882e+09 ns, where it found 9.7304817670175190e+09, and writes 8.0936321754779882e+09. No test named a removed file.
+
+What changed against d1596e0 on this host, both from `release` (SSE2), mean time a run from `aadp_results_table`, d1596e0 then 8bb2116:
+
+| workload | price (ms) | tape (ms) | hand (ms) | tape / price | tape / hand |
+|---|---|---|---|---|---|
+| `aad1-barrier` | 5161 → 3756 | 9730 → 8194 | - | 1.89 → 2.18 | - |
+| `aad3-barrier-mt` | 2729 → 1992 | 5157 → 4363 | - | 1.89 → 2.19 | - |
+| `aad4-asian12` | 237.3 → 177.0 | 452.9 → 315.9 | 242.1 → 183.6 | 1.91 → 1.79 | 1.87 → 1.72 |
+| `mc-asian252` | 4882 → 3605 | 8927 → 6130 | 4903 → 3637 | 1.83 → 1.70 | 1.82 → 1.69 |
+| `mc3-asian252-mt` | 2592 → 1905 | 4728 → 3218 | 2598 → 1936 | 1.82 → 1.69 | - |
+| `lw-worst` | 0.1355 → 0.4675 | 14.40 → 12.10 | 0.4384 → 0.2939 | 106 → 25.9 | - |
+
+- The primal is 1.34 to 1.37 times faster on the five pricer workloads. Every one draws its normals through the scalar inverse normal, which takes a central fast path since 5d2e385 ("Profile on the Linux host" and "Stage 11", above). `MC-1`'s price goes from 6.145e4 to 8.322e4 paths/s.
+- The tape is 1.18 to 1.19 times faster on the barriers and 1.43 to 1.47 times on the Asians: the record path inlined (d400652) and the straight-line reverse sweep (ab1e985) change the tape, besides the draws it shares with the primal. On the barriers the primal gained more than the tape, so `AAD-1` and `AAD-3` rose from 1.89 to 2.18 and 2.19; on the Asians the tape gained more, so `AAD-4` fell from 1.91 to 1.79 and `AAD-5` from 1.87 to 1.72. Which commit moved which figure was not measured in this run; the per-change figures are the iteration figures in the sections named.
+- The Lax-Wendroff hand adjoint is 1.49 times faster, its gather form (9ab335d). Its `price` variant took 3.45 times as long as at d1596e0, 0.4675 ms against 0.1355 ms (median batch 0.479 ms, so not a few slow batches), and longer than the hand adjoint, which runs the primal first. The same primal inside the bumps did not slow down: 201 and 101 pricings took 26.61 and 13.31 ms, 0.132 ms a pricing, as at d1596e0 (26.56 and 13.38 ms). So `lw-worst`'s 25.9 is not read beside Hogan's 22 to 33. Why the `price` variant alone is slower is not established, and nothing was run to find it: the host is closed to this piece.
+- `MEM-5` on two threads went from 1.05 and 1.09 to 1.15 and 1.11; on one thread it is 1.00 to 1.05. Not explained. Tape bytes a path and the Lax-Wendroff chunks are the same at both commits.
+- The stage 7a floors on the raw surface: 532,934 floored path-steps on the Asian and the bridge, where the stage 7a iteration run at a4bb6ff on macOS had 532,933, and 521,609 for calendar, where it had 521,608. Not examined: one path-step in 138 million, between another commit and another host.
+
+Each target's verdict on `linux-zen1` at 8bb2116, with the figures and their files in `BENCHMARKS.md`:
+
+| target | verdict | figure |
+|---|---|---|
+| `AAD-1` | met | 2.18; against the fastest primal the lane tape 2.39, met, and the scalar tape 3.41, missed by 0.41 |
+| `AAD-2` | not measured | no expression-template tape |
+| `AAD-3` | met; stretch missed | 2.19 on 2 threads; the stretch 1.64 by 0.55 |
+| `AAD-4` | met | 1.79; 1.70 at 252 fixings |
+| `AAD-5` | missed | 1.72 and 1.69, by 0.47 and 0.44 |
+| `AAD-6` | met | 1.04 and 1.01 |
+| `AAD-7` | met | 11.10 and 6.01 against 11 and 6 |
+| `AAD-8` | no target | multiples reported |
+| `MEM-1`, `MEM-2`, `MEM-4` | met | as at d1596e0 |
+| `MEM-3` | missed | 3.83 to 3.88 MB of process against 1.9; the tape's chunks 0.17 MB |
+| `MEM-5` | met on one thread, missed on two | 1.15 and 1.11, by 0.06 and 0.02 |
+| `MC-1` | missed | 8.322e4 paths/s, 12.5 times; lanes 1.377e5, 7.6 times |
+| `MC-2` | missed | 4.894e4 paths/s, 4.0 times; lanes 6.744e4, 2.9 times |
+| `MC-3` | missed | 9.321e4 paths/s on 2 threads, 13.4 times; lanes 1.261e5, 9.9 times |
+| `MC-4` | met at 4 lanes, missed scalar | 29.6 and 12.4 million paths/s against 18.2 |
+| `RNG-1` | met | 1.140 cycles per byte against 3.6 |
+| `RNG-2` | missed | 0.468 cycles per byte against 0.33; 1.09 ns per 64 bits against 0.58 |
+| `RNG-4` | missed, stretch missed | 55.7 cycles scalar against 47; 59.2 at 4 lanes against 9 |
+| `SIMD-1` | reported | speedups beside the ceiling, no pass mark |
+| `SIMD-2` | met | every in-run bit check passed |
+| `SVI-2` | missed | 357.5 ns against 180, 1.99 times |
+| `SVI-6` | met | 0.287, 1.132 and 1.231 bp of F |
+| `SVI-7` | missed | 237.4, 112.4 and 170.0 ms against 15 |
+| `SVI-8` | met | 523.7 ms raw SVI; eSSVI 18.48 ms with every check |
+| `SVI-9` | met | every violation listed, none repaired |
+| `SVI-10` | cost reported | the report and check pending |
+| `SVI-11` | missed on two slices of three | 0.958 and 1.397 against 0.73; 0.410 met |
+
+`RNG-3`, `MEM-6` and the `SVI-1` to `SVI-5` checks are tests, not files, and unchanged. The GPU and QuantLib targets are the Mac's.
+
+The Mac. Its first batch at F, from 13:19Z to 13:55Z on 2026-11-17, was stopped and every step withdrawn, by the orchestrator's ruling, because two heavy jobs of other projects ran on the Mac beside it. Its batch runs again from 04:00Z on 2026-11-18, the bench set at F and then QuantLib and Metal at G = c5f3473, and is read after the weekly pause. So the Mac's files stay the six of d1596e0.
+
+Pending: the Mac batch, its files with the headline and its "Measured" lines; on `linux-zen1`, five steps, `qs-report`, `qs-check` and the three withdrawn per-kernel runs; `references/quantlib_accuracy.csv`, curated from the accuracy run at G.
+
+This piece's commits went up to `jb-build` one at a time, each after CI had passed in every job on the one before; the Linux host was closed to it, so CI's GCC and libstdc++ jobs (`linux-gcc-debug`, `linux-gcc-release`, `clang-tidy-libstdcxx`) stood in for the GCC pre-commit and the libstdc++ clang-tidy there: 8385204 (the build in a headline source), 60ec4fd (the files, the headline and the "Measured" lines) and the commit that adds this section. CI passed every job at 8385204 on `jb-build` (run 44110747821) and on `main` (run 44119234244), and at 60ec4fd on `jb-build` (run 44119508798); its run on `main`, 44141725829, had started when this was written. Each of the four finished runs passed all 22 jobs.
+
 ### Rule slips
 
 None affected a number.
@@ -2690,6 +2771,13 @@ None affected a number.
   - One batch of iteration runs, started in the background without a time limit of its own, was stopped by the tool's 30-minute limit during its last run, which it left partial and which is not used. The wait on it was stopped the same way.
   - The first fault run named the new faults without `--source`, so it read the committed manifest and refused them ("no such fault") before building anything. The runs above used a copy of the working tree.
   - The Linux host was closed to this piece, so its commits had no GCC pre-commit and no libstdc++ tidy there. CI was their gate instead (above).
+- Stage 11, the writer of the last commit before the reported run was read (c5f3473): one wait on CI ran past the tool's 600 s timeout.
+- Stage 11, the reported run at 8bb2116 and its reading:
+  - The run on the Linux host: one empty zsh heredoc; one poll ran past the tool's 600 s timeout; one plain 7-minute wait, where the rules ask for a poll.
+  - The drafting of the run's plan: three scratch files were written in `/tmp`.
+  - The launch that held the window: one empty zsh heredoc; one word starting with `=` in zsh; one command timed out, and its output went to `/tmp`.
+  - The review: three files were written by a shell redirect, not the editor; one inline `python3 -I -c`, not a script; one `echo` of a word starting with `=` in zsh, which failed and did nothing else.
+  - The reading (this section and the commits it names): one foreground `sleep` was refused by the tool, and a 5-second one after a push ran; one background wait on CI was stopped by the tool's 30-minute limit and was started again with a longer one; one inline `python3 -I -c` listed the faults by the files they edit; one `python3 -I - < /dev/null`, a no-op, was typed by mistake; the three withdrawn files were taken out of `results/` while a gate was running on the tree, so the gate was run again, whole, on the final tree, with the faults on the results docs. The tool keeps an output file in the system temporary directory for each background command; the gates' own output went under `build/`.
 
 ## Option chain
 
