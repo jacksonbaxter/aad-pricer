@@ -10735,6 +10735,64 @@
       "reason": "check philox-lanes-1-bits FAILED",
       "timeout_s": 300,
       "mutated_exit": 9
+    },
+    {
+      "id": "rng2-xoshiro-rotation",
+      "kind": "oracle",
+      "covers": "xoshiro256++ against its published known answers, RNG-2",
+      "bug": "The engine rotates its last word by 44 where the generator's description says 45.",
+      "edits": [
+        {
+          "file": "src/rng/xoshiro256pp.hpp",
+          "find": "    s_[3] = std::rotl(s_[3], 45);\n",
+          "replace": "    s_[3] = std::rotl(s_[3], 44);\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_xoshiro256pp_test"],
+      "command": ["{build}/bin/aadp_xoshiro256pp_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Xoshiro256PlusPlus\\.FirstTenOutputsAreThePublishedOnes",
+      "timeout_s": 300
+    },
+    {
+      "id": "rng2-xoshiro-shift",
+      "kind": "oracle",
+      "covers": "xoshiro256++ against its published known answers, RNG-2",
+      "bug": "The engine shifts by 18 where the generator's description says 17.",
+      "edits": [
+        {
+          "file": "src/rng/xoshiro256pp.hpp",
+          "find": "    const std::uint64_t shifted = s_[1] << 17;\n",
+          "replace": "    const std::uint64_t shifted = s_[1] << 18;\n"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_xoshiro256pp_test"],
+      "command": ["{build}/bin/aadp_xoshiro256pp_test"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Xoshiro256PlusPlus\\.OneStepOfTheEngine",
+      "timeout_s": 300
+    },
+    {
+      "id": "rng2-bench-xoshiro-kat",
+      "kind": "check",
+      "covers": "aadp_bench_simd checks xoshiro256++'s first outputs before timing it",
+      "bug": "The bench times the generator from another state than the known-answer one it says it uses.",
+      "edits": [
+        {
+          "file": "bench/simd_bench.cpp",
+          "find": "constexpr aadp::Xoshiro256PlusPlus::State kXoshiroState = {1, 2, 3, 4};",
+          "replace": "constexpr aadp::Xoshiro256PlusPlus::State kXoshiroState = {1, 2, 3, 5};"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_simd"],
+      "command": ["{build}/bin/aadp_bench_simd", "--aadp-workload=simd-math", "--aadp-scale=500", "--aadp-require-valid", "--batches=1", "--repetitions=1", "--warmup-ms=0", "--gb-warmup-s=0.001"],
+      "detect": "test",
+      "reason": "check xoshiro256pp-kat FAILED",
+      "timeout_s": 300,
+      "mutated_exit": 9
     }
   ]
 }

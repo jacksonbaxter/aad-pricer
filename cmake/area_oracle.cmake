@@ -5,6 +5,11 @@ aadp_test(aadp_philox_test
   SOURCES tests/oracle/philox_test.cpp
   LINK aadp_rng
   LABELS oracle fast)
+# RNG-2's evaluated option, against published known answers; the pricer does not use it.
+aadp_test(aadp_xoshiro256pp_test
+  SOURCES tests/oracle/xoshiro256pp_test.cpp
+  LINK aadp_rng
+  LABELS oracle fast)
 aadp_test(aadp_inverse_normal_test
   SOURCES tests/oracle/inverse_normal_test.cpp
   LINK aadp_rng

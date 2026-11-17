@@ -45,6 +45,7 @@
 #include "pricer/pricer.hpp"
 #include "pricer/runner.hpp"
 #include "rng/philox.hpp"
+#include "rng/xoshiro256pp.hpp"
 #include "simd/simd_pricer.hpp"
 
 namespace {
@@ -125,11 +126,11 @@ const std::vector<Workload>& Workloads() {
        .market = {.spot = 100.0, .sigma = 0.2, .r = 0.03, .q = 0.0, .maturity = 3.0},
        .paths = 500'000},
       {.id = "simd-math",
-       .targets = "RNG-1, RNG-4, SIMD-1, SIMD-2",
+       .targets = "RNG-1, RNG-2, RNG-4, SIMD-1, SIMD-2",
        .description = "each math kernel over 2^20 doubles: exp on [-5, 5], log on (0, 4], "
                       "inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]; and the "
                       "pricer's Philox4x32-10 generator alone, its raw words, 2^18 blocks of 16 "
-                      "bytes (2^20 32-bit words)",
+                      "bytes (2^20 32-bit words), and xoshiro256++ over as many bytes",
        .kind = Kind::kMath,
        .contract = {},
        .market = {},
@@ -366,6 +367,43 @@ void AddPhilox(const Workload& w, std::size_t n, Prepared& out, std::string& bod
   }
 }
 
+// RNG-2: xoshiro256++ (rng/xoshiro256pp.hpp), the evaluated CPU-only option, over as many bytes
+// as the Philox kernel, scalar only: its state is sequential, so it has no lane form here. Each
+// call starts again from the same state, the generator's known-answer state, whose first outputs
+// are checked against the published ones before timing; any state but zero runs the same code.
+constexpr aadp::Xoshiro256PlusPlus::State kXoshiroState = {1, 2, 3, 4};
+constexpr std::array<std::uint64_t, 4> kXoshiroFirst = {41943041ULL, 58720359ULL,
+                                                        3588806011781223ULL, 3591011842654386ULL};
+
+void XoshiroFill(std::span<std::uint64_t> out) {
+  aadp::Xoshiro256PlusPlus generator(kXoshiroState);
+  for (std::uint64_t& word : out) word = generator.Next();
+}
+
+void AddXoshiro(const Workload& w, std::size_t n, Prepared& out, std::string& body) {
+  const std::size_t words = n / 2;
+  body += "xoshiro256pp: " + std::to_string(words) +
+          " outputs of 64 bits a call from the state (1, 2, 3, 4), " + std::to_string(8 * words) +
+          " bytes a call; time per 64 bits is the time over " + std::to_string(words) + "\n";
+  const auto values = std::make_shared<std::vector<std::uint64_t>>(words);
+  XoshiroFill(*values);
+  const std::size_t compared = std::min(words, kXoshiroFirst.size());
+  Record(out, body, w.id, "xoshiro256pp-kat",
+         std::ranges::equal(std::span(*values).first(compared),
+                            std::span(kXoshiroFirst).first(compared)),
+         "the first " + std::to_string(compared) + " outputs against the published ones");
+  out.timed.push_back({.name = std::string(w.id) + ".xoshiro256pp-scalar",
+                       .run =
+                           [values](std::uint64_t units) {
+                             for (std::uint64_t u = 0; u < units; ++u) {
+                               XoshiroFill(*values);
+                               benchmark::DoNotOptimize(values->data());
+                               benchmark::ClobberMemory();
+                             }
+                           },
+                       .units = 1});
+}
+
 std::optional<int> PrepareMath(const Options& options, const Workload& w, Prepared& out) {
   const std::size_t n = kMathValues / options.scale;
   if (n == 0) return aadp::bench::kExitUsage;
@@ -432,6 +470,7 @@ std::optional<int> PrepareMath(const Options& options, const Workload& w, Prepar
     }
   }
   AddPhilox(w, n, out, body);
+  AddXoshiro(w, n, out, body);
   out.extras.sections.push_back({.name = "simd_" + std::string(w.id), .body = body});
   return std::nullopt;
 }

@@ -2550,6 +2550,15 @@ Raw output is in the research cache, `evidence/stage11-h/`.
 
 Gates of the Philox commit, on the Mac through `heavy.sh`: release 898 of 898 (3 new) and fuzz 20 of 20, 0 skipped; format, scan, the static fault check 528 of 528, the results docs check and clang-tidy on the three changed C++ files, clean. On the Linux host, its window free: the GCC pre-commit, release-gcc 886 of 886.
 
+`RNG-2`, xoshiro256++ as an evaluated CPU-only option:
+- `src/rng/xoshiro256pp.hpp`, written from the generator's description in Blackman and Vigna, "Scrambled Linear Pseudorandom Number Generators" (arXiv 1805.01407): the xoshiro256 engine on four 64-bit words with shift 17 and rotation 45, and the ++ scrambler, rotl(s0 + s3, 23) + s0, taken before the step. No code was copied. The pricer does not use it and no pricing bit changes: its state is sequential, so a draw depends on every draw before it, where a Philox draw depends only on its key and counter, which is why Philox stays the reference stream (`docs/NOTES.md`, "Decisions").
+- The known-answer test, `tests/oracle/xoshiro256pp_test.cpp`: the first ten outputs from the state (1, 2, 3, 4) are the published ones, those of the `rand_xoshiro` crate's reference test, which says they were produced with the authors' reference implementation; only the numbers were taken, fetched as data into the research cache (`evidence/stage11-h/xoshiro/`). The first output is also checked at compile time against the hand value rotl(5, 23) + 1 = 41,943,041, and one step of the engine against the state worked by hand.
+- No jump function: neither `RNG-2` nor the TASKS item asks for one, and the bench times one stream.
+- One benchmark, `simd-math.xoshiro256pp-scalar`: 2^19 outputs of 64 bits a call, as many bytes as the Philox kernel, from the known-answer state each call, scalar only, its first outputs checked against the published ones before timing (`xoshiro256pp-kat` in the section). `RNG-2`'s units are ns per 64 bits and cycles per byte; the section gives the outputs and bytes a call. The workload's targets gain `RNG-2`.
+- Faults, each caught with `--only`: `rng2-xoshiro-rotation` and `rng2-xoshiro-shift` (oracle faults, the generator's two constants) and `rng2-bench-xoshiro-kat` (the bench's check, exit 9), and `rng1-bench-philox-bits`, the one existing fault on the bench source, rerun and caught.
+
+Gates of the xoshiro256++ commit, on the Mac through `heavy.sh`: release 900 of 900 (2 new) and fuzz 20 of 20, 0 skipped; format, scan, the static fault check 531 of 531, the results docs check and clang-tidy on the bench source and the new test (which includes the header), clean. On the Linux host, its window free: the GCC pre-commit, release-gcc 888 of 888.
+
 ### Rule slips
 
 None affected a number.
