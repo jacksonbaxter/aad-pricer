@@ -9367,6 +9367,329 @@
       "timeout_s": 300
     },
     {
+      "id": "docs-verdicts-left-out",
+      "kind": "check",
+      "covers": "a verdict a \"Measured\" line states has a row in results/verdicts.csv",
+      "bug": "A target stated missed on a host may have no missed row, so the README counts it as met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (s.missed && !g.missed) {",
+          "replace": "  if (s.missed && !g.missed && g.none) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesAStatedVerdictLeftOut",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-invented",
+      "kind": "check",
+      "covers": "a row of results/verdicts.csv has a \"Measured\" line that states it",
+      "bug": "A row may give a verdict no line of BENCHMARKS.md states.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (!states(s->second, row)) {",
+          "replace": "    if (!states(s->second, row) && row.verdict == \"missed\") {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesARowNoLineStates",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-none-silent",
+      "kind": "check",
+      "covers": "a none row needs a \"Measured\" line that states no verdict",
+      "bug": "A none row is taken on any target with a \"Measured\" line, judged or not.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  return is_counted(row) ? line.silent : line.not_counted;",
+          "replace": "  return is_counted(row) ? line.line != 0 : line.not_counted;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesARowNoLineStates",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-headline-agree",
+      "kind": "check",
+      "covers": "a verdicts row agrees with the headline row it names",
+      "bug": "A row may say missed where the headline computes met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      if (row.verdict != headline_verdict(cells[i])) {",
+          "replace": "      if (row.verdict != headline_verdict(cells[i]) && row.verdict == \"none\") {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.AHeadlineRowIsNamedOnceAndAgrees",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-headline-named",
+      "kind": "check",
+      "covers": "every headline row is named by exactly one verdicts row",
+      "bug": "A headline row named by no verdicts row passes, so its verdict is in no count.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (count != 1) {",
+          "replace": "    if (count > 1) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.AHeadlineRowIsNamedOnceAndAgrees",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-files",
+      "kind": "check",
+      "covers": "every file a verdicts row cites is in results/<host>/",
+      "bug": "A row may cite a file that is not in the repo.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      if (!present) {",
+          "replace": "      if (!present && host == hosts.end()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesACitedFileThatIsNotInItsHostsResults",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-files-host",
+      "kind": "check",
+      "covers": "a verdicts row cites only its own host's files",
+      "bug": "A linux-zen1 row may cite a mac-m4max file.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      return std::unexpected(file + \" is not results/\" + row.host + \"/<name>.txt\");",
+          "replace": "      continue;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesACitedFileThatIsNotInItsHostsResults",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdicts-unique",
+      "kind": "check",
+      "covers": "a target's row with an empty condition is its only row on the host",
+      "bug": "An unconditioned row may sit beside conditioned rows of the same target and host.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "          (other.condition == row->condition || other.condition.empty() ||",
+          "replace": "          (other.condition == row->condition ||"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesWhatIsNotAVerdictsFile",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-count-part",
+      "kind": "check",
+      "covers": "a target with a met and a missed row is counted met in part, never met",
+      "bug": "A target with a missed row is counted as met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (s.met && s.missed) {",
+          "replace": "    if (s.met && s.missed && s.none) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.TheCountsNameEveryTargetAndTheTableEveryRow",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-measured-words-whole",
+      "kind": "check",
+      "covers": "a verdict word in a \"Measured\" line is a whole word",
+      "bug": "\"parameters\" reads as met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    met = met || word == \"met\" || word == \"meets\" || word == \"meeting\";",
+          "replace": "    met = met || word.contains(\"met\");"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-measured-bar-item",
+      "kind": "check",
+      "covers": "a bar item's \"Measured\" lines end where the item ends",
+      "bug": "A \"Measured\" line after a bar item is read as that item's.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      target = bar_item(line).value_or(\"\");",
+          "replace": "      target = bar_item(line).value_or(target);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-measured-not-counted",
+      "kind": "check",
+      "covers": "a \"Measured\" line that says not counted states a verdict not counted",
+      "bug": "Only a line that begins with the words is read as not counted.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  measured.not_counted = lower.contains(\"not counted\");",
+          "replace": "  measured.not_counted = lower.starts_with(\"not counted\");"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-not-counted-counted",
+      "kind": "check",
+      "covers": "a verdict not counted raises no count",
+      "bug": "A split row is counted, by the target's other rows' grouping, as if its rerun answered.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (!is_counted(row)) {\n      t.not_counted.push_back(",
+          "replace": "    if (row.verdict == \"marked\") {\n      t.not_counted.push_back("
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.ARowNotCountedGivesBothRunsAndCountsNeither",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-split-differ",
+      "kind": "check",
+      "covers": "a split row's two runs have different outcomes",
+      "bug": "Runs that agree are marked split, so a verdict that stands is not counted.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "    if (withdrawn->empty() || rerun->empty() || *withdrawn == *rerun) {",
+          "replace": "    if (withdrawn->empty() || rerun->empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANotCountedVerdictLeftOutInventedOrHalfGiven",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-runs-agree",
+      "kind": "check",
+      "covers": "a counted row's runs both give its verdict",
+      "bug": "A met row whose withdrawn run met and whose rerun missed is counted met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "             (!withdrawn->empty() && (*withdrawn != row.verdict || *rerun != row.verdict))) {",
+          "replace": "             (!withdrawn->empty() && *rerun != row.verdict)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANotCountedVerdictLeftOutInventedOrHalfGiven",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-not-counted-stated",
+      "kind": "check",
+      "covers": "a \"Measured\" line that says not counted has a split or marked row",
+      "bug": "A verdict BENCHMARKS.md says is not counted may be left out of results/verdicts.csv.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (s.not_counted && !g.not_counted) {",
+          "replace": "  if (s.not_counted && !g.not_counted && g.none) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANotCountedVerdictLeftOutInventedOrHalfGiven",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-not-counted-headline",
+      "kind": "check",
+      "covers": "a verdict not counted names no headline row",
+      "bug": "A split row may name a headline row, which puts it on the README's first screen.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (!is_counted(row) && !row.headline.empty()) {",
+          "replace": "  if (row.verdict == \"marked\" && !row.headline.empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANotCountedVerdictLeftOutInventedOrHalfGiven",
+      "timeout_s": 300
+    },
+    {
       "id": "docs-report-cell-latest",
       "kind": "check",
       "covers": "the report_cell headline reads the latest run by run_started_at",

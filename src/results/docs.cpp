@@ -313,6 +313,243 @@ std::expected<MeasuredRow, std::string> parse_measured_row(std::string_view line
                      .verdict = std::string(f[5])};
 }
 
+// --- results/verdicts.csv and BENCHMARKS.md's "Measured" lines ---
+
+constexpr std::size_t kVerdictFieldsBeforeNote = 9;
+constexpr std::array<std::string_view, 2> kHostLabels = {"linux-zen1", "mac-m4max"};
+
+bool all_in(std::string_view text, char low, char high) {
+  return !text.empty() &&
+         std::ranges::all_of(text, [low, high](char c) { return c >= low && c <= high; });
+}
+
+// AAD-1, SVI-11: capitals, a hyphen and digits; or a code-quality bar item, B34.
+bool is_target_id(std::string_view id) {
+  const std::size_t hyphen = id.find('-');
+  if (hyphen == std::string_view::npos) {
+    return id.starts_with('B') && all_in(id.substr(1), '0', '9');
+  }
+  return all_in(id.substr(0, hyphen), 'A', 'Z') && all_in(id.substr(hyphen + 1), '0', '9');
+}
+
+bool is_known_host(std::string_view host) {
+  return host == kAnyHost || std::ranges::find(kHostLabels, host) != kHostLabels.end();
+}
+
+// GitHub's anchor for a heading: lower case, spaces to hyphens, every other character but
+// letters, digits, hyphens and underscores dropped. Empty for a heading with a byte outside
+// ASCII, whose anchor that rule does not settle.
+std::string anchor_of(std::string_view heading) {
+  std::string out;
+  for (const char c : heading) {
+    if (static_cast<unsigned char>(c) >= 0x80U) {
+      return {};
+    }
+    if (c >= 'A' && c <= 'Z') {
+      out += static_cast<char>(c - 'A' + 'a');
+    } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+      out += c;
+    } else if (c == ' ') {
+      out += '-';
+    }
+  }
+  return out;
+}
+
+bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+
+char ascii_lower(char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c; }
+
+// Sets met or missed for each verdict word in the text.
+void read_verdict_words(std::string_view text, bool& met, bool& missed) {
+  std::size_t at = 0;
+  while (at < text.size()) {
+    if (!is_letter(text[at])) {
+      ++at;
+      continue;
+    }
+    std::size_t end = at;
+    std::string word;
+    for (; end < text.size() && is_letter(text[end]); ++end) {
+      word += ascii_lower(text[end]);
+    }
+    met = met || word == "met" || word == "meets" || word == "meeting";
+    missed = missed || word == "missed" || word == "misses" || word == "missing";
+    at = end;
+  }
+}
+
+// "- B34. ..." at the top level: the bar item's id.
+std::optional<std::string> bar_item(std::string_view line) {
+  if (!line.starts_with("- B")) {
+    return std::nullopt;
+  }
+  const std::size_t dot = line.find(". ");
+  if (dot == std::string_view::npos || !is_target_id(line.substr(2, dot - 2))) {
+    return std::nullopt;
+  }
+  return std::string(line.substr(2, dot - 2));
+}
+
+// A heading's text, without its hashes and the spaces after them.
+std::string_view heading_text(std::string_view line) {
+  while (line.starts_with('#')) {
+    line.remove_prefix(1);
+  }
+  while (line.starts_with(' ')) {
+    line.remove_prefix(1);
+  }
+  return line;
+}
+
+// A "Measured" line's hosts and verdict words; `body` starts at "Measured".
+MeasuredLine read_measured_line(std::string_view body, std::size_t number,
+                                const std::string& target, const std::string& anchor) {
+  MeasuredLine measured{.line = number,
+                        .target = target,
+                        .anchor = anchor,
+                        .hosts = {},
+                        .met = false,
+                        .missed = false,
+                        .not_counted = false};
+  for (const std::string_view host : kHostLabels) {
+    if (body.contains("`" + std::string(host) + "`")) {
+      measured.hosts.emplace_back(host);
+    }
+  }
+  std::string lower(body);
+  std::ranges::transform(lower, lower.begin(), ascii_lower);
+  // A verdict not counted: its verdict words are the outcomes of its runs.
+  measured.not_counted = lower.contains("not counted");
+  if (!measured.not_counted) {
+    read_verdict_words(body, measured.met, measured.missed);
+  }
+  return measured;
+}
+
+// results/<host>/<name>.txt, the name of letters, digits, '-', '_' and '.', and no "..": a
+// stamped file's name holds its UTC time, 20261117T070836Z.
+bool is_results_path(std::string_view path, std::string_view host) {
+  const std::string prefix = "results/" + std::string(host) + "/";
+  if (!path.starts_with(prefix) || !path.ends_with(".txt") || path.contains("..")) {
+    return false;
+  }
+  const std::string_view name = path.substr(prefix.size());
+  return std::ranges::all_of(name, [](char c) {
+    return is_plain_name(std::string_view(&c, 1)) || (c >= 'A' && c <= 'Z');
+  });
+}
+
+bool is_counted(const VerdictRow& row) { return row.verdict != "split" && row.verdict != "marked"; }
+
+// "met 1.05", "missed 1.12 times": a run's outcome, then its figure. Empty if `run` is empty.
+std::expected<std::string_view, std::string> run_outcome(std::string_view run) {
+  if (run.empty()) {
+    return std::string_view();
+  }
+  const std::size_t space = run.find(' ');
+  const std::string_view outcome = run.substr(0, space);
+  if (space == std::string_view::npos || space + 1 == run.size() ||
+      (outcome != "met" && outcome != "missed")) {
+    return std::unexpected(std::string("a run is \"<met|missed> <figure>\": ") + std::string(run));
+  }
+  return outcome;
+}
+
+// The runs a verdict carries: split, both, with different outcomes; marked, its rerun; met or
+// missed, both or neither, each the verdict; none, neither.
+std::expected<void, std::string> check_verdict_runs(const VerdictRow& row) {
+  const auto withdrawn = run_outcome(row.withdrawn);
+  const auto rerun = run_outcome(row.rerun);
+  if (!withdrawn || !rerun) {
+    return std::unexpected(withdrawn ? rerun.error() : withdrawn.error());
+  }
+  if (row.verdict == "split") {
+    if (withdrawn->empty() || rerun->empty() || *withdrawn == *rerun) {
+      return std::unexpected(
+          "a split row gives the withdrawn run and the rerun, with different outcomes");
+    }
+  } else if (row.verdict == "marked") {
+    if (rerun->empty()) {
+      return std::unexpected("a marked row gives the figure it publishes, as its rerun");
+    }
+  } else if (withdrawn->empty() != rerun->empty() ||
+             (!withdrawn->empty() && (*withdrawn != row.verdict || *rerun != row.verdict))) {
+    return std::unexpected("a " + row.verdict + " row gives both runs or neither, each " +
+                           row.verdict + "; runs that differ make it split");
+  }
+  if (!is_counted(row) && !row.headline.empty()) {
+    return std::unexpected("a verdict not counted names no headline row");
+  }
+  return {};
+}
+
+std::expected<void, std::string> check_verdict_fields(const VerdictRow& row) {
+  if (!is_target_id(row.target) || !is_known_host(row.host)) {
+    return std::unexpected("a row needs a target id and a host label, or `any`");
+  }
+  if (row.verdict != "met" && row.verdict != "missed" && row.verdict != "none" && is_counted(row)) {
+    return std::unexpected("a verdict is met, missed, none, split or marked");
+  }
+  if (auto runs = check_verdict_runs(row); !runs) {
+    return runs;
+  }
+  if (row.basis != "files" && row.basis != "test") {
+    return std::unexpected("a basis is files or test");
+  }
+  if ((row.basis == "files") == row.files.empty() ||
+      (row.host == kAnyHost && row.basis != "test")) {
+    return std::unexpected(
+        "a files row cites files and a test row none; a row on any host is a test");
+  }
+  for (const std::string& file : row.files) {
+    if (!is_results_path(file, row.host)) {
+      return std::unexpected(file + " is not results/" + row.host + "/<name>.txt");
+    }
+  }
+  const std::vector<std::string_view> headline = split(row.headline, ' ');
+  if (!row.headline.empty() && (row.basis != "files" || headline.size() > 2 ||
+                                std::ranges::any_of(headline, &std::string_view::empty))) {
+    return std::unexpected(R"(a headline is "<source> <detail>" or "<source>", on a files row)");
+  }
+  if (row.condition.contains('|') || row.withdrawn.contains('|') || row.rerun.contains('|') ||
+      row.note.contains('|')) {
+    return std::unexpected("a condition, run or note holds a |");
+  }
+  return {};
+}
+
+std::expected<VerdictRow, std::string> parse_verdict_row(std::string_view line) {
+  std::array<std::string_view, kVerdictFieldsBeforeNote> f{};
+  for (std::string_view& field : f) {
+    const std::size_t comma = line.find(',');
+    if (comma == std::string_view::npos) {
+      return std::unexpected("a row needs 10 fields, the note last");
+    }
+    field = line.substr(0, comma);
+    line.remove_prefix(comma + 1);
+  }
+  VerdictRow row{.target = std::string(f[0]),
+                 .host = std::string(f[1]),
+                 .condition = std::string(f[2]),
+                 .verdict = std::string(f[3]),
+                 .basis = std::string(f[4]),
+                 .files = {},
+                 .headline = std::string(f[6]),
+                 .withdrawn = std::string(f[7]),
+                 .rerun = std::string(f[8]),
+                 .note = std::string(line)};
+  if (!f[5].empty()) {
+    for (const std::string_view file : split(f[5], ' ')) {
+      row.files.emplace_back(file);
+    }
+  }
+  if (auto checked = check_verdict_fields(row); !checked) {
+    return std::unexpected(checked.error());
+  }
+  return row;
+}
+
 }  // namespace
 
 std::expected<HeadlineSpec, std::string> parse_headline_spec(std::string_view text) {
@@ -429,6 +666,81 @@ std::optional<std::string> target_heading(std::string_view benchmarks, std::stri
     }
   }
   return std::nullopt;
+}
+
+std::expected<std::vector<VerdictRow>, std::string> parse_verdicts(std::string_view text) {
+  std::vector<VerdictRow> rows;
+  bool header_seen = false;
+  std::size_t number = 0;
+  for (const std::string_view line : lines(text)) {
+    ++number;
+    if (line.empty() || line.starts_with('#')) {
+      continue;
+    }
+    const std::string where = "verdicts.csv: line " + std::to_string(number);
+    if (!header_seen) {
+      if (line != kVerdictsHeader) {
+        return std::unexpected(where + " is not the header");
+      }
+      header_seen = true;
+      continue;
+    }
+    auto row = parse_verdict_row(line);
+    if (!row) {
+      return std::unexpected(where + ": " + row.error());
+    }
+    for (const VerdictRow& other : rows) {
+      if (other.target == row->target && other.host == row->host &&
+          (other.condition == row->condition || other.condition.empty() ||
+           row->condition.empty())) {
+        return std::unexpected(where + ": " + row->target + " on " + row->host +
+                               " has two rows of one condition, or an empty condition beside "
+                               "another row");
+      }
+    }
+    rows.push_back(std::move(*row));
+  }
+  if (rows.empty()) {
+    return std::unexpected("verdicts.csv: no rows");
+  }
+  return rows;
+}
+
+std::vector<MeasuredLine> measured_lines(std::string_view benchmarks) {
+  std::vector<MeasuredLine> out;
+  std::string target;
+  std::string anchor;
+  std::string heading_anchor;
+  bool in_target_section = false;
+  std::size_t number = 0;
+  for (const std::string_view line : lines(benchmarks)) {
+    ++number;
+    if (line.starts_with('#')) {
+      const std::string_view text = heading_text(line);
+      heading_anchor = anchor_of(text);
+      const std::size_t colon = text.find(':');
+      in_target_section = line.starts_with("### ") && colon != std::string_view::npos &&
+                          is_target_id(text.substr(0, colon));
+      target = in_target_section ? std::string(text.substr(0, colon)) : std::string();
+      anchor = heading_anchor;
+      continue;
+    }
+    // Outside a target's section, a top-level `- B<n>.` opens a bar item, and any other
+    // top-level line closes it.
+    if (!in_target_section && !line.empty() && !line.starts_with(' ')) {
+      target = bar_item(line).value_or("");
+      anchor = heading_anchor;
+    }
+    std::string_view body = line;
+    while (body.starts_with(' ')) {
+      body.remove_prefix(1);
+    }
+    if (!target.empty() && body.starts_with("- Measured")) {
+      body.remove_prefix(2);
+      out.push_back(read_measured_line(body, number, target, anchor));
+    }
+  }
+  return out;
 }
 
 std::expected<std::string, std::string> splice_headline(std::string_view readme,
@@ -1084,6 +1396,411 @@ constexpr std::string_view kResultsIntro =
     "The README's headline rows, chosen in `results/headline.csv`, with how each value is "
     "computed. A row's target is its heading in `BENCHMARKS.md`.\n\n";
 
+// --- results/verdicts.csv against BENCHMARKS.md, the headline and the files ---
+
+using TargetHost = std::pair<std::string, std::string>;
+
+struct Stated {
+  bool met = false;
+  bool missed = false;
+  bool none = false;
+  bool not_counted = false;
+  bool silent = false;   // a line states no verdict at all
+  std::size_t line = 0;  // BENCHMARKS.md's first line for the pair
+};
+
+std::string target_on(const TargetHost& key) { return key.first + " on " + key.second; }
+
+// Whether the "Measured" lines of a target and host state the row's verdict.
+bool states(const Stated& line, const VerdictRow& row) {
+  if (row.verdict == "met") {
+    return line.met;
+  }
+  if (row.verdict == "missed") {
+    return line.missed;
+  }
+  return is_counted(row) ? line.silent : line.not_counted;
+}
+
+// What the "Measured" lines state, by target and host.
+std::map<TargetHost, Stated> stated_by_lines(const std::vector<MeasuredLine>& lines) {
+  std::map<TargetHost, Stated> stated;
+  for (const MeasuredLine& m : lines) {
+    std::vector<std::string> on = m.hosts;
+    if (on.empty() && (m.met || m.missed || m.not_counted)) {
+      on.emplace_back(kAnyHost);
+    }
+    for (const std::string& host : on) {
+      Stated& s = stated[{m.target, host}];
+      s.line = s.line == 0 ? m.line : s.line;
+      s.met = s.met || m.met;
+      s.missed = s.missed || m.missed;
+      s.not_counted = s.not_counted || m.not_counted;
+      s.silent = s.silent || (!m.met && !m.missed && !m.not_counted);
+    }
+  }
+  return stated;
+}
+
+// What the rows give, by target and host.
+std::map<TargetHost, Stated> given_by_rows(const std::vector<VerdictRow>& rows) {
+  std::map<TargetHost, Stated> given;
+  for (const VerdictRow& row : rows) {
+    Stated& g = given[{row.target, row.host}];
+    g.met = g.met || row.verdict == "met";
+    g.missed = g.missed || row.verdict == "missed";
+    g.none = g.none || row.verdict == "none";
+    g.not_counted = g.not_counted || !is_counted(row);
+  }
+  return given;
+}
+
+// Why the rows `g` of a target and host leave out what its lines `s` state; empty if they do not.
+std::string left_out(const TargetHost& key, const Stated& s, const Stated& g) {
+  const std::string at = "BENCHMARKS.md line " + std::to_string(s.line) + " and after: ";
+  if (s.met && !g.met) {
+    return at + target_on(key) + " is stated met, and results/verdicts.csv has no met row for it";
+  }
+  if (s.missed && !g.missed) {
+    return at + target_on(key) +
+           " is stated missed, and results/verdicts.csv has no missed row for it";
+  }
+  if (s.not_counted && !g.not_counted) {
+    return at + target_on(key) +
+           " is stated not counted, and results/verdicts.csv has no split or marked row for it";
+  }
+  if (!s.met && !s.missed && !s.not_counted && !g.none) {
+    return at + target_on(key) +
+           " is measured with no verdict, and results/verdicts.csv has no none row for it";
+  }
+  return {};
+}
+
+// Every target, host and verdict a "Measured" line states has a row, and every row has a line
+// that states it.
+std::expected<void, std::string> check_against_benchmarks(const std::vector<VerdictRow>& rows,
+                                                          const std::vector<MeasuredLine>& lines) {
+  const std::map<TargetHost, Stated> stated = stated_by_lines(lines);
+  const std::map<TargetHost, Stated> given = given_by_rows(rows);
+  for (const auto& [key, s] : stated) {
+    const auto g = given.find(key);
+    std::string why = left_out(key, s, g == given.end() ? Stated{} : g->second);
+    if (!why.empty()) {
+      return std::unexpected(std::move(why));
+    }
+  }
+  for (const VerdictRow& row : rows) {
+    const auto s = stated.find({row.target, row.host});
+    if (s == stated.end()) {
+      return std::unexpected("results/verdicts.csv: " + target_on({row.target, row.host}) +
+                             " has no \"Measured\" line in BENCHMARKS.md that names that host");
+    }
+    if (!states(s->second, row)) {
+      return std::unexpected("results/verdicts.csv: " + target_on({row.target, row.host}) + " is " +
+                             row.verdict + ", which no \"Measured\" line of BENCHMARKS.md for it " +
+                             "states");
+    }
+  }
+  return {};
+}
+
+std::expected<void, std::string> check_cited_files(const std::vector<VerdictRow>& rows,
+                                                   const Hosts& hosts) {
+  for (const VerdictRow& row : rows) {
+    for (const std::string& path : row.files) {
+      const std::string name = path.substr(path.rfind('/') + 1);
+      const auto host = hosts.find(row.host);
+      const bool present = host != hosts.end() &&
+                           std::ranges::find(host->second.results, name, &ResultsEntry::name) !=
+                               host->second.results.end();
+      if (!present) {
+        return std::unexpected("results/verdicts.csv: " + path +
+                               " is not a results file in results/" + row.host + "/");
+      }
+    }
+  }
+  return {};
+}
+
+std::string headline_key(const HeadlineRow& row) {
+  return row.detail.empty() ? row.source : row.source + " " + row.detail;
+}
+
+// met, missed, or none for an INVALID run.
+std::string_view headline_verdict(const Evaluated& cell) {
+  if (cell.verdict.starts_with("met")) {
+    return "met";
+  }
+  return cell.verdict.starts_with("missed") ? "missed" : "none";
+}
+
+// Every headline row but an oracle run is named by exactly one verdict row, which agrees with
+// it; a verdict row names only a headline row that exists.
+std::expected<void, std::string> check_against_headline(const std::vector<VerdictRow>& rows,
+                                                        const std::vector<HeadlineRow>& spec,
+                                                        const std::vector<Evaluated>& cells) {
+  for (std::size_t i = 0; i < spec.size(); ++i) {
+    if (spec[i].kind == kOracleRunKind) {
+      continue;
+    }
+    const std::string key = headline_key(spec[i]);
+    const std::string what = "headline " + spec[i].id + " on " + spec[i].host + " (" + key + ")";
+    std::size_t count = 0;
+    for (const VerdictRow& row : rows) {
+      if (row.target != spec[i].id || row.host != spec[i].host || row.headline != key) {
+        continue;
+      }
+      ++count;
+      if (row.verdict != headline_verdict(cells[i])) {
+        return std::unexpected(what + " computes " + std::string(headline_verdict(cells[i])) +
+                               ", and results/verdicts.csv says " + row.verdict);
+      }
+    }
+    if (count != 1) {
+      return std::unexpected(what + " is named by " + std::to_string(count) +
+                             " rows of results/verdicts.csv, not one");
+    }
+  }
+  for (const VerdictRow& row : rows) {
+    const bool named = std::ranges::any_of(spec, [&row](const HeadlineRow& h) {
+      return h.kind != kOracleRunKind && h.id == row.target && h.host == row.host &&
+             headline_key(h) == row.headline;
+    });
+    if (!row.headline.empty() && !named) {
+      return std::unexpected("results/verdicts.csv: " + target_on({row.target, row.host}) +
+                             " names headline row " + row.headline +
+                             ", which results/headline.csv does not have");
+    }
+  }
+  return {};
+}
+
+struct TargetLink {
+  std::size_t line = 0;  // the target's first "Measured" line, for the order
+  std::string anchor;
+};
+
+std::expected<std::map<std::string, TargetLink, std::less<>>, std::string> target_links(
+    const std::vector<MeasuredLine>& lines) {
+  std::map<std::string, TargetLink, std::less<>> links;
+  for (const MeasuredLine& m : lines) {
+    if (m.anchor.empty()) {
+      return std::unexpected("BENCHMARKS.md: the heading above line " + std::to_string(m.line) +
+                             " has a byte outside ASCII, so its anchor is not known");
+    }
+    links.emplace(m.target, TargetLink{.line = m.line, .anchor = m.anchor});
+  }
+  return links;
+}
+
+std::string target_link(std::string_view target,
+                        const std::map<std::string, TargetLink, std::less<>>& links) {
+  return "[" + std::string(target) + "](BENCHMARKS.md#" + links.find(target)->second.anchor + ")";
+}
+
+// "met at 1.05": a run's outcome and figure as words.
+std::string run_words(std::string_view run) {
+  const std::size_t space = run.find(' ');
+  return std::string(run.substr(0, space)) + " at " + std::string(run.substr(space + 1));
+}
+
+// Why a row is not counted, with both runs where it has them: "one thread: the withdrawn run met
+// at 1.05, the rerun missed at 1.12".
+std::string uncounted_runs(const VerdictRow& row) {
+  std::string out = row.condition.empty() ? std::string() : row.condition + ": ";
+  if (row.verdict == "split") {
+    return out + "the withdrawn run " + run_words(row.withdrawn) + ", the rerun " +
+           run_words(row.rerun);
+  }
+  out += "marked, failed the rule on every run, its last run " + run_words(row.rerun);
+  return out + (row.withdrawn.empty() ? "" : ", the withdrawn run " + run_words(row.withdrawn));
+}
+
+// One host's rows, gathered for its line of the counts.
+struct HostTally {
+  std::map<std::size_t, std::string> order;  // first line -> target, counted rows only
+  std::map<std::string, Stated, std::less<>> by_target;
+  std::vector<std::string> commits;      // of the cited files, in backticks, first seen first
+  std::vector<std::string> not_counted;  // each linked, with its runs
+  std::map<std::string, std::string, std::less<>> none_conditions;  // what a none row says
+  bool tests = false;
+};
+
+void add_commits(const VerdictRow& row, const HostFiles& files, std::vector<std::string>& out) {
+  for (const std::string& path : row.files) {
+    const auto entry =
+        std::ranges::find(files.results, path.substr(path.rfind('/') + 1), &ResultsEntry::name);
+    const std::string commit = "`" + short_commit(entry->file.required("commit")) + "`";
+    if (std::ranges::find(out, commit) == out.end()) {
+      out.push_back(commit);
+    }
+  }
+}
+
+HostTally tally_host(std::string_view host, const std::vector<VerdictRow>& rows,
+                     const std::map<std::string, TargetLink, std::less<>>& links,
+                     const Hosts& hosts) {
+  HostTally t;
+  for (const VerdictRow& row : rows) {
+    if (row.host != host) {
+      continue;
+    }
+    if (!is_counted(row)) {
+      t.not_counted.push_back(target_link(row.target, links) + " (" + uncounted_runs(row) + ")");
+    } else {
+      t.order.emplace(links.find(row.target)->second.line, row.target);
+    }
+    Stated& s = t.by_target[row.target];
+    s.met = s.met || row.verdict == "met";
+    s.missed = s.missed || row.verdict == "missed";
+    s.none = s.none || row.verdict == "none";
+    if (row.verdict == "none" && !row.condition.empty()) {
+      std::string& said = t.none_conditions[row.target];
+      said += (said.empty() ? "" : "; ") + row.condition;
+    }
+    t.tests = t.tests || row.basis == "test";
+    if (!row.files.empty()) {
+      add_commits(row, hosts.find(host)->second, t.commits);
+    }
+  }
+  return t;
+}
+
+// "`linux-zen1`, from the files of commit `8bb2116` and from tests".
+std::string host_heading(std::string_view host, const HostTally& t) {
+  if (host == kAnyHost) {
+    return "By tests whose \"Measured\" line names no host";
+  }
+  std::string out = "`" + std::string(host) + "`, from ";
+  if (!t.commits.empty()) {
+    out += t.commits.size() == 1 ? "the files of commit " : "the files of commits ";
+    out += joined(t.commits);
+    out += t.tests ? " and from " : "";
+  }
+  return out + (t.tests ? "tests" : "");
+}
+
+// " Met, 2: a and b." or " Met, 0."
+std::string group(std::string_view word, const std::vector<std::string>& items) {
+  const std::string out = " " + std::string(word) + ", " + std::to_string(items.size());
+  return out + (items.empty() ? "." : ": " + joined(items) + ".");
+}
+
+// One host's line of the counts: its targets judged, met, missed and met in part, each named and
+// linked, then its rows not counted with both runs, then those measured with no verdict.
+std::string host_counts(std::string_view host, const std::vector<VerdictRow>& rows,
+                        const std::map<std::string, TargetLink, std::less<>>& links,
+                        const Hosts& hosts) {
+  const HostTally t = tally_host(host, rows, links, hosts);
+  std::vector<std::string> met;
+  std::vector<std::string> missed;
+  std::vector<std::string> part;
+  std::vector<std::string> none;
+  for (const auto& [line, target] : t.order) {
+    const Stated& s = t.by_target.at(target);
+    const std::string linked = target_link(target, links);
+    if (s.met && s.missed) {
+      part.push_back(linked);
+    } else if (s.met) {
+      met.push_back(linked);
+    } else if (s.missed) {
+      missed.push_back(linked);
+    } else {
+      const auto said = t.none_conditions.find(target);
+      none.push_back(linked + (said == t.none_conditions.end() ? "" : " (" + said->second + ")"));
+    }
+  }
+  const std::size_t judged = met.size() + missed.size() + part.size();
+  std::string out = "- " + host_heading(host, t) + ": " + std::to_string(judged) +
+                    (judged == 1 ? " target" : " targets") + " judged.";
+  out += group("Met", met);
+  out += group("Missed", missed);
+  out += group("Met in part", part);
+  out += group("Not counted", t.not_counted);
+  if (!none.empty()) {
+    out += " Measured with no verdict stated: " + joined(none) + ".";
+  }
+  return out + "\n";
+}
+
+std::string verdict_counts(const std::vector<VerdictRow>& rows,
+                           const std::map<std::string, TargetLink, std::less<>>& links,
+                           const Hosts& hosts, bool in_results_md) {
+  std::string out =
+      "Every verdict: [`results/verdicts.csv`](results/verdicts.csv) has one row for each verdict "
+      "that a \"Measured\" line of [BENCHMARKS.md](BENCHMARKS.md) states, by target, host and "
+      "condition, and " +
+      std::string(in_results_md ? "the table below" : "[RESULTS.md](RESULTS.md#verdicts)") +
+      " lists every row with its files and notes. The generator refuses a target, host and "
+      "verdict that a line states and no row gives, a row that no line states, a row that "
+      "disagrees with the headline row it names, and a cited file that is not in "
+      "`results/<host>/`. A target counts as met on a host if every one of its counted rows "
+      "there is met, as missed if every one is missed, and as met in part if some are met and "
+      "some missed, so a target with a missed row is never counted as met. A row is not "
+      "counted, neither as met nor as missed, where a step withdrawn under the host's rule gave "
+      "one outcome in the withdrawn run and the other in its rerun (the row gives both figures "
+      "and both outcomes), or where its figure rests on a step that failed the rule on every run "
+      "it was allowed (published with its mark); such a row is listed as not counted and names "
+      "no headline row.\n\n";
+  std::vector<std::string_view> order(kHostLabels.begin(), kHostLabels.end());
+  order.push_back(kAnyHost);
+  for (const std::string_view host : order) {
+    if (std::ranges::any_of(rows, [host](const VerdictRow& row) { return row.host == host; })) {
+      out += host_counts(host, rows, links, hosts);
+    }
+  }
+  return out;
+}
+
+// A verdicts row's verdict cell.
+std::string verdict_cell(const VerdictRow& row) {
+  if (row.verdict == "split") {
+    return "not counted: the runs differ";
+  }
+  if (row.verdict == "marked") {
+    return "not counted: marked";
+  }
+  return row.verdict == "none" ? "none stated" : row.verdict;
+}
+
+// A verdicts row's runs cell: "withdrawn run met at 1.05; rerun missed at 1.12", or "-".
+std::string runs_cell(const VerdictRow& row) {
+  std::string runs = row.withdrawn.empty() ? "" : "withdrawn run " + run_words(row.withdrawn);
+  if (!row.rerun.empty()) {
+    runs += runs.empty() ? "" : "; ";
+    runs += row.verdict == "marked" ? "last run " : "rerun ";
+    runs += run_words(row.rerun);
+  }
+  return runs.empty() ? "-" : cell(runs);
+}
+
+// A verdicts row's files cell: each file linked, or "a test".
+std::string files_cell(const VerdictRow& row) {
+  if (row.basis == "test") {
+    return "a test";
+  }
+  std::string files;
+  for (const std::string& path : row.files) {
+    files += files.empty() ? "" : ", ";
+    files += file_link(row.host, path.substr(path.rfind('/') + 1));
+  }
+  return files;
+}
+
+std::string verdicts_table(const std::vector<VerdictRow>& rows,
+                           const std::map<std::string, TargetLink, std::less<>>& links) {
+  std::string out =
+      "| target | host | condition | verdict | runs | headline row | files | note |\n"
+      "|---|---|---|---|---|---|---|---|\n";
+  for (const VerdictRow& row : rows) {
+    out += "| " + target_link(row.target, links) + " | " + row.host + " | " +
+           (row.condition.empty() ? "-" : cell(row.condition)) + " | " + verdict_cell(row) + " | " +
+           runs_cell(row) + " | " + (row.headline.empty() ? "-" : "`" + row.headline + "`") +
+           " | " + files_cell(row) + " | " + (row.note.empty() ? "-" : cell(row.note)) + " |\n";
+  }
+  return out;
+}
+
 }  // namespace
 
 std::expected<Docs, std::string> render_docs(const DocsInputs& inputs) {
@@ -1124,10 +1841,29 @@ std::expected<Docs, std::string> render_docs(const DocsInputs& inputs) {
     }
     cells.push_back(std::move(*evaluated));
   }
+  const auto verdicts = parse_verdicts(inputs.verdicts);
+  if (!verdicts) {
+    return std::unexpected(verdicts.error());
+  }
+  const std::vector<MeasuredLine> lines = measured_lines(inputs.benchmarks);
+  const auto links = target_links(lines);
+  if (!links) {
+    return std::unexpected(links.error());
+  }
+  for (const auto& checked :
+       {check_against_benchmarks(*verdicts, lines), check_cited_files(*verdicts, hosts),
+        check_against_headline(*verdicts, spec->rows, cells)}) {
+    if (!checked) {
+      return std::unexpected(checked.error());
+    }
+  }
   const std::string note = hosts_note(spec->rows, cells, hosts);
-  Docs docs{.headline = headline_table(cells, false) + "\n" + note,
+  Docs docs{.headline = headline_table(cells, false) + "\n" + note + "\n" +
+                        verdict_counts(*verdicts, *links, hosts, false),
             .results_md = std::string(kResultsIntro) + headline_table(cells, true) + "\n" + note +
-                          "\n" + measured_runs_section(*spec, runs, hosts)};
+                          "\n## Verdicts\n\n" + verdict_counts(*verdicts, *links, hosts, true) +
+                          "\n" + verdicts_table(*verdicts, *links) + "\n" +
+                          measured_runs_section(*spec, runs, hosts)};
   for (const auto& [label, host] : hosts) {
     auto section = host_section(label, host);
     if (!section) {

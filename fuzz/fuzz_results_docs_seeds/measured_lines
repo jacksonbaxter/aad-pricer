@@ -1,0 +1,20 @@
+# BENCHMARKS
+
+## 1. Cost
+
+### AAD-1: barrier: multiple below 3.0
+
+- Measured on `linux-zen1`: 2.18, met; the scalar tape misses.
+- Measured on `mac-m4max` and `linux-zen1`, by a test of the parameters.
+
+### MEM-5: peak RSS at most 1.09 times the primal
+
+- Measured on `mac-m4max`: 1.05 in the withdrawn run, met; 1.12 in its rerun, missed; not counted.
+- Measured: met, by a test.
+
+## 14. Code-quality bar
+
+**Benchmarks**
+- B34. One adversarial workload.
+  - Measured on `linux-zen1`: published.
+- B35. Benchmarks in CI.

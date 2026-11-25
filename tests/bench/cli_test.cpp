@@ -404,7 +404,11 @@ void docs_tree(const fs::path& root) {
   std::ofstream(root / "references" / "r.csv")
       << "# Code run at commit 89abcde.\n"
          "id,estimate,reference,se,bound,verdict\nA,1,1,1,1,pass\nB,1,1,1,1,FAIL\n";
-  std::ofstream(root / "BENCHMARKS.md") << "# BENCHMARKS\n";
+  std::ofstream(root / "results" / "verdicts.csv")
+      << "target,host,condition,verdict,basis,files,headline,withdrawn,rerun,note\n"
+         "MEM-6,any,,met,test,,,,,a test\n";
+  std::ofstream(root / "BENCHMARKS.md")
+      << "# BENCHMARKS\n\n### MEM-6: no heap allocation\n\n- Measured: met, by a test.\n";
   std::ofstream(root / "README.md") << "# r\n\n<!-- BEGIN GENERATED HEADLINE: aadp_results_table "
                                        "--docs . --write; do not edit -->\n<!-- END GENERATED "
                                        "HEADLINE -->\n\nrest\n";
@@ -447,6 +451,20 @@ TEST(Table, DocsCheckFailsOnAHandEditToEitherFile) {
   EXPECT_EQ(run(docs_command(dir / "repo", "--check", dir)), 1);
   expect_reason(dir, "RESULTS.md differs from a fresh generation");
   EXPECT_EQ(slurp(dir / "err.txt").find("README.md headline differs"), std::string::npos);
+}
+
+TEST(Table, DocsCountsTheVerdictsAndNeedsThem) {
+  const fs::path dir = fresh_dir();
+  docs_tree(dir / "repo");
+  ASSERT_EQ(run(docs_command(dir / "repo", "--write", dir)), 0) << slurp(dir / "err.txt");
+  const std::string readme = slurp(dir / "repo" / "README.md");
+  EXPECT_NE(readme.find("- By tests whose \"Measured\" line names no host: 1 target judged. Met, "
+                        "1: [MEM-6](BENCHMARKS.md#mem-6-no-heap-allocation)."),
+            std::string::npos)
+      << readme;
+  fs::remove(dir / "repo" / "results" / "verdicts.csv");
+  EXPECT_EQ(run(docs_command(dir / "repo", "--check", dir)), 1);
+  expect_reason(dir, "verdicts.csv: no rows");
 }
 
 TEST(Table, DocsRefusesAnythingElseUnderResults) {

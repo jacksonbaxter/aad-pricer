@@ -32,6 +32,37 @@ constexpr std::string_view kBenchmarks =
     "### MC-1: Asian: 1.044 million paths/s, single thread\n\n"
     "### MEM-4: per-path tape below 50 MB in the worst case\n";
 
+// One row per verdict the "Measured" lines of inputs() state; AAD-1's note holds a comma.
+constexpr std::string_view kVerdicts =
+    "# a comment\n"
+    "target,host,condition,verdict,basis,files,headline,withdrawn,rerun,note\n"
+    "AAD-1,linux-zen1,,met,files,results/linux-zen1/a.txt,w tape/price,,,a note, with a comma\n"
+    "AAD-5,linux-zen1,,missed,files,results/linux-zen1/a.txt,w tape/hand,,,\n"
+    "MC-1,linux-zen1,,missed,files,results/linux-zen1/a.txt,w price,,,\n"
+    "MEM-4,linux-zen1,,met,files,results/linux-zen1/a.txt,tape_allocated_bytes,,,\n";
+
+// Puts a "Measured" line just under the target's heading.
+void state(std::string& benchmarks, std::string_view id, std::string_view text) {
+  const std::size_t heading = benchmarks.find("### " + std::string(id) + ":");
+  ASSERT_NE(heading, std::string::npos) << id;
+  benchmarks.insert(benchmarks.find('\n', heading) + 1, "- Measured " + std::string(text) + "\n");
+}
+
+std::string stated_benchmarks(std::string_view aad1 = "met") {
+  std::string out(kBenchmarks);
+  state(out, "AAD-1", "on `linux-zen1`: " + std::string(aad1) + ".");
+  state(out, "AAD-5", "on `linux-zen1`: missed.");
+  state(out, "MC-1", "on `linux-zen1`: missed.");
+  state(out, "MEM-4", "on `linux-zen1`: met.");
+  return out;
+}
+
+// AAD-1 judged missed: its "Measured" line and its row.
+void judge_aad1_missed(DocsInputs& in) {
+  in.benchmarks = stated_benchmarks("missed");
+  in.verdicts.replace(in.verdicts.find("AAD-1,linux-zen1,,met,"), 22, "AAD-1,linux-zen1,,missed,");
+}
+
 constexpr std::string_view kRun =
     "# Measured run 1. Host linux-zen1, Linux.\n"
     "# Code of 1234567 run at commit 89abcde, seed 1.\n"
@@ -104,7 +135,8 @@ std::string results_text(std::string_view label, const std::string& aad,
 DocsInputs inputs() {
   DocsInputs in;
   in.spec = kSpec;
-  in.benchmarks = kBenchmarks;
+  in.verdicts = kVerdicts;
+  in.benchmarks = stated_benchmarks();
   in.files.push_back(
       {.host_dir = "linux-zen1", .name = "a.txt", .text = results_text("linux-zen1", section())});
   in.files.push_back({.host_dir = "linux-zen1",
@@ -210,6 +242,7 @@ TEST(Docs, TheLatestRunOfAWorkloadAnswersItsTarget) {
       {.host_dir = "linux-zen1",
        .name = "b.txt",
        .text = results_text("linux-zen1", section(), "2026-01-02T03:04:08Z", "1e6")});
+  judge_aad1_missed(in);
   const auto docs = render_docs(in);
   ASSERT_TRUE(docs.has_value()) << docs.error();
   EXPECT_TRUE(has(docs->headline, "| 4 times one pricing | [linux-zen1](results/linux-zen1/b.txt)"))
@@ -234,6 +267,11 @@ TEST(Docs, AWorkloadRowCanNameItsBuild) {
     return spec;
   };
   in.spec = replace_source("w@baseline");
+  const std::string verdicts = in.verdicts;
+  for (std::size_t at = in.verdicts.find(",w "); at != std::string::npos;
+       at = in.verdicts.find(",w ", at + 1)) {
+    in.verdicts.replace(at, 3, ",w@baseline ");
+  }
   const auto docs = render_docs(in);
   ASSERT_TRUE(docs.has_value()) << docs.error();
   EXPECT_TRUE(has(docs->headline, "| 2 times one pricing | [linux-zen1](results/linux-zen1/a.txt)"))
@@ -246,6 +284,8 @@ TEST(Docs, AWorkloadRowCanNameItsBuild) {
       << docs->results_md;
 
   in.spec = bare;
+  in.verdicts = verdicts;
+  judge_aad1_missed(in);  // b.txt's AAD-1 is 4
   const auto latest = render_docs(in);
   ASSERT_TRUE(latest.has_value()) << latest.error();
   EXPECT_TRUE(
@@ -289,6 +329,17 @@ TEST(Docs, MarksAWorkloadWhoseChecksFailedInvalid) {
   in.files[0].text = results_text("linux-zen1", section("AAD-1, AAD-5, MC-1", false));
   in.spec = std::string(kSpec).substr(0, std::string(kSpec).find("largest")) +
             "oracle_run,run 1,linux-zen1,references/r.csv,,,,,,,\n";
+  // An INVALID run has no verdict: its lines state none and its rows say none.
+  in.benchmarks = kBenchmarks;
+  for (const std::string_view id : {"AAD-1", "AAD-5", "MC-1"}) {
+    state(in.benchmarks, id, "on `linux-zen1`: INVALID.");
+  }
+  state(in.benchmarks, "MEM-4", "on `linux-zen1`: met.");
+  in.verdicts = std::string(kVerdictsHeader) +
+                "\nAAD-1,linux-zen1,,none,files,results/linux-zen1/a.txt,w tape/price,,,\n"
+                "AAD-5,linux-zen1,,none,files,results/linux-zen1/a.txt,w tape/hand,,,\n"
+                "MC-1,linux-zen1,,none,files,results/linux-zen1/a.txt,w price,,,\n"
+                "MEM-4,linux-zen1,,met,files,results/linux-zen1/a.txt,,,,\n";
   const auto docs = render_docs(in);
   ASSERT_TRUE(docs.has_value()) << docs.error();
   EXPECT_TRUE(has(docs->headline,
@@ -296,6 +347,17 @@ TEST(Docs, MarksAWorkloadWhoseChecksFailedInvalid) {
                   "INVALID: the run's in-run checks did not all pass |"))
       << docs->headline;
   EXPECT_FALSE(has(docs->headline, "met, by"));
+  EXPECT_TRUE(has(docs->headline,
+                  "Measured with no verdict stated: [AAD-1](BENCHMARKS.md#aad-1-barrier-multiple-"
+                  "below-30), [AAD-5]"))
+      << docs->headline;
+
+  // A row that calls an INVALID run met disagrees with the headline.
+  state(in.benchmarks, "AAD-1", "on `linux-zen1`: met.");
+  in.verdicts.replace(in.verdicts.find("AAD-1,linux-zen1,,none,"), 23, "AAD-1,linux-zen1,,met,");
+  const auto met = render_docs(in);
+  ASSERT_FALSE(met.has_value());
+  EXPECT_TRUE(has(met.error(), "computes none, and results/verdicts.csv says met")) << met.error();
 }
 
 TEST(Docs, RefusesAFileUnderAnotherHostsDirectory) {
@@ -344,10 +406,16 @@ constexpr std::string_view kReportRow =
     "report_cell,SVI-6,linux-zen1,fit_error,s1/error,4,at most 4 bp,at_most,1,bp of F,on s1\n";
 constexpr std::string_view kReportHeading = "\n### SVI-6: fit error at most 4 bp of forward\n";
 
-DocsInputs report_inputs(std::string_view row = kReportRow) {
+constexpr std::string_view kReportVerdict =
+    "SVI-6,linux-zen1,,met,files,results/linux-zen1/r1.txt,fit_error s1/error,,,\n";
+
+DocsInputs report_inputs(std::string_view row = kReportRow,
+                         std::string_view verdict = kReportVerdict, std::string_view word = "met") {
   DocsInputs in = inputs();
   in.spec += row;
+  in.verdicts += verdict;
   in.benchmarks += kReportHeading;
+  in.benchmarks += "- Measured on `linux-zen1`: " + std::string(word) + ".\n";
   in.files.push_back({.host_dir = "linux-zen1", .name = "r1.txt", .text = report_text()});
   return in;
 }
@@ -465,7 +533,9 @@ TEST(DocsReport, RefusesACellThatIsMissingNotANumberOrNotForTheTarget) {
 
 TEST(DocsReport, AnIntegerCellAnswersAndScaleDivides) {
   const auto docs = render_docs(report_inputs(
-      "report_cell,SVI-6,linux-zen1,fit_error,s2W4/quotes,40,at most 4 bp,at_least,10,,\n"));
+      "report_cell,SVI-6,linux-zen1,fit_error,s2W4/quotes,40,at most 4 bp,at_least,10,,\n",
+      "SVI-6,linux-zen1,,missed,files,results/linux-zen1/r1.txt,fit_error s2W4/quotes,,,\n",
+      "missed"));
   ASSERT_TRUE(docs.has_value()) << docs.error();
   EXPECT_TRUE(has(docs->headline,
                   "| 5.1 | [linux-zen1](results/linux-zen1/r1.txt), Linux | "
@@ -616,6 +686,340 @@ TEST(Headline, FindsTheTargetHeadingAndTheFirstDifference) {
   EXPECT_EQ(first_difference_line("a\nb\n", "a\nb\n"), 0U);
   EXPECT_EQ(first_difference_line("a\nb\n", "a\nc\n"), 2U);
   EXPECT_EQ(first_difference_line("a\n", "a\nb\n"), 2U);
+}
+
+// --- results/verdicts.csv ---
+
+// inputs() with AAD-1 met on its scalar reading and missed on lanes, a host-free test verdict
+// (RNG-3), and a target measured with no verdict (AAD-8).
+DocsInputs judged_inputs() {
+  DocsInputs in = inputs();
+  in.benchmarks = kBenchmarks;
+  in.benchmarks +=
+      "\n### AAD-8: second order\n\n### RNG-3: accuracy\n- Measured: missed, by a test.\n";
+  state(in.benchmarks, "AAD-1", "on `linux-zen1`: 2, met; on lanes it misses.");
+  state(in.benchmarks, "AAD-5", "on `linux-zen1`: missed.");
+  state(in.benchmarks, "MC-1", "on `linux-zen1`: missed.");
+  state(in.benchmarks, "MEM-4", "on `linux-zen1`: met.");
+  state(in.benchmarks, "AAD-8", "on `linux-zen1`: reported, no bar; the parameters are fixed.");
+  in.verdicts.replace(in.verdicts.find("AAD-1,linux-zen1,,met,"), 22,
+                      "AAD-1,linux-zen1,scalar,met,");
+  in.verdicts +=
+      "AAD-1,linux-zen1,lanes,missed,files,results/linux-zen1/a.txt,,,,\n"
+      "AAD-8,linux-zen1,,none,files,results/linux-zen1/a.txt,,,,\n"
+      "RNG-3,any,,missed,test,,,,,the test\n";
+  return in;
+}
+
+TEST(Verdicts, TheCountsNameEveryTargetAndTheTableEveryRow) {
+  const auto docs = render_docs(judged_inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  const std::string& h = docs->headline;
+  EXPECT_TRUE(has(h, "a target with a missed row is never counted as met. A row is not counted,"))
+      << h;
+  EXPECT_TRUE(has(h,
+                  "- `linux-zen1`, from the files of commit `0123456`: 4 targets judged. Met, 1: "
+                  "[MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case). "
+                  "Missed, 2: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) "
+                  "and [MC-1](BENCHMARKS.md#mc-1-asian-1044-million-pathss-single-thread). Met in "
+                  "part, 1: [AAD-1](BENCHMARKS.md#aad-1-barrier-multiple-below-30). Not counted, "
+                  "0. Measured with no verdict stated: [AAD-8](BENCHMARKS.md#aad-8-second-order)."
+                  "\n"))
+      << h;
+  EXPECT_TRUE(has(h,
+                  "- By tests whose \"Measured\" line names no host: 1 target judged. Met, 0. "
+                  "Missed, 1: [RNG-3](BENCHMARKS.md#rng-3-accuracy). Met in part, 0. Not counted, "
+                  "0.\n"))
+      << h;
+  EXPECT_TRUE(has(h, "[RESULTS.md](RESULTS.md#verdicts)")) << h;
+  const std::string& r = docs->results_md;
+  EXPECT_TRUE(has(r, "\n## Verdicts\n\n")) << r;
+  EXPECT_TRUE(
+      has(r,
+          "| [AAD-1](BENCHMARKS.md#aad-1-barrier-multiple-below-30) | linux-zen1 | scalar | "
+          "met | - | `w tape/price` | [a.txt](results/linux-zen1/a.txt) | a note, with a "
+          "comma |\n"))
+      << r;
+  EXPECT_TRUE(has(r,
+                  "| [RNG-3](BENCHMARKS.md#rng-3-accuracy) | any | - | missed | - | - | a test "
+                  "| the test |\n"))
+      << r;
+  EXPECT_TRUE(has(r, "| linux-zen1 | - | none stated | - |")) << r;
+}
+
+TEST(Verdicts, RefusesAStatedVerdictLeftOut) {
+  DocsInputs in = judged_inputs();
+  in.verdicts.erase(in.verdicts.find("AAD-1,linux-zen1,lanes"));
+  in.verdicts +=
+      "AAD-8,linux-zen1,,none,files,results/linux-zen1/a.txt,,,,\n"
+      "RNG-3,any,,missed,test,,,,,the test\n";
+  const auto missed = render_docs(in);
+  ASSERT_FALSE(missed.has_value());
+  EXPECT_TRUE(has(missed.error(),
+                  "AAD-1 on linux-zen1 is stated missed, and results/verdicts.csv "
+                  "has no missed row for it"))
+      << missed.error();
+
+  in = judged_inputs();
+  in.verdicts.erase(in.verdicts.find("RNG-3,any"));
+  const auto any = render_docs(in);
+  ASSERT_FALSE(any.has_value());
+  EXPECT_TRUE(has(any.error(), "RNG-3 on any is stated missed")) << any.error();
+
+  in = judged_inputs();
+  state(in.benchmarks, "MEM-4", "on `mac-m4max`: met.");
+  const auto host = render_docs(in);
+  ASSERT_FALSE(host.has_value());
+  EXPECT_TRUE(has(host.error(), "MEM-4 on mac-m4max is stated met")) << host.error();
+
+  in = judged_inputs();
+  in.verdicts.erase(in.verdicts.find("AAD-8,"),
+                    in.verdicts.find("RNG-3,") - in.verdicts.find("AAD-8,"));
+  const auto none = render_docs(in);
+  ASSERT_FALSE(none.has_value());
+  EXPECT_TRUE(has(none.error(), "AAD-8 on linux-zen1 is measured with no verdict")) << none.error();
+}
+
+TEST(Verdicts, RefusesARowNoLineStates) {
+  DocsInputs in = judged_inputs();
+  in.verdicts += "AAD-1,linux-zen1,other,none,files,results/linux-zen1/a.txt,,,,\n";
+  const auto invented = render_docs(in);
+  ASSERT_FALSE(invented.has_value());
+  EXPECT_TRUE(has(invented.error(), "AAD-1 on linux-zen1 is none, which no \"Measured\" line"))
+      << invented.error();
+
+  in = judged_inputs();
+  in.verdicts += "AAD-5,linux-zen1,skip,met,files,results/linux-zen1/a.txt,,,,\n";
+  in.verdicts.replace(in.verdicts.find("AAD-5,linux-zen1,,"), 18, "AAD-5,linux-zen1,tape,");
+  const auto met = render_docs(in);
+  ASSERT_FALSE(met.has_value());
+  EXPECT_TRUE(has(met.error(), "AAD-5 on linux-zen1 is met, which no \"Measured\" line"))
+      << met.error();
+
+  in = judged_inputs();
+  in.verdicts += "MEM-4,mac-m4max,,met,test,,,,,\n";
+  const auto host = render_docs(in);
+  ASSERT_FALSE(host.has_value());
+  EXPECT_TRUE(has(host.error(), "MEM-4 on mac-m4max has no \"Measured\" line")) << host.error();
+}
+
+TEST(Verdicts, AHeadlineRowIsNamedOnceAndAgrees) {
+  DocsInputs in = judged_inputs();
+  in.verdicts.replace(in.verdicts.find("MEM-4,linux-zen1,,met,"), 22, "MEM-4,linux-zen1,a,missed,");
+  in.verdicts += "MEM-4,linux-zen1,b,met,files,results/linux-zen1/a.txt,,,,\n";
+  state(in.benchmarks, "MEM-4", "on `linux-zen1`: missed.");
+  const auto disagrees = render_docs(in);
+  ASSERT_FALSE(disagrees.has_value());
+  EXPECT_TRUE(has(disagrees.error(),
+                  "headline MEM-4 on linux-zen1 (tape_allocated_bytes) computes "
+                  "met, and results/verdicts.csv says missed"))
+      << disagrees.error();
+
+  in = judged_inputs();
+  in.verdicts.replace(in.verdicts.find(",w price,"), 9, ",,");
+  const auto unnamed = render_docs(in);
+  ASSERT_FALSE(unnamed.has_value());
+  EXPECT_TRUE(has(unnamed.error(), "headline MC-1 on linux-zen1 (w price) is named by 0 rows"))
+      << unnamed.error();
+
+  in = judged_inputs();
+  in.verdicts.replace(in.verdicts.find(",w price,"), 9, ",w paths,");
+  const auto unknown = render_docs(in);
+  ASSERT_FALSE(unknown.has_value());
+  EXPECT_TRUE(has(unknown.error(),
+                  "names headline row w paths, which results/headline.csv does "
+                  "not have") ||
+              has(unknown.error(), "is named by 0 rows"))
+      << unknown.error();
+}
+
+TEST(Verdicts, RefusesACitedFileThatIsNotInItsHostsResults) {
+  DocsInputs in = judged_inputs();
+  in.verdicts += "MEM-4,linux-zen1,other,met,files,results/linux-zen1/zz.txt,,,,\n";
+  in.verdicts.replace(in.verdicts.find("MEM-4,linux-zen1,,"), 18, "MEM-4,linux-zen1,one,");
+  const auto absent = render_docs(in);
+  ASSERT_FALSE(absent.has_value());
+  EXPECT_TRUE(has(absent.error(),
+                  "results/linux-zen1/zz.txt is not a results file in "
+                  "results/linux-zen1/"))
+      << absent.error();
+
+  in = judged_inputs();
+  in.files.push_back(
+      {.host_dir = "mac-m4max", .name = "m.txt", .text = results_text("mac-m4max", section())});
+  in.verdicts += "AAD-8,mac-m4max,,none,files,results/mac-m4max/m.txt,,,,\n";
+  in.verdicts.replace(in.verdicts.find("AAD-8,linux-zen1,,none,files,results/linux-zen1/a.txt"), 53,
+                      "AAD-8,linux-zen1,,none,files,results/mac-m4max/m.txt");
+  const auto other_host = render_docs(in);
+  ASSERT_FALSE(other_host.has_value());
+  EXPECT_TRUE(has(other_host.error(), "results/mac-m4max/m.txt is not results/linux-zen1/"))
+      << other_host.error();
+}
+
+TEST(Verdicts, RefusesWhatIsNotAVerdictsFile) {
+  const std::string header = std::string(kVerdictsHeader) + "\n";
+  const std::string row = "AAD-1,linux-zen1,,met,files,results/linux-zen1/a.txt,,,,";
+  EXPECT_TRUE(parse_verdicts(header + row + "\n").has_value());
+  EXPECT_EQ(parse_verdicts(header + row + "a, b, c\n")->front().note, "a, b, c");
+  for (const std::string_view bad : {
+           "AAD-1,linux-zen1,,met,files,results/linux-zen1/a.txt,,",       // no run fields
+           "aad-1,linux-zen1,,met,files,results/linux-zen1/a.txt,,,,",     // not an id
+           "AAD-1,linux,,met,files,results/linux-zen1/a.txt,,,,",          // not a host
+           "AAD-1,linux-zen1,,good,files,results/linux-zen1/a.txt,,,,",    // not a verdict
+           "AAD-1,linux-zen1,,met,file,results/linux-zen1/a.txt,,,,",      // not a basis
+           "AAD-1,linux-zen1,,met,files,,,,,",                             // files with none
+           "AAD-1,linux-zen1,,met,test,results/linux-zen1/a.txt,,,,",      // a test with files
+           "AAD-1,any,,met,files,results/any/a.txt,,,,",                   // any host on files
+           "AAD-1,linux-zen1,,met,files,results/linux-zen1/../a.txt,,,,",  // a path out
+           "AAD-1,linux-zen1,,met,files,results/linux-zen1/a.txt,a b c,,,",
+           "AAD-1,linux-zen1,,met,files,results/linux-zen1/a.txt,,,,a | b",
+       }) {
+    EXPECT_FALSE(parse_verdicts(header + std::string(bad) + "\n").has_value()) << bad;
+  }
+  EXPECT_FALSE(parse_verdicts("target,host\n" + row + "\n").has_value());
+  EXPECT_FALSE(parse_verdicts(header).has_value());
+  const std::string two = "AAD-1,linux-zen1,lanes,met,files,results/linux-zen1/a.txt,,,,\n";
+  EXPECT_TRUE(parse_verdicts(header + two + "AAD-1,linux-zen1,scalar,met,test,,,,,\n").has_value());
+  EXPECT_TRUE(parse_verdicts(header + two + "AAD-1,mac-m4max,lanes,met,test,,,,,\n").has_value());
+  const auto same = parse_verdicts(header + two + two);
+  ASSERT_FALSE(same.has_value());
+  EXPECT_TRUE(has(same.error(), "two rows of one condition")) << same.error();
+  EXPECT_FALSE(parse_verdicts(header + two + row + "\n").has_value());  // empty beside another
+  EXPECT_FALSE(parse_verdicts(header + row + "\n" + two).has_value());  // and in the other order
+}
+
+// inputs() with a split verdict (AAD-8 on lanes: the withdrawn run met, the rerun missed) and a
+// marked one (RNG-4), each with its "Measured" line.
+DocsInputs uncounted_inputs() {
+  DocsInputs in = judged_inputs();
+  in.benchmarks += "\n### RNG-4: per kernel\n";
+  state(in.benchmarks, "AAD-8",
+        "on `linux-zen1`, lanes: 1.9 in the withdrawn run, met; 2.2 in its rerun, missed; not "
+        "counted.");
+  state(in.benchmarks, "RNG-4", "on `linux-zen1`: 3.1 ns, missed, marked; not counted.");
+  in.verdicts.replace(in.verdicts.find("AAD-8,linux-zen1,,none,"), 23,
+                      "AAD-8,linux-zen1,reported,none,");
+  in.verdicts +=
+      "AAD-8,linux-zen1,lanes,split,files,results/linux-zen1/a.txt,,met 1.9,missed 2.2,a rerun\n"
+      "RNG-4,linux-zen1,,marked,files,results/linux-zen1/a.txt,,,missed 3.1 ns,twice\n";
+  return in;
+}
+
+TEST(Verdicts, ARowNotCountedGivesBothRunsAndCountsNeither) {
+  const auto docs = render_docs(uncounted_inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  const std::string& h = docs->headline;
+  EXPECT_TRUE(has(h, "such a row is listed as not counted and names no headline row.\n\n")) << h;
+  EXPECT_TRUE(
+      has(h,
+          "- `linux-zen1`, from the files of commit `0123456`: 4 targets judged. Met, 1: "
+          "[MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case). "
+          "Missed, 2: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) "
+          "and [MC-1](BENCHMARKS.md#mc-1-asian-1044-million-pathss-single-thread). Met in "
+          "part, 1: [AAD-1](BENCHMARKS.md#aad-1-barrier-multiple-below-30). Not counted, 2: "
+          "[AAD-8](BENCHMARKS.md#aad-8-second-order) (lanes: the withdrawn run met at 1.9, "
+          "the rerun missed at 2.2) and [RNG-4](BENCHMARKS.md#rng-4-per-kernel) (marked, "
+          "failed the rule on every run, its last run missed at 3.1 ns). Measured with no "
+          "verdict stated: [AAD-8](BENCHMARKS.md#aad-8-second-order) (reported).\n"))
+      << h;
+  const std::string& r = docs->results_md;
+  EXPECT_TRUE(has(r,
+                  "| [AAD-8](BENCHMARKS.md#aad-8-second-order) | linux-zen1 | lanes | not counted: "
+                  "the runs differ | withdrawn run met at 1.9; rerun missed at 2.2 | - | "
+                  "[a.txt](results/linux-zen1/a.txt) | a rerun |\n"))
+      << r;
+  EXPECT_TRUE(
+      has(r,
+          "| [RNG-4](BENCHMARKS.md#rng-4-per-kernel) | linux-zen1 | - | not counted: marked "
+          "| last run missed at 3.1 ns | - | [a.txt](results/linux-zen1/a.txt) | twice |\n"))
+      << r;
+}
+
+TEST(Verdicts, RefusesANotCountedVerdictLeftOutInventedOrHalfGiven) {
+  DocsInputs in = uncounted_inputs();
+  in.verdicts.erase(in.verdicts.find("RNG-4,"));
+  const auto left_out = render_docs(in);
+  ASSERT_FALSE(left_out.has_value());
+  EXPECT_TRUE(has(left_out.error(),
+                  "RNG-4 on linux-zen1 is stated not counted, and "
+                  "results/verdicts.csv has no split or marked row for it"))
+      << left_out.error();
+
+  in = uncounted_inputs();
+  const std::size_t split_line = in.benchmarks.find("- Measured on `linux-zen1`, lanes");
+  in.benchmarks.erase(split_line, in.benchmarks.find('\n', split_line) + 1 - split_line);
+  const auto invented = render_docs(in);
+  ASSERT_FALSE(invented.has_value());
+  EXPECT_TRUE(has(invented.error(), "AAD-8 on linux-zen1 is split, which no \"Measured\" line"))
+      << invented.error();
+
+  const std::string header = std::string(kVerdictsHeader) + "\n";
+  const std::string head = "AAD-1,linux-zen1,,";
+  const std::string files = ",files,results/linux-zen1/a.txt,";
+  EXPECT_TRUE(parse_verdicts(header + head + "met" + files + ",met 1.9,met 2.0,\n").has_value());
+  EXPECT_TRUE(
+      parse_verdicts(header + head + "split" + files + ",met 1.9,missed 2.2,\n").has_value());
+  EXPECT_TRUE(
+      parse_verdicts(header + head + "marked" + files + ",met 1.9,missed 2.2,\n").has_value());
+  EXPECT_TRUE(parse_verdicts(header + head + "marked" + files + ",,missed 2.2,\n").has_value());
+  for (const std::string_view bad : {
+           "split,,met 1.9,met 2.0,",           // a split whose runs agree
+           "split,,,missed 2.2,",               // a split with one run
+           "met,,met 1.9,missed 2.2,",          // runs that differ, counted
+           "met,,missed 1.9,met 2.2,",          // the withdrawn run missed, counted met
+           "missed,,met 1.9,met 2.2,",          // runs that are not the verdict
+           "met,,met 1.9,,",                    // one run on a counted row
+           "none,,met 1.9,met 2.0,",            // runs on a none row
+           "marked,,met 1.9,,",                 // marked with no figure it publishes
+           "split,w tape,met 1.9,missed 2.2,",  // a headline line for a verdict not counted
+           "split,,fine 1.9,missed 2.2,",       // not an outcome
+           "split,,met,missed 2.2,",            // no figure
+       }) {
+    std::string text = header;
+    text += head;
+    text += bad.substr(0, bad.find(','));
+    text += files;
+    text += bad.substr(bad.find(',') + 1);
+    text += '\n';
+    EXPECT_FALSE(parse_verdicts(text).has_value()) << text;
+  }
+}
+
+TEST(Verdicts, MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor) {
+  const std::string text =
+      "## 1. Cost\n\n### AAD-1: barrier, tape: multiple below 3.0\n\n"
+      "- Source: a paper that met no one.\n"
+      "- Measured on `linux-zen1`: 2.18. Met; the scalar tape misses.\n"
+      "- Measured on `mac-m4max` and `linux-zen1`, by a test of the parameters.\n"
+      "- Measured: met, by a test.\n"
+      "## 14. Code-quality bar\n\n**Benchmarks**\n"
+      "- B34. One adversarial workload.\n"
+      "  - Measured on `linux-zen1`: published.\n"
+      "- B35. Benchmarks in CI.\n"
+      "**Other**\n"
+      "- Measured on `linux-zen1`: met, outside any target.\n"
+      "### MC-3: threads\n"
+      "- Measured on `linux-zen1`: withdrawn run met, rerun missed; Not Counted.\n";
+  const std::vector<MeasuredLine> lines = measured_lines(text);
+  ASSERT_EQ(lines.size(), 5U);
+  EXPECT_TRUE(lines[4].not_counted);
+  EXPECT_FALSE(lines[4].met);  // the outcomes of its runs, not verdicts
+  EXPECT_FALSE(lines[4].missed);
+  EXPECT_FALSE(lines[0].not_counted);
+  EXPECT_EQ(lines[0].line, 6U);
+  EXPECT_EQ(lines[0].target, "AAD-1");
+  EXPECT_EQ(lines[0].anchor, "aad-1-barrier-tape-multiple-below-30");
+  EXPECT_EQ(lines[0].hosts, std::vector<std::string>{"linux-zen1"});
+  EXPECT_TRUE(lines[0].met);
+  EXPECT_TRUE(lines[0].missed);
+  EXPECT_EQ(lines[1].hosts, (std::vector<std::string>{"linux-zen1", "mac-m4max"}));
+  EXPECT_FALSE(lines[1].met);  // "parameters" holds "met" inside a word
+  EXPECT_FALSE(lines[1].missed);
+  EXPECT_TRUE(lines[2].hosts.empty());
+  EXPECT_TRUE(lines[2].met);
+  EXPECT_EQ(lines[3].target, "B34");
+  EXPECT_EQ(lines[3].anchor, "14-code-quality-bar");
+  EXPECT_FALSE(lines[3].met);
 }
 
 }  // namespace

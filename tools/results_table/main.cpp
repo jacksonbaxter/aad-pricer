@@ -32,6 +32,7 @@ constexpr std::string_view kUsage =
     "usage: aadp_results_table [--one-table] [--iteration] <file or directory>...\n"
     "       aadp_results_table --docs <repo root> --check | --write\n";
 constexpr std::string_view kSpecName = "headline.csv";
+constexpr std::string_view kVerdictsName = "verdicts.csv";
 
 bool is_host_directory(std::string_view name) {
   return name == "mac-m4max" || name == "linux-zen1" || name == "other";
@@ -76,7 +77,8 @@ std::string slurp(const fs::path& path) {
   return text.str();
 }
 
-// results/ holds the spec and one directory per host, each of .txt files, and nothing else.
+// results/ holds headline.csv, verdicts.csv and one directory per host, each of .txt files, and
+// nothing else.
 bool read_results_tree(const fs::path& results, aadp::results::DocsInputs& inputs) {
   std::vector<fs::path> entries;
   for (const auto& entry : fs::directory_iterator(results)) {
@@ -85,7 +87,7 @@ bool read_results_tree(const fs::path& results, aadp::results::DocsInputs& input
   std::ranges::sort(entries);
   for (const fs::path& path : entries) {
     const std::string name = path.filename().string();
-    if (fs::is_regular_file(path) && name == kSpecName) {
+    if (fs::is_regular_file(path) && (name == kSpecName || name == kVerdictsName)) {
       continue;
     }
     if (!fs::is_directory(path) || !is_host_directory(name)) {
@@ -129,6 +131,7 @@ bool settle(const fs::path& path, std::string_view label, const std::string& wan
 int run_docs(const fs::path& root, bool write) {
   aadp::results::DocsInputs inputs;
   inputs.spec = slurp(root / "results" / kSpecName);
+  inputs.verdicts = slurp(root / "results" / kVerdictsName);
   inputs.benchmarks = slurp(root / "BENCHMARKS.md");
   if (!read_results_tree(root / "results", inputs)) {
     return kExitRefused;

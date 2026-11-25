@@ -1,6 +1,7 @@
 // The readers behind RESULTS.md and the README's headline (results/docs.hpp). Properties, beyond
-// not crashing: a measured run's counts agree with its rows, splicing the same block twice
-// changes nothing, and two texts differ exactly when a difference line is found.
+// not crashing: a measured run's counts agree with its rows, a verdicts row not counted names no
+// headline row, splicing the same block twice changes nothing, and two texts differ exactly when
+// a difference line is found.
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -27,6 +28,23 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   }
   (void)r::target_heading(text, "AAD-1");
 
+  // The input as results/verdicts.csv: every row has a target and a verdict, a row not counted
+  // names no headline row, and a split row carries both runs.
+  if (const auto verdicts = r::parse_verdicts(text)) {
+    for (const r::VerdictRow& row : *verdicts) {
+      FUZZ_ASSERT(!row.target.empty() && !row.verdict.empty());
+      const bool counted = row.verdict != "split" && row.verdict != "marked";
+      FUZZ_ASSERT(counted || row.headline.empty());
+      FUZZ_ASSERT(row.verdict != "split" || (!row.withdrawn.empty() && !row.rerun.empty()));
+    }
+  }
+  // The input as BENCHMARKS.md: every "Measured" line has a target and a line number in it, and
+  // a line not counted states no verdict word as a verdict.
+  for (const r::MeasuredLine& line : r::measured_lines(text)) {
+    FUZZ_ASSERT(!line.target.empty() && line.line >= 1);
+    FUZZ_ASSERT(!line.not_counted || (!line.met && !line.missed));
+  }
+
   // The input as a README. A block with no marker in it splices the same way twice; the input
   // itself as the block may hold markers, so only its length is checked.
   constexpr std::string_view kBlock = "| a | b |\n";
@@ -44,6 +62,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   if (const auto spec = r::parse_headline_spec(text)) {
     r::DocsInputs inputs;
     inputs.spec = std::string(text);
+    inputs.verdicts = std::string(text);
     inputs.benchmarks = std::string(text);
     for (const r::HeadlineRow& row : spec->measured_runs) {
       inputs.measured_runs[row.source] = std::string(text);
