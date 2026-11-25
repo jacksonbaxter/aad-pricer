@@ -12,7 +12,10 @@
 #              split (a step withdrawn under the host's rule gave one outcome in the withdrawn run
 #              and the other in its rerun) or marked (the figure rests on a step that failed the
 #              rule on every run it was allowed, published with its mark)
+#              and waiting, neither judged nor counted: the step that would answer it
+#              on the host has no standing run yet; listed after the counts
 #   basis      files: the stamped files cited; test: no file, the note names the test
+#              pending, on a waiting row only: no file yet
 #   files      results/<host>/<name>.txt, space-separated
 #   headline   empty, or the results/headline.csv row whose verdict this is: "<source> <detail>",
 #              or "<source>" for a row with no detail; never on a row not counted
@@ -20,7 +23,8 @@
 #   rerun      empty, or "<met|missed> <figure>": the answering run's outcome and figure
 #   note       the rest of the line: what must travel with the verdict
 # A split row gives both runs, with different outcomes; a marked row gives its rerun; a met or
-# missed row gives both runs or neither, each its verdict; a none row gives neither.
+# missed row gives both runs or neither, each its verdict; a none row gives neither; a
+# waiting row gives neither, cites no file and names no headline row.
 #
 # The Mac's rows are its batch of 2026-11-18 at 8bb2116 (the bench set) and c5f3473 (Metal and
 # QuantLib), its 24 standing bench files and the Metal table; its 19 withdrawn steps run again on
@@ -93,24 +97,31 @@ MC-4,linux-zen1,scalar,missed,files,results/linux-zen1/simd-european-20261117T09
 MC-4,mac-m4max,2 lanes,met,files,results/mac-m4max/simd-european-20261118T051033Z.txt,,,,31.9 million paths/s at 2 lanes (NEON, lane ceiling 2 lanes), met by 13.7 million
 MC-4,mac-m4max,scalar,met,files,results/mac-m4max/simd-european-20261118T051033Z.txt,,,,the scalar pricer 37.3 million paths/s, met by 19.1 million; on this workload it is faster than the 2 lanes
 RNG-1,linux-zen1,,met,files,results/linux-zen1/simd-math-philox-scalar-20261117T104150Z.txt results/linux-zen1/simd-math-philox-lanes-1-20261117T104153Z.txt results/linux-zen1/simd-math-philox-lanes-4-20261117T104157Z.txt,,,,the scalar generator 1.140 cycles per byte, met by 2.46; at 1 lane 2.657 and at 4 lanes 1.255
+RNG-1,mac-m4max,cycles per byte,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (the Philox per-kernel runs)
 RNG-2,linux-zen1,cycles per byte,missed,files,results/linux-zen1/simd-math-xoshiro256pp-scalar-20261117T104201Z.txt,,,,0.468 cycles per byte, missed by 0.138, 1.42 times
 RNG-2,linux-zen1,ns per 64 bits,missed,files,results/linux-zen1/simd-math-20261117T103815Z.txt,,,,1.09 ns, missed by 0.51 ns, 1.87 times: Zen 1 at its own clock against Zen 5 fixed at 4.5 GHz
 RNG-2,mac-m4max,ns per 64 bits,missed,files,results/mac-m4max/simd-math-20261118T053137Z.txt,,,,0.688 ns, missed by 0.11 ns, 1.19 times: an M4 Max core at its own clock against Zen 5 fixed at 4.5 GHz; the cycles wait for the per-kernel rerun
+RNG-2,mac-m4max,cycles per byte,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (the xoshiro256++ per-kernel run); its time is judged above
 RNG-3,any,,missed,test,,,,,MathInverseNormal.ProductionMatchesTheTable: 8.39e-16, 1.4 times the target, the same bits on both hosts
 RNG-4,linux-zen1,47 scalar,missed,files,results/linux-zen1/simd-math-inverse-normal-scalar-20261117T104027Z.txt,,,,55.7 cycles per value, missed by 8.7 cycles, 1.18 times, in double against the source's single precision
 RNG-4,linux-zen1,stretch 9 vector,missed,files,results/linux-zen1/simd-math-inverse-normal-lanes-4-20261117T104055Z.txt,,,,59.2 cycles at 4 lanes, missed by 50.2 cycles, 6.6 times
+RNG-4,mac-m4max,cycles per value,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (the inverse-normal per-kernel runs)
 SIMD-1,linux-zen1,no efficiency claimed,none,files,results/linux-zen1/simd-european-20261117T095501Z.txt results/linux-zen1/simd-asian252-20261117T095540Z.txt results/linux-zen1/simd-barrier-onestep-20261117T100553Z.txt results/linux-zen1/simd-math-20261117T103815Z.txt,,,,scalar over 4 lanes 2.39, 1.57 and 2.15 beside the lane ceiling of 4 lanes (Zen 1: 128-bit FP datapath)
 SIMD-1,mac-m4max,no efficiency claimed,none,files,results/mac-m4max/simd-european-20261118T051033Z.txt results/mac-m4max/simd-asian252-20261118T051048Z.txt results/mac-m4max/simd-barrier-onestep-20261118T051348Z.txt results/mac-m4max/simd-math-20261118T053137Z.txt,,,,scalar over 2 lanes 0.86, 0.77 and 1.38 beside the lane ceiling of 2 lanes (NEON)
 SIMD-2,linux-zen1,within each build,met,test,,,,,bit-identical at 1, 2 and 4 lanes (AVX2), by tests (a486c9a)
 SIMD-2,linux-zen1,the reported run,met,files,results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt results/linux-zen1/mc3-asian252-mt-avx2-20261117T130249Z.txt results/linux-zen1/simd-asian252-20261117T095540Z.txt results/linux-zen1/simd-barrier-onestep-20261117T100553Z.txt results/linux-zen1/simd-european-20261117T095501Z.txt results/linux-zen1/simd-math-20261117T103815Z.txt results/linux-zen1/simd-math-exp-lanes-1-20261117T103952Z.txt results/linux-zen1/simd-math-exp-scalar-20261117T103946Z.txt results/linux-zen1/simd-math-inverse-normal-lanes-1-20261117T104035Z.txt results/linux-zen1/simd-math-inverse-normal-lanes-4-20261117T104055Z.txt results/linux-zen1/simd-math-inverse-normal-scalar-20261117T104027Z.txt results/linux-zen1/simd-math-log-lanes-4-20261117T104021Z.txt results/linux-zen1/simd-math-normal-cdf-lanes-1-20261117T104118Z.txt results/linux-zen1/simd-math-normal-cdf-lanes-4-20261117T104139Z.txt results/linux-zen1/simd-math-normal-cdf-scalar-20261117T104104Z.txt results/linux-zen1/simd-math-philox-lanes-1-20261117T104153Z.txt results/linux-zen1/simd-math-philox-lanes-4-20261117T104157Z.txt results/linux-zen1/simd-math-philox-scalar-20261117T104150Z.txt results/linux-zen1/simd-math-xoshiro256pp-scalar-20261117T104201Z.txt results/linux-zen1/aad1-barrier-20261117T070836Z.txt results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt results/linux-zen1/aad4-asian12-20261117T074943Z.txt results/linux-zen1/mc-asian252-20261117T075630Z.txt results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt,,,,every lane check in the stamped files passed
 SIMD-2,mac-m4max,within each build,met,test,,,,,bit-identical at 1 and 2 lanes (NEON), by tests (a486c9a)
 SIMD-2,mac-m4max,the reported run,met,files,results/mac-m4max/simd-european-20261118T051033Z.txt results/mac-m4max/simd-asian252-20261118T051048Z.txt results/mac-m4max/simd-barrier-onestep-20261118T051348Z.txt results/mac-m4max/simd-math-20261118T053137Z.txt results/mac-m4max/simd-math-normal-cdf-scalar-20261118T053256Z.txt results/mac-m4max/simd-math-normal-cdf-lanes-1-20261118T053304Z.txt results/mac-m4max/simd-math-normal-cdf-lanes-2-20261118T053313Z.txt results/mac-m4max/aad1-barrier-20261118T040001Z.txt results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt results/mac-m4max/aad4-asian12-20261118T042112Z.txt results/mac-m4max/mc-asian252-20261118T042341Z.txt results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt,,,,every lane check in the stamped files passed, at 1 and 2 lanes (NEON)
+GPU-1,mac-m4max,timing,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (metal-timing: no process record)
 GPU-2,mac-m4max,the reported table,met,files,results/mac-m4max/metal-table-20261118T063834Z.txt,,,,abs(D - B) / SE_B 0.00030, 0.00062 and 0.00015 against 0.01 at 2^24 paths per contract, the file's verdict pass on all three; at c5f3473
 GPU-2,mac-m4max,by tests,met,test,,,,,Gpu.Gpu2Asian12, Gpu.Gpu2Asian252 and Gpu.Gpu2Barrier156 at N = 2^20: 0.00008, 0.00015 and 0.00004 of SE against 0.01
 GPU-3,mac-m4max,reported and not judged,none,files,results/mac-m4max/metal-table-20261118T063834Z.txt,,,,(D - B) / B -1.083e-7, +2.206e-7 and -1.081e-7 beside NAG's reference of about 1e-7; at c5f3473
+QL-1,mac-m4max,speed,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (the three QuantLib speed runs: no process record)
 QL-2,mac-m4max,,met,test,,,,,all 42 comparisons pass the section 10 rule, 18 QuantLib and 24 ours, every SE under its ceiling, in references/quantlib_accuracy.csv: curated from the accuracy run at c5f3473 and checked against that run's rows byte for byte by the curation script's check. This table's files column takes only results/<host>/ files, so the curated file is named here; the ctest aadp_quantlib_accuracy_curation validates its 42 verdicts from their own cells
+QL-3,mac-m4max,context,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (QL-1's speed runs)
 SVI-1,any,,met,test,,,,,by test (83d93b1) on macOS: the worst vol error 0.25 of its bound and the worst price error 0.27
 SVI-2,linux-zen1,,missed,files,results/linux-zen1/svi2-implied-vol-20261117T104552Z.txt,,,,357.5 ns per inversion, missed by 177.5 ns, 1.99 times
+SVI-2,mac-m4max,,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (svi2-implied-vol)
 SVI-3,any,,met,test,,,,,by test (fd60de0)
 SVI-4,any,,met,test,,,,,by test (fd60de0)
 SVI-5,any,,met,test,,,,,by test (fd60de0)
@@ -147,3 +158,4 @@ SVI-11,mac-m4max,202411,missed,files,results/mac-m4max/svi-fit-report-20261118T0
 SVI-11,mac-m4max,202411W4,met,files,results/mac-m4max/svi-fit-report-20261118T053339Z.txt,,,,0.410 vol points, met by 0.320
 SVI-11,mac-m4max,202412,missed,files,results/mac-m4max/svi-fit-report-20261118T053339Z.txt,,,,1.397 vol points, missed by 0.667
 B34,linux-zen1,caveat: its price variant ran 3.45 times slower than at d1596e0 and the cause is not established,none,files,results/linux-zen1/lw-worst-20261117T083521Z.txt,,,,published as B34 asks: tape 25.9 times price, but not to be read beside Hogan's 22 to 33 yet: the price variant took 0.4675 ms a call, 3.45 times its 0.1355 ms at d1596e0 on this host, while the same primal inside the bumps did not slow down (0.132 ms a pricing); why is not established, and nothing was run to find it
+B34,mac-m4max,on lw-worst,waiting,pending,,,,,its step of the batch of 2026-11-18 was withdrawn under the Mac's rule; it runs again once on 2026-11-26 (lw-worst); until then the Mac's lw-worst file is the one of d1596e0

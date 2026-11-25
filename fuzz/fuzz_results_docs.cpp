@@ -29,20 +29,24 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
   (void)r::target_heading(text, "AAD-1");
 
   // The input as results/verdicts.csv: every row has a target and a verdict, a row not counted
-  // names no headline row, and a split row carries both runs.
+  // names no headline row, a split row carries both runs, and a waiting row no file and no run.
   if (const auto verdicts = r::parse_verdicts(text)) {
     for (const r::VerdictRow& row : *verdicts) {
       FUZZ_ASSERT(!row.target.empty() && !row.verdict.empty());
-      const bool counted = row.verdict != "split" && row.verdict != "marked";
+      const bool counted =
+          row.verdict != "split" && row.verdict != "marked" && row.verdict != "waiting";
       FUZZ_ASSERT(counted || row.headline.empty());
       FUZZ_ASSERT(row.verdict != "split" || (!row.withdrawn.empty() && !row.rerun.empty()));
+      FUZZ_ASSERT(row.verdict != "waiting" ||
+                  (row.files.empty() && row.withdrawn.empty() && row.rerun.empty()));
     }
   }
   // The input as BENCHMARKS.md: every "Measured" line has a target and a line number in it, and
-  // a line not counted states no verdict word as a verdict.
+  // a line not counted, or waiting, states no verdict word as a verdict.
   for (const r::MeasuredLine& line : r::measured_lines(text)) {
     FUZZ_ASSERT(!line.target.empty() && line.line >= 1);
     FUZZ_ASSERT(!line.not_counted || (!line.met && !line.missed));
+    FUZZ_ASSERT(!line.waiting || (!line.met && !line.missed && !line.not_counted));
   }
 
   // The input as a README. A block with no marker in it splices the same way twice; the input

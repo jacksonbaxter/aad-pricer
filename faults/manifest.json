@@ -9678,8 +9678,8 @@
       "edits": [
         {
           "file": "src/results/docs.cpp",
-          "find": "  if (!is_counted(row) && !row.headline.empty()) {",
-          "replace": "  if (row.verdict == \"marked\" && !row.headline.empty()) {"
+          "find": "  if ((!is_counted(row) || is_waiting(row)) && !row.headline.empty()) {",
+          "replace": "  if ((row.verdict == \"marked\" || is_waiting(row)) && !row.headline.empty()) {"
         }
       ],
       "preset": "release",
@@ -9687,6 +9687,63 @@
       "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
       "detect": "test",
       "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANotCountedVerdictLeftOutInventedOrHalfGiven",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-waiting-listed",
+      "kind": "check",
+      "covers": "a waiting row is listed after the counts with what waits",
+      "bug": "The README's count drops the targets that wait for a run, so a reader cannot tell they were left out.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (!t.waiting.empty()) {\n    out += \" Waiting for a run",
+          "replace": "  if (t.waiting.empty()) {\n    out += \" Waiting for a run"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.AWaitingRowIsListedAfterTheCountsAndCountsNeither",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-verdict-waiting-stated",
+      "kind": "check",
+      "covers": "a \"Waiting\" line of BENCHMARKS.md needs a waiting row",
+      "bug": "A target BENCHMARKS.md says is waiting can be left out of results/verdicts.csv, and of the count.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (s.waiting && !g.waiting) {",
+          "replace": "  if (s.waiting && g.waiting) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesAWaitingRowLeftOutInventedOrWithAFigure",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-measured-waiting-words",
+      "kind": "check",
+      "covers": "a \"Waiting\" line states no verdict, whatever its words",
+      "bug": "A waiting line's words are read as verdicts, so a step that has not run is counted met or missed.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (measured.waiting) {\n    return measured;",
+          "replace": "  if (false) {\n    return measured;"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor",
       "timeout_s": 300
     },
     {

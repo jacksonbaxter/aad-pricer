@@ -909,7 +909,7 @@ TEST(Verdicts, ARowNotCountedGivesBothRunsAndCountsNeither) {
   const auto docs = render_docs(uncounted_inputs());
   ASSERT_TRUE(docs.has_value()) << docs.error();
   const std::string& h = docs->headline;
-  EXPECT_TRUE(has(h, "such a row is listed as not counted and names no headline row.\n\n")) << h;
+  EXPECT_TRUE(has(h, "such a row is listed as not counted and names no headline row. ")) << h;
   EXPECT_TRUE(
       has(h,
           "- `linux-zen1`, from the files of commit `0123456`: 4 targets judged. Met, 1: "
@@ -985,6 +985,83 @@ TEST(Verdicts, RefusesANotCountedVerdictLeftOutInventedOrHalfGiven) {
   }
 }
 
+// judged_inputs() with RNG-4 waiting for a run on linux-zen1: its "Waiting" line and its row.
+DocsInputs waiting_inputs() {
+  DocsInputs in = judged_inputs();
+  in.benchmarks += "\n### RNG-4: per kernel\n";
+  const std::size_t heading = in.benchmarks.find("### RNG-4:");
+  in.benchmarks.insert(in.benchmarks.find('\n', heading) + 1,
+                       "- Waiting on `linux-zen1`: its run was withdrawn, missed nothing yet.\n");
+  in.verdicts += "RNG-4,linux-zen1,cycles,waiting,pending,,,,,runs again\n";
+  return in;
+}
+
+TEST(Verdicts, AWaitingRowIsListedAfterTheCountsAndCountsNeither) {
+  const auto docs = render_docs(waiting_inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  const std::string& h = docs->headline;
+  EXPECT_TRUE(has(h,
+                  "has a waiting row there, neither judged nor counted, listed after the "
+                  "counts with what waits.\n\n"))
+      << h;
+  EXPECT_TRUE(has(h,
+                  "- `linux-zen1`, from the files of commit `0123456`: 4 targets judged. Met, 1: "
+                  "[MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case). "
+                  "Missed, 2: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) "
+                  "and [MC-1](BENCHMARKS.md#mc-1-asian-1044-million-pathss-single-thread). Met in "
+                  "part, 1: [AAD-1](BENCHMARKS.md#aad-1-barrier-multiple-below-30). Not counted, "
+                  "0. Measured with no verdict stated: [AAD-8](BENCHMARKS.md#aad-8-second-order). "
+                  "Waiting for a run, neither judged nor counted: "
+                  "[RNG-4](BENCHMARKS.md#rng-4-per-kernel) (cycles).\n"))
+      << h;
+  EXPECT_TRUE(has(docs->results_md,
+                  "| [RNG-4](BENCHMARKS.md#rng-4-per-kernel) | linux-zen1 | cycles | waiting for a "
+                  "run | - | - | none yet | runs again |\n"))
+      << docs->results_md;
+}
+
+TEST(Verdicts, RefusesAWaitingRowLeftOutInventedOrWithAFigure) {
+  DocsInputs in = waiting_inputs();
+  in.verdicts.erase(in.verdicts.find("RNG-4,"));
+  const auto left_out = render_docs(in);
+  ASSERT_FALSE(left_out.has_value());
+  EXPECT_TRUE(has(left_out.error(),
+                  "RNG-4 on linux-zen1 is stated waiting, and results/verdicts.csv has no "
+                  "waiting row for it"))
+      << left_out.error();
+
+  in = waiting_inputs();
+  const std::size_t line = in.benchmarks.find("- Waiting on");
+  in.benchmarks.replace(line, std::string_view("- Waiting").size(), "- Measured");
+  const auto measured = render_docs(in);
+  ASSERT_FALSE(measured.has_value());
+  EXPECT_TRUE(has(measured.error(), "RNG-4 on linux-zen1 is stated missed") ||
+              has(measured.error(), "RNG-4 on linux-zen1 is waiting, which no \"Measured\" line"))
+      << measured.error();
+
+  in = waiting_inputs();
+  in.benchmarks.erase(line, in.benchmarks.find('\n', line) + 1 - line);
+  const auto invented = render_docs(in);
+  ASSERT_FALSE(invented.has_value());
+  EXPECT_TRUE(has(invented.error(), "RNG-4 on linux-zen1 has no \"Measured\" line"))
+      << invented.error();
+
+  const std::string header = std::string(kVerdictsHeader) + "\n";
+  EXPECT_TRUE(parse_verdicts(header + "RNG-4,mac-m4max,cycles,waiting,pending,,,,,\n").has_value());
+  for (const std::string_view bad : {
+           "RNG-4,mac-m4max,,waiting,files,results/mac-m4max/a.txt,,,,",    // a waiting file
+           "RNG-4,mac-m4max,,waiting,pending,results/mac-m4max/a.txt,,,,",  // pending with files
+           "RNG-4,mac-m4max,,waiting,test,,,,,",                            // not pending
+           "RNG-4,mac-m4max,,met,pending,,,,,",                             // pending, counted
+           "RNG-4,mac-m4max,,waiting,pending,,,met 1.9,,",                  // a run that waits
+           "RNG-4,mac-m4max,,waiting,pending,,,,missed 2.2,",               // and its rerun
+           "RNG-4,mac-m4max,,waiting,pending,,w tape,,,",                   // a headline row
+           "RNG-4,any,,waiting,pending,,,,,",                               // on any host
+       }) {
+    EXPECT_FALSE(parse_verdicts(header + std::string(bad) + "\n").has_value()) << bad;
+  }
+}
+
 TEST(Verdicts, MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor) {
   const std::string text =
       "## 1. Cost\n\n### AAD-1: barrier, tape: multiple below 3.0\n\n"
@@ -999,9 +1076,15 @@ TEST(Verdicts, MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor) {
       "**Other**\n"
       "- Measured on `linux-zen1`: met, outside any target.\n"
       "### MC-3: threads\n"
-      "- Measured on `linux-zen1`: withdrawn run met, rerun missed; Not Counted.\n";
+      "- Measured on `linux-zen1`: withdrawn run met, rerun missed; Not Counted.\n"
+      "- Waiting on `mac-m4max`: withdrawn; it met once, not counted.\n"
+      "- Wait on `mac-m4max`: no such line.\n";
   const std::vector<MeasuredLine> lines = measured_lines(text);
-  ASSERT_EQ(lines.size(), 5U);
+  ASSERT_EQ(lines.size(), 6U);
+  EXPECT_TRUE(lines[5].waiting);  // its words state no verdict
+  EXPECT_FALSE(lines[5].met || lines[5].missed || lines[5].not_counted);
+  EXPECT_EQ(lines[5].hosts, std::vector<std::string>{"mac-m4max"});
+  EXPECT_FALSE(lines[4].waiting);
   EXPECT_TRUE(lines[4].not_counted);
   EXPECT_FALSE(lines[4].met);  // the outcomes of its runs, not verdicts
   EXPECT_FALSE(lines[4].missed);

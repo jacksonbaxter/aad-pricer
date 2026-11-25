@@ -123,7 +123,11 @@ std::optional<std::string> target_heading(std::string_view benchmarks, std::stri
 //                        the withdrawn run and the other in the rerun
 //                marked  the figure rests on a step that failed the rule on every run it was
 //                        allowed, published with its mark
-//   basis      files: the stamped files in `files`; test: no file, the note names the test
+//              and waiting, neither judged nor counted: the step that would answer it on the
+//              host has no standing run yet (withdrawn and to run again, say); the condition
+//              says what waits, and the README's counts list it after them
+//   basis      files: the stamped files in `files`; test: no file, the note names the test;
+//              pending, on a waiting row only: no file yet
 //   files      results/<host>/<name>, space-separated, each a file in results/<host>/
 //   headline   empty, or the headline.csv row of the same target and host whose verdict this is:
 //              "<source> <detail>", or "<source>" for a row with no detail. Empty on a row not
@@ -134,15 +138,17 @@ std::optional<std::string> target_heading(std::string_view benchmarks, std::stri
 //   note       the rest of the line, commas and all: what must travel with the verdict
 // No field but the note holds a comma or a `|`. (target, host, condition) is unique. A split
 // row gives both runs, with different outcomes; a marked row gives its rerun; a met or missed
-// row gives both runs or neither, and both outcomes are its verdict; a none row gives neither.
+// row gives both runs or neither, and both outcomes are its verdict; a none row gives neither;
+// a waiting row gives neither, cites no file and names no headline row.
 //
 // render_docs checks the rows against BENCHMARKS.md's "Measured" lines (measured_lines below):
 // every target, host and verdict a line states has a row, and every row has a line that states
 // it, so a judged target can be neither left out nor invented; a target measured on a host with
 // no verdict stated has a `none` row there, and one whose line says "not counted" has a split or
-// marked row. Every headline row but an oracle run is named by exactly one verdict row, whose
-// verdict must be the headline's (met, missed, or none for an INVALID run). Files are refused
-// unless they are under results/<host>/ of the row's own host.
+// marked row. A "Waiting" line has a waiting row, and a waiting row a "Waiting" line. Every
+// headline row but an oracle run is named by exactly one verdict row, whose verdict must be the
+// headline's (met, missed, or none for an INVALID run). Files are refused unless they are under
+// results/<host>/ of the row's own host.
 struct VerdictRow {
   std::string target;
   std::string host;
@@ -163,7 +169,9 @@ std::expected<std::vector<VerdictRow>, std::string> parse_verdicts(std::string_v
 // labels it names in backticks; a line that names none is a host-free verdict by a test, if it
 // states one. A verdict is a word: met, meets or meeting; missed, misses or missing. A line that
 // says "not counted" states a verdict not counted, and its verdict words are the outcomes of its
-// runs, not verdicts.
+// runs, not verdicts. A "Waiting" line, a bullet whose text begins "Waiting", in the same places,
+// says that the target waits on the hosts it names for a run that has no standing file yet; it
+// states no verdict, whatever its words.
 struct MeasuredLine {
   std::size_t line = 0;  // counted from 1
   std::string target;
@@ -172,6 +180,7 @@ struct MeasuredLine {
   bool met = false;
   bool missed = false;
   bool not_counted = false;
+  bool waiting = false;
 };
 
 std::vector<MeasuredLine> measured_lines(std::string_view benchmarks);

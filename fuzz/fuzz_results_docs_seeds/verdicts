@@ -1,4 +1,4 @@
-# a synthetic verdicts file: counted, unjudged and not counted rows
+# a synthetic verdicts file: counted, unjudged, not counted and waiting rows
 target,host,condition,verdict,basis,files,headline,withdrawn,rerun,note
 AAD-1,linux-zen1,scalar,met,files,results/linux-zen1/a.txt,w tape/price,,,a note, with a comma
 AAD-1,linux-zen1,lanes,missed,files,results/linux-zen1/a.txt,,missed 3.4,missed 3.5,both runs missed
@@ -6,3 +6,4 @@ AAD-8,linux-zen1,,none,files,results/linux-zen1/b.txt,,,,
 MEM-5,mac-m4max,one thread,split,files,results/mac-m4max/c.txt,,met 1.05,missed 1.12,the runs differ
 RNG-4,mac-m4max,,marked,files,results/mac-m4max/d.txt,,,missed 60.1 cycles,failed the rule twice
 RNG-3,any,,missed,test,,,,,a test
+RNG-1,mac-m4max,cycles per byte,waiting,pending,,,,,its step runs again

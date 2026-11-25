@@ -402,7 +402,7 @@ std::string_view heading_text(std::string_view line) {
   return line;
 }
 
-// A "Measured" line's hosts and verdict words; `body` starts at "Measured".
+// A "Measured" or "Waiting" line's hosts and verdict words; `body` starts at either word.
 MeasuredLine read_measured_line(std::string_view body, std::size_t number,
                                 const std::string& target, const std::string& anchor) {
   MeasuredLine measured{.line = number,
@@ -411,11 +411,15 @@ MeasuredLine read_measured_line(std::string_view body, std::size_t number,
                         .hosts = {},
                         .met = false,
                         .missed = false,
-                        .not_counted = false};
+                        .not_counted = false,
+                        .waiting = body.starts_with("Waiting")};
   for (const std::string_view host : kHostLabels) {
     if (body.contains("`" + std::string(host) + "`")) {
       measured.hosts.emplace_back(host);
     }
+  }
+  if (measured.waiting) {
+    return measured;  // a step that has not run states no verdict
   }
   std::string lower(body);
   std::ranges::transform(lower, lower.begin(), ascii_lower);
@@ -442,6 +446,8 @@ bool is_results_path(std::string_view path, std::string_view host) {
 
 bool is_counted(const VerdictRow& row) { return row.verdict != "split" && row.verdict != "marked"; }
 
+bool is_waiting(const VerdictRow& row) { return row.verdict == "waiting"; }
+
 // "met 1.05", "missed 1.12 times": a run's outcome, then its figure. Empty if `run` is empty.
 std::expected<std::string_view, std::string> run_outcome(std::string_view run) {
   if (run.empty()) {
@@ -464,7 +470,11 @@ std::expected<void, std::string> check_verdict_runs(const VerdictRow& row) {
   if (!withdrawn || !rerun) {
     return std::unexpected(withdrawn ? rerun.error() : withdrawn.error());
   }
-  if (row.verdict == "split") {
+  if (is_waiting(row)) {
+    if (!withdrawn->empty() || !rerun->empty()) {
+      return std::unexpected("a waiting row gives no run: its step has not run");
+    }
+  } else if (row.verdict == "split") {
     if (withdrawn->empty() || rerun->empty() || *withdrawn == *rerun) {
       return std::unexpected(
           "a split row gives the withdrawn run and the rerun, with different outcomes");
@@ -478,8 +488,24 @@ std::expected<void, std::string> check_verdict_runs(const VerdictRow& row) {
     return std::unexpected("a " + row.verdict + " row gives both runs or neither, each " +
                            row.verdict + "; runs that differ make it split");
   }
-  if (!is_counted(row) && !row.headline.empty()) {
+  if ((!is_counted(row) || is_waiting(row)) && !row.headline.empty()) {
     return std::unexpected("a verdict not counted names no headline row");
+  }
+  return {};
+}
+
+// files cites results files and test none; pending, a waiting row's alone, cites none.
+std::expected<void, std::string> check_verdict_basis(const VerdictRow& row) {
+  if (row.basis != "files" && row.basis != "test" && row.basis != "pending") {
+    return std::unexpected("a basis is files, test or pending");
+  }
+  if (is_waiting(row) != (row.basis == "pending")) {
+    return std::unexpected("a waiting row's basis is pending, and only a waiting row's");
+  }
+  if ((row.basis == "files") == row.files.empty() ||
+      (row.host == kAnyHost && row.basis != "test")) {
+    return std::unexpected(
+        "a files row cites files and a test or pending row none; a row on any host is a test");
   }
   return {};
 }
@@ -488,19 +514,15 @@ std::expected<void, std::string> check_verdict_fields(const VerdictRow& row) {
   if (!is_target_id(row.target) || !is_known_host(row.host)) {
     return std::unexpected("a row needs a target id and a host label, or `any`");
   }
-  if (row.verdict != "met" && row.verdict != "missed" && row.verdict != "none" && is_counted(row)) {
-    return std::unexpected("a verdict is met, missed, none, split or marked");
+  if (row.verdict != "met" && row.verdict != "missed" && row.verdict != "none" &&
+      !is_waiting(row) && is_counted(row)) {
+    return std::unexpected("a verdict is met, missed, none, split, marked or waiting");
   }
   if (auto runs = check_verdict_runs(row); !runs) {
     return runs;
   }
-  if (row.basis != "files" && row.basis != "test") {
-    return std::unexpected("a basis is files or test");
-  }
-  if ((row.basis == "files") == row.files.empty() ||
-      (row.host == kAnyHost && row.basis != "test")) {
-    return std::unexpected(
-        "a files row cites files and a test row none; a row on any host is a test");
+  if (auto basis = check_verdict_basis(row); !basis) {
+    return basis;
   }
   for (const std::string& file : row.files) {
     if (!is_results_path(file, row.host)) {
@@ -735,7 +757,7 @@ std::vector<MeasuredLine> measured_lines(std::string_view benchmarks) {
     while (body.starts_with(' ')) {
       body.remove_prefix(1);
     }
-    if (!target.empty() && body.starts_with("- Measured")) {
+    if (!target.empty() && (body.starts_with("- Measured") || body.starts_with("- Waiting"))) {
       body.remove_prefix(2);
       out.push_back(read_measured_line(body, number, target, anchor));
     }
@@ -1405,7 +1427,8 @@ struct Stated {
   bool missed = false;
   bool none = false;
   bool not_counted = false;
-  bool silent = false;   // a line states no verdict at all
+  bool waiting = false;
+  bool silent = false;   // a "Measured" line states no verdict at all
   std::size_t line = 0;  // BENCHMARKS.md's first line for the pair
 };
 
@@ -1419,6 +1442,9 @@ bool states(const Stated& line, const VerdictRow& row) {
   if (row.verdict == "missed") {
     return line.missed;
   }
+  if (is_waiting(row)) {
+    return line.waiting;
+  }
   return is_counted(row) ? line.silent : line.not_counted;
 }
 
@@ -1427,7 +1453,7 @@ std::map<TargetHost, Stated> stated_by_lines(const std::vector<MeasuredLine>& li
   std::map<TargetHost, Stated> stated;
   for (const MeasuredLine& m : lines) {
     std::vector<std::string> on = m.hosts;
-    if (on.empty() && (m.met || m.missed || m.not_counted)) {
+    if (on.empty() && (m.met || m.missed || m.not_counted || m.waiting)) {
       on.emplace_back(kAnyHost);
     }
     for (const std::string& host : on) {
@@ -1436,7 +1462,8 @@ std::map<TargetHost, Stated> stated_by_lines(const std::vector<MeasuredLine>& li
       s.met = s.met || m.met;
       s.missed = s.missed || m.missed;
       s.not_counted = s.not_counted || m.not_counted;
-      s.silent = s.silent || (!m.met && !m.missed && !m.not_counted);
+      s.waiting = s.waiting || m.waiting;
+      s.silent = s.silent || (!m.met && !m.missed && !m.not_counted && !m.waiting);
     }
   }
   return stated;
@@ -1451,6 +1478,7 @@ std::map<TargetHost, Stated> given_by_rows(const std::vector<VerdictRow>& rows) 
     g.missed = g.missed || row.verdict == "missed";
     g.none = g.none || row.verdict == "none";
     g.not_counted = g.not_counted || !is_counted(row);
+    g.waiting = g.waiting || is_waiting(row);
   }
   return given;
 }
@@ -1469,9 +1497,13 @@ std::string left_out(const TargetHost& key, const Stated& s, const Stated& g) {
     return at + target_on(key) +
            " is stated not counted, and results/verdicts.csv has no split or marked row for it";
   }
-  if (!s.met && !s.missed && !s.not_counted && !g.none) {
+  if (s.silent && !s.met && !s.missed && !s.not_counted && !g.none) {
     return at + target_on(key) +
            " is measured with no verdict, and results/verdicts.csv has no none row for it";
+  }
+  if (s.waiting && !g.waiting) {
+    return at + target_on(key) +
+           " is stated waiting, and results/verdicts.csv has no waiting row for it";
   }
   return {};
 }
@@ -1622,6 +1654,7 @@ struct HostTally {
   std::map<std::string, Stated, std::less<>> by_target;
   std::vector<std::string> commits;      // of the cited files, in backticks, first seen first
   std::vector<std::string> not_counted;  // each linked, with its runs
+  std::vector<std::string> waiting;      // each linked, with what waits
   std::map<std::string, std::string, std::less<>> none_conditions;  // what a none row says
   bool tests = false;
 };
@@ -1643,6 +1676,11 @@ HostTally tally_host(std::string_view host, const std::vector<VerdictRow>& rows,
   HostTally t;
   for (const VerdictRow& row : rows) {
     if (row.host != host) {
+      continue;
+    }
+    if (is_waiting(row)) {
+      t.waiting.push_back(target_link(row.target, links) +
+                          (row.condition.empty() ? "" : " (" + row.condition + ")"));
       continue;
     }
     if (!is_counted(row)) {
@@ -1720,6 +1758,9 @@ std::string host_counts(std::string_view host, const std::vector<VerdictRow>& ro
   if (!none.empty()) {
     out += " Measured with no verdict stated: " + joined(none) + ".";
   }
+  if (!t.waiting.empty()) {
+    out += " Waiting for a run, neither judged nor counted: " + joined(t.waiting) + ".";
+  }
   return out + "\n";
 }
 
@@ -1741,7 +1782,9 @@ std::string verdict_counts(const std::vector<VerdictRow>& rows,
       "one outcome in the withdrawn run and the other in its rerun (the row gives both figures "
       "and both outcomes), or where its figure rests on a step that failed the rule on every run "
       "it was allowed (published with its mark); such a row is listed as not counted and names "
-      "no headline row.\n\n";
+      "no headline row. A target whose step has no standing run on a host yet, withdrawn and to "
+      "run again, has a waiting row there, neither judged nor counted, listed after the counts "
+      "with what waits.\n\n";
   std::vector<std::string_view> order(kHostLabels.begin(), kHostLabels.end());
   order.push_back(kAnyHost);
   for (const std::string_view host : order) {
@@ -1759,6 +1802,9 @@ std::string verdict_cell(const VerdictRow& row) {
   }
   if (row.verdict == "marked") {
     return "not counted: marked";
+  }
+  if (is_waiting(row)) {
+    return "waiting for a run";
   }
   return row.verdict == "none" ? "none stated" : row.verdict;
 }
@@ -1778,6 +1824,9 @@ std::string runs_cell(const VerdictRow& row) {
 std::string files_cell(const VerdictRow& row) {
   if (row.basis == "test") {
     return "a test";
+  }
+  if (row.basis == "pending") {
+    return "none yet";
   }
   std::string files;
   for (const std::string& path : row.files) {

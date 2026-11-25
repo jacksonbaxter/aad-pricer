@@ -11,6 +11,7 @@
 
 - Measured on `mac-m4max`: 1.05 in the withdrawn run, met; 1.12 in its rerun, missed; not counted.
 - Measured: met, by a test.
+- Waiting on `linux-zen1`: withdrawn; it met once, not counted.
 
 ## 14. Code-quality bar
 
