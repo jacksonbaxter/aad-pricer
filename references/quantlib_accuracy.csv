@@ -1,0 +1,56 @@
+# QuantLib comparison, accuracy (QL-2): aadp_bench_quantlib accuracy, curated by scripts/curate_quantlib_accuracy.py (docs/NOTES.md, "The QuantLib and Metal report emitters").
+# Commit c5f3473043b2ce1b3964fe520d3c728ff6e23aa0, tree exported, host mac-m4max; QuantLib 1.44 (0x014400f0), Boost 109200; Clang 23.1.4; -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG (Release, C++23), the same for QuantLib (scripts/check_quantlib_flags.py); QuantLib static library; LTO no.
+# N 4194304 per comparison, seed 20261112, B 64, K 42, critical 3.897574976; ceilings bench/quantlib/ceilings.csv.
+# bound = b + critical * se; z = (estimate - reference) / se; pass when |estimate - reference| <= bound and se <= ceiling (BENCHMARKS.md section 10).
+# R9a reference: CD(0.01) of the n = 12 quadrature 0.5764557354, CD(0.02) 0.5764556799, b 1.554693846e-07
+# R9b reference: O6 0.7978141916, b 1e-09; QuantLib's bump expectation CD(1.0) of the recursion 0.7983237215, its b 0.0005095318544
+# comparisons failed 0, checks failed 0.
+# check,grid-rule-equals-FixedLocalVolSurface,held,largest relative difference 0
+# sanity,R10,speed-only row: ours 4.142037812 +- 0.01202936408, QuantLib 4.171010761 +- 0.01117232851, N 262144 (same contract on the same grid; not an accuracy measure)
+# sanity,R11,speed-only row: ours 5.609951266 +- 0.01529100496, QuantLib 5.652059438 +- 0.01381541287, N 262144 (same contract on the same grid; not an accuracy measure)
+# sanity,R12,Black at the SVI implied vol 13.86270322; ours 13.90026682 +- 0.03051204695 (1.231107035 SE); QuantLib 13.96382687 +- 0.02842437769 (3.557637967 SE); no pass mark
+# No row is derived from the option chain: R10 to R12 price on a synthetic surface written in the bench.
+# QuantLib's batches share the seeds 100 x base + 1 + b on every row but R5, so its rows' errors are correlated (docs/NOTES.md, "Stage 10 results").
+name,estimate,se,reference,b,ceiling,bound,z,verdict,check,reference_source
+R1/quantlib,5.353618118,0.003826154777,5.342560663,0,0.00787,0.01491272512,2.889965401,pass,tuned-equals-default |gap| 0,references/oracle_values.csv O4
+R1/ours,5.342995366,0.003555831006,5.342560663,0,0.00533,0.01385911795,0.1222506329,pass,lanes-equal-scalar bits,references/oracle_values.csv O4
+R2.K090/quantlib,11.91253571,0.00508976578,11.90491575,1e-09,0.00816,0.01983774474,1.497114185,pass,tuned-equals-default |gap| 0,references/oracle_values.csv AA12K090
+R2.K090/ours,11.90506555,0.004356194474,11.90491575,1e-09,0.00703,0.01697859557,0.03438795574,pass,lanes-equal-scalar bits,references/oracle_values.csv AA12K090
+R2.K100/quantlib,4.887607197,0.00367824068,4.881961617,1e-09,0.00606,0.01433621983,1.534858896,pass,tuned-equals-default |gap| 0,references/oracle_values.csv AA12K100
+R2.K100/ours,4.882090916,0.003092590881,4.881961617,1e-09,0.00473,0.01205360583,0.04180932175,pass,lanes-equal-scalar bits,references/oracle_values.csv AA12K100
+R2.K110/quantlib,1.36444064,0.002009649795,1.363037953,1e-09,0.00323,0.007832761754,0.6979756773,pass,tuned-equals-default |gap| 0,references/oracle_values.csv AA12K110
+R2.K110/ours,1.363176811,0.001904842739,1.363037953,1e-09,0.00273,0.007424268392,0.07289726393,pass,lanes-equal-scalar bits,references/oracle_values.csv AA12K110
+R3/quantlib,4.882228294,0.0001613489867,4.881961617,1e-09,0.000248,0.000628870773,1.652798718,pass,tuned-equals-default |gap| 0,references/oracle_values.csv AA12K100
+R3/ours,4.881972016,0.0001391913379,4.881961617,1e-09,0.000233,0.0005425096756,0.07471349853,pass,no lane form,references/oracle_values.csv AA12K100
+R4/quantlib,4.942235935,0.003417290365,4.937202814,1e-09,0.00612,0.01331914642,1.472839471,pass,tuned-equals-default |gap| 0,references/oracle_values.csv O9
+R4/ours,4.935214824,0.003292721061,4.937202814,1e-09,0.00573,0.01283362821,-0.6037531617,pass,lanes-equal-scalar bits,references/oracle_values.csv O9
+R5.H085/quantlib,6.306541078,0.004461896837,6.307574932,0,0.00736,0.01739057746,-0.2317073002,pass,tuned-equals-default |gap| 0,references/oracle_values.csv CB085.value
+R5.H085/ours,6.301505442,0.004358702377,6.307574932,0,0.00731,0.01698836931,-1.392499369,pass,lanes-equal-scalar bits,references/oracle_values.csv CB085.value
+R5.H090/quantlib,5.976650848,0.004468173846,5.977241996,0,0.00737,0.01741504257,-0.1323018789,pass,tuned-equals-default |gap| 0,"closed form, src/oracle/barrier.hpp"
+R5.H090/ours,5.971668072,0.004400119399,5.977241996,0,0.00729,0.01714979526,-1.266766396,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R5.H095/quantlib,4.396665526,0.004246504599,4.39750256,0,0.007,0.01655107006,-0.1971113241,pass,tuned-equals-default |gap| 0,references/oracle_values.csv O7
+R5.H095/ours,4.3964999,0.004307236673,4.39750256,0,0.00736,0.01678777788,-0.2327850274,pass,lanes-equal-scalar bits,references/oracle_values.csv O7
+R5.H097/quantlib,3.056216389,0.003788884366,3.059563305,0,0.00625,0.01476746089,-0.8833512949,pass,tuned-equals-default |gap| 0,"closed form, src/oracle/barrier.hpp"
+R5.H097/ours,3.057226106,0.004086488011,3.059563305,0,0.00684,0.01592739341,-0.5719333064,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R5.H099/quantlib,1.169145941,0.002536525144,1.170793035,0,0.00419,0.009886296929,-0.6493505743,pass,tuned-equals-default |gap| 0,"closed form, src/oracle/barrier.hpp"
+R5.H099/ours,1.170788188,0.002645279247,1.170793035,0,0.00394,0.0103101742,-0.001832106887,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R6.H085/ours,6.301502548,0.004354354475,6.307574932,0,0.00731,0.01697142304,-1.394554442,pass,lanes-equal-scalar bits,references/oracle_values.csv CB085.value
+R6.H090/ours,5.972091898,0.004355814044,5.977241996,0,0.00733,0.01697711182,-1.182350109,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R6.H095/ours,4.39562019,0.004323766343,4.39750256,0,0.00725,0.0168522035,-0.4353542311,pass,lanes-equal-scalar bits,references/oracle_values.csv O7
+R6.H097/ours,3.058645862,0.003801592626,3.059563305,0,0.00632,0.01481699229,-0.2413309929,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R6.H099/ours,1.172495124,0.002453168341,1.170793035,0,0.00334,0.009561407541,0.6938328326,pass,lanes-equal-scalar bits,"closed form, src/oracle/barrier.hpp"
+R7.H085/quantlib,6.327426711,0.004990726267,6.322240141,1e-09,0.00799,0.01945173081,1.039241551,pass,tuned-equals-default |gap| 0,references/oracle_values.csv DB085.value
+R7.H085/ours,6.316027298,0.004342718818,6.322240141,1e-09,0.00728,0.01692607319,-1.43063433,pass,lanes-equal-scalar bits,references/oracle_values.csv DB085.value
+R7.H090/quantlib,6.104207967,0.004834044706,6.098196143,1e-09,0.00805,0.01884105268,1.243642552,pass,tuned-equals-default |gap| 0,references/oracle_values.csv DB090.value
+R7.H090/ours,6.093088818,0.004484718887,6.098196143,1e-09,0.00734,0.01747952911,-1.138828332,pass,lanes-equal-scalar bits,references/oracle_values.csv DB090.value
+R7.H095/quantlib,4.910370047,0.00440023,4.906789035,1e-09,0.00792,0.01715022734,0.8138237006,pass,tuned-equals-default |gap| 0,references/oracle_values.csv O5
+R7.H095/ours,4.904065068,0.004408226711,4.906789035,1e-09,0.00796,0.01718139512,-0.6179281055,pass,lanes-equal-scalar bits,references/oracle_values.csv O5
+R7.H097/quantlib,3.835204673,0.003660226976,3.833977705,1e-09,0.00719,0.01426601007,0.3352162895,pass,tuned-equals-default |gap| 0,references/oracle_values.csv DB097.value
+R7.H097/ours,3.831927992,0.004087949928,3.833977705,1e-09,0.00664,0.01593309234,-0.5014036481,pass,lanes-equal-scalar bits,references/oracle_values.csv DB097.value
+R7.H099/quantlib,2.339216907,0.003085851187,2.336386896,1e-09,0.0066,0.01202733737,0.9170927119,pass,tuned-equals-default |gap| 0,references/oracle_values.csv DB099.value
+R7.H099/ours,2.33656961,0.003580015013,2.336386896,1e-09,0.0054,0.01395337793,0.0510372669,pass,lanes-equal-scalar bits,references/oracle_values.csv DB099.value
+R9a/quantlib,0.5767583091,0.0002868457141,0.5764557354,1.554693846e-07,0.000816,0.001118158147,1.05483078,pass,tuned-equals-default |gap| 0,"central difference of tools/quadrature, h 0.01"
+R9a/ours,0.5765086022,0.0002424709498,0.5764557354,1.554693846e-07,0.000459,0.0009452041759,0.2180335916,pass,lanes-equal-scalar bits,"central difference of tools/quadrature, h 0.01"
+R9b/quantlib,0.7990566154,0.001034838433,0.7978141916,0.0005095318544,0.00283,0.004542892237,1.200596853,pass,tuned-equals-default |gap| 0,"O6, b with the bump's truncation from tools/quadrature"
+R9b/ours-one-step,0.7971675021,0.0004657449777,0.7978141916,1e-09,0.000922,0.001815276971,-1.388505556,pass,lanes-equal-scalar bits,references/oracle_values.csv O6
+R9b/ours-smoothed,0.7984335422,0.001153458785,0.7978141916,1e-09,0.00243,0.004495693099,0.5369508048,pass,lanes-equal-scalar bits,references/oracle_values.csv O6

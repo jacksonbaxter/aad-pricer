@@ -4,26 +4,36 @@
 # threshold as BENCHMARKS.md states it: target_text must appear in the target's heading there.
 #
 # Pinned headline numbers come from linux-zen1, from the reported run at 8bb2116. A row on
-# mac-m4max is labelled macOS; the Mac's reported run at 8bb2116 is still to be read, so no Mac
-# row is here yet. linux-zen1 ran the first-order workloads in two presets, release (SSE2) and
-# release-avx2; BENCHMARKS.md takes every figure but the lane ones from release, so those rows
-# name that build: <workload>@baseline, its simd_cmake_target.
-# Rows: the AAD multiples against the scalar primal (AAD-1, AAD-3 on two pinned threads, AAD-4,
-# AAD-6), AAD-5, tape over the hand-written adjoint; MC-1 and MC-2, paths/s on one thread;
-# MEM-4, the largest tape of any workload; the raw SVI fit to settlements per slice (SVI-6,
-# SVI-11) and its time (SVI-7 per slice, SVI-8 for the surface, raw SVI and eSSVI); and measured
-# run 2, with its two failures. Both oracle runs were recorded on mac-m4max: run 2's file says
-# so, and run 1's host is in docs/NOTES.md, "Stage 8b: measured run 2".
+# mac-m4max is labelled macOS, and comes from that host's batch of 2026-11-18 at 8bb2116, each
+# beside the linux-zen1 row of the same target. linux-zen1 ran the first-order workloads in two
+# presets, release (SSE2) and release-avx2; BENCHMARKS.md takes every figure but the lane ones
+# from release, so those rows name that build: <workload>@baseline, its simd_cmake_target.
+# mac-m4max ran them in release only (NEON), so its rows name the workload alone.
+# Rows: the AAD multiples against the scalar primal (AAD-1, AAD-3 on two pinned threads and on
+# eight unpinned ones, AAD-4, AAD-6), AAD-5, tape over the hand-written adjoint; MC-1 and MC-2,
+# paths/s on one thread; MEM-4, the largest tape of any workload, on linux-zen1 only, since the
+# Mac's lw-worst file is still the one of d1596e0; the raw SVI fit to settlements per slice
+# (SVI-6, SVI-11), on linux-zen1 only, since the Mac's fit gives the same digits; its time
+# (SVI-7 per slice, SVI-8 for the surface, raw SVI and eSSVI) on both hosts; and measured run 2,
+# with its two failures. Both oracle runs were recorded on mac-m4max: run 2's file says so, and
+# run 1's host is in docs/NOTES.md, "Stage 8b: measured run 2".
 kind,id,host,source,detail,target,target_text,better,scale,unit,label
 measured_run,run 1,mac-m4max,references/measured_results.csv,,,,,,,
 measured_run,run 2,mac-m4max,references/measured_results_run2.csv,,,,,,,
 multiple,AAD-1,linux-zen1,aad1-barrier@baseline,tape/price,3.0,below 3.0,below,1,,times one scalar pricing
+multiple,AAD-1,mac-m4max,aad1-barrier,tape/price,3.0,below 3.0,below,1,,times one scalar pricing
 multiple,AAD-3,linux-zen1,aad3-barrier-mt@baseline,tape/price,2.86,multiple 2.86,at_most,1,,times one scalar pricing on 2 threads
+multiple,AAD-3,mac-m4max,aad3-barrier-mt,tape/price,2.86,multiple 2.86,at_most,1,,times one scalar pricing on 8 threads
 multiple,AAD-4,linux-zen1,aad4-asian12@baseline,tape/price,2.8,multiple 2.8,at_most,1,,times one scalar pricing
+multiple,AAD-4,mac-m4max,aad4-asian12,tape/price,2.8,multiple 2.8,at_most,1,,times one scalar pricing
 multiple,AAD-5,linux-zen1,aad4-asian12@baseline,tape/hand,1.25,within 1.25,at_most,1,,times the hand-written adjoint
+multiple,AAD-5,mac-m4max,aad4-asian12,tape/hand,1.25,within 1.25,at_most,1,,times the hand-written adjoint
 multiple,AAD-6,linux-zen1,aad4-asian12@baseline,hand/price,2.0,below 2.0,below,1,,times one scalar pricing
+multiple,AAD-6,mac-m4max,aad4-asian12,hand/price,2.0,below 2.0,below,1,,times one scalar pricing
 paths_per_second,MC-1,linux-zen1,mc-asian252@baseline,price,1.044e6,1.044 million paths/s,at_least,1,paths/s,
+paths_per_second,MC-1,mac-m4max,mc-asian252,price,1.044e6,1.044 million paths/s,at_least,1,paths/s,
 paths_per_second,MC-2,linux-zen1,mc-asian252@baseline,tape,0.197e6,0.197 million paths/s,at_least,1,paths/s,
+paths_per_second,MC-2,mac-m4max,mc-asian252,tape,0.197e6,0.197 million paths/s,at_least,1,paths/s,
 largest,MEM-4,linux-zen1,tape_allocated_bytes,,50,below 50 MB,below,1e6,MB,of tape chunks
 report_cell,SVI-6,linux-zen1,svi_fit_error,202411/svi6,4,at most 4 bp of forward,at_most,1,bp of F,on 202411 settlements (5 days)
 report_cell,SVI-6,linux-zen1,svi_fit_error,202411W4/svi6,4,at most 4 bp of forward,at_most,1,bp of F,on 202411W4 settlements (12 days)
@@ -32,8 +42,13 @@ report_cell,SVI-11,linux-zen1,svi_fit_error,202411/svi11,0.73,at most 0.73 vol p
 report_cell,SVI-11,linux-zen1,svi_fit_error,202411W4/svi11,0.73,at most 0.73 vol points per slice,at_most,1,vol points,on 202411W4 settlements (12 days)
 report_cell,SVI-11,linux-zen1,svi_fit_error,202412/svi11,0.73,at most 0.73 vol points per slice,at_most,1,vol points,on 202412 settlements (33 days)
 report_cell,SVI-7,linux-zen1,svi_fit_time,202411/median,15,15 ms per slice,at_most,1,ms,median on 202411 settlements
+report_cell,SVI-7,mac-m4max,svi_fit_time,202411/median,15,15 ms per slice,at_most,1,ms,median on 202411 settlements
 report_cell,SVI-7,linux-zen1,svi_fit_time,202411W4/median,15,15 ms per slice,at_most,1,ms,median on 202411W4 settlements
+report_cell,SVI-7,mac-m4max,svi_fit_time,202411W4/median,15,15 ms per slice,at_most,1,ms,median on 202411W4 settlements
 report_cell,SVI-7,linux-zen1,svi_fit_time,202412/median,15,15 ms per slice,at_most,1,ms,median on 202412 settlements
+report_cell,SVI-7,mac-m4max,svi_fit_time,202412/median,15,15 ms per slice,at_most,1,ms,median on 202412 settlements
 report_cell,SVI-8,linux-zen1,svi_fit_surface_time,surface/median,1.2,below 1.2 s,below,1000,s,median: raw SVI with its three fits and every check
+report_cell,SVI-8,mac-m4max,svi_fit_surface_time,surface/median,1.2,below 1.2 s,below,1000,s,median: raw SVI with its three fits and every check
 report_cell,SVI-8,linux-zen1,essvi_fit_time,fit_and_checks/median,1.2,below 1.2 s,below,1000,s,median: eSSVI with its fit and every check
+report_cell,SVI-8,mac-m4max,essvi_fit_time,fit_and_checks/median,1.2,below 1.2 s,below,1000,s,median: eSSVI with its fit and every check
 oracle_run,run 2,mac-m4max,references/measured_results_run2.csv,,,,,,,

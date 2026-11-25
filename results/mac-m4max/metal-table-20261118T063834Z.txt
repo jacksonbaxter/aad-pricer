@@ -1,0 +1,133 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2.1 (build 26B131)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.433
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 1
+batches_per_repetition: 1
+warmup: none
+commit: c5f3473043b2ce1b3964fe520d3c728ff6e23aa0
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-18T06:38:34Z
+report_tool: aadp_metal_report --mode=table --report --paths=16777216 --threads=16
+report_inputs: no market data: the stage 9 contracts asian12, asian252 and barrier156 under GBM (src/f32/contracts.hpp)
+report_prices_only: every figure is a price, a difference of prices or the time to price; AAD does not run on the GPU, and no Greek is in this file
+metal_device: Apple M4 Max
+metal_seed: 20261202, span 16
+metal_paths: 16777216 per contract
+metal_columns: A double on 32-bit uniforms and B double on 23-bit uniforms (the production double kernels), C float32 on the CPU, D float32 on the GPU; B, C and D on the same uniforms; 16 CPU threads
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 3187896975183
+perf_instructions: 8541883390010
+perf_counters_note: none
+peak_rss_bytes: 108019712
+measure_start: measure.sh: start load1=1.05 at=2026-11-18T06:38:34Z
+measure_end: measure.sh: end load1=11.91 exit=0 at=2026-11-18T06:39:31Z
+
+@section report_metal_prices
+type table
+title Stage 9 table, prices only: A and B double, C float32 on the CPU, D float32 on the GPU, on the same uniforms
+targets GPU-2,GPU-3
+timing no
+uses_chain no
+column workload text none
+column column text none
+column mean real none
+column standard_error real none
+column paths integer count
+row asian12.A asian12 A 5.631797136663099 0.0020102758544695326 16777216
+row asian12.B asian12 B 5.631795588773441 0.002010274827528844 16777216
+row asian12.C asian12 C 5.631795171978907 0.002010274713264954 16777216
+row asian12.D asian12 D 5.631794978750333 0.0020102746905151627 16777216
+row asian252.A asian252 A 5.298645395956617 0.0018916400988750182 16777216
+row asian252.B asian252 B 5.298644896376724 0.001891639976540671 16777216
+row asian252.C asian252 C 5.298646266732217 0.0018916429346081932 16777216
+row asian252.D asian252 D 5.298646065244988 0.0018916429120769997 16777216
+row barrier156.A barrier156 A 1.053313784131539 0.0007763175507537168 16777216
+row barrier156.B barrier156 B 1.053314197759433 0.0007763177815135625 16777216
+row barrier156.C barrier156 C 1.0533140739658269 0.0007763176776905917 16777216
+row barrier156.D barrier156 D 1.0533140838704211 0.0007763176734307763 16777216
+@section report_metal_differences
+type table
+title Stage 9 table: paired differences of the prices, each relative to the mean of the column it subtracts
+targets GPU-2,GPU-3
+timing no
+uses_chain no
+column workload text none
+column pair text none
+column mean real none
+column standard_error real none
+column base real none
+column relative real none
+column relative_se real none
+row asian12.B-A asian12 B-A -1.5478896535189984e-06 5.895245440407201e-07 5.631797136663099 -2.748482617461856e-07 1.0467787275271419e-07
+row asian12.C-B asian12 C-B -4.167946432199155e-07 7.663988161501464e-10 5.631795588773441 -7.400741675545968e-08 1.3608427437918816e-10
+row asian12.D-B asian12 D-B -6.100232162945815e-07 7.864377856201972e-10 5.631795588773441 -1.083177126511155e-07 1.3964245918085193e-10
+row asian12.D-C asian12 D-C -1.9322857307466582e-07 6.787823767172029e-10 5.631795171978907 -3.431029843487169e-08 1.2052682244100357e-10
+row asian252.B-A asian252 B-A -4.995797722342903e-07 2.1448796004167042e-07 5.298645395956617 -9.428443213345026e-08 4.0479772472667376e-08
+row asian252.C-B asian252 C-B 1.3703555957580053e-06 4.656547720382256e-09 5.298644896376724 2.58623784487817e-07 8.788186057847466e-10
+row asian252.D-B asian252 D-B 1.1688683658809361e-06 4.648263213969675e-09 5.298644896376724 2.205976034891906e-07 8.77255091608085e-10
+row asian252.D-C asian252 D-C -2.0148722987706852e-07 5.803834654181879e-10 5.298646266732217 -3.8026171164154685e-08 1.0953429162881677e-10
+row barrier156.B-A barrier156 B-A 4.136278820219398e-07 3.117778156357396e-07 1.053313784131539 3.9269198623748904e-07 2.959970906417042e-07
+row barrier156.C-B barrier156 C-B -1.237935844562233e-07 7.955520966318977e-09 1.053314197759433 -1.1752768995191747e-07 7.552846988336089e-09
+row barrier156.D-B barrier156 D-B -1.1388898729433367e-07 7.939433972532269e-09 1.053314197759433 -1.0812442055427876e-07 7.537574248425313e-09
+row barrier156.D-C barrier156 D-C 9.904597161888733e-09 5.195897897967157e-10 1.0533140739658269 9.403270502782699e-09 4.932904654358325e-10
+@section report_metal_gpu2
+type table
+title GPU-2: abs(D - B) / SE_B against 0.01, and the CPU float32 line's abs(C - B) / SE_B, not judged
+targets GPU-2
+timing no
+uses_chain no
+column workload text none
+column ratio real none
+column bound real none
+column verdict text none
+column cpu_ratio real none
+column same_bit_spans integer count
+column spans integer count
+row asian12 asian12 0.0003034525922673371 0.01 pass 0.00020733211613139656 431551 1048576
+row asian252 asian252 0.0006179126461738466 0.01 pass 0.0007244272219209427 548097 1048576
+row barrier156 barrier156 0.00014670411330118587 0.01 pass 0.00015946254096023171 211804 1048576

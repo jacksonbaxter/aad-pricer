@@ -7,7 +7,7 @@ cpu_model: Apple M4 Max
 logical_cpus: 16
 arch: arm64
 kernel: Darwin 27.2.0
-os: macOS 27.2 (build 26B123)
+os: macOS 27.2.1 (build 26B131)
 compiler_id: Clang
 compiler_version: 23.1.4
 cxx_standard: 23
@@ -33,7 +33,7 @@ timer_calibration_spread: 0.000000
 timer_granularity_ticks: 1
 timer_min_delta_ticks: 1
 timer_resolution_ns: 41.667
-timer_read_cost_ns: 4.433
+timer_read_cost_ns: 4.435
 timer_note: mach_timebase 125/3, not used
 clock_source: CLOCK_MONOTONIC_RAW
 clock_getres_ns: 42.0
@@ -41,19 +41,20 @@ clock_resolution_ns: 41.0
 repetitions: 3
 batches_per_repetition: 5
 warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
-commit: d1596e0e06689b84324e2135fb10686b9ac7739b
-commit_source: git
-tree_state: clean
-run_started_at: 2026-11-04T07:47:14Z
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-18T04:24:58Z
 bench_workloads: mc-asian252
 bench_scale: 1 (the targets' path counts)
 bench_seed: 20261103
 bench_mc_batches: 50
 bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 gradient_check: pass
 smt_siblings: unavailable
@@ -64,17 +65,17 @@ max_frequency_khz: unavailable
 turbo: unavailable
 perf_counters_source: proc_pid_rusage
 perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
-perf_cycles: 3470953469311
-perf_instructions: 11384793547343
+perf_cycles: 2261055012234
+perf_instructions: 9201582822709
 perf_counters_note: none
-peak_rss_bytes: 4653056
-measure_start: measure.sh: start load1=1.34 at=2026-11-04T07:45:20Z
-measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
+peak_rss_bytes: 5259264
+measure_start: measure.sh: start load1=1.17 at=2026-11-18T04:23:41Z
+measure_end: measure.sh: end load1=1.12 exit=0 at=2026-11-18T04:37:50Z
 
 @section benchmark_json
 {
   "context": {
-    "date": "2026-11-04T00:49:01-07:00",
+    "date": "2026-11-17T21:26:09-07:00",
     "num_cpus": 16,
     "mhz_per_cpu": 24,
     "cpu_scaling_enabled": false,
@@ -99,9 +100,9 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       }
     ],
     "load_avg": [
-      1.13428,
-      2.06641,
-      2.69238
+      1.17676,
+      2.03027,
+      2.24121
     ],
     "library_version": "v1.10.0",
     "library_build_type": "release",
@@ -118,10 +119,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0169458000000000e+09,
-      "cpu_time": 2.0168149999999969e+09,
+      "real_time": 1.1854818666666665e+09,
+      "cpu_time": 1.1854070000000007e+09,
       "time_unit": "ns",
-      "items_per_second": 4.9579914343756787e-01
+      "items_per_second": 8.4353884113959177e-01
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
@@ -133,10 +134,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0172138833333335e+09,
-      "cpu_time": 2.0170770000000062e+09,
+      "real_time": 1.1828510500000000e+09,
+      "cpu_time": 1.1827760000000041e+09,
       "time_unit": "ns",
-      "items_per_second": 4.9573325281083019e-01
+      "items_per_second": 8.4541498272331073e-01
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time",
@@ -148,10 +149,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0154924500000000e+09,
-      "cpu_time": 2.0153582000000026e+09,
+      "real_time": 1.1854431000000002e+09,
+      "cpu_time": 1.1853661999999986e+09,
       "time_unit": "ns",
-      "items_per_second": 4.9615665888502830e-01
+      "items_per_second": 8.4356642676481042e-01
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_mean",
@@ -164,10 +165,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.0165507111111109e+09,
-      "cpu_time": 2.0164167333333352e+09,
+      "real_time": 1.1845920055555556e+09,
+      "cpu_time": 1.1845164000000010e+09,
       "time_unit": "ns",
-      "items_per_second": 4.9589635171114210e-01
+      "items_per_second": 8.4417341687590430e-01
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_median",
@@ -180,10 +181,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.0169458000000000e+09,
-      "cpu_time": 2.0168149999999969e+09,
+      "real_time": 1.1854431000000002e+09,
+      "cpu_time": 1.1853661999999983e+09,
       "time_unit": "ns",
-      "items_per_second": 4.9579914343756787e-01
+      "items_per_second": 8.4356642676481042e-01
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_stddev",
@@ -196,10 +197,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 9.2623139821412647e+05,
-      "cpu_time": 9.2602948826264963e+05,
+      "real_time": 1.5078363300398306e+06,
+      "cpu_time": 1.5073686609737182e+06,
       "time_unit": "ns",
-      "items_per_second": 2.2782726407293472e-04
+      "items_per_second": 1.0753160264642429e-03
     },
     {
       "name": "mc-asian252.price/iterations:5/repeats:3/manual_time_cv",
@@ -212,10 +213,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 4.5931470659806858e-04,
-      "cpu_time": 4.5924509202610700e-04,
+      "real_time": 1.2728739709269592e-03,
+      "cpu_time": 1.2725603976219467e-03,
       "time_unit": "ns",
-      "items_per_second": 4.5942516674460897e-04
+      "items_per_second": 1.2738093914917924e-03
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
@@ -227,10 +228,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 5.5210960333333340e+09,
-      "cpu_time": 5.5207308000000067e+09,
+      "real_time": 3.0317685666666670e+09,
+      "cpu_time": 3.0315690000000019e+09,
       "time_unit": "ns",
-      "items_per_second": 1.8112345700247767e-01
+      "items_per_second": 3.2984048023806389e-01
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
@@ -242,10 +243,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 5.5283034500000000e+09,
-      "cpu_time": 5.5279497999999990e+09,
+      "real_time": 3.0322577166666670e+09,
+      "cpu_time": 3.0320662000000029e+09,
       "time_unit": "ns",
-      "items_per_second": 1.8088732086513812e-01
+      "items_per_second": 3.2978727187453277e-01
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time",
@@ -257,10 +258,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 5.5262220833333330e+09,
-      "cpu_time": 5.5258583999999933e+09,
+      "real_time": 3.0291251333333335e+09,
+      "cpu_time": 3.0289357999999990e+09,
       "time_unit": "ns",
-      "items_per_second": 1.8095544929617002e-01
+      "items_per_second": 3.3012832285986554e-01
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_mean",
@@ -273,10 +274,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 5.5252071888888884e+09,
-      "cpu_time": 5.5248463333333330e+09,
+      "real_time": 3.0310504722222219e+09,
+      "cpu_time": 3.0308570000000014e+09,
       "time_unit": "ns",
-      "items_per_second": 1.8098874238792861e-01
+      "items_per_second": 3.2991869165748733e-01
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_median",
@@ -289,10 +290,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 5.5262220833333330e+09,
-      "cpu_time": 5.5258583999999924e+09,
+      "real_time": 3.0317685666666665e+09,
+      "cpu_time": 3.0315690000000019e+09,
       "time_unit": "ns",
-      "items_per_second": 1.8095544929617002e-01
+      "items_per_second": 3.2984048023806389e-01
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_stddev",
@@ -305,10 +306,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 3.7093425035191490e+06,
-      "cpu_time": 3.7143908591262102e+06,
+      "real_time": 1.6852341999985429e+06,
+      "cpu_time": 1.6822779325565926e+06,
       "time_unit": "ns",
-      "items_per_second": 1.2153761268689599e-04
+      "items_per_second": 1.8348491298248704e-04
     },
     {
       "name": "mc-asian252.tape/iterations:5/repeats:3/manual_time_cv",
@@ -321,10 +322,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 6.7134903302424264e-04,
-      "cpu_time": 6.7230663714861892e-04,
+      "real_time": 5.5599014778629191e-04,
+      "cpu_time": 5.5505024900765431e-04,
       "time_unit": "ns",
-      "items_per_second": 6.7152028951278115e-04
+      "items_per_second": 5.5615191749419310e-04
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
@@ -336,10 +337,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.8955758833333340e+09,
-      "cpu_time": 4.8952536000000010e+09,
+      "real_time": 3.0086406250000005e+09,
+      "cpu_time": 3.0084449999999948e+09,
       "time_unit": "ns",
-      "items_per_second": 2.0426606058838437e-01
+      "items_per_second": 3.3237602114742432e-01
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
@@ -351,10 +352,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.8983760833333340e+09,
-      "cpu_time": 4.8980614000000057e+09,
+      "real_time": 3.0065982500000000e+09,
+      "cpu_time": 3.0064059999999986e+09,
       "time_unit": "ns",
-      "items_per_second": 2.0414929008870678e-01
+      "items_per_second": 3.3260180338360801e-01
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time",
@@ -366,10 +367,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.9003373500000010e+09,
-      "cpu_time": 4.9000252000000048e+09,
+      "real_time": 3.0028691083333335e+09,
+      "cpu_time": 3.0026796000000048e+09,
       "time_unit": "ns",
-      "items_per_second": 2.0406758322465285e-01
+      "items_per_second": 3.3301484810805648e-01
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_mean",
@@ -382,10 +383,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 4.8980964388888893e+09,
-      "cpu_time": 4.8977800666666698e+09,
+      "real_time": 3.0060359944444447e+09,
+      "cpu_time": 3.0058435333333321e+09,
       "time_unit": "ns",
-      "items_per_second": 2.0416097796724797e-01
+      "items_per_second": 3.3266422421302955e-01
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_median",
@@ -398,10 +399,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 4.8983760833333330e+09,
-      "cpu_time": 4.8980614000000057e+09,
+      "real_time": 3.0065982500000000e+09,
+      "cpu_time": 3.0064059999999981e+09,
       "time_unit": "ns",
-      "items_per_second": 2.0414929008870678e-01
+      "items_per_second": 3.3260180338360801e-01
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_stddev",
@@ -414,10 +415,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.3930194238155163e+06,
-      "cpu_time": 2.3982082844115528e+06,
+      "real_time": 2.9265508091919846e+06,
+      "cpu_time": 2.9235656061536190e+06,
       "time_unit": "ns",
-      "items_per_second": 9.9753550683454734e-05
+      "items_per_second": 3.2395561643228012e-04
     },
     {
       "name": "mc-asian252.tape-skip/iterations:5/repeats:3/manual_time_cv",
@@ -430,10 +431,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 4.8856110811047282e-04,
-      "cpu_time": 4.8965209784189543e-04,
+      "real_time": 9.7355813922409462e-04,
+      "cpu_time": 9.7262734195333489e-04,
       "time_unit": "ns",
-      "items_per_second": 4.8860243361225210e-04
+      "items_per_second": 9.7382162809556388e-04
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
@@ -445,10 +446,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.0256354750000000e+09,
-      "cpu_time": 4.0253748000000086e+09,
+      "real_time": 2.1757588750000000e+09,
+      "cpu_time": 2.1756187999999952e+09,
       "time_unit": "ns",
-      "items_per_second": 2.4840798582241230e-01
+      "items_per_second": 4.5960975340155741e-01
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
@@ -460,10 +461,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.0259072250000000e+09,
-      "cpu_time": 4.0256358000000091e+09,
+      "real_time": 2.1764448416666670e+09,
+      "cpu_time": 2.1763093999999909e+09,
       "time_unit": "ns",
-      "items_per_second": 2.4839121820548160e-01
+      "items_per_second": 4.5946489470150098e-01
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time",
@@ -475,10 +476,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 4.0224447166666665e+09,
-      "cpu_time": 4.0221796000000038e+09,
+      "real_time": 2.1763403666666670e+09,
+      "cpu_time": 2.1762025999999990e+09,
       "time_unit": "ns",
-      "items_per_second": 2.4860503262023287e-01
+      "items_per_second": 4.5948695126747252e-01
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_mean",
@@ -491,10 +492,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 4.0246624722222219e+09,
-      "cpu_time": 4.0243967333333402e+09,
+      "real_time": 2.1761813611111107e+09,
+      "cpu_time": 2.1760435999999948e+09,
       "time_unit": "ns",
-      "items_per_second": 2.4846807888270894e-01
+      "items_per_second": 4.5952053312351027e-01
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_median",
@@ -507,10 +508,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 4.0256354749999995e+09,
-      "cpu_time": 4.0253748000000091e+09,
+      "real_time": 2.1763403666666665e+09,
+      "cpu_time": 2.1762025999999990e+09,
       "time_unit": "ns",
-      "items_per_second": 2.4840798582241230e-01
+      "items_per_second": 4.5948695126747252e-01
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_stddev",
@@ -523,10 +524,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 1.9254328845241929e+06,
-      "cpu_time": 1.9245234261578976e+06,
+      "real_time": 3.6959388980786200e+05,
+      "cpu_time": 3.7174297715458676e+05,
       "time_unit": "ns",
-      "items_per_second": 1.1890135783230116e-04
+      "items_per_second": 7.8050090014050534e-05
     },
     {
       "name": "mc-asian252.tape-record/iterations:5/repeats:3/manual_time_cv",
@@ -539,10 +540,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 4.7840853681850815e-04,
-      "cpu_time": 4.7821414082200773e-04,
+      "real_time": 1.6983597801754698e-04,
+      "cpu_time": 1.7083434226896355e-04,
       "time_unit": "ns",
-      "items_per_second": 4.7853775972739483e-04
+      "items_per_second": 1.6985114785517577e-04
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
@@ -554,10 +555,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0585520500000000e+09,
-      "cpu_time": 2.0584132000000184e+09,
+      "real_time": 1.1929141083333333e+09,
+      "cpu_time": 1.1928411999999981e+09,
       "time_unit": "ns",
-      "items_per_second": 4.8577834114031748e-01
+      "items_per_second": 8.3828332066349598e-01
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
@@ -569,10 +570,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0583553333333335e+09,
-      "cpu_time": 2.0582243999999948e+09,
+      "real_time": 1.1933156083333335e+09,
+      "cpu_time": 1.1932425999999964e+09,
       "time_unit": "ns",
-      "items_per_second": 4.8582476689317972e-01
+      "items_per_second": 8.3800127394350332e-01
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time",
@@ -584,10 +585,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.0588344750000000e+09,
-      "cpu_time": 2.0586994000000005e+09,
+      "real_time": 1.1918036000000000e+09,
+      "cpu_time": 1.1917310000000157e+09,
       "time_unit": "ns",
-      "items_per_second": 4.8571170346270792e-01
+      "items_per_second": 8.3906442303077444e-01
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_mean",
@@ -600,10 +601,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.0585806194444444e+09,
-      "cpu_time": 2.0584456666666710e+09,
+      "real_time": 1.1926777722222221e+09,
+      "cpu_time": 1.1926049333333366e+09,
       "time_unit": "ns",
-      "items_per_second": 4.8577160383206835e-01
+      "items_per_second": 8.3844967254592451e-01
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_median",
@@ -616,10 +617,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.0585520500000000e+09,
-      "cpu_time": 2.0584132000000181e+09,
+      "real_time": 1.1929141083333333e+09,
+      "cpu_time": 1.1928411999999979e+09,
       "time_unit": "ns",
-      "items_per_second": 4.8577834114031748e-01
+      "items_per_second": 8.3828332066349598e-01
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_stddev",
@@ -632,10 +633,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.4084506454125492e+05,
-      "cpu_time": 2.3915855255247990e+05,
+      "real_time": 7.8321987213158933e+05,
+      "cpu_time": 7.8300708398701495e+05,
       "time_unit": "ns",
-      "items_per_second": 5.6832018467849009e-05
+      "items_per_second": 5.5075058539978943e-04
     },
     {
       "name": "mc-asian252.hand/iterations:5/repeats:3/manual_time_cv",
@@ -648,10 +649,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 1.1699569220964129e-04,
-      "cpu_time": 1.1618404917131456e-04,
+      "real_time": 6.5669025647411693e-04,
+      "cpu_time": 6.5655194113486211e-04,
       "time_unit": "ns",
-      "items_per_second": 1.1699329071424250e-04
+      "items_per_second": 6.5686779234757600e-04
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
@@ -663,10 +664,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.2233656633333336e+10,
-      "cpu_time": 2.2232169199999996e+10,
+      "real_time": 1.3042253916666668e+10,
+      "cpu_time": 1.3041402599999992e+10,
       "time_unit": "ns",
-      "items_per_second": 4.4976857225579862e-02
+      "items_per_second": 7.6673863765380476e-02
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
@@ -678,10 +679,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.2236221483333332e+10,
-      "cpu_time": 2.2234735400000000e+10,
+      "real_time": 1.3039485975000004e+10,
+      "cpu_time": 1.3038647600000002e+10,
       "time_unit": "ns",
-      "items_per_second": 4.4971669343621526e-02
+      "items_per_second": 7.6690139620323478e-02
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time",
@@ -693,10 +694,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 2.2243267200000000e+10,
-      "cpu_time": 2.2241788599999992e+10,
+      "real_time": 1.3035930433333334e+10,
+      "cpu_time": 1.3035109200000011e+10,
       "time_unit": "ns",
-      "items_per_second": 4.4957424240266289e-02
+      "items_per_second": 7.6711056806728933e-02
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_mean",
@@ -709,10 +710,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.2237715105555553e+10,
-      "cpu_time": 2.2236231066666660e+10,
+      "real_time": 1.3039223441666666e+10,
+      "cpu_time": 1.3038386466666666e+10,
       "time_unit": "ns",
-      "items_per_second": 4.4968650269822552e-02
+      "items_per_second": 7.6691686730810948e-02
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_median",
@@ -725,10 +726,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.2236221483333332e+10,
-      "cpu_time": 2.2234735400000000e+10,
+      "real_time": 1.3039485975000002e+10,
+      "cpu_time": 1.3038647600000002e+10,
       "time_unit": "ns",
-      "items_per_second": 4.4971669343621526e-02
+      "items_per_second": 7.6690139620323478e-02
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_stddev",
@@ -741,10 +742,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 4.9763368505185721e+06,
-      "cpu_time": 4.9810619561959375e+06,
+      "real_time": 3.1699058621194041e+06,
+      "cpu_time": 3.1548159782461333e+06,
       "time_unit": "ns",
-      "items_per_second": 1.0062123776005826e-05
+      "items_per_second": 1.8644724379790360e-05
     },
     {
       "name": "mc-asian252.bump-central/iterations:5/repeats:3/manual_time_cv",
@@ -757,10 +758,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 2.2377914398567664e-04,
-      "cpu_time": 2.2400657473211922e-04,
+      "real_time": 2.4310541776514168e-04,
+      "cpu_time": 2.4196368057593544e-04,
       "time_unit": "ns",
-      "items_per_second": 2.2375863441821580e-04
+      "items_per_second": 2.4311271761740801e-04
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
@@ -772,10 +773,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 0,
       "threads": 1,
       "iterations": 5,
-      "real_time": 1.2126862683333334e+10,
-      "cpu_time": 1.2126044400000000e+10,
+      "real_time": 7.1096624833333340e+09,
+      "cpu_time": 7.1092186000000076e+09,
       "time_unit": "ns",
-      "items_per_second": 8.2461558781758051e-02
+      "items_per_second": 1.4065365301717592e-01
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
@@ -787,10 +788,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 1,
       "threads": 1,
       "iterations": 5,
-      "real_time": 1.2599800308333334e+10,
-      "cpu_time": 1.2599099200000000e+10,
+      "real_time": 7.1151086750000000e+09,
+      "cpu_time": 7.1146725999999943e+09,
       "time_unit": "ns",
-      "items_per_second": 7.9366337206043955e-02
+      "items_per_second": 1.4054599102802881e-01
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time",
@@ -802,10 +803,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "repetition_index": 2,
       "threads": 1,
       "iterations": 5,
-      "real_time": 1.2575900500000000e+10,
-      "cpu_time": 1.2575145599999996e+10,
+      "real_time": 7.1142276416666660e+09,
+      "cpu_time": 7.1137842000000095e+09,
       "time_unit": "ns",
-      "items_per_second": 7.9517168571745622e-02
+      "items_per_second": 1.4056339638939747e-01
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_mean",
@@ -818,10 +819,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "mean",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 1.2434187830555555e+10,
-      "cpu_time": 1.2433429733333330e+10,
+      "real_time": 7.1129996000000010e+09,
+      "cpu_time": 7.1125584666666689e+09,
       "time_unit": "ns",
-      "items_per_second": 8.0448354853182538e-02
+      "items_per_second": 1.4058768014486739e-01
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_median",
@@ -834,10 +835,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "median",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 1.2575900500000000e+10,
-      "cpu_time": 1.2575145599999998e+10,
+      "real_time": 7.1142276416666670e+09,
+      "cpu_time": 7.1137842000000086e+09,
       "time_unit": "ns",
-      "items_per_second": 7.9517168571745622e-02
+      "items_per_second": 1.4056339638939747e-01
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_stddev",
@@ -850,10 +851,10 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "stddev",
       "aggregate_unit": "time",
       "iterations": 3,
-      "real_time": 2.6641951842153969e+08,
-      "cpu_time": 2.6647279617169133e+08,
+      "real_time": 2.9234082247174480e+06,
+      "cpu_time": 2.9263194732018649e+06,
       "time_unit": "ns",
-      "items_per_second": 1.7451160616829384e-03
+      "items_per_second": 5.7793179212190830e-05
     },
     {
       "name": "mc-asian252.bump-forward/iterations:5/repeats:3/manual_time_cv",
@@ -866,10 +867,228 @@ measure_end: measure.sh: end load1=1.74 exit=0 at=2026-11-04T08:06:43Z
       "aggregate_name": "cv",
       "aggregate_unit": "percentage",
       "iterations": 3,
-      "real_time": 2.1426370749108761e-02,
-      "cpu_time": 2.1431962208890168e-02,
+      "real_time": 4.1099513413686236e-04,
+      "cpu_time": 4.1142993578417595e-04,
       "time_unit": "ns",
-      "items_per_second": 2.1692377238388010e-02
+      "items_per_second": 4.1108281431657696e-04
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5276124166666667e+09,
+      "cpu_time": 1.5275077999999893e+09,
+      "time_unit": "ns",
+      "items_per_second": 6.5461630783419156e-01
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5281287833333335e+09,
+      "cpu_time": 1.5280355999999983e+09,
+      "time_unit": "ns",
+      "items_per_second": 6.5439510786432731e-01
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 1.5295675750000000e+09,
+      "cpu_time": 1.5294745999999804e+09,
+      "time_unit": "ns",
+      "items_per_second": 6.5377954942592187e-01
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.5284362583333333e+09,
+      "cpu_time": 1.5283393333333225e+09,
+      "time_unit": "ns",
+      "items_per_second": 6.5426365504148021e-01
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time_median",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.5281287833333333e+09,
+      "cpu_time": 1.5280355999999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 6.5439510786432731e-01
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.0131962712291037e+06,
+      "cpu_time": 1.0179715190443288e+06,
+      "time_unit": "ns",
+      "items_per_second": 4.3359086944653059e-04
+    },
+    {
+      "name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 7,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.price-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 6.6289730154264499e-04,
+      "cpu_time": 6.6606380981121727e-04,
+      "time_unit": "ns",
+      "items_per_second": 6.6271581205139848e-04
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.7759229166666670e+09,
+      "cpu_time": 2.7757496000000176e+09,
+      "time_unit": "ns",
+      "items_per_second": 3.6024055062768162e-01
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.7767688750000000e+09,
+      "cpu_time": 2.7765810000000105e+09,
+      "time_unit": "ns",
+      "items_per_second": 3.6013080130768893e-01
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 5,
+      "real_time": 2.8020894583333330e+09,
+      "cpu_time": 2.8018900000000029e+09,
+      "time_unit": "ns",
+      "items_per_second": 3.5687654333305768e-01
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time_mean",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.7849270833333335e+09,
+      "cpu_time": 2.7847402000000100e+09,
+      "time_unit": "ns",
+      "items_per_second": 3.5908263175614269e-01
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time_median",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.7767688750000000e+09,
+      "cpu_time": 2.7765810000000100e+09,
+      "time_unit": "ns",
+      "items_per_second": 3.6013080130768893e-01
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time_stddev",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.4869070182908185e+07,
+      "cpu_time": 1.4857978884013444e+07,
+      "time_unit": "ns",
+      "items_per_second": 1.9113165164925485e-03
+    },
+    {
+      "name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time_cv",
+      "family_index": 8,
+      "per_family_instance_index": 0,
+      "run_name": "mc-asian252.tape-lanes/iterations:5/repeats:3/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 5.3391236962337645e-03,
+      "cpu_time": 5.3354991190967798e-03,
+      "time_unit": "ns",
+      "items_per_second": 5.3227762845142182e-03
     }
   ]
 }
@@ -879,91 +1098,117 @@ batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 2009071616
-p50 2016411647
-p90 2025848831
-p99 2025848831
-p99.9 2025848831
-p99.99 2025848831
-max 2025848831
+min 1180696576
+p50 1184890879
+p90 1188036607
+p99 1189085183
+p99.9 1189085183
+p99.99 1189085183
+max 1189085183
 @section histogram_mc-asian252.tape
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 5511315456
-p50 5523898367
-p90 5540675583
-p99 5540675583
-p99.9 5540675583
-p99.99 5540675583
-max 5540675583
+min 3024093184
+p50 3030384639
+p90 3038773247
+p99 3040870399
+p99.9 3040870399
+p99.99 3040870399
+max 3040870399
 @section histogram_mc-asian252.tape-skip
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 4890558464
-p50 4898947071
-p90 4907335679
-p99 4907335679
-p99.9 4907335679
-p99.99 4907335679
-max 4907335679
+min 2996830208
+p50 3007315967
+p90 3015704575
+p99 3019898879
+p99.9 3019898879
+p99.99 3019898879
+max 3019898879
 @section histogram_mc-asian252.tape-record
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 4013948928
-p50 4026531839
-p90 4032823295
-p99 4034920447
-p99.9 4034920447
-p99.99 4034920447
-max 4034920447
+min 2166358016
+p50 2176843775
+p90 2183135231
+p99 2187329535
+p99.9 2187329535
+p99.99 2187329535
+max 2187329535
 @section histogram_mc-asian252.hand
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 2051014656
-p50 2060451839
-p90 2063597567
-p99 2064646143
-p99.9 2064646143
-p99.99 2064646143
-max 2064646143
+min 1188036608
+p50 1193279487
+p90 1196425215
+p99 1197473791
+p99.9 1197473791
+p99.99 1197473791
+max 1197473791
 @section histogram_mc-asian252.bump-central
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 22213033984
-p50 22246588415
-p90 22263365631
-p99 22263365631
-p99.9 22263365631
-p99.99 22263365631
-max 22263365631
+min 13027508224
+p50 13044285439
+p90 13052674047
+p99 13052674047
+p99.9 13052674047
+p99.99 13052674047
+max 13052674047
 @section histogram_mc-asian252.bump-forward
 unit ns
 batch_units 1
 batches 15
 gate_ns 416.7
 timer_resolution_ns 41.667
-min 12113149952
-p50 12138315775
-p90 13379829759
-p99 13681819647
-p99.9 13681819647
-p99.99 13681819647
-max 13681819647
+min 7100956672
+p50 7113539583
+p90 7130316799
+p99 7138705407
+p99.9 7138705407
+p99.99 7138705407
+max 7138705407
+@section histogram_mc-asian252.price-lanes
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 1523580928
+p50 1528823807
+p90 1533018111
+p99 1533018111
+p99.9 1533018111
+p99.99 1533018111
+max 1533018111
+@section histogram_mc-asian252.tape-lanes
+unit ns
+batch_units 1
+batches 15
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 2757754880
+p50 2789212159
+p90 2808086527
+p99 2831155199
+p99.9 2831155199
+p99.99 2831155199
+max 2831155199
 @section aad_mc-asian252
 workload mc-asian252
 targets MC-1, MC-2, AAD-4 at 252 fixings, AAD-5, AAD-6
@@ -993,14 +1238,29 @@ check skip-equals-tape pass 0
 check hand-vs-tape pass 5.137e-08
 check central-vs-tape pass 0.0926
 check forward-vs-tape pass 0.2881
-peak_rss idle 2080768
-peak_rss price 2162688
-peak_rss tape 2392064
-peak_rss tape-skip 2392064
-peak_rss tape-record 2375680
-peak_rss hand 2179072
-peak_rss bump-central 2277376
-peak_rss bump-forward 2228224
+check lanes-gradient-bits pass 0
+check lanes-fallback-zero pass 0
+lane_count 2
+lane_target NEON
+lane_ceiling 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+lane_tape_statements_per_group 1263
+lane_tape_operands_per_group 2018
+lane_tape_operand_bytes 21
+lane_tape_bytes_per_path 21820.5
+lane_tape_allocated_bytes 311304
+lane_tape_groups_sampled 512
+lane_fallback_groups 0
+lane_fallback_paths 0
+peak_rss idle 2097152
+peak_rss price 2211840
+peak_rss tape 2473984
+peak_rss tape-skip 2473984
+peak_rss tape-record 2457600
+peak_rss hand 2228224
+peak_rss bump-central 2326528
+peak_rss bump-forward 2310144
+peak_rss price-lanes 2211840
+peak_rss tape-lanes 2965504
 variant price mc-asian252.price
 estimate price value 5.269572148239754 0.013805443923656409
 variant tape mc-asian252.tape
@@ -1040,6 +1300,15 @@ estimate bump-forward vega 22.217468074797651 0.069610766816562891
 estimate bump-forward rho 23.597116497969253 0.039847088811004093
 estimate bump-forward dividend-rho -28.86664336025715 0.049836947997983827
 estimate bump-forward theta -2.9296553544979544 0.0076652765849431221
+variant price-lanes mc-asian252.price-lanes
+estimate price-lanes value 5.269572148239754 0.013805443923656409
+variant tape-lanes mc-asian252.tape-lanes
+estimate tape-lanes value 5.269572148239754 0.013805443923656409
+estimate tape-lanes delta 0.56121241588026105 0.00095912081439144376
+estimate tape-lanes vega 22.217466030937757 0.069611742434256607
+estimate tape-lanes rho 23.597125904057666 0.039848077417178669
+estimate tape-lanes dividend-rho -28.866698052297433 0.049825774103033592
+estimate tape-lanes theta -2.9296603802155055 0.0076652891372845913
 step central delta 4.76837158203125e-05 -5.4436301192950505e-07 5.4436123807469891e-07 7.9278525414804435e-07
 step central vega 3.814697265625e-06 4.8612648000319795e-06 5.9912381389189278e-06 9.9098156768270083e-06
 step central rho 9.5367431640625e-07 -2.9121749103069304e-05 2.912206588429692e-05 3.9639262707349213e-05

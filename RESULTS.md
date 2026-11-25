@@ -11,12 +11,19 @@ The README's headline rows, chosen in `results/headline.csv`, with how each valu
 | target | measured | host | verdict | computed as |
 |---|---|---|---|---|
 | AAD-1: barrier, general tape, single thread: multiple below 3.0 | 2.18 times one scalar pricing | [linux-zen1](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), Linux | met, by 0.82 | mean time of `tape` over mean time of `price` on `aad1-barrier` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-1: barrier, general tape, single thread: multiple below 3.0 | 2.66 times one scalar pricing | [mac-m4max](results/mac-m4max/aad1-barrier-20261118T040001Z.txt), macOS | met, by 0.34 | mean time of `tape` over mean time of `price` on `aad1-barrier`, each the mean of 3 repetitions |
 | AAD-3: barrier, multi-threaded: multiple 2.86, stretch 1.64 | 2.19 times one scalar pricing on 2 threads | [linux-zen1](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt), Linux | met, by 0.67 | mean time of `tape` over mean time of `price` on `aad3-barrier-mt` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-3: barrier, multi-threaded: multiple 2.86, stretch 1.64 | 2.54 times one scalar pricing on 8 threads | [mac-m4max](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt), macOS | met, by 0.32 | mean time of `tape` over mean time of `price` on `aad3-barrier-mt`, each the mean of 3 repetitions |
 | AAD-4: arithmetic Asian: multiple 2.8 | 1.79 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 1.01 | mean time of `tape` over mean time of `price` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-4: arithmetic Asian: multiple 2.8 | 2.56 times one scalar pricing | [mac-m4max](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), macOS | met, by 0.24 | mean time of `tape` over mean time of `price` on `aad4-asian12`, each the mean of 3 repetitions |
 | AAD-5: within 1.25 times a hand-written adjoint | 1.72 times the hand-written adjoint | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | missed, by 0.47 | mean time of `tape` over mean time of `hand` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-5: within 1.25 times a hand-written adjoint | 2.36 times the hand-written adjoint | [mac-m4max](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), macOS | missed, by 1.11 | mean time of `tape` over mean time of `hand` on `aad4-asian12`, each the mean of 3 repetitions |
 | AAD-6: hand-written baseline: multiple below 2.0 | 1.04 times one scalar pricing | [linux-zen1](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), Linux | met, by 0.96 | mean time of `hand` over mean time of `price` on `aad4-asian12` in the `baseline` build (SSE2), each the mean of 3 repetitions |
+| AAD-6: hand-written baseline: multiple below 2.0 | 1.08 times one scalar pricing | [mac-m4max](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), macOS | met, by 0.92 | mean time of `hand` over mean time of `price` on `aad4-asian12`, each the mean of 3 repetitions |
 | MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 83,220 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 12.5 times | paths (300000) over mean time of `price` on `mc-asian252` in the `baseline` build (SSE2), the mean of 3 repetitions |
+| MC-1: arithmetic Asian, 252 fixings, price only: 1.044 million paths/s, single thread | 253,300 paths/s | [mac-m4max](results/mac-m4max/mc-asian252-20261118T042341Z.txt), macOS | missed, by 4.1 times | paths (300000) over mean time of `price` on `mc-asian252`, the mean of 3 repetitions |
 | MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread | 48,940 paths/s | [linux-zen1](results/linux-zen1/mc-asian252-20261117T075630Z.txt), Linux | missed, by 4.0 times | paths (300000) over mean time of `tape` on `mc-asian252` in the `baseline` build (SSE2), the mean of 3 repetitions |
+| MC-2: same, with five Greeks by tape: 0.197 million paths/s, single thread | 98,980 paths/s | [mac-m4max](results/mac-m4max/mc-asian252-20261118T042341Z.txt), macOS | missed, by 2.0 times | paths (300000) over mean time of `tape` on `mc-asian252`, the mean of 3 repetitions |
 | MEM-4: per-path tape below 50 MB in the worst case | 46.7 MB of tape chunks (`lw-worst`) | [linux-zen1](results/linux-zen1/lw-worst-20261117T083521Z.txt), Linux | met, by 3.33 MB | the largest `tape_allocated_bytes` of any valid AAD section on the host, divided by 1e+06 |
 | SVI-6: fit error at most 4 bp of forward | 0.287 bp of F on 202411 settlements (5 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 3.71 bp of F | `svi6` of row `202411` in report section `svi_fit_error` of the latest result on the host |
 | SVI-6: fit error at most 4 bp of forward | 1.13 bp of F on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 2.87 bp of F | `svi6` of row `202411W4` in report section `svi_fit_error` of the latest result on the host |
@@ -25,10 +32,15 @@ The README's headline rows, chosen in `results/headline.csv`, with how each valu
 | SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 0.41 vol points on 202411W4 settlements (12 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.32 vol points | `svi11` of row `202411W4` in report section `svi_fit_error` of the latest result on the host |
 | SVI-11: raw SVI implied-vol RMSE: at most 0.73 vol points per slice | 1.4 vol points on 202412 settlements (33 days) | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 0.67 vol points | `svi11` of row `202412` in report section `svi_fit_error` of the latest result on the host |
 | SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 237 ms median on 202411 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 222.35 ms | `median` of row `202411` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 80.3 ms median on 202411 settlements | [mac-m4max](results/mac-m4max/svi-fit-report-20261118T053339Z.txt), macOS | missed, by 65.27 ms | `median` of row `202411` in report section `svi_fit_time`, a timing, of the latest result on the host |
 | SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 112 ms median on 202411W4 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 97.38 ms | `median` of row `202411W4` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 41.9 ms median on 202411W4 settlements | [mac-m4max](results/mac-m4max/svi-fit-report-20261118T053339Z.txt), macOS | missed, by 26.92 ms | `median` of row `202411W4` in report section `svi_fit_time`, a timing, of the latest result on the host |
 | SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 170 ms median on 202412 settlements | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | missed, by 155.02 ms | `median` of row `202412` in report section `svi_fit_time`, a timing, of the latest result on the host |
+| SVI-7: calibration time: 15 ms per slice, stretch 3 ms | 59.2 ms median on 202412 settlements | [mac-m4max](results/mac-m4max/svi-fit-report-20261118T053339Z.txt), macOS | missed, by 44.21 ms | `median` of row `202412` in report section `svi_fit_time`, a timing, of the latest result on the host |
 | SVI-8: surface time below 1.2 s | 0.524 s median: raw SVI with its three fits and every check | [linux-zen1](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), Linux | met, by 0.68 s | `median` of row `surface` in report section `svi_fit_surface_time`, a timing, of the latest result on the host, divided by 1000 |
+| SVI-8: surface time below 1.2 s | 0.183 s median: raw SVI with its three fits and every check | [mac-m4max](results/mac-m4max/svi-fit-report-20261118T053339Z.txt), macOS | met, by 1.02 s | `median` of row `surface` in report section `svi_fit_surface_time`, a timing, of the latest result on the host, divided by 1000 |
 | SVI-8: surface time below 1.2 s | 0.0185 s median: eSSVI with its fit and every check | [linux-zen1](results/linux-zen1/essvi-timing-20261117T142319Z.txt), Linux | met, by 1.18 s | `median` of row `fit_and_checks` in report section `essvi_fit_time`, a timing, of the latest result on the host, divided by 1000 |
+| SVI-8: surface time below 1.2 s | 0.00653 s median: eSSVI with its fit and every check | [mac-m4max](results/mac-m4max/essvi-timing-20261118T053418Z.txt), macOS | met, by 1.19 s | `median` of row `fit_and_checks` in report section `essvi_fit_time`, a timing, of the latest result on the host, divided by 1000 |
 | Oracle plan, run 2: all 147 registered comparisons pass the tolerance rule (`BENCHMARKS.md` section 10) | 145 of 147 pass | [mac-m4max](references/measured_results_run2.csv), macOS | 2 failed: P3.DB.d12.rho, P3.CB.d12.rho | rows with verdict `pass`, of the file's rows |
 
 Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. A row from a report section derived from the option chain keeps the chain's terms; the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md. Each row's commit, as its source file says: `8bb2116` for AAD-1, AAD-3, AAD-4, AAD-5, AAD-6, MC-1, MC-2, MEM-4, SVI-6, SVI-11, SVI-7 and SVI-8; `4398aee` for the oracle plan's run 2.
@@ -38,7 +50,7 @@ Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; 
 Every verdict: [`results/verdicts.csv`](results/verdicts.csv) has one row for each verdict that a "Measured" line of [BENCHMARKS.md](BENCHMARKS.md) states, by target, host and condition, and the table below lists every row with its files and notes. The generator refuses a target, host and verdict that a line states and no row gives, a row that no line states, a row that disagrees with the headline row it names, and a cited file that is not in `results/<host>/`. A target counts as met on a host if every one of its counted rows there is met, as missed if every one is missed, and as met in part if some are met and some missed, so a target with a missed row is never counted as met. A row is not counted, neither as met nor as missed, where a step withdrawn under the host's rule gave one outcome in the withdrawn run and the other in its rerun (the row gives both figures and both outcomes), or where its figure rests on a step that failed the rule on every run it was allowed (published with its mark); such a row is listed as not counted and names no headline row.
 
 - `linux-zen1`, from the files of commit `8bb2116` and from tests: 26 targets judged. Met, 10: [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20), [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost), [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes), [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing), [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case), [RNG-1](BENCHMARKS.md#rng-1-philox4x32-10-36-cycles-per-byte), [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree), [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward), [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) and [SVI-9](BENCHMARKS.md#svi-9-every-violation-reported-none-repaired-silently). Missed, 10: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint), [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222), [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread), [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread), [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541), [RNG-2](BENCHMARKS.md#rng-2-xoshiro256-058-ns-per-64-bits-033-cycles-per-byte), [RNG-4](BENCHMARKS.md#rng-4-inverse-normal-speed-47-cycles-scalar-stretch-9-cycles-vector), [SVI-2](BENCHMARKS.md#svi-2-inversion-speed-180-ns), [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) and [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration). Met in part, 6: [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30), [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164), [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28), [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal), [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) and [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice). Not counted, 0. Measured with no verdict stated: [AAD-8](BENCHMARKS.md#aad-8-second-order-greeks-cost-reported-separately) (no numeric target), [SIMD-1](BENCHMARKS.md#simd-1-speedup-reported-against-the-lane-ceiling) (no efficiency claimed) and [B34](BENCHMARKS.md#14-code-quality-bar) (caveat: its price variant ran 3.45 times slower than at d1596e0 and the cause is not established).
-- `mac-m4max`, from the files of commit `d1596e0` and from tests: 16 targets judged. Met, 9: [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30), [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28), [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20), [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost), [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes), [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing), [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case), [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree) and [GPU-2](BENCHMARKS.md#gpu-2-float32-error-far-below-monte-carlo-standard-error). Missed, 6: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint), [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222), [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal), [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread), [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) and [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541). Met in part, 1: [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164). Not counted, 0.
+- `mac-m4max`, from the files of commits `8bb2116`, `d1596e0` and `c5f3473` and from tests: 24 targets judged. Met, 14: [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30), [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28), [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20), [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost), [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes), [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing), [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case), [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial), [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree), [GPU-2](BENCHMARKS.md#gpu-2-float32-error-far-below-monte-carlo-standard-error), [QL-2](BENCHMARKS.md#ql-2-accuracy), [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward), [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) and [SVI-9](BENCHMARKS.md#svi-9-every-violation-reported-none-repaired-silently). Missed, 8: [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint), [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222), [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal), [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread), [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread), [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541), [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) and [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration). Met in part, 2: [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) and [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice). Not counted, 0. Measured with no verdict stated: [AAD-8](BENCHMARKS.md#aad-8-second-order-greeks-cost-reported-separately) (no numeric target), [SIMD-1](BENCHMARKS.md#simd-1-speedup-reported-against-the-lane-ceiling) (no efficiency claimed) and [GPU-3](BENCHMARKS.md#gpu-3-paired-relative-difference-about-1e-7) (reported and not judged).
 - By tests whose "Measured" line names no host: 6 targets judged. Met, 5: [MEM-6](BENCHMARKS.md#mem-6-no-heap-allocation-after-warm-up), [SVI-1](BENCHMARKS.md#svi-1-implied-volatility-inversion-at-machine-precision), [SVI-3](BENCHMARKS.md#svi-3-butterfly-check-catches-a-known-violation), [SVI-4](BENCHMARKS.md#svi-4-wing-check-at-the-lee-limit-of-2-not-4) and [SVI-5](BENCHMARKS.md#svi-5-calendar-check-by-dense-numerical-crossing-test). Missed, 1: [RNG-3](BENCHMARKS.md#rng-3-inverse-normal-accuracy-60e-16-maximum-relative-error). Met in part, 0. Not counted, 0.
 
 | target | host | condition | verdict | runs | headline row | files | note |
@@ -46,58 +58,69 @@ Every verdict: [`results/verdicts.csv`](results/verdicts.csv) has one row for ea
 | [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | linux-zen1 | scalar primal | met | - | `aad1-barrier@baseline tape/price` | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt) | 2.18 against below 3.0, met by 0.82; release preset (SSE2) |
 | [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | linux-zen1 | fastest primal: lane tape | met | - | - | [aad1-barrier-avx2-20261117T110605Z.txt](results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt) | tape-lanes 2.39 times price-lanes, the fastest primal (1.55 times as fast as price), met by 0.61; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
 | [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | linux-zen1 | fastest primal: scalar tape | missed | - | - | [aad1-barrier-avx2-20261117T110605Z.txt](results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt) | the scalar tape 3.41 times price-lanes, missed by 0.41: the primal it is divided by runs on 4 lanes and the scalar tape on none |
-| [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | mac-m4max | scalar primal | met | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt) | 2.74, met by 0.26; at d1596e0. No reported run yet against the fastest primal on this host |
+| [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | mac-m4max | scalar primal | met | - | `aad1-barrier tape/price` | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt) | 2.66 against below 3.0, met by 0.34; release preset (NEON). Here the scalar primal is also the fastest: price-lanes takes 1.33 times as long as price |
+| [AAD-1](BENCHMARKS.md#aad-1-barrier-general-tape-single-thread-multiple-below-30) | mac-m4max | fastest primal: lane tape | met | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt) | tape-lanes 2.43 times price, met by 0.57; NEON, 2 lanes, lane ceiling 2 lanes |
 | [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | linux-zen1 | scalar primal | met | - | `aad3-barrier-mt@baseline tape/price` | [aad3-barrier-mt-20261117T083620Z.txt](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt) | 2.19 on 2 threads pinned to CPUs 4 and 6, meets 2.86 by 0.67; release preset (SSE2) |
 | [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | linux-zen1 | scalar primal: stretch | missed | - | - | [aad3-barrier-mt-20261117T083620Z.txt](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt) | 2.19 misses the stretch 1.64 by 0.55: the stretch assumes expression templates, which this tape does not have (AAD-2) |
 | [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | linux-zen1 | fastest primal: lane tape | met | - | - | [aad3-barrier-mt-avx2-20261117T122533Z.txt](results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt) | the lane tape 2.19 times price-lanes (1.52 times as fast as price), meets 2.86 by 0.67; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
 | [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | linux-zen1 | fastest primal: lane tape stretch | missed | - | - | [aad3-barrier-mt-avx2-20261117T122533Z.txt](results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt) | the lane tape 2.19 misses the stretch 1.64 by 0.55 |
 | [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | linux-zen1 | fastest primal: scalar tape | missed | - | - | [aad3-barrier-mt-avx2-20261117T122533Z.txt](results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt) | the scalar tape 3.56 times price-lanes, misses 2.86 by 0.70, for the reason given under AAD-1 |
-| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | scalar primal | met | - | - | [aad3-barrier-mt-20261104T073414Z.txt](results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt) | 2.68 on 8 threads unpinned, meets 2.86 by 0.18; at d1596e0 |
-| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | scalar primal: stretch | missed | - | - | [aad3-barrier-mt-20261104T073414Z.txt](results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt) | 2.68 misses the stretch 1.64 by 1.04; at d1596e0 |
+| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | scalar primal | met | - | `aad3-barrier-mt tape/price` | [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt) | 2.54 on 8 threads unpinned, meets 2.86 by 0.32; release preset (NEON). The scalar primal is the fastest here: price-lanes takes 1.33 times as long |
+| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | scalar primal: stretch | missed | - | - | [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt) | 2.54 misses the stretch 1.64 by 0.90: the stretch assumes expression templates, which this tape does not have (AAD-2) |
+| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | fastest primal: lane tape | met | - | - | [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt) | tape-lanes 2.31 times price, meets 2.86 by 0.55; NEON, 2 lanes, lane ceiling 2 lanes |
+| [AAD-3](BENCHMARKS.md#aad-3-barrier-multi-threaded-multiple-286-stretch-164) | mac-m4max | fastest primal: lane tape stretch | missed | - | - | [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt) | the lane tape 2.31 misses the stretch 1.64 by 0.67 |
 | [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | linux-zen1 | scalar primal | met | - | `aad4-asian12@baseline tape/price` | [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt) | 1.79 at 12 fixings, met by 1.01; release preset (SSE2). At 252 fixings (mc-asian252) 1.70, which no verdict is stated on |
 | [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | linux-zen1 | fastest primal: lane tape | met | - | - | [aad4-asian12-avx2-20261117T114352Z.txt](results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt) | the lane tape 2.09 times price-lanes at 12 fixings (1.66 times as fast as price), met by 0.71; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
 | [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | linux-zen1 | fastest primal: scalar tape | missed | - | - | [aad4-asian12-avx2-20261117T114352Z.txt](results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt) | the scalar tape 3.06 times price-lanes at 12 fixings, missed by 0.26, for the reason given under AAD-1 |
-| [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | mac-m4max | scalar primal | met | - | - | [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt) | 2.67 at 12 fixings, met by 0.13; at d1596e0 |
+| [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | mac-m4max | scalar primal | met | - | `aad4-asian12 tape/price` | [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | 2.56 at 12 fixings, met by 0.24; release preset (NEON). The scalar primal is the fastest here: price-lanes takes 1.30 times as long. At 252 fixings (mc-asian252) 2.56, which no verdict is stated on |
+| [AAD-4](BENCHMARKS.md#aad-4-arithmetic-asian-multiple-28) | mac-m4max | fastest primal: lane tape | met | - | - | [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | tape-lanes 2.66 times price at 12 fixings, met by 0.14; NEON, 2 lanes, lane ceiling 2 lanes; on this workload the lane tape is slower than the scalar tape |
 | [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | linux-zen1 | 12 fixings: tape | missed | - | `aad4-asian12@baseline tape/hand` | [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt) | 1.72 times the hand adjoint, missed by 0.47; release preset (SSE2) |
 | [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | linux-zen1 | 12 fixings: tape-skip | missed | - | - | [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt) | tape-skip 1.68 times the hand adjoint, missed by 0.43 |
 | [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | linux-zen1 | 252 fixings: tape | missed | - | - | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | 1.69, missed by 0.44 |
 | [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | linux-zen1 | 252 fixings: tape-skip | missed | - | - | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | tape-skip 1.61, missed by 0.36 |
-| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 12 fixings: tape | missed | - | - | [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt) | 2.57, missed by 1.32; at d1596e0 |
-| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 252 fixings: tape | missed | - | - | [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 2.68, missed by 1.43; at d1596e0 |
-| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | tape-skip | missed | - | - | [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt), [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | tape-skip over hand 2.30 to 2.38; at d1596e0 |
+| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 12 fixings: tape | missed | - | `aad4-asian12 tape/hand` | [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | 2.36 times the hand adjoint, missed by 1.11; release preset (NEON) |
+| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 12 fixings: tape-skip | missed | - | - | [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | tape-skip 2.38 times the hand adjoint, missed by 1.13 |
+| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 252 fixings: tape | missed | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | 2.54, missed by 1.29 |
+| [AAD-5](BENCHMARKS.md#aad-5-within-125-times-a-hand-written-adjoint) | mac-m4max | 252 fixings: tape-skip | missed | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | tape-skip 2.52, missed by 1.27 |
 | [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | linux-zen1 | 12 fixings | met | - | `aad4-asian12@baseline hand/price` | [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt) | 1.04, met by 0.96; release preset (SSE2) |
 | [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | linux-zen1 | 252 fixings | met | - | - | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | 1.01, met by 0.99 |
-| [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | mac-m4max | 12 fixings | met | - | - | [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt) | 1.04, met by 0.96; at d1596e0 |
-| [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | mac-m4max | 252 fixings | met | - | - | [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 1.02, met by 0.98; at d1596e0 |
+| [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | mac-m4max | 12 fixings | met | - | `aad4-asian12 hand/price` | [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | 1.08, met by 0.92; release preset (NEON) |
+| [AAD-6](BENCHMARKS.md#aad-6-hand-written-baseline-multiple-below-20) | mac-m4max | 252 fixings | met | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | 1.01, met by 0.99 |
 | [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost) | linux-zen1 | - | met | - | - | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt) | on aad1-barrier with N = 5: central bumps 11.10 pricings and forward 6.01, against 11 and 6; across the five pricer workloads 10.95 to 11.10 and 5.97 to 6.05 |
-| [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost) | mac-m4max | - | met | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt) | 11.01 and 6.02 against 11 and 6; at d1596e0 |
+| [AAD-7](BENCHMARKS.md#aad-7-bump-and-revalue-cost) | mac-m4max | - | met | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt) | on aad1-barrier with N = 5: central bumps 11.10 pricings and forward 6.08, against 11 and 6; across the five pricer workloads 11.00 to 11.20 and 6.00 to 6.14 |
 | [AAD-8](BENCHMARKS.md#aad-8-second-order-greeks-cost-reported-separately) | linux-zen1 | no numeric target | none stated | - | - | [aad8-asian12-20261117T104204Z.txt](results/linux-zen1/aad8-asian12-20261117T104204Z.txt), [aad8-barrier-20261117T133751Z.txt](results/linux-zen1/aad8-barrier-20261117T133751Z.txt) | second order reported with its own multiples; no numeric target, so no verdict |
+| [AAD-8](BENCHMARKS.md#aad-8-second-order-greeks-cost-reported-separately) | mac-m4max | no numeric target | none stated | - | - | [aad8-asian12-20261118T044438Z.txt](results/mac-m4max/aad8-asian12-20261118T044438Z.txt), [aad8-barrier-20261118T044627Z.txt](results/mac-m4max/aad8-barrier-20261118T044627Z.txt) | second order reported with its own multiples; no numeric target, so no verdict |
 | [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes) | linux-zen1 | - | met | - | - | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt) | Real 16 B, statement 1 B, operand 12 B, by static_assert, recorded in tape_config |
-| [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes) | mac-m4max | - | met | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt) | as on linux-zen1; at d1596e0 |
+| [MEM-1](BENCHMARKS.md#mem-1-active-type-16-bytes-statement-at-most-8-bytes-operand-at-most-12-bytes) | mac-m4max | - | met | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt) | Real 16 B, statement 1 B, operand 12 B, by static_assert, recorded in tape_config |
 | [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing) | linux-zen1 | - | met | - | - | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt), [aad8-barrier-20261117T133751Z.txt](results/linux-zen1/aad8-barrier-20261117T133751Z.txt) | met exactly on every workload: statements plus 12 times operands |
-| [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing) | mac-m4max | - | met | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt), [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt), [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | met exactly, the same counts as at 8bb2116 on linux-zen1; at d1596e0 |
+| [MEM-2](BENCHMARKS.md#mem-2-12k--1-bytes-per-statement-with-linear-indexing) | mac-m4max | - | met | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt), [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt), [aad8-barrier-20261118T044627Z.txt](results/mac-m4max/aad8-barrier-20261118T044627Z.txt) | met exactly on every workload, the same counts as on linux-zen1 |
 | [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222) | linux-zen1 | - | missed | - | - | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | peak RSS 3,825,664 to 3,883,008 B, over 1.9 MB by 1.93 to 1.98 MB; an idle process alone peaks at 3,461,120 to 3,596,288 B, and the tape's own chunks are 172,032 B |
-| [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222) | mac-m4max | - | missed | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt), [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt), [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 2,392,064 to 2,408,448 B, over 1.9 MB by 0.49 to 0.51 MB; an idle process alone 2,080,768 B; at d1596e0 |
+| [MEM-3](BENCHMARKS.md#mem-3-peak-memory-at-most-19-mb-with-a-per-path-tape-n--10-and-71-mb-at-n--222) | mac-m4max | - | missed | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt), [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | peak RSS 2,473,984 to 2,506,752 B, over 1.9 MB by 0.57 to 0.61 MB; an idle process alone peaks at 2,097,152 B, and the tape's own chunks are 172,032 B |
 | [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case) | linux-zen1 | - | met | - | `tape_allocated_bytes` | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt), [aad8-barrier-20261117T133751Z.txt](results/linux-zen1/aad8-barrier-20261117T133751Z.txt), [lw-worst-20261117T083521Z.txt](results/linux-zen1/lw-worst-20261117T083521Z.txt) | the largest is lw-worst's 46,669,824 B of chunks, 3.3 MB under the limit |
-| [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case) | mac-m4max | - | met | - | - | [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt), [lw-worst-20261104T081214Z.txt](results/mac-m4max/lw-worst-20261104T081214Z.txt) | the same bytes as at 8bb2116 on linux-zen1; at d1596e0 |
+| [MEM-4](BENCHMARKS.md#mem-4-per-path-tape-below-50-mb-in-the-worst-case) | mac-m4max | - | met | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt), [aad8-barrier-20261118T044627Z.txt](results/mac-m4max/aad8-barrier-20261118T044627Z.txt), [lw-worst-20261104T081214Z.txt](results/mac-m4max/lw-worst-20261104T081214Z.txt) | the largest is lw-worst's 46,669,824 B of chunks, 3.3 MB under the limit, from its file at d1596e0: lw-worst's run at 8bb2116 was withdrawn and runs again on 2026-11-26. The pricer paths are from the files at 8bb2116 |
 | [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | linux-zen1 | one thread | met | - | - | [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt), [aad1-barrier-avx2-20261117T110605Z.txt](results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt), [aad4-asian12-avx2-20261117T114352Z.txt](results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt), [mc-asian252-avx2-20261117T115010Z.txt](results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt) | met on the build judged: 1.05, 1.00 and 1.04 from the release (SSE2) files, the build BENCHMARKS.md's "How Phase 3 numbers are produced" takes for every figure but the lane ones (committed in 8bb2116 before the run). The release-avx2 files of the same run give 1.19 (aad1-barrier-avx2), 1.09 (aad4-asian12-avx2, 1.087, under the bar) and 1.11 (mc-asian252-avx2): two of the three are over the 1.09 bar, so the verdict depends on which build is read |
 | [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | linux-zen1 | two threads | missed | - | - | [aad3-barrier-mt-20261117T083620Z.txt](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt), [mc3-asian252-mt-20261117T091647Z.txt](results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt) | 1.15 and 1.11, missed by 0.06 and 0.02; the tape adds 565,248 and 438,272 B, beyond the idle process's spread of 208,896 B |
-| [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | mac-m4max | one thread | missed | - | - | [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt), [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt), [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 1.10, 1.11 and 1.11, missed by 0.01 to 0.02; at d1596e0 |
-| [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | mac-m4max | 8 threads | missed | - | - | [aad3-barrier-mt-20261104T073414Z.txt](results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt), [mc3-asian252-mt-20261104T080643Z.txt](results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt) | 1.61 and 1.63; at d1596e0 |
+| [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | mac-m4max | one thread | missed | - | - | [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt), [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | 1.125, 1.119 and 1.119, missed by 0.035, 0.029 and 0.029; release preset (NEON), the one build on this host |
+| [MEM-5](BENCHMARKS.md#mem-5-peak-rss-at-most-109-times-the-primal) | mac-m4max | 8 threads | missed | - | - | [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt), [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | 1.62 and 1.63, missed by 0.53 and 0.54 |
 | [MEM-6](BENCHMARKS.md#mem-6-no-heap-allocation-after-warm-up) | any | - | met | - | - | a test | TapeAllocation.NoHeapAllocationAfterWarmUp counts 0 allocations after warm-up, on both hosts |
 | [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread) | linux-zen1 | scalar primal | missed | - | `mc-asian252@baseline price` | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | 8.322e4 paths/s, missed by 12.5 times; release preset (SSE2) |
 | [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread) | linux-zen1 | lane primal | missed | - | - | [mc-asian252-avx2-20261117T115010Z.txt](results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt) | price-lanes 1.377e5 paths/s, missed by 7.6 times; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
-| [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread) | mac-m4max | - | missed | - | - | [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 1.488e5 paths/s, missed by 7.0 times; at d1596e0 |
+| [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread) | mac-m4max | scalar primal | missed | - | `mc-asian252 price` | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | 2.533e5 paths/s, missed by 4.12 times; release preset (NEON) |
+| [MC-1](BENCHMARKS.md#mc-1-arithmetic-asian-252-fixings-price-only-1044-million-pathss-single-thread) | mac-m4max | lane primal | missed | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | price-lanes 1.963e5 paths/s, missed by 5.32 times; NEON, 2 lanes, lane ceiling 2 lanes |
 | [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) | linux-zen1 | scalar tape | missed | - | `mc-asian252@baseline tape` | [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt) | 4.894e4 paths/s, missed by 4.0 times; release preset (SSE2) |
 | [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) | linux-zen1 | lane tape | missed | - | - | [mc-asian252-avx2-20261117T115010Z.txt](results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt) | tape-lanes 6.744e4 paths/s, missed by 2.9 times; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
-| [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) | mac-m4max | - | missed | - | - | [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | 5.43e4 paths/s, missed by 3.6 times; at d1596e0 |
+| [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) | mac-m4max | scalar tape | missed | - | `mc-asian252 tape` | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | 9.898e4 paths/s, missed by 1.99 times; release preset (NEON) |
+| [MC-2](BENCHMARKS.md#mc-2-same-with-five-greeks-by-tape-0197-million-pathss-single-thread) | mac-m4max | lane tape | missed | - | - | [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | tape-lanes 1.077e5 paths/s, missed by 1.83 times; NEON, 2 lanes, lane ceiling 2 lanes |
 | [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | linux-zen1 | scalar tape | missed | - | - | [mc3-asian252-mt-20261117T091647Z.txt](results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt) | 9.321e4 paths/s on 2 threads pinned to CPUs 4 and 6, missed by 13.4 times; release preset (SSE2) |
 | [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | linux-zen1 | lane tape | missed | - | - | [mc3-asian252-mt-avx2-20261117T130249Z.txt](results/linux-zen1/mc3-asian252-mt-avx2-20261117T130249Z.txt) | 1.261e5 paths/s, missed by 9.9 times; release-avx2 (AVX2, 4 lanes, lane ceiling 4 lanes) |
 | [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | linux-zen1 | stretch | missed | - | - | [mc3-asian252-mt-20261117T091647Z.txt](results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt), [mc3-asian252-mt-avx2-20261117T130249Z.txt](results/linux-zen1/mc3-asian252-mt-avx2-20261117T130249Z.txt) | the stretch 5.41 million paths/s, missed by more |
-| [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | mac-m4max | 8 threads | missed | - | - | [mc3-asian252-mt-20261104T080643Z.txt](results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt) | 3.914e5 paths/s on 8 threads unpinned, missed by 3.2 times; at d1596e0 |
-| [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | mac-m4max | stretch | missed | - | - | [mc3-asian252-mt-20261104T080643Z.txt](results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt) | the stretch 5.41 million paths/s, missed by more; at d1596e0 |
-| [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) | linux-zen1 | 4 lanes | met | - | - | [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt) | 29.6 million paths/s, met by 11.4 million; release-avx2 (AVX2, lane ceiling 4 lanes). MC-4 names NEON: the Mac's run is still to be read |
+| [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | mac-m4max | 8 threads: scalar tape | missed | - | - | [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | 7.344e5 paths/s on 8 threads unpinned, missed by 1.70 times; release preset (NEON) |
+| [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | mac-m4max | 8 threads: lane tape | missed | - | - | [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | tape-lanes 7.800e5 paths/s, missed by 1.60 times; NEON, 2 lanes, lane ceiling 2 lanes |
+| [MC-3](BENCHMARKS.md#mc-3-value-and-five-greeks-eight-threads-1245-million-pathss-stretch-541) | mac-m4max | stretch | missed | - | - | [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | the stretch 5.41 million paths/s, missed by more |
+| [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) | linux-zen1 | 4 lanes | met | - | - | [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt) | 29.6 million paths/s, met by 11.4 million; release-avx2 (AVX2, lane ceiling 4 lanes). MC-4 names NEON, which the Mac's rows are on |
 | [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) | linux-zen1 | scalar | missed | - | - | [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt) | 12.4 million paths/s, missed by 5.8 million, 1.47 times |
+| [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) | mac-m4max | 2 lanes | met | - | - | [simd-european-20261118T051033Z.txt](results/mac-m4max/simd-european-20261118T051033Z.txt) | 31.9 million paths/s at 2 lanes (NEON, lane ceiling 2 lanes), met by 13.7 million |
+| [MC-4](BENCHMARKS.md#mc-4-neon-european-182-million-pathss-serial) | mac-m4max | scalar | met | - | - | [simd-european-20261118T051033Z.txt](results/mac-m4max/simd-european-20261118T051033Z.txt) | the scalar pricer 37.3 million paths/s, met by 19.1 million; on this workload it is faster than the 2 lanes |
 | [RNG-1](BENCHMARKS.md#rng-1-philox4x32-10-36-cycles-per-byte) | linux-zen1 | - | met | - | - | [simd-math-philox-scalar-20261117T104150Z.txt](results/linux-zen1/simd-math-philox-scalar-20261117T104150Z.txt), [simd-math-philox-lanes-1-20261117T104153Z.txt](results/linux-zen1/simd-math-philox-lanes-1-20261117T104153Z.txt), [simd-math-philox-lanes-4-20261117T104157Z.txt](results/linux-zen1/simd-math-philox-lanes-4-20261117T104157Z.txt) | the scalar generator 1.140 cycles per byte, met by 2.46; at 1 lane 2.657 and at 4 lanes 1.255 |
 | [RNG-2](BENCHMARKS.md#rng-2-xoshiro256-058-ns-per-64-bits-033-cycles-per-byte) | linux-zen1 | cycles per byte | missed | - | - | [simd-math-xoshiro256pp-scalar-20261117T104201Z.txt](results/linux-zen1/simd-math-xoshiro256pp-scalar-20261117T104201Z.txt) | 0.468 cycles per byte, missed by 0.138, 1.42 times |
 | [RNG-2](BENCHMARKS.md#rng-2-xoshiro256-058-ns-per-64-bits-033-cycles-per-byte) | linux-zen1 | ns per 64 bits | missed | - | - | [simd-math-20261117T103815Z.txt](results/linux-zen1/simd-math-20261117T103815Z.txt) | 1.09 ns, missed by 0.51 ns, 1.87 times: Zen 1 at its own clock against Zen 5 fixed at 4.5 GHz |
@@ -105,10 +128,15 @@ Every verdict: [`results/verdicts.csv`](results/verdicts.csv) has one row for ea
 | [RNG-4](BENCHMARKS.md#rng-4-inverse-normal-speed-47-cycles-scalar-stretch-9-cycles-vector) | linux-zen1 | 47 scalar | missed | - | - | [simd-math-inverse-normal-scalar-20261117T104027Z.txt](results/linux-zen1/simd-math-inverse-normal-scalar-20261117T104027Z.txt) | 55.7 cycles per value, missed by 8.7 cycles, 1.18 times, in double against the source's single precision |
 | [RNG-4](BENCHMARKS.md#rng-4-inverse-normal-speed-47-cycles-scalar-stretch-9-cycles-vector) | linux-zen1 | stretch 9 vector | missed | - | - | [simd-math-inverse-normal-lanes-4-20261117T104055Z.txt](results/linux-zen1/simd-math-inverse-normal-lanes-4-20261117T104055Z.txt) | 59.2 cycles at 4 lanes, missed by 50.2 cycles, 6.6 times |
 | [SIMD-1](BENCHMARKS.md#simd-1-speedup-reported-against-the-lane-ceiling) | linux-zen1 | no efficiency claimed | none stated | - | - | [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt), [simd-asian252-20261117T095540Z.txt](results/linux-zen1/simd-asian252-20261117T095540Z.txt), [simd-barrier-onestep-20261117T100553Z.txt](results/linux-zen1/simd-barrier-onestep-20261117T100553Z.txt), [simd-math-20261117T103815Z.txt](results/linux-zen1/simd-math-20261117T103815Z.txt) | scalar over 4 lanes 2.39, 1.57 and 2.15 beside the lane ceiling of 4 lanes (Zen 1: 128-bit FP datapath) |
+| [SIMD-1](BENCHMARKS.md#simd-1-speedup-reported-against-the-lane-ceiling) | mac-m4max | no efficiency claimed | none stated | - | - | [simd-european-20261118T051033Z.txt](results/mac-m4max/simd-european-20261118T051033Z.txt), [simd-asian252-20261118T051048Z.txt](results/mac-m4max/simd-asian252-20261118T051048Z.txt), [simd-barrier-onestep-20261118T051348Z.txt](results/mac-m4max/simd-barrier-onestep-20261118T051348Z.txt), [simd-math-20261118T053137Z.txt](results/mac-m4max/simd-math-20261118T053137Z.txt) | scalar over 2 lanes 0.86, 0.77 and 1.38 beside the lane ceiling of 2 lanes (NEON) |
 | [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree) | linux-zen1 | within each build | met | - | - | a test | bit-identical at 1, 2 and 4 lanes (AVX2), by tests (a486c9a) |
 | [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree) | linux-zen1 | the reported run | met | - | - | [aad1-barrier-avx2-20261117T110605Z.txt](results/linux-zen1/aad1-barrier-avx2-20261117T110605Z.txt), [aad3-barrier-mt-avx2-20261117T122533Z.txt](results/linux-zen1/aad3-barrier-mt-avx2-20261117T122533Z.txt), [aad4-asian12-avx2-20261117T114352Z.txt](results/linux-zen1/aad4-asian12-avx2-20261117T114352Z.txt), [mc-asian252-avx2-20261117T115010Z.txt](results/linux-zen1/mc-asian252-avx2-20261117T115010Z.txt), [mc3-asian252-mt-avx2-20261117T130249Z.txt](results/linux-zen1/mc3-asian252-mt-avx2-20261117T130249Z.txt), [simd-asian252-20261117T095540Z.txt](results/linux-zen1/simd-asian252-20261117T095540Z.txt), [simd-barrier-onestep-20261117T100553Z.txt](results/linux-zen1/simd-barrier-onestep-20261117T100553Z.txt), [simd-european-20261117T095501Z.txt](results/linux-zen1/simd-european-20261117T095501Z.txt), [simd-math-20261117T103815Z.txt](results/linux-zen1/simd-math-20261117T103815Z.txt), [simd-math-exp-lanes-1-20261117T103952Z.txt](results/linux-zen1/simd-math-exp-lanes-1-20261117T103952Z.txt), [simd-math-exp-scalar-20261117T103946Z.txt](results/linux-zen1/simd-math-exp-scalar-20261117T103946Z.txt), [simd-math-inverse-normal-lanes-1-20261117T104035Z.txt](results/linux-zen1/simd-math-inverse-normal-lanes-1-20261117T104035Z.txt), [simd-math-inverse-normal-lanes-4-20261117T104055Z.txt](results/linux-zen1/simd-math-inverse-normal-lanes-4-20261117T104055Z.txt), [simd-math-inverse-normal-scalar-20261117T104027Z.txt](results/linux-zen1/simd-math-inverse-normal-scalar-20261117T104027Z.txt), [simd-math-log-lanes-4-20261117T104021Z.txt](results/linux-zen1/simd-math-log-lanes-4-20261117T104021Z.txt), [simd-math-normal-cdf-lanes-1-20261117T104118Z.txt](results/linux-zen1/simd-math-normal-cdf-lanes-1-20261117T104118Z.txt), [simd-math-normal-cdf-lanes-4-20261117T104139Z.txt](results/linux-zen1/simd-math-normal-cdf-lanes-4-20261117T104139Z.txt), [simd-math-normal-cdf-scalar-20261117T104104Z.txt](results/linux-zen1/simd-math-normal-cdf-scalar-20261117T104104Z.txt), [simd-math-philox-lanes-1-20261117T104153Z.txt](results/linux-zen1/simd-math-philox-lanes-1-20261117T104153Z.txt), [simd-math-philox-lanes-4-20261117T104157Z.txt](results/linux-zen1/simd-math-philox-lanes-4-20261117T104157Z.txt), [simd-math-philox-scalar-20261117T104150Z.txt](results/linux-zen1/simd-math-philox-scalar-20261117T104150Z.txt), [simd-math-xoshiro256pp-scalar-20261117T104201Z.txt](results/linux-zen1/simd-math-xoshiro256pp-scalar-20261117T104201Z.txt), [aad1-barrier-20261117T070836Z.txt](results/linux-zen1/aad1-barrier-20261117T070836Z.txt), [aad3-barrier-mt-20261117T083620Z.txt](results/linux-zen1/aad3-barrier-mt-20261117T083620Z.txt), [aad4-asian12-20261117T074943Z.txt](results/linux-zen1/aad4-asian12-20261117T074943Z.txt), [mc-asian252-20261117T075630Z.txt](results/linux-zen1/mc-asian252-20261117T075630Z.txt), [mc3-asian252-mt-20261117T091647Z.txt](results/linux-zen1/mc3-asian252-mt-20261117T091647Z.txt) | every lane check in the stamped files passed |
 | [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree) | mac-m4max | within each build | met | - | - | a test | bit-identical at 1 and 2 lanes (NEON), by tests (a486c9a) |
-| [GPU-2](BENCHMARKS.md#gpu-2-float32-error-far-below-monte-carlo-standard-error) | mac-m4max | - | met | - | - | a test | Gpu.Gpu2Asian12, Gpu.Gpu2Asian252 and Gpu.Gpu2Barrier156 at N = 2^20: 0.00008, 0.00015 and 0.00004 of SE against 0.01 |
+| [SIMD-2](BENCHMARKS.md#simd-2-scalar-and-simd-agree) | mac-m4max | the reported run | met | - | - | [simd-european-20261118T051033Z.txt](results/mac-m4max/simd-european-20261118T051033Z.txt), [simd-asian252-20261118T051048Z.txt](results/mac-m4max/simd-asian252-20261118T051048Z.txt), [simd-barrier-onestep-20261118T051348Z.txt](results/mac-m4max/simd-barrier-onestep-20261118T051348Z.txt), [simd-math-20261118T053137Z.txt](results/mac-m4max/simd-math-20261118T053137Z.txt), [simd-math-normal-cdf-scalar-20261118T053256Z.txt](results/mac-m4max/simd-math-normal-cdf-scalar-20261118T053256Z.txt), [simd-math-normal-cdf-lanes-1-20261118T053304Z.txt](results/mac-m4max/simd-math-normal-cdf-lanes-1-20261118T053304Z.txt), [simd-math-normal-cdf-lanes-2-20261118T053313Z.txt](results/mac-m4max/simd-math-normal-cdf-lanes-2-20261118T053313Z.txt), [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt), [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt), [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt), [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt), [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | every lane check in the stamped files passed, at 1 and 2 lanes (NEON) |
+| [GPU-2](BENCHMARKS.md#gpu-2-float32-error-far-below-monte-carlo-standard-error) | mac-m4max | the reported table | met | - | - | [metal-table-20261118T063834Z.txt](results/mac-m4max/metal-table-20261118T063834Z.txt) | abs(D - B) / SE_B 0.00030, 0.00062 and 0.00015 against 0.01 at 2^24 paths per contract, the file's verdict pass on all three; at c5f3473 |
+| [GPU-2](BENCHMARKS.md#gpu-2-float32-error-far-below-monte-carlo-standard-error) | mac-m4max | by tests | met | - | - | a test | Gpu.Gpu2Asian12, Gpu.Gpu2Asian252 and Gpu.Gpu2Barrier156 at N = 2^20: 0.00008, 0.00015 and 0.00004 of SE against 0.01 |
+| [GPU-3](BENCHMARKS.md#gpu-3-paired-relative-difference-about-1e-7) | mac-m4max | reported and not judged | none stated | - | - | [metal-table-20261118T063834Z.txt](results/mac-m4max/metal-table-20261118T063834Z.txt) | (D - B) / B -1.083e-7, +2.206e-7 and -1.081e-7 beside NAG's reference of about 1e-7; at c5f3473 |
+| [QL-2](BENCHMARKS.md#ql-2-accuracy) | mac-m4max | - | met | - | - | a test | all 42 comparisons pass the section 10 rule, 18 QuantLib and 24 ours, every SE under its ceiling, in references/quantlib_accuracy.csv: curated from the accuracy run at c5f3473 and checked against that run's rows byte for byte by the curation script's check. This table's files column takes only results/<host>/ files, so the curated file is named here; the ctest aadp_quantlib_accuracy_curation validates its 42 verdicts from their own cells |
 | [SVI-1](BENCHMARKS.md#svi-1-implied-volatility-inversion-at-machine-precision) | any | - | met | - | - | a test | by test (83d93b1) on macOS: the worst vol error 0.25 of its bound and the worst price error 0.27 |
 | [SVI-2](BENCHMARKS.md#svi-2-inversion-speed-180-ns) | linux-zen1 | - | missed | - | - | [svi2-implied-vol-20261117T104552Z.txt](results/linux-zen1/svi2-implied-vol-20261117T104552Z.txt) | 357.5 ns per inversion, missed by 177.5 ns, 1.99 times |
 | [SVI-3](BENCHMARKS.md#svi-3-butterfly-check-catches-a-known-violation) | any | - | met | - | - | a test | by test (fd60de0) |
@@ -117,19 +145,35 @@ Every verdict: [`results/verdicts.csv`](results/verdicts.csv) has one row for ea
 | [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | linux-zen1 | 202411 | met | - | `svi_fit_error 202411/svi6` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 0.287 bp of F, met by 3.71; settlements, not tradable quotes |
 | [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | linux-zen1 | 202411W4 | met | - | `svi_fit_error 202411W4/svi6` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 1.132 bp of F, met by 2.87 |
 | [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | linux-zen1 | 202412 | met | - | `svi_fit_error 202412/svi6` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 1.231 bp of F, met by 2.77 |
+| [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | mac-m4max | 202411 | met | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 0.287 bp of F, met by 3.71; settlements, not tradable quotes |
+| [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | mac-m4max | 202411W4 | met | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 1.132 bp of F, met by 2.87 |
+| [SVI-6](BENCHMARKS.md#svi-6-fit-error-at-most-4-bp-of-forward) | mac-m4max | 202412 | met | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 1.231 bp of F, met by 2.77 |
 | [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | linux-zen1 | 202411 | missed | - | `svi_fit_time 202411/median` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 237.4 ms per slice, missed by 222.4 ms, 15.8 times |
 | [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | linux-zen1 | 202411W4 | missed | - | `svi_fit_time 202411W4/median` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 112.4 ms, missed by 97.4 ms, 7.5 times |
 | [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | linux-zen1 | 202412 | missed | - | `svi_fit_time 202412/median` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 170.0 ms, missed by 155.0 ms, 11.3 times |
 | [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | linux-zen1 | stretch | missed | - | - | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | the stretch 3 ms, missed on every slice by more |
+| [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | mac-m4max | 202411 | missed | - | `svi_fit_time 202411/median` | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 80.3 ms per slice, missed by 65.3 ms, 5.35 times |
+| [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | mac-m4max | 202411W4 | missed | - | `svi_fit_time 202411W4/median` | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 41.9 ms, missed by 26.9 ms, 2.79 times |
+| [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | mac-m4max | 202412 | missed | - | `svi_fit_time 202412/median` | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 59.2 ms, missed by 44.2 ms, 3.95 times |
+| [SVI-7](BENCHMARKS.md#svi-7-calibration-time-15-ms-per-slice-stretch-3-ms) | mac-m4max | stretch | missed | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | the stretch 3 ms, missed on every slice by more |
 | [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) | linux-zen1 | raw SVI | met | - | `svi_fit_surface_time surface/median` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 523.7 ms with the three fits and every check, met by 0.68 s |
 | [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) | linux-zen1 | eSSVI | met | - | `essvi_fit_time fit_and_checks/median` | [essvi-timing-20261117T142319Z.txt](results/linux-zen1/essvi-timing-20261117T142319Z.txt) | 18.48 ms with every check, met by 1.18 s |
+| [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) | mac-m4max | raw SVI | met | - | `svi_fit_surface_time surface/median` | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 182.8 ms with the three fits and every check, met by 1.02 s |
+| [SVI-8](BENCHMARKS.md#svi-8-surface-time-below-12-s) | mac-m4max | eSSVI | met | - | `essvi_fit_time fit_and_checks/median` | [essvi-timing-20261118T053418Z.txt](results/mac-m4max/essvi-timing-20261118T053418Z.txt) | 6.53 ms with every check, met by 1.19 s |
 | [SVI-9](BENCHMARKS.md#svi-9-every-violation-reported-none-repaired-silently) | linux-zen1 | - | met | - | - | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt), [essvi-fit-20261117T104708Z.txt](results/linux-zen1/essvi-fit-20261117T104708Z.txt), [essvi-price-20261117T104710Z.txt](results/linux-zen1/essvi-price-20261117T104710Z.txt), [lv-report-20261117T142322Z.txt](results/linux-zen1/lv-report-20261117T142322Z.txt) | every violation listed and nothing repaired |
+| [SVI-9](BENCHMARKS.md#svi-9-every-violation-reported-none-repaired-silently) | mac-m4max | - | met | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt), [essvi-fit-20261118T053357Z.txt](results/mac-m4max/essvi-fit-20261118T053357Z.txt), [essvi-price-20261118T053358Z.txt](results/mac-m4max/essvi-price-20261118T053358Z.txt), [lv-report-20261118T053419Z.txt](results/mac-m4max/lv-report-20261118T053419Z.txt) | every violation listed and nothing repaired |
 | [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | linux-zen1 | cost: no numeric target | none stated | - | - | [qs-timing-20261117T144925Z.txt](results/linux-zen1/qs-timing-20261117T144925Z.txt) | the implicit-function step on top of the price with its 15 sensitivities: ratios of 1.0002 to 1.0003 |
 | [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | linux-zen1 | sensitivities: the report states no verdict | none stated | - | - | [qs-report-20261117T215634Z.txt](results/linux-zen1/qs-report-20261117T215634Z.txt) | Gauss-Newton disclosed: it moves dθ/dV by up to 15.7%, 1.2% and 61.6% on the three slices; from the late run, with the host's timers paused |
 | [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | linux-zen1 | registered bump-and-recalibrate check | missed | - | - | [qs-check-20261117T224419Z.txt](results/linux-zen1/qs-check-20261117T224419Z.txt) | FAIL on 24 of 3,420 required comparisons: 20 of 1,080 prices, on the two barriers, and 4 of 900 parameters through parity, on one 202412 settlement (worst 1.045 of tolerance), which an iteration-only diagnostic traces to the C library's maths functions; from the late run, with the host's timers paused |
+| [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | mac-m4max | cost: no numeric target | none stated | - | - | [qs-timing-20261118T060541Z.txt](results/mac-m4max/qs-timing-20261118T060541Z.txt) | the implicit-function step on top of the price with its 15 sensitivities: ratios of 1.0002 |
+| [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | mac-m4max | sensitivities: the report states no verdict | none stated | - | - | [qs-report-20261118T054019Z.txt](results/mac-m4max/qs-report-20261118T054019Z.txt) | Gauss-Newton disclosed: it moves dθ/dV by up to 15.7%, 1.2% and 61.6% on the three slices |
+| [SVI-10](BENCHMARKS.md#svi-10-market-quote-sensitivities-through-calibration) | mac-m4max | registered bump-and-recalibrate check | missed | - | - | [qs-check-20261118T054606Z.txt](results/mac-m4max/qs-check-20261118T054606Z.txt) | FAIL on 20 of 3,420 required comparisons: 20 of 1,080 prices, on the two barriers; every parameter and parity comparison passes |
 | [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | linux-zen1 | 202411 | missed | - | `svi_fit_error 202411/svi11` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 0.958 vol points, missed by 0.228 |
 | [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | linux-zen1 | 202411W4 | met | - | `svi_fit_error 202411W4/svi11` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 0.410 vol points, met by 0.320 |
 | [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | linux-zen1 | 202412 | missed | - | `svi_fit_error 202412/svi11` | [svi-fit-report-20261117T104614Z.txt](results/linux-zen1/svi-fit-report-20261117T104614Z.txt) | 1.397 vol points, missed by 0.667 |
+| [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | mac-m4max | 202411 | missed | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 0.958 vol points, missed by 0.228 |
+| [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | mac-m4max | 202411W4 | met | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 0.410 vol points, met by 0.320 |
+| [SVI-11](BENCHMARKS.md#svi-11-raw-svi-implied-vol-rmse-at-most-073-vol-points-per-slice) | mac-m4max | 202412 | missed | - | - | [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | 1.397 vol points, missed by 0.667 |
 | [B34](BENCHMARKS.md#14-code-quality-bar) | linux-zen1 | caveat: its price variant ran 3.45 times slower than at d1596e0 and the cause is not established | none stated | - | - | [lw-worst-20261117T083521Z.txt](results/linux-zen1/lw-worst-20261117T083521Z.txt) | published as B34 asks: tape 25.9 times price, but not to be read beside Hogan's 22 to 33 yet: the price variant took 0.4675 ms a call, 3.45 times its 0.1355 ms at d1596e0 on this host, while the same primal inside the bumps did not slow down (0.132 ms a pricing); why is not established, and nothing was run to find it |
 
 ## Oracle plan: measured runs
@@ -2071,13 +2115,33 @@ The tables derived from the option chain keep its terms. The attribution their f
 
 | file | claim | commit | started (UTC) | OS | CPU | pinning |
 |---|---|---|---|---|---|---|
-| [aad1-barrier-20261104T071059Z.txt](results/mac-m4max/aad1-barrier-20261104T071059Z.txt) | result | `d1596e0` | 2026-11-04T07:13:43Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
-| [aad3-barrier-mt-20261104T073414Z.txt](results/mac-m4max/aad3-barrier-mt-20261104T073414Z.txt) | result | `d1596e0` | 2026-11-04T07:34:31Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
-| [aad4-asian12-20261104T074006Z.txt](results/mac-m4max/aad4-asian12-20261104T074006Z.txt) | result | `d1596e0` | 2026-11-04T07:41:18Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
+| [aad1-barrier-20261118T040001Z.txt](results/mac-m4max/aad1-barrier-20261118T040001Z.txt) | result | `8bb2116` | 2026-11-18T04:01:14Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [aad3-barrier-mt-20261118T041439Z.txt](results/mac-m4max/aad3-barrier-mt-20261118T041439Z.txt) | result | `8bb2116` | 2026-11-18T04:14:50Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [aad4-asian12-20261118T042112Z.txt](results/mac-m4max/aad4-asian12-20261118T042112Z.txt) | result | `8bb2116` | 2026-11-18T04:21:16Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [aad8-asian12-20261118T044438Z.txt](results/mac-m4max/aad8-asian12-20261118T044438Z.txt) | result | `8bb2116` | 2026-11-18T04:44:41Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [aad8-barrier-20261118T044627Z.txt](results/mac-m4max/aad8-barrier-20261118T044627Z.txt) | result | `8bb2116` | 2026-11-18T04:48:46Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [essvi-fit-20261118T053357Z.txt](results/mac-m4max/essvi-fit-20261118T053357Z.txt) | result | `8bb2116` | 2026-11-18T05:33:57Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [essvi-price-20261118T053358Z.txt](results/mac-m4max/essvi-price-20261118T053358Z.txt) | result | `8bb2116` | 2026-11-18T05:33:58Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [essvi-timing-20261118T053418Z.txt](results/mac-m4max/essvi-timing-20261118T053418Z.txt) | result | `8bb2116` | 2026-11-18T05:34:18Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
 | [harness-selftest-20261030T231633Z.txt](results/mac-m4max/harness-selftest-20261030T231633Z.txt) | none | `93166a0` | 2026-10-30T23:24:35Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
+| [lv-bias-20261118T053609Z.txt](results/mac-m4max/lv-bias-20261118T053609Z.txt) | result | `8bb2116` | 2026-11-18T05:36:09Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [lv-report-20261118T053419Z.txt](results/mac-m4max/lv-report-20261118T053419Z.txt) | result | `8bb2116` | 2026-11-18T05:34:19Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [lv-timing-20261118T053930Z.txt](results/mac-m4max/lv-timing-20261118T053930Z.txt) | result | `8bb2116` | 2026-11-18T05:39:30Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
 | [lw-worst-20261104T081214Z.txt](results/mac-m4max/lw-worst-20261104T081214Z.txt) | result | `d1596e0` | 2026-11-04T08:13:15Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
-| [mc-asian252-20261104T074520Z.txt](results/mac-m4max/mc-asian252-20261104T074520Z.txt) | result | `d1596e0` | 2026-11-04T07:47:14Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
-| [mc3-asian252-mt-20261104T080643Z.txt](results/mac-m4max/mc3-asian252-mt-20261104T080643Z.txt) | result | `d1596e0` | 2026-11-04T08:07:00Z | macOS 27.2 (build 26B123) | Apple M4 Max | not pinned, CPUs none |
+| [mc-asian252-20261118T042341Z.txt](results/mac-m4max/mc-asian252-20261118T042341Z.txt) | result | `8bb2116` | 2026-11-18T04:24:58Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [mc3-asian252-mt-20261118T043750Z.txt](results/mac-m4max/mc3-asian252-mt-20261118T043750Z.txt) | result | `8bb2116` | 2026-11-18T04:38:01Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [metal-table-20261118T063834Z.txt](results/mac-m4max/metal-table-20261118T063834Z.txt) | result | `c5f3473` | 2026-11-18T06:38:34Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [qs-check-20261118T054606Z.txt](results/mac-m4max/qs-check-20261118T054606Z.txt) | result | `8bb2116` | 2026-11-18T05:46:06Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [qs-report-20261118T054019Z.txt](results/mac-m4max/qs-report-20261118T054019Z.txt) | result | `8bb2116` | 2026-11-18T05:40:19Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [qs-timing-20261118T060541Z.txt](results/mac-m4max/qs-timing-20261118T060541Z.txt) | result | `8bb2116` | 2026-11-18T06:05:41Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-asian252-20261118T051048Z.txt](results/mac-m4max/simd-asian252-20261118T051048Z.txt) | result | `8bb2116` | 2026-11-18T05:10:53Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-barrier-onestep-20261118T051348Z.txt](results/mac-m4max/simd-barrier-onestep-20261118T051348Z.txt) | result | `8bb2116` | 2026-11-18T05:14:05Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-european-20261118T051033Z.txt](results/mac-m4max/simd-european-20261118T051033Z.txt) | result | `8bb2116` | 2026-11-18T05:10:33Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-math-20261118T053137Z.txt](results/mac-m4max/simd-math-20261118T053137Z.txt) | result | `8bb2116` | 2026-11-18T05:31:37Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-math-normal-cdf-lanes-1-20261118T053304Z.txt](results/mac-m4max/simd-math-normal-cdf-lanes-1-20261118T053304Z.txt) | result | `8bb2116` | 2026-11-18T05:33:04Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-math-normal-cdf-lanes-2-20261118T053313Z.txt](results/mac-m4max/simd-math-normal-cdf-lanes-2-20261118T053313Z.txt) | result | `8bb2116` | 2026-11-18T05:33:13Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [simd-math-normal-cdf-scalar-20261118T053256Z.txt](results/mac-m4max/simd-math-normal-cdf-scalar-20261118T053256Z.txt) | result | `8bb2116` | 2026-11-18T05:32:56Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
+| [svi-fit-report-20261118T053339Z.txt](results/mac-m4max/svi-fit-report-20261118T053339Z.txt) | result | `8bb2116` | 2026-11-18T05:33:39Z | macOS 27.2.1 (build 26B131) | Apple M4 Max | not pinned, CPUs none |
 
 ### Fault-injection reports
 
@@ -2095,25 +2159,43 @@ Rows with claim `none` are harness self-tests, not performance results.
 
 | benchmark | build | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| aad1-barrier.price | `baseline`, NEON | 3 | 15 | 2.2509612194149022e+09 | 2252341247 | 2254438399 | 2254438399 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape | `baseline`, NEON | 3 | 15 | 6.1753724052722197e+09 | 6182404095 | 6220152831 | 6220152831 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape-skip | `baseline`, NEON | 3 | 15 | 4.7562088497983179e+09 | 4760535039 | 4773117951 | 4773117951 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape-record | `baseline`, NEON | 3 | 15 | 4.4284959996106043e+09 | 4429185023 | 4441767935 | 4441767935 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.bump-central | `baseline`, NEON | 3 | 15 | 2.4789079176502655e+10 | 24796725247 | 24830279679 | 24830279679 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.bump-forward | `baseline`, NEON | 3 | 15 | 1.3560054211902132e+10 | 13564379135 | 13581156351 | 13581156351 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad3-barrier-mt.price | `baseline`, NEON | 3 | 30 | 3.2387828055555558e+08 | 324009983 | 324796415 | 324796415 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape | `baseline`, NEON | 3 | 30 | 8.6927965000000000e+08 | 869269503 | 871890943 | 871890943 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-skip | `baseline`, NEON | 3 | 30 | 6.5699101527777767e+08 | 656932863 | 660078591 | 660078591 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-record | `baseline`, NEON | 3 | 30 | 6.1303946111111116e+08 | 613416959 | 613941247 | 613941247 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-central | `baseline`, NEON | 3 | 30 | 3.5594386847222219e+09 | 3560964095 | 3560964095 | 3560964095 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-forward | `baseline`, NEON | 3 | 30 | 1.9414594513888891e+09 | 1941962751 | 1943011327 | 1943011327 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad4-asian12.price | `baseline`, NEON | 3 | 60 | 1.0469107777777779e+08 | 104595455 | 106954751 | 111869951 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape | `baseline`, NEON | 3 | 60 | 2.7908835347222221e+08 | 279183359 | 282853375 | 283377663 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape-skip | `baseline`, NEON | 3 | 60 | 2.4961188888888884e+08 | 249561087 | 252575743 | 252706815 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape-record | `baseline`, NEON | 3 | 60 | 2.0301261527777779e+08 | 202768383 | 206438399 | 207749119 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.hand | `baseline`, NEON | 3 | 60 | 1.0846883611111109e+08 | 108396543 | 110624767 | 110952447 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.bump-central | `baseline`, NEON | 3 | 60 | 1.1249515979166667e+09 | 1125122047 | 1131413503 | 1134559231 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.bump-forward | `baseline`, NEON | 3 | 60 | 6.1169924444444454e+08 | 612368383 | 615514111 | 618659839 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad1-barrier.price | `baseline`, NEON | 3 | 15 | 1.2772700500000000e+09 | 1276116991 | 1291845631 | 1291845631 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.tape | `baseline`, NEON | 3 | 15 | 3.4025001055555549e+09 | 3403677695 | 3414163455 | 3414163455 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.tape-skip | `baseline`, NEON | 3 | 15 | 2.7304158944444447e+09 | 2730491903 | 2738880511 | 2738880511 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.tape-record | `baseline`, NEON | 3 | 15 | 2.4495445944444442e+09 | 2449473535 | 2457862143 | 2457862143 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.bump-central | `baseline`, NEON | 3 | 15 | 1.4179735255555557e+10 | 14193524735 | 14201913343 | 14201913343 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.bump-forward | `baseline`, NEON | 3 | 15 | 7.7621709305555563e+09 | 7763656703 | 7780433919 | 7780433919 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.price-lanes | `baseline`, NEON | 3 | 15 | 1.6944561777777777e+09 | 1695547391 | 1699741695 | 1699741695 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad1-barrier.tape-lanes | `baseline`, NEON | 3 | 15 | 3.1034457111111112e+09 | 3101687807 | 3120562175 | 3120562175 | 1.55 | 1.47 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price | `baseline`, NEON | 3 | 30 | 1.8355409778488144e+08 | 183631871 | 184025087 | 184025087 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape | `baseline`, NEON | 3 | 30 | 4.6643510304718846e+08 | 466616319 | 467140607 | 467140607 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-skip | `baseline`, NEON | 3 | 30 | 3.6946142342597836e+08 | 369623039 | 371720191 | 371720191 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-record | `baseline`, NEON | 3 | 30 | 3.3234209441094112e+08 | 332398591 | 333185023 | 333185023 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-central | `baseline`, NEON | 3 | 30 | 2.0189772686853247e+09 | 2019557375 | 2020605951 | 2020605951 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-forward | `baseline`, NEON | 3 | 30 | 1.1014236797681472e+09 | 1102053375 | 1104150527 | 1104150527 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price-lanes | `baseline`, NEON | 3 | 30 | 2.4338304144576302e+08 | 243400703 | 244580351 | 244580351 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-lanes | `baseline`, NEON | 3 | 30 | 4.2414497663757628e+08 | 424148991 | 427294719 | 427294719 | 1.47 | 8.10 | 8bb2116be2fb | result |
+| aad4-asian12.price | `baseline`, NEON | 3 | 60 | 5.7687944604958378e+07 | 57507839 | 60325887 | 60325887 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.tape | `baseline`, NEON | 3 | 60 | 1.4744835619645241e+08 | 147455999 | 149553151 | 149815295 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.tape-skip | `baseline`, NEON | 3 | 60 | 1.4860444504680726e+08 | 148635647 | 150732799 | 151257087 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.tape-record | `baseline`, NEON | 3 | 60 | 1.0926435121917838e+08 | 109248511 | 111280127 | 111542271 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.hand | `baseline`, NEON | 3 | 60 | 6.2489970833789058e+07 | 62291967 | 64913407 | 65110015 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.bump-central | `baseline`, NEON | 3 | 60 | 6.4628271665294302e+08 | 645922815 | 651165695 | 652214271 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.bump-forward | `baseline`, NEON | 3 | 60 | 3.5442940901970845e+08 | 354418687 | 357302271 | 357826559 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.price-lanes | `baseline`, NEON | 3 | 60 | 7.5229416242498964e+07 | 75169791 | 77266943 | 77529087 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad4-asian12.tape-lanes | `baseline`, NEON | 3 | 60 | 1.5317633864441967e+08 | 153354239 | 155844607 | 156106751 | 1.94 | 1.17 | 8bb2116be2fb | result |
+| aad8-asian12.price | `baseline`, NEON | 3 | 60 | 5.8187385967276417e+07 | 58064895 | 59932671 | 60653567 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-asian12.tape | `baseline`, NEON | 3 | 60 | 1.5361996762045202e+08 | 155975679 | 158728191 | 158990335 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-asian12.cond-price | `baseline`, NEON | 3 | 60 | 7.7456173415098116e+07 | 77266943 | 79101951 | 79101951 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-asian12.cond-tape | `baseline`, NEON | 3 | 60 | 1.8320092346755385e+08 | 181272575 | 189267967 | 189661183 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot | `baseline`, NEON | 3 | 60 | 3.8782421362137914e+08 | 387710975 | 391643135 | 391905279 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot-vol | `baseline`, NEON | 3 | 60 | 4.1454726867877716e+08 | 414711807 | 419168255 | 419430399 | 1.64 | 1.46 | 8bb2116be2fb | result |
+| aad8-barrier.price | `baseline`, NEON | 3 | 15 | 5.3356697389615765e+09 | 5335154687 | 5364514815 | 5364514815 | 1.46 | 1.14 | 8bb2116be2fb | result |
+| aad8-barrier.tape | `baseline`, NEON | 3 | 15 | 8.2650201643815165e+09 | 8258584575 | 8334082047 | 8334082047 | 1.46 | 1.14 | 8bb2116be2fb | result |
+| aad8-barrier.cond-price | `baseline`, NEON | 3 | 15 | 5.5374319984645643e+09 | 5540675583 | 5549064191 | 5549064191 | 1.46 | 1.14 | 8bb2116be2fb | result |
+| aad8-barrier.cond-tape | `baseline`, NEON | 3 | 15 | 8.8163789410929375e+09 | 8682209279 | 9638510591 | 9638510591 | 1.46 | 1.14 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot | `baseline`, NEON | 3 | 15 | 1.5413641660995279e+10 | 15250489343 | 16550723583 | 16550723583 | 1.46 | 1.14 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot-vol | `baseline`, NEON | 3 | 15 | 1.5805343324051613e+10 | 15854469119 | 15904800767 | 15904800767 | 1.46 | 1.14 | 8bb2116be2fb | result |
 | harness_selftest | `baseline`, NEON | 3 | 60000 | 6.0920939530601318e+03 | 6083 | 6127 | 42303 | 2.88 | 2.88 | 93166a082dda | none |
 | lw-worst.price | `baseline`, NEON | 3 | 600 | 5.4752220397209108e+04 | 53599 | 72063 | 76287 | 3.78 | 2.94 | d1596e0e0668 | result |
 | lw-worst.tape | `baseline`, NEON | 3 | 600 | 9.1081539325160906e+06 | 9142271 | 9592831 | 9846783 | 3.78 | 2.94 | d1596e0e0668 | result |
@@ -2122,33 +2204,65 @@ Rows with claim `none` are harness self-tests, not performance results.
 | lw-worst.hand | `baseline`, NEON | 3 | 600 | 1.8447103551783689e+05 | 183551 | 194559 | 200831 | 3.78 | 2.94 | d1596e0e0668 | result |
 | lw-worst.bump-central | `baseline`, NEON | 3 | 600 | 1.0750263252780935e+07 | 10723327 | 11231231 | 11444223 | 3.78 | 2.94 | d1596e0e0668 | result |
 | lw-worst.bump-forward | `baseline`, NEON | 3 | 600 | 5.4089169724865509e+06 | 5398527 | 5677055 | 5820415 | 3.78 | 2.94 | d1596e0e0668 | result |
-| mc-asian252.price | `baseline`, NEON | 3 | 15 | 2.0165507111111109e+09 | 2016411647 | 2025848831 | 2025848831 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape | `baseline`, NEON | 3 | 15 | 5.5252071888888884e+09 | 5523898367 | 5540675583 | 5540675583 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape-skip | `baseline`, NEON | 3 | 15 | 4.8980964388888893e+09 | 4898947071 | 4907335679 | 4907335679 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape-record | `baseline`, NEON | 3 | 15 | 4.0246624722222219e+09 | 4026531839 | 4034920447 | 4034920447 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.hand | `baseline`, NEON | 3 | 15 | 2.0585806194444444e+09 | 2060451839 | 2064646143 | 2064646143 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.bump-central | `baseline`, NEON | 3 | 15 | 2.2237715105555553e+10 | 22246588415 | 22263365631 | 22263365631 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.bump-forward | `baseline`, NEON | 3 | 15 | 1.2434187830555555e+10 | 12138315775 | 13681819647 | 13681819647 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc3-asian252-mt.price | `baseline`, NEON | 3 | 30 | 2.8783540416666663e+08 | 288358399 | 288620543 | 288620543 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape | `baseline`, NEON | 3 | 30 | 7.6643064166666663e+08 | 767033343 | 769130495 | 769130495 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-skip | `baseline`, NEON | 3 | 30 | 6.7191386805555558e+08 | 672137215 | 675282943 | 675282943 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-record | `baseline`, NEON | 3 | 30 | 5.4820345972222221e+08 | 548929535 | 549453823 | 549453823 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.hand | `baseline`, NEON | 3 | 30 | 2.9313154444444448e+08 | 293339135 | 294125567 | 294125567 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-central | `baseline`, NEON | 3 | 30 | 3.1720821902777781e+09 | 3172990975 | 3175088127 | 3175088127 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-forward | `baseline`, NEON | 3 | 30 | 1.7301431111111109e+09 | 1730150399 | 1734344703 | 1734344703 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc-asian252.price | `baseline`, NEON | 3 | 15 | 1.1845920055555556e+09 | 1184890879 | 1189085183 | 1189085183 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.tape | `baseline`, NEON | 3 | 15 | 3.0310504722222219e+09 | 3030384639 | 3040870399 | 3040870399 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.tape-skip | `baseline`, NEON | 3 | 15 | 3.0060359944444447e+09 | 3007315967 | 3019898879 | 3019898879 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.tape-record | `baseline`, NEON | 3 | 15 | 2.1761813611111107e+09 | 2176843775 | 2187329535 | 2187329535 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.hand | `baseline`, NEON | 3 | 15 | 1.1926777722222221e+09 | 1193279487 | 1197473791 | 1197473791 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.bump-central | `baseline`, NEON | 3 | 15 | 1.3039223441666666e+10 | 13044285439 | 13052674047 | 13052674047 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.bump-forward | `baseline`, NEON | 3 | 15 | 7.1129996000000010e+09 | 7113539583 | 7138705407 | 7138705407 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.price-lanes | `baseline`, NEON | 3 | 15 | 1.5284362583333333e+09 | 1528823807 | 1533018111 | 1533018111 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc-asian252.tape-lanes | `baseline`, NEON | 3 | 15 | 2.7849270833333335e+09 | 2789212159 | 2831155199 | 2831155199 | 1.17 | 1.12 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price | `baseline`, NEON | 3 | 30 | 1.6657564861111107e+08 | 166723583 | 167116799 | 167116799 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape | `baseline`, NEON | 3 | 30 | 4.0851230416666669e+08 | 408682495 | 409206783 | 409206783 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-skip | `baseline`, NEON | 3 | 30 | 4.0936671527777785e+08 | 409468927 | 410517503 | 410517503 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-record | `baseline`, NEON | 3 | 30 | 2.9266578750000000e+08 | 292814847 | 294911999 | 294911999 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.hand | `baseline`, NEON | 3 | 30 | 1.6787747777777773e+08 | 167903231 | 168296447 | 168296447 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-central | `baseline`, NEON | 3 | 30 | 1.8317568069444444e+09 | 1831862271 | 1833959423 | 1833959423 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-forward | `baseline`, NEON | 3 | 30 | 9.9929959305555546e+08 | 999292927 | 1000341503 | 1000341503 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price-lanes | `baseline`, NEON | 3 | 30 | 2.1744729027777779e+08 | 217579519 | 218103807 | 218103807 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-lanes | `baseline`, NEON | 3 | 30 | 3.8462139722222215e+08 | 381157375 | 400556031 | 400556031 | 1.12 | 7.82 | 8bb2116be2fb | result |
+| simd-asian252.scalar | `baseline`, NEON | 5 | 25 | 1.1844612666666667e+09 | 1184890879 | 1190133759 | 1190133759 | 1.25 | 1.17 | 8bb2116be2fb | result |
+| simd-asian252.lanes-1 | `baseline`, NEON | 5 | 25 | 2.7201048400000005e+09 | 2720006143 | 2728394751 | 2728394751 | 1.25 | 1.17 | 8bb2116be2fb | result |
+| simd-asian252.lanes-2 | `baseline`, NEON | 5 | 25 | 1.5299297483333335e+09 | 1530920959 | 1536163839 | 1536163839 | 1.25 | 1.17 | 8bb2116be2fb | result |
+| simd-barrier-onestep.scalar | `baseline`, NEON | 5 | 50 | 5.3343372550000010e+09 | 5335154687 | 5360320511 | 5360320511 | 1.17 | 1.15 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-1 | `baseline`, NEON | 5 | 50 | 7.7293935483333359e+09 | 7730102271 | 7797211135 | 7797211135 | 1.17 | 1.15 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-2 | `baseline`, NEON | 5 | 50 | 3.8744306808333344e+09 | 3875536895 | 3902799871 | 3902799871 | 1.17 | 1.15 | 8bb2116be2fb | result |
+| simd-european.scalar | `baseline`, NEON | 5 | 100 | 2.6841890416666664e+07 | 26918911 | 27492351 | 27754495 | 1.14 | 1.25 | 8bb2116be2fb | result |
+| simd-european.lanes-1 | `baseline`, NEON | 5 | 100 | 5.1422113333333343e+07 | 51281919 | 53280767 | 53346303 | 1.14 | 1.25 | 8bb2116be2fb | result |
+| simd-european.lanes-2 | `baseline`, NEON | 5 | 100 | 3.1374387083333332e+07 | 31358975 | 32391167 | 32587775 | 1.14 | 1.25 | 8bb2116be2fb | result |
+| simd-math.exp-scalar | `baseline`, NEON | 5 | 250 | 4.8703343376609292e+06 | 4890623 | 5132287 | 5271551 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-1 | `baseline`, NEON | 5 | 250 | 3.9361607021323466e+06 | 3950591 | 4030463 | 4509695 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-2 | `baseline`, NEON | 5 | 250 | 2.2133480928908545e+06 | 2224127 | 2273279 | 2437119 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.log-scalar | `baseline`, NEON | 5 | 250 | 5.4769694841070967e+06 | 5492735 | 5672959 | 5914623 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.log-lanes-1 | `baseline`, NEON | 5 | 250 | 4.8518890049424181e+06 | 4874239 | 5074943 | 5431295 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.log-lanes-2 | `baseline`, NEON | 5 | 250 | 2.6965450767848240e+06 | 2711551 | 2756607 | 2883583 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-scalar | `baseline`, NEON | 5 | 250 | 6.3249772891744431e+06 | 6348799 | 6565887 | 6770687 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-1 | `baseline`, NEON | 5 | 250 | 2.3357142554787844e+07 | 23429119 | 24412159 | 25313279 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-2 | `baseline`, NEON | 5 | 250 | 1.1610207446339307e+07 | 11640831 | 12328959 | 12771327 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | `baseline`, NEON | 5 | 250 | 1.8397159053448454e+07 | 18448383 | 19251199 | 19398655 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | `baseline`, NEON | 5 | 250 | 2.0834638138868522e+07 | 20905983 | 21446655 | 21626879 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-2 | `baseline`, NEON | 5 | 250 | 1.2021355932634812e+07 | 12066815 | 12435455 | 12795903 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.philox-scalar | `baseline`, NEON | 5 | 250 | 1.3541311215304658e+06 | 1364991 | 1420287 | 1472511 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-1 | `baseline`, NEON | 5 | 250 | 1.5757769474758510e+06 | 1582079 | 1703935 | 1802239 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-2 | `baseline`, NEON | 5 | 250 | 9.5141480162056279e+05 | 959999 | 993791 | 1011711 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.xoshiro256pp-scalar | `baseline`, NEON | 5 | 250 | 3.6091215463666216e+05 | 361215 | 388351 | 398079 | 1.15 | 1.23 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | `baseline`, NEON | 5 | 250 | 2.0857790138096817e+07 | 20922367 | 21757951 | 21856255 | 1.61 | 1.64 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-2 | `baseline`, NEON | 5 | 250 | 1.2050976901682483e+07 | 12083199 | 12468223 | 12738559 | 1.64 | 1.54 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | `baseline`, NEON | 5 | 250 | 1.8417179833333336e+07 | 18464767 | 19546111 | 19824639 | 1.64 | 1.61 | 8bb2116be2fb | result |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad1-barrier (AAD-1)
 
@@ -2156,48 +2270,55 @@ up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, smoothed (h
 
 Paths 500000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 2251 | 2.221e+05 | 1 | no lane primal | 2.1 | 1.00 | - | value only |
-| tape | 6175 | 8.097e+04 | 2.74 | no lane primal | 2.3 | 1.10 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 1747 ms, 0.776 x primal |
-| tape-skip | 4756 | 1.051e+05 | 2.11 | no lane primal | 2.3 | 1.10 | 17794 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 4428 | 1.129e+05 | 1.97 | no lane primal | 2.3 | 1.08 | 17794 | record and rewind, no reverse sweep |
-| bump-central | 2.479e+04 | 2.017e+04 | 11 | no lane primal | 2.2 | 1.04 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1.356e+04 | 3.687e+04 | 6.02 | no lane primal | 2.1 | 1.01 | - | 6 pricings expected (N + 1) |
+| price | 1277 | 3.915e+05 | 1 | 1 | 2.1 | 1.00 | - | value only |
+| price-lanes | 1694 | 2.951e+05 | 1.33 | 1.33 | 2.1 | 0.99 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.754 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction |
+| tape | 3403 | 1.47e+05 | 2.66 | 2.66 | 2.4 | 1.12 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 953 ms, 0.746 x primal |
+| tape-lanes | 3103 | 1.611e+05 | 2.43 | 2.43 | 2.8 | 1.33 | 15165.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.1 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 2730 | 1.831e+05 | 2.14 | 2.14 | 2.4 | 1.11 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 2450 | 2.041e+05 | 1.92 | 1.92 | 2.3 | 1.10 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 1.418e+04 | 3.526e+04 | 11.1 | 11.1 | 2.2 | 1.06 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 7762 | 6.441e+04 | 6.08 | 6.08 | 2.2 | 1.01 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 4.81e-05 |
-| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 6.44e-06 |
-| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0776 |
-| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.491 |
-| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.496 |
-| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000257 |
-| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 2.59e-05 |
-| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.311 |
-| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 1.97 |
-| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 1.99 |
-| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00103 |
-| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 1.41e-05 |
-| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.17 |
-| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 1.08 |
-| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 1.09 |
-| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.000565 |
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 2.73e-05 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 3.55e-06 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0428 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.271 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.273 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000142 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 1.48e-05 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.178 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 1.13 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 1.14 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.00059 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 8.09e-06 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.0975 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 0.617 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 0.623 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 0.000323 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 3.24e-06 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.039 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.247 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.249 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 0.000129 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad3-barrier-mt (AAD-3)
 
@@ -2205,48 +2326,55 @@ the AAD-1 workload on --aadp-threads worker threads. Differences from the target
 
 Paths 500000 in 50 batches, 8 thread(s), seed 20261103; nonzero-payoff fraction 0.135786; tape 1078 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); central-vs-tape pass (0.09708 of its bound); forward-vs-tape pass (0.3604 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 323.9 | 1.544e+06 | 1 | no lane primal | 2.2 | 1.00 | - | value only |
-| tape | 869.3 | 5.752e+05 | 2.68 | no lane primal | 3.6 | 1.61 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 256.2 ms, 0.791 x primal |
-| tape-skip | 657 | 7.61e+05 | 2.03 | no lane primal | 3.6 | 1.62 | 17794 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 613 | 8.156e+05 | 1.89 | no lane primal | 3.6 | 1.61 | 17794 | record and rewind, no reverse sweep |
-| bump-central | 3559 | 1.405e+05 | 11 | no lane primal | 2.4 | 1.07 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1941 | 2.575e+05 | 5.99 | no lane primal | 2.3 | 1.04 | - | 6 pricings expected (N + 1) |
+| price | 183.6 | 2.724e+06 | 1 | 1 | 2.3 | 1.00 | - | value only |
+| price-lanes | 243.4 | 2.054e+06 | 1.33 | 1.33 | 2.3 | 1.01 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.754 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction |
+| tape | 466.4 | 1.072e+06 | 2.54 | 2.54 | 3.7 | 1.62 | 17794 | value and every Greek; reverse sweep (tape - tape-record) 134.1 ms, 0.731 x primal |
+| tape-lanes | 424.1 | 1.179e+06 | 2.31 | 2.31 | 6.5 | 2.83 | 15165.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.1 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 369.5 | 1.353e+06 | 2.01 | 2.01 | 3.7 | 1.62 | 17794 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 332.3 | 1.504e+06 | 1.81 | 1.81 | 3.7 | 1.61 | 17794 | record and rewind, no reverse sweep |
+| bump-central | 2019 | 2.477e+05 | 11 | 11 | 2.5 | 1.07 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 1101 | 4.54e+05 | 6 | 6 | 2.4 | 1.04 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 6.92e-06 |
-| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 9.07e-07 |
-| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.0109 |
-| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.0691 |
-| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.0698 |
-| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 3.62e-05 |
-| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 3.71e-06 |
-| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.0447 |
-| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 0.283 |
-| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 0.286 |
-| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 0.000148 |
-| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 2.02e-06 |
-| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.0244 |
-| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 0.154 |
-| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 0.156 |
-| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 8.08e-05 |
+| value | price | 0.92938266 | 0.004622 | 0 (pathwise) | - | - | 3.92e-06 |
+| delta | tape | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 4.86e-07 |
+| vega | tape | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.00586 |
+| rho | tape | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.0371 |
+| dividend-rho | tape | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.0375 |
+| theta | tape | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 1.94e-05 |
+| delta | bump-central | 0.0044951783 | 0.001021 | -1.44e-07 | 1e-07 | 2.384e-05 | 2.11e-06 |
+| vega | bump-central | -8.1120535 | 0.1121 | -1.83e-09 | 4.9e-09 | 1.192e-07 | 0.0254 |
+| rho | bump-central | 3.2557742 | 0.282 | -2.11e-09 | 1.3e-09 | 5.96e-08 | 0.161 |
+| dividend-rho | bump-central | -6.0439222 | 0.2834 | 1.24e-09 | 1.3e-09 | 5.96e-08 | 0.162 |
+| theta | bump-central | 0.23784407 | 0.006453 | 6.51e-08 | 3.1e-09 | 2.861e-06 | 8.41e-05 |
+| delta | bump-forward | 0.0044957428 | 0.001021 | 3.51e-07 | 2.1e-07 | 2.384e-05 | 1.15e-06 |
+| vega | bump-forward | -8.1119946 | 0.1121 | 2.01e-05 | 0.0002 | 4.768e-07 | 0.0138 |
+| rho | bump-forward | 3.2558448 | 0.282 | 8.36e-06 | 0.00041 | 2.384e-07 | 0.0876 |
+| dividend-rho | bump-forward | -6.0438316 | 0.2834 | 8.13e-05 | 1.7e-06 | 5.96e-08 | 0.0885 |
+| theta | bump-forward | 0.23784051 | 0.006453 | -3.32e-06 | 5e-08 | 2.861e-06 | 4.59e-05 |
+| delta | tape-lanes | 0.0044952866 | 0.001021 | 0 (pathwise) | - | - | 4.42e-07 |
+| vega | tape-lanes | -8.1120536 | 0.1121 | 0 (pathwise) | - | - | 0.00533 |
+| rho | tape-lanes | 3.2557746 | 0.282 | 0 (pathwise) | - | - | 0.0337 |
+| dividend-rho | tape-lanes | -6.0439225 | 0.2834 | 0 (pathwise) | - | - | 0.0341 |
+| theta | tape-lanes | 0.23784404 | 0.006453 | 0 (pathwise) | - | - | 1.77e-05 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### aad4-asian12 (AAD-4, AAD-5, AAD-6)
 
@@ -2254,41 +2382,188 @@ arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, 300,000 paths. Differen
 
 Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.523697; tape 63 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (3.554e-06 of its bound); central-vs-tape pass (0.07015 of its bound); forward-vs-tape pass (0.6515 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (3.554e-06 of its bound); central-vs-tape pass (0.07015 of its bound); forward-vs-tape pass (0.6515 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 104.7 | 2.866e+06 | 1 | no lane primal | 2.1 | 1.00 | - | value only |
-| tape | 279.1 | 1.075e+06 | 2.67 | no lane primal | 2.3 | 1.11 | 1239 | value and every Greek; reverse sweep (tape - tape-record) 76.08 ms, 0.727 x primal |
-| tape-skip | 249.6 | 1.202e+06 | 2.38 | no lane primal | 2.3 | 1.11 | 1239 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 203 | 1.478e+06 | 1.94 | no lane primal | 2.3 | 1.10 | 1239 | record and rewind, no reverse sweep |
-| hand | 108.5 | 2.766e+06 | 1.04 | no lane primal | 2.1 | 1.01 | - | hand-written adjoint |
-| bump-central | 1125 | 2.667e+05 | 10.7 | no lane primal | 2.1 | 1.04 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 611.7 | 4.904e+05 | 5.84 | no lane primal | 2.1 | 1.02 | - | 6 pricings expected (N + 1) |
+| price | 57.69 | 5.2e+06 | 1 | 1 | 2.1 | 1.00 | - | value only |
+| price-lanes | 75.23 | 3.988e+06 | 1.3 | 1.3 | 2.1 | 1.00 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.767 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction |
+| tape | 147.4 | 2.035e+06 | 2.56 | 2.56 | 2.4 | 1.12 | 1239 | value and every Greek; reverse sweep (tape - tape-record) 38.18 ms, 0.662 x primal |
+| tape-lanes | 153.2 | 1.959e+06 | 2.66 | 2.66 | 2.8 | 1.31 | 1071.0 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 0.963 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 148.6 | 2.019e+06 | 2.58 | 2.58 | 2.4 | 1.12 | 1239 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 109.3 | 2.746e+06 | 1.89 | 1.89 | 2.3 | 1.11 | 1239 | record and rewind, no reverse sweep |
+| hand | 62.49 | 4.801e+06 | 1.08 | 1.08 | 2.1 | 1.01 | - | hand-written adjoint |
+| bump-central | 646.3 | 4.642e+05 | 11.2 | 11.2 | 2.2 | 1.04 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 354.4 | 8.464e+05 | 6.14 | 6.14 | 2.2 | 1.03 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 1.96e-05 |
-| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 2.44e-07 |
-| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00136 |
-| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000512 |
-| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000759 |
-| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 1.65e-05 |
-| delta | hand | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 9.48e-08 |
-| vega | hand | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.00053 |
-| rho | hand | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000199 |
-| dividend-rho | hand | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000295 |
-| theta | hand | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 6.41e-06 |
-| delta | bump-central | 0.56428426 | 0.0009349 | 3.03e-11 | 1.8e-11 | 2.384e-05 | 9.83e-07 |
-| vega | bump-central | 23.569722 | 0.06991 | 3.85e-10 | 2.4e-10 | 1.907e-06 | 0.0055 |
-| rho | bump-central | 25.616229 | 0.04283 | 9.32e-07 | 1.9e-09 | 4.768e-07 | 0.00206 |
-| dividend-rho | bump-central | -31.222745 | 0.05214 | -9.31e-07 | 1.9e-09 | 4.768e-07 | 0.00306 |
-| theta | bump-central | -3.125459 | 0.007685 | 5.67e-08 | 6.1e-08 | 0.0001221 | 6.64e-05 |
-| delta | bump-forward | 0.5642844 | 0.0009349 | 2.98e-07 | 3e-07 | 9.537e-05 | 5.35e-07 |
-| vega | bump-forward | 23.569718 | 0.06991 | -3.45e-06 | 8.4e-08 | 1.907e-06 | 0.00299 |
-| rho | bump-forward | 25.616221 | 0.04284 | 1.85e-05 | 5.2e-05 | 1.907e-06 | 0.00112 |
-| dividend-rho | bump-forward | -31.22274 | 0.05214 | 3.83e-06 | 6.5e-09 | 4.768e-07 | 0.00166 |
-| theta | bump-forward | -3.1254541 | 0.007685 | 4.86e-06 | 1.2e-08 | 7.629e-06 | 3.61e-05 |
+| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 1.08e-05 |
+| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.29e-07 |
+| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000721 |
+| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000271 |
+| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000401 |
+| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 8.71e-06 |
+| delta | hand | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 5.46e-08 |
+| vega | hand | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000305 |
+| rho | hand | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000115 |
+| dividend-rho | hand | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.00017 |
+| theta | hand | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 3.69e-06 |
+| delta | bump-central | 0.56428426 | 0.0009349 | 3.03e-11 | 1.8e-11 | 2.384e-05 | 5.65e-07 |
+| vega | bump-central | 23.569722 | 0.06991 | 3.85e-10 | 2.4e-10 | 1.907e-06 | 0.00316 |
+| rho | bump-central | 25.616229 | 0.04283 | 9.32e-07 | 1.9e-09 | 4.768e-07 | 0.00119 |
+| dividend-rho | bump-central | -31.222745 | 0.05214 | -9.31e-07 | 1.9e-09 | 4.768e-07 | 0.00176 |
+| theta | bump-central | -3.125459 | 0.007685 | 5.67e-08 | 6.1e-08 | 0.0001221 | 3.82e-05 |
+| delta | bump-forward | 0.5642844 | 0.0009349 | 2.98e-07 | 3e-07 | 9.537e-05 | 3.1e-07 |
+| vega | bump-forward | 23.569718 | 0.06991 | -3.45e-06 | 8.4e-08 | 1.907e-06 | 0.00173 |
+| rho | bump-forward | 25.616221 | 0.04284 | 1.85e-05 | 5.2e-05 | 1.907e-06 | 0.00065 |
+| dividend-rho | bump-forward | -31.22274 | 0.05214 | 3.83e-06 | 6.5e-09 | 4.768e-07 | 0.000964 |
+| theta | bump-forward | -3.1254541 | 0.007685 | 4.86e-06 | 1.2e-08 | 7.629e-06 | 2.09e-05 |
+| delta | tape-lanes | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.34e-07 |
+| vega | tape-lanes | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000749 |
+| rho | tape-lanes | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000281 |
+| dividend-rho | tape-lanes | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000416 |
+| theta | tape-lanes | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 9.05e-06 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad8-asian12 (AAD-8 (proposed): second order on AAD-4's contract)
+
+arithmetic Asian call, S0 = K = 100, 12 fixings, 1 year, 300,000 paths; gamma, vanna and volga by forward over reverse on the conditional kernels. Differences from the target: AAD-4's contract and paths; the second-order and cond-* variants price the last step's expectation in closed form, so their primal is cond-price, not price.
+
+Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.523697; tape 63 statements per path.
+
+Checks: value-bits pass (0 of its bound); for-gradient-bits pass (0 of its bound); spot-row-bits pass (0 of its bound); vanna-symmetry pass (7.533e-08 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 58.19 | 5.156e+06 | 1 | no lane primal | 2.1 | 1.00 | - | value only |
+| tape | 153.6 | 1.953e+06 | 2.64 | no lane primal | 2.4 | 1.12 | 1239 | value and every Greek |
+| cond-price | 77.46 | 3.873e+06 | 1.33 | no lane primal | 2.1 | 1.01 | - | value only, conditional kernels (last step in closed form) |
+| cond-tape | 183.2 | 1.638e+06 | 3.15 | no lane primal | 2.5 | 1.17 | - | value and every Greek, conditional kernels, one reverse sweep per path, 2.37 x cond-price |
+| for-spot | 387.8 | 7.735e+05 | 6.67 | no lane primal | 2.3 | 1.07 | - | value, every Greek and the spot Hessian row (gamma, vanna) in one forward-over-reverse sweep per path, 1 tangent lane, 2.12 x cond-tape, 5.01 x cond-price |
+| for-spot-vol | 414.5 | 7.237e+05 | 7.12 | no lane primal | 2.3 | 1.10 | - | value, every Greek and the spot and vol Hessian rows (gamma, vanna, volga) in one forward-over-reverse sweep per path, 2 tangent lanes, 2.26 x cond-tape, 5.35 x cond-price |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 5.6065164 | 0.01368 | 0 (pathwise) | - | - | 1.09e-05 |
+| delta | tape | 0.56428426 | 0.0009349 | 0 (pathwise) | - | - | 1.34e-07 |
+| vega | tape | 23.569722 | 0.06991 | 0 (pathwise) | - | - | 0.000751 |
+| rho | tape | 25.616229 | 0.04283 | 0 (pathwise) | - | - | 0.000282 |
+| dividend-rho | tape | -31.222745 | 0.05214 | 0 (pathwise) | - | - | 0.000418 |
+| theta | tape | -3.125459 | 0.007685 | 0 (pathwise) | - | - | 9.07e-06 |
+| value | cond-price | 5.6071115 | 0.01351 | 0 (pathwise) | - | - | 1.41e-05 |
+| delta | cond-tape | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 1.52e-07 |
+| vega | cond-tape | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.000874 |
+| rho | cond-tape | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.000318 |
+| dividend-rho | cond-tape | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.000477 |
+| theta | cond-tape | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 1.06e-05 |
+| delta | for-spot | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 3.23e-07 |
+| vega | for-spot | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.00185 |
+| rho | for-spot | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.000674 |
+| dividend-rho | for-spot | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.00101 |
+| theta | for-spot | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 2.24e-05 |
+| gamma | for-spot | 0.031528051 | 0.0002719 | 0 (pathwise) | - | - | 2.87e-08 |
+| vanna | for-spot | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 5.07e-06 |
+| d2V/dS.dr | for-spot | 1.4554065 | 0.01475 | 0 (pathwise) | - | - | 8.44e-05 |
+| d2V/dS.dq | for-spot | -2.0197248 | 0.01466 | 0 (pathwise) | - | - | 8.33e-05 |
+| d2V/dS.dT | for-spot | 0.027930275 | 0.0001093 | 0 (pathwise) | - | - | 4.63e-09 |
+| delta | for-spot-vol | 0.56431834 | 0.0009121 | 0 (pathwise) | - | - | 3.45e-07 |
+| vega | for-spot-vol | 23.572827 | 0.06906 | 0 (pathwise) | - | - | 0.00198 |
+| rho | for-spot-vol | 25.617451 | 0.04168 | 0 (pathwise) | - | - | 0.00072 |
+| dividend-rho | for-spot-vol | -31.224563 | 0.05101 | 0 (pathwise) | - | - | 0.00108 |
+| theta | for-spot-vol | -3.1258062 | 0.007597 | 0 (pathwise) | - | - | 2.39e-05 |
+| gamma | for-spot-vol | 0.031528051 | 0.0002719 | 0 (pathwise) | - | - | 3.07e-08 |
+| vanna | for-spot-vol | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 5.42e-06 |
+| d2V/dS.dr | for-spot-vol | 1.4554065 | 0.01475 | 0 (pathwise) | - | - | 9.02e-05 |
+| d2V/dS.dq | for-spot-vol | -2.0197248 | 0.01466 | 0 (pathwise) | - | - | 8.91e-05 |
+| d2V/dS.dT | for-spot-vol | 0.027930275 | 0.0001093 | 0 (pathwise) | - | - | 4.95e-09 |
+| d2V/dsigma.dS | for-spot-vol | -0.1573192 | 0.003616 | 0 (pathwise) | - | - | 5.42e-06 |
+| volga | for-spot-vol | 1.1854906 | 0.09456 | 0 (pathwise) | - | - | 0.00371 |
+| d2V/dsigma.dr | for-spot-vol | -29.516513 | 0.1771 | 0 (pathwise) | - | - | 0.013 |
+| d2V/dsigma.dq | for-spot-vol | 5.9436859 | 0.1979 | 0 (pathwise) | - | - | 0.0162 |
+| d2V/dsigma.dT | for-spot-vol | 11.019467 | 0.04091 | 0 (pathwise) | - | - | 0.000694 |
+
+#### AAD cost and accuracy
+
+- bench_scale: 1 (the targets' path counts)
+- bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
+- bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
+- bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
+- gradient_check: pass
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+
+##### aad8-barrier (AAD-8 (proposed): second order on AAD-1's contract)
+
+up-and-out call, S0 100, K 120, H 150, discrete at 156 weekly dates, one-step survival, 3 years, 500,000 paths; gamma, vanna and volga by forward over reverse on the conditional kernels. Differences from the target: AAD-1's contract with one-step survival (Gerstner, Harrach, Roth, arXiv 1804.03975v3) in place of Savine's smoothing, which has no unbiased second derivative; price and tape run the production one-step kernel.
+
+Paths 500000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.286480; tape 1408 statements per path.
+
+Checks: value-bits pass (0 of its bound); for-gradient-bits pass (0 of its bound); spot-row-bits pass (0 of its bound); vanna-symmetry pass (4.563e-21 of its bound);
+
+| variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
+|---|---|---|---|---|---|---|---|---|
+| price | 5336 | 9.371e+04 | 1 | no lane primal | 2.1 | 1.00 | - | value only |
+| tape | 8265 | 6.05e+04 | 1.55 | no lane primal | 2.4 | 1.12 | 27664 | value and every Greek |
+| cond-price | 5537 | 9.029e+04 | 1.04 | no lane primal | 2.2 | 1.02 | - | value only, conditional kernels (last step in closed form) |
+| cond-tape | 8816 | 5.671e+04 | 1.65 | no lane primal | 2.5 | 1.18 | - | value and every Greek, conditional kernels, one reverse sweep per path, 1.59 x cond-price |
+| for-spot | 1.541e+04 | 3.244e+04 | 2.89 | no lane primal | 2.5 | 1.18 | - | value, every Greek and the spot Hessian row (gamma, vanna) in one forward-over-reverse sweep per path, 1 tangent lane, 1.75 x cond-tape, 2.78 x cond-price |
+| for-spot-vol | 1.581e+04 | 3.163e+04 | 2.96 | no lane primal | 2.6 | 1.21 | - | value, every Greek and the spot and vol Hessian rows (gamma, vanna, volga) in one forward-over-reverse sweep per path, 2 tangent lanes, 1.79 x cond-tape, 2.85 x cond-price |
+
+| quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
+|---|---|---|---|---|---|---|---|
+| value | price | 1.0517117 | 0.004605 | 0 (pathwise) | - | - | 0.000113 |
+| delta | tape | 0.007542749 | 0.0006427 | 0 (pathwise) | - | - | 3.41e-06 |
+| vega | tape | -9.3179342 | 0.06673 | 0 (pathwise) | - | - | 0.0368 |
+| rho | tape | 4.0281558 | 0.1775 | 0 (pathwise) | - | - | 0.26 |
+| dividend-rho | tape | -7.1832908 | 0.1789 | 0 (pathwise) | - | - | 0.264 |
+| theta | tape | 0.27031625 | 0.003859 | 0 (pathwise) | - | - | 0.000123 |
+| value | cond-price | 1.0523743 | 0.004219 | 0 (pathwise) | - | - | 9.86e-05 |
+| delta | cond-tape | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 3.03e-06 |
+| vega | cond-tape | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.0357 |
+| rho | cond-tape | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.229 |
+| dividend-rho | cond-tape | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.234 |
+| theta | cond-tape | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000115 |
+| delta | for-spot | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 5.3e-06 |
+| vega | for-spot | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.0625 |
+| rho | for-spot | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.4 |
+| dividend-rho | for-spot | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.41 |
+| theta | for-spot | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000202 |
+| gamma | for-spot | -0.0014686582 | 0.0001619 | 0 (pathwise) | - | - | 4.04e-07 |
+| vanna | for-spot | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.00704 |
+| d2V/dS.dr | for-spot | -0.23757152 | 0.04468 | 0 (pathwise) | - | - | 0.0308 |
+| d2V/dS.dq | for-spot | 0.21524992 | 0.04464 | 0 (pathwise) | - | - | 0.0307 |
+| d2V/dS.dT | for-spot | -0.013018485 | 0.001139 | 0 (pathwise) | - | - | 2e-05 |
+| delta | for-spot-vol | 0.0074405321 | 0.0005861 | 0 (pathwise) | - | - | 5.43e-06 |
+| vega | for-spot-vol | -9.3273358 | 0.06366 | 0 (pathwise) | - | - | 0.064 |
+| rho | for-spot-vol | 4.0027009 | 0.1611 | 0 (pathwise) | - | - | 0.41 |
+| dividend-rho | for-spot-vol | -7.1598237 | 0.163 | 0 (pathwise) | - | - | 0.42 |
+| theta | for-spot-vol | 0.27088419 | 0.003616 | 0 (pathwise) | - | - | 0.000207 |
+| gamma | for-spot-vol | -0.0014686582 | 0.0001619 | 0 (pathwise) | - | - | 4.14e-07 |
+| vanna | for-spot-vol | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.00721 |
+| d2V/dS.dr | for-spot-vol | -0.23757152 | 0.04468 | 0 (pathwise) | - | - | 0.0316 |
+| d2V/dS.dq | for-spot-vol | 0.21524992 | 0.04464 | 0 (pathwise) | - | - | 0.0315 |
+| d2V/dS.dT | for-spot-vol | -0.013018485 | 0.001139 | 0 (pathwise) | - | - | 2.05e-05 |
+| d2V/dsigma.dS | for-spot-vol | -0.31928309 | 0.02136 | 0 (pathwise) | - | - | 0.00721 |
+| volga | for-spot-vol | 84.518743 | 2.996 | 0 (pathwise) | - | - | 142 |
+| d2V/dsigma.dr | for-spot-vol | -92.824531 | 5.806 | 0 (pathwise) | - | - | 533 |
+| d2V/dsigma.dq | for-spot-vol | 120.80654 | 5.795 | 0 (pathwise) | - | - | 531 |
+| d2V/dsigma.dT | for-spot-vol | 0.33449014 | 0.1534 | 0 (pathwise) | - | - | 0.372 |
 
 #### AAD cost and accuracy
 
@@ -2333,13 +2608,13 @@ Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound)
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### mc-asian252 (MC-1, MC-2, AAD-4 at 252 fixings, AAD-5, AAD-6)
 
@@ -2347,54 +2622,61 @@ arithmetic Asian call, S0 = K = 100, 252 fixings, 1 year, 300,000 paths. Differe
 
 Paths 300000 in 50 batches, 1 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 2017 | 1.488e+05 | 1 | no lane primal | 2.1 | 1.00 | - | value only |
-| tape | 5525 | 5.43e+04 | 2.74 | no lane primal | 2.3 | 1.11 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 1501 ms, 0.744 x primal |
-| tape-skip | 4898 | 6.125e+04 | 2.43 | no lane primal | 2.3 | 1.11 | 25479 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 4025 | 7.454e+04 | 2 | no lane primal | 2.3 | 1.10 | 25479 | record and rewind, no reverse sweep |
-| hand | 2059 | 1.457e+05 | 1.02 | no lane primal | 2.1 | 1.01 | - | hand-written adjoint |
-| bump-central | 2.224e+04 | 1.349e+04 | 11 | no lane primal | 2.2 | 1.05 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1.243e+04 | 2.413e+04 | 6.17 | no lane primal | 2.1 | 1.03 | - | 6 pricings expected (N + 1) |
+| price | 1185 | 2.533e+05 | 1 | 1 | 2.1 | 1.00 | - | value only |
+| price-lanes | 1528 | 1.963e+05 | 1.29 | 1.29 | 2.1 | 1.00 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.775 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction |
+| tape | 3031 | 9.898e+04 | 2.56 | 2.56 | 2.4 | 1.12 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 854.9 ms, 0.722 x primal |
+| tape-lanes | 2785 | 1.077e+05 | 2.35 | 2.35 | 2.8 | 1.34 | 21820.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.09 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 3006 | 9.98e+04 | 2.54 | 2.54 | 2.4 | 1.12 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 2176 | 1.379e+05 | 1.84 | 1.84 | 2.3 | 1.11 | 25479 | record and rewind, no reverse sweep |
+| hand | 1193 | 2.515e+05 | 1.01 | 1.01 | 2.1 | 1.01 | - | hand-written adjoint |
+| bump-central | 1.304e+04 | 2.301e+04 | 11 | 11 | 2.2 | 1.05 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 7113 | 4.218e+04 | 6 | 6 | 2.2 | 1.04 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000384 |
-| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 5.08e-06 |
-| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0268 |
-| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00877 |
-| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0137 |
-| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000325 |
-| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 1.89e-06 |
-| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00998 |
-| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00327 |
-| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00511 |
-| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000121 |
-| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 2.05e-05 |
-| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.108 |
-| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0353 |
-| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0552 |
-| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.00131 |
-| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.14e-05 |
-| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0603 |
-| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0197 |
-| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0309 |
-| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.000731 |
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 0.000226 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.79e-06 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0147 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00481 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00752 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000178 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 1.1e-06 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00578 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00189 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00296 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 7.01e-05 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 1.2e-05 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.0632 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0207 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.0324 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.000766 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 6.54e-06 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.0345 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.0113 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0177 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.000418 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.56e-06 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.0135 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00442 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00691 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 0.000164 |
 
 #### AAD cost and accuracy
 
 - bench_scale: 1 (the targets' path counts)
 - bench_threads: 8 worker threads for aad3-barrier-mt and mc3-asian252-mt, 1 for the others; hardware_concurrency 16
 - bench_thread_setup: pricer::RunBatches: the calling thread and threads - 1 std::jthread workers take blocks of 1024 paths in turn, one tape per worker, block sums merged in block order, so every estimate is the same bits for any thread count; no pinning of its own, see pinning_state
-- bench_instruction_set: scalar: the pricer, the tape and the hand adjoint are scalar C++, no SIMD kernel exists until stage 5; simd_target is the build's Highway target only
-- bench_lane_ceiling: absent
-- bench_fastest_primal: pending stage 5 (SIMD kernels); multiples here are against the scalar primal
-- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip
+- bench_instruction_set: price-lanes and tape-lanes: Highway NEON, 2 double lanes, static dispatch (simd_target); every other variant is scalar C++ in the same binary, at the same flags (cxx_flags)
+- bench_lane_ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction
+- bench_fastest_primal: per workload, the faster of price (scalar) and price-lanes (simd::PriceLanes at 2 lanes, the build's widest); both give Price()'s bits. Workloads without lanes (aad8-*, lw-worst) have no fastest-primal multiple
+- tape_config: tape v1: one statement per operation, Real 16 B, statement 1 B, operand 12 B (struct of arrays), chunks of 8192 entries, thread-local active tape, one tape per worker, mark and rewind per path, set-up swept once per block of 1024 paths; the zero-adjoint skip only in tape-skip. tape-lanes: the vector tape at 2 lanes, one statement per operation per group of lanes, statement 1 B, operand 4 + 1 + 8 per lane B (12 at one lane), the set-up on the worker's scalar tape, any group whose Selects diverge priced on the scalar tape and counted
 - bench_rss_probe: peak RSS of a fresh process of this binary (posix_spawn) running one variant once at this size, as the process reports it (VmHWM on Linux, getrusage on macOS); idle runs nothing
 - gradient_check: pass
-- commit: d1596e0e06689b84324e2135fb10686b9ac7739b
+- commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
 
 ##### mc3-asian252-mt (MC-3)
 
@@ -2402,38 +2684,852 @@ the MC-1 workload on --aadp-threads worker threads. Differences from the target:
 
 Paths 300000 in 50 batches, 8 thread(s), seed 20261103; nonzero-payoff fraction 0.524003; tape 1263 statements per path.
 
-Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound);
+Checks: value-bits pass (0 of its bound); skip-equals-tape pass (0 of its bound); hand-vs-tape pass (5.137e-08 of its bound); central-vs-tape pass (0.0926 of its bound); forward-vs-tape pass (0.2881 of its bound); lanes-gradient-bits pass (0 of its bound); lanes-fallback-zero pass (0 of its bound);
 
 | variant | time per run (ms) | paths/s | x scalar primal | x fastest primal | peak RSS (MiB) | RSS / primal | tape B/path | note |
 |---|---|---|---|---|---|---|---|---|
-| price | 287.8 | 1.042e+06 | 1 | no lane primal | 2.2 | 1.00 | - | value only |
-| tape | 766.4 | 3.914e+05 | 2.66 | no lane primal | 3.6 | 1.63 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 218.2 ms, 0.758 x primal |
-| tape-skip | 671.9 | 4.465e+05 | 2.33 | no lane primal | 3.6 | 1.62 | 25479 | the tape with the zero-adjoint skip (B9) |
-| tape-record | 548.2 | 5.472e+05 | 1.9 | no lane primal | 3.6 | 1.61 | 25479 | record and rewind, no reverse sweep |
-| hand | 293.1 | 1.023e+06 | 1.02 | no lane primal | 2.2 | 1.01 | - | hand-written adjoint |
-| bump-central | 3172 | 9.458e+04 | 11 | no lane primal | 2.4 | 1.07 | - | 11 pricings expected (2N + 1) |
-| bump-forward | 1730 | 1.734e+05 | 6.01 | no lane primal | 2.3 | 1.04 | - | 6 pricings expected (N + 1) |
+| price | 166.6 | 1.801e+06 | 1 | 1 | 2.3 | 1.00 | - | value only |
+| price-lanes | 217.4 | 1.38e+06 | 1.31 | 1.31 | 2.3 | 1.01 | - | value only, the lane primal at 2 lanes; price / price-lanes 0.766 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction |
+| tape | 408.5 | 7.344e+05 | 2.45 | 2.45 | 3.7 | 1.63 | 25479 | value and every Greek; reverse sweep (tape - tape-record) 115.8 ms, 0.695 x primal |
+| tape-lanes | 384.6 | 7.8e+05 | 2.31 | 2.31 | 6.5 | 2.89 | 21820.5 | value and every Greek on the vector tape at 2 lanes; tape / tape-lanes 1.06 x, lane ceiling: 2 double lanes on NEON, at most 2 doubles of arithmetic per instruction; fallbacks to the scalar tape: 0 groups, 0 paths |
+| tape-skip | 409.4 | 7.328e+05 | 2.46 | 2.46 | 3.7 | 1.63 | 25479 | the tape with the zero-adjoint skip (B9) |
+| tape-record | 292.7 | 1.025e+06 | 1.76 | 1.76 | 3.7 | 1.62 | 25479 | record and rewind, no reverse sweep |
+| hand | 167.9 | 1.787e+06 | 1.01 | 1.01 | 2.3 | 1.02 | - | hand-written adjoint |
+| bump-central | 1832 | 1.638e+05 | 11 | 11 | 2.5 | 1.08 | - | 11 pricings expected (2N + 1) |
+| bump-forward | 999.3 | 3.002e+05 | 6 | 6 | 2.4 | 1.04 | - | 6 pricings expected (N + 1) |
 
 | quantity | variant | estimate | SE | bias (h study) | bias SE | h | RMSE^2 x time (s) |
 |---|---|---|---|---|---|---|---|
-| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 5.49e-05 |
-| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 7.05e-07 |
-| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00371 |
-| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.00122 |
-| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.0019 |
-| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 4.5e-05 |
-| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 2.7e-07 |
-| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00142 |
-| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.000465 |
-| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.000728 |
-| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 1.72e-05 |
-| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 2.92e-06 |
-| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.0154 |
-| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.00504 |
-| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.00788 |
-| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.000186 |
-| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 1.59e-06 |
-| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.00838 |
-| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.00275 |
-| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.0043 |
-| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 0.000102 |
+| value | price | 5.2695721 | 0.01381 | 0 (pathwise) | - | - | 3.17e-05 |
+| delta | tape | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 3.76e-07 |
+| vega | tape | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00198 |
+| rho | tape | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.000649 |
+| dividend-rho | tape | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.00101 |
+| theta | tape | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 2.4e-05 |
+| delta | hand | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 1.54e-07 |
+| vega | hand | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.000813 |
+| rho | hand | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.000267 |
+| dividend-rho | hand | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.000417 |
+| theta | hand | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 9.86e-06 |
+| delta | bump-central | 0.56121201 | 0.0009592 | -5.44e-07 | 5.4e-07 | 4.768e-05 | 1.69e-06 |
+| vega | bump-central | 22.21747 | 0.06961 | 4.86e-06 | 6e-06 | 3.815e-06 | 0.00888 |
+| rho | bump-central | 23.597102 | 0.03985 | -2.91e-05 | 2.9e-05 | 9.537e-07 | 0.00291 |
+| dividend-rho | bump-central | -28.866674 | 0.04983 | 2.91e-05 | 2.9e-05 | 9.537e-07 | 0.00455 |
+| theta | bump-central | -2.9296604 | 0.007665 | 4.35e-08 | 4.8e-08 | 0.0001221 | 0.000108 |
+| delta | bump-forward | 0.56121298 | 0.0009591 | 1.13e-06 | 1.1e-06 | 9.537e-05 | 9.19e-07 |
+| vega | bump-forward | 22.217468 | 0.06961 | 8.99e-06 | 1.8e-05 | 3.815e-06 | 0.00484 |
+| rho | bump-forward | 23.597116 | 0.03985 | 1.61e-05 | 4.8e-05 | 1.907e-06 | 0.00159 |
+| dividend-rho | bump-forward | -28.866643 | 0.04984 | 9.67e-05 | 8.7e-05 | 9.537e-07 | 0.00248 |
+| theta | bump-forward | -2.9296554 | 0.007665 | 4.67e-06 | 1.2e-08 | 7.629e-06 | 5.87e-05 |
+| delta | tape-lanes | 0.56121242 | 0.0009591 | 0 (pathwise) | - | - | 3.54e-07 |
+| vega | tape-lanes | 22.217466 | 0.06961 | 0 (pathwise) | - | - | 0.00186 |
+| rho | tape-lanes | 23.597126 | 0.03985 | 0 (pathwise) | - | - | 0.000611 |
+| dividend-rho | tape-lanes | -28.866698 | 0.04983 | 0 (pathwise) | - | - | 0.000955 |
+| theta | tape-lanes | -2.9296604 | 0.007665 | 0 (pathwise) | - | - | 2.26e-05 |
+
+### Reports
+
+#### eSSVI beside raw SVI per slice: the cost in fit error, settlements
+
+`report_essvi_fit_error`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | essvi_phi | essvi_phi_per_dof | raw_phi | raw_phi_per_dof | phi_ratio | essvi_svi6 (bp_of_F) | raw_svi6 (bp_of_F) | essvi_svi11 (vol_points) | raw_svi11 (vol_points) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 202411 | 65 | 26.83572112999463 | 0.43283421177410697 | 12.423749901758493 | 0.20706249836264154 | 2.1600339142529124 | 0.44961344489004096 | 0.2867787183006679 | 1.893213061588734 | 0.9576403021731241 |
+| 202411W4 | 51 | 109.30652884292478 | 2.277219350894266 | 106.88795417077615 | 2.3236511776255684 | 1.0226271958417732 | 1.173575131058901 | 1.1317032961911349 | 1.020361649994434 | 0.40959494100502025 |
+| 202412 | 64 | 312.8778709647785 | 5.129145425652106 | 191.03415965774565 | 3.2378671128431464 | 1.6378111198820486 | 1.6027083833114493 | 1.2311502895553388 | 2.4976354497264093 | 1.3972749889451608 |
+
+#### eSSVI beside raw SVI over the surface: the cost in fit error
+
+`report_essvi_fit_surface`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | essvi_phi | essvi_phi_per_dof | raw_phi | raw_phi_per_dof | phi_ratio |
+|---|---|---|---|---|---|---|
+| surface | 180 | 449.0201209376979 | 2.625848660454374 | 310.3458637302803 | 1.8808840226077594 | 1.4468377813726512 |
+
+#### Butterfly checks of both surfaces' slices, nothing repaired
+
+`report_essvi_fit_arbitrage`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | model_triples (count) | model_non_convex (count) | grid_points (count) | min_g | k_min_g (log_moneyness) | martini_mingone | violations (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.essvi | 61 | 0 | 14002 | 0.25408881120670046 | -3 | no-arbitrage | 0 |
+| 202411.raw | 61 | 0 | 14002 | -28.86046281534699 | 0.13350150903884594 | type-1 | 4 |
+| 202411W4.essvi | 47 | 0 | 14002 | 0.26165795146504484 | -3 | no-arbitrage | 0 |
+| 202411W4.raw | 47 | 0 | 14002 | -24.87985088659242 | 0.17500000000000002 | type-1 | 4 |
+| 202412.essvi | 60 | 0 | 14002 | 0.2615713143548635 | -3.29968733708107 | no-arbitrage | 0 |
+| 202412.raw | 60 | 0 | 14002 | -3.261889385463554 | 0.8670001038834672 | type-1 | 4 |
+
+#### Calendar checks of both surfaces' adjacent slices
+
+`report_essvi_fit_calendar`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | grid_points (count) | min_gap (total_variance) | k_min_gap (log_moneyness) | violations (count) |
+|---|---|---|---|---|
+| 202411-202411W4.essvi | 22003 | 0.00028634226713557926 | 0.42086726233054284 | 0 |
+| 202411W4-202412.essvi | 22003 | 0.0025022078899729796 | 0.07549338382867714 | 0 |
+| 202411-202411W4.raw | 22003 | -0.1515950175802363 | 3 | 4 |
+| 202411W4-202412.raw | 22003 | -1.81456676003803 | 6.089991751438618 | 2 |
+
+#### Every violation of either surface's slices and pairs
+
+`report_essvi_fit_violations`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | kind | k_begin (log_moneyness) | k_end (log_moneyness) | k_worst (log_moneyness) | value | bound | points (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.raw.1 | density | 0.12037318227579721 | 3 | 0.13350150903884594 | -28.86046281534699 | -4.951111050238315e-13 | 6809 |
+| 202411.raw.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.raw.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411W4.raw.1 | density | 0.16051865857818337 | 3 | 0.17500000000000002 | -24.87985088659242 | -4.555456844858408e-13 | 6753 |
+| 202411W4.raw.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411W4.raw.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411W4.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202412.raw.1 | density | 0.6826754052339042 | 6.089991751438618 | 0.8670001038834672 | -3.261889385463554 | -8.738579019220155e-14 | 6250 |
+| 202412.raw.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202412.raw.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202412.raw.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411-202411W4.raw.1 | calendar-crossing | -3 | -0.733 | -3 | -0.003736146046412113 | -8.901649759509281e-14 | 2268 |
+| 202411-202411W4.raw.2 | calendar-crossing | 0.0713643970329835 | 3 | 3 | -0.1515950175802363 | -8.154701499485595e-14 | 11990 |
+| 202411-202411W4.raw.3 | calendar-right-wing | +inf | +inf | +inf | -0.1515981127594312 | 0 | 0 |
+| 202411-202411W4.raw.4 | calendar-left-wing | -inf | -inf | -inf | -0.0016474994336630154 | 1 | 0 |
+| 202411W4-202412.raw.1 | calendar-crossing | 0.12664232813225376 | 6.089991751438618 | 6.089991751438618 | -1.81456676003803 | -1.6286798190662498e-13 | 11419 |
+| 202411W4-202412.raw.2 | calendar-right-wing | +inf | +inf | +inf | -1.8180454717557273 | 0 | 0 |
+
+#### eSSVI constraints B1, B2, N and S on the fitted slices
+
+`report_essvi_fit_constraints`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | slack | active | violated |
+|---|---|---|---|
+| 202411.B1 | 0.9933811558401852 | no | no |
+| 202411.B2 | 0.7876068368306423 | no | no |
+| 202411W4.B1 | 0.9923221925707669 | no | no |
+| 202411W4.B2 | 0.9011925321270741 | no | no |
+| 202412.B1 | 0.9831158280766914 | no | no |
+| 202412.B2 | 0.8186933406821795 | no | no |
+| 202411W4.N-theta | 1.8175724331135075 | no | no |
+| 202411W4.N-psi | 0.029517580115640207 | no | no |
+| 202411W4.S | 0.598954010672858 | no | no |
+| 202412.N-theta | 1.8886157794153946 | no | no |
+| 202412.N-psi | 1.1990877055632563 | no | no |
+| 202412.S | 0.1655862818625654 | no | no |
+
+#### eSSVI surface fit: convergence, starts and constraints
+
+`report_essvi_fit_convergence`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:57Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | converged | stop | iterations (count) | scaled_gradient | starts_at_best (count) | starts (count) | constraints_violated (count) | constraints_active (count) |
+|---|---|---|---|---|---|---|---|---|
+| surface | yes | no-decrease | 10 | 1.2676390608973532e-09 | 16 | 16 | 0 | 0 |
+
+#### 7a's contracts off raw SVI and eSSVI on the same uniforms
+
+`report_essvi_price`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:58Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | paths (count) | raw (index_points) | raw_se (index_points) | essvi (index_points) | essvi_se (index_points) | paired_difference (index_points) | paired_se (index_points) | paired_batches (count) |
+|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 1048576 | 336.7943496230489 | 0.44032859960557547 | 336.9449742236807 | 0.4358835950011928 | 0.15062460063174132 | 0.044182274863085604 | 64 |
+| down-out-call-discrete-one-step | 1048576 | 570.3559147406875 | 0.8285019189572408 | 570.3300347287637 | 0.8487811574987623 | -0.025880011923810287 | 0.128417024090473 | 64 |
+| down-out-call-continuous-bridge | 1048576 | 552.8382668792686 | 0.8198867833877109 | 552.7563924203378 | 0.8381388869167646 | -0.08187445893100076 | 0.12854057797962584 | 64 |
+
+#### Local-variance floors and caps per contract and surface
+
+`report_essvi_price_floors`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:58Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | path_steps (count) | paths (count) | non_finite (count) | non_positive_variance (count) | calendar (count) | butterfly (count) | below_floor (count) | capped (count) | paths_with_floor (count) | paths_with_cap (count) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| asian-arithmetic-call.raw | 138412032 | 1048576 | 0 | 0 | 521608 | 0 | 11325 | 52 | 34156 | 8 |
+| down-out-call-discrete-one-step.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| down-out-call-discrete-one-step.raw | 138412032 | 1048576 | 0 | 0 | 523535 | 0 | 11366 | 0 | 34297 | 0 |
+| down-out-call-continuous-bridge.essvi | 138412032 | 1048576 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| down-out-call-continuous-bridge.raw | 138412032 | 1048576 | 0 | 0 | 521608 | 0 | 11325 | 52 | 34156 | 8 |
+
+#### Where the floors and caps fell, in k and t, by segment
+
+`report_essvi_price_floor_ranges`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:58Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | count (count) | k_min (log_moneyness) | k_max (log_moneyness) | t_min (years) | t_max (years) |
+|---|---|---|---|---|---|
+| asian-arithmetic-call.raw.floored.all | 532933 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.floored.seg2 | 181408 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| asian-arithmetic-call.raw.floored.seg3 | 351525 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.capped.all | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| asian-arithmetic-call.raw.capped.seg3 | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.raw.floored.all | 534901 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.raw.floored.seg2 | 181434 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-discrete-one-step.raw.floored.seg3 | 353467 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.floored.all | 532933 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.floored.seg2 | 181408 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-continuous-bridge.raw.floored.seg3 | 351525 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.capped.all | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.raw.capped.seg3 | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+
+#### eSSVI surface fit time, alone and with every check, one thread
+
+`report_essvi_fit_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:34:18Z. Targets: SVI-8. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| fit | 4.628146 | 4.267125 | 50 |
+| fit_and_checks | 6.528792 | 6.260417 | 50 |
+
+#### Euler bias plan: V(n) on coupled draws, n = 1 to 16
+
+`report_lv_bias_levels`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:36:09Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | draws | value (index_points) | value_se (index_points) |
+|---|---|---|---|---|
+| asian-arithmetic-call.n1 | 1 | coarse | 337.97618162450624 | 0.4556849738664734 |
+| asian-arithmetic-call.n2 | 2 | production | 337.4315378305191 | 0.44688900422480765 |
+| asian-arithmetic-call.n4 | 4 | production | 336.7943496230489 | 0.44032859960557547 |
+| asian-arithmetic-call.n8 | 8 | production | 336.61205072635187 | 0.4688011151126764 |
+| asian-arithmetic-call.n16 | 16 | production | 336.5169863284511 | 0.4396080808253108 |
+| down-out-call-discrete-one-step.n1 | 1 | coarse | 570.6440580651383 | 0.8684854832124405 |
+| down-out-call-discrete-one-step.n2 | 2 | production | 570.380381852293 | 0.8761095366190779 |
+| down-out-call-discrete-one-step.n4 | 4 | production | 570.3559147406875 | 0.8285019189572408 |
+| down-out-call-discrete-one-step.n8 | 8 | production | 570.2242324536911 | 0.8123294930904484 |
+| down-out-call-discrete-one-step.n16 | 16 | production | 570.4839850031822 | 0.7733473790655433 |
+| down-out-call-discrete-hard.n1 | 1 | coarse | 570.7124086015269 | 0.8841375251388538 |
+| down-out-call-discrete-hard.n2 | 2 | production | 570.6155667860452 | 0.8717121178138817 |
+| down-out-call-discrete-hard.n4 | 4 | production | 570.4089197592423 | 0.8366854501472639 |
+| down-out-call-discrete-hard.n8 | 8 | production | 570.2015141735529 | 0.8149071496978257 |
+| down-out-call-discrete-hard.n16 | 16 | production | 570.5100885732052 | 0.7770108732721864 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | coarse | 569.8425517409518 | 0.8870507369731342 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | production | 569.7347793846945 | 0.8767794634569451 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | production | 569.5763954777431 | 0.8303316183012878 |
+| down-out-call-discrete-smoothed-0.005.n8 | 8 | production | 569.3008275387633 | 0.8157710965233913 |
+| down-out-call-discrete-smoothed-0.005.n16 | 16 | production | 569.6630561442174 | 0.7735643617598708 |
+| down-out-call-continuous-bridge.n1 | 1 | coarse | 554.0071482144633 | 0.8715741893290136 |
+| down-out-call-continuous-bridge.n2 | 2 | production | 553.1843449727332 | 0.8620627884111413 |
+| down-out-call-continuous-bridge.n4 | 4 | production | 552.8382668792686 | 0.8198867833877109 |
+| down-out-call-continuous-bridge.n8 | 8 | production | 552.4811333964207 | 0.8118713276214312 |
+| down-out-call-continuous-bridge.n16 | 16 | production | 552.5806863800594 | 0.7835760285773212 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | coarse | 553.9700948252449 | 0.8692352276574813 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | production | 553.1775652980928 | 0.8710041917096407 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | production | 552.8169259678925 | 0.8220824002889201 |
+| down-out-call-continuous-sampled-crossing.n8 | 8 | production | 552.3897508726419 | 0.8220957210664249 |
+| down-out-call-continuous-sampled-crossing.n16 | 16 | production | 552.60683686605 | 0.7853988435657171 |
+
+#### Euler bias plan: Delta(n) = V(n) - V(2n) on coupled draws
+
+`report_lv_bias_delta`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:36:09Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | delta (index_points) | delta_se (index_points) |
+|---|---|---|---|
+| asian-arithmetic-call.n1 | 1 | 0.5446437939871377 | 0.03103003061014735 |
+| asian-arithmetic-call.n2 | 2 | 0.32536214495548693 | 0.02210428938251946 |
+| asian-arithmetic-call.n4 | 4 | 0.17773529067782282 | 0.015023009146458996 |
+| asian-arithmetic-call.n8 | 8 | 0.10416104051008696 | 0.011693207981160357 |
+| down-out-call-discrete-one-step.n1 | 1 | 0.26367621284541887 | 0.07281046994601174 |
+| down-out-call-discrete-one-step.n2 | 2 | 0.1068056653712331 | 0.06091297047648754 |
+| down-out-call-discrete-one-step.n4 | 4 | 0.06556323238612397 | 0.057147131752047046 |
+| down-out-call-discrete-one-step.n8 | 8 | -0.04716595202910996 | 0.04167706371215782 |
+| down-out-call-discrete-hard.n1 | 1 | 0.09684181548174196 | 0.09826737012983554 |
+| down-out-call-discrete-hard.n2 | 2 | 0.13308101033042335 | 0.07543023684673002 |
+| down-out-call-discrete-hard.n4 | 4 | -0.05919654732451853 | 0.05607917728070128 |
+| down-out-call-discrete-hard.n8 | 8 | 0.012380999558493228 | 0.04829772188453388 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | 0.10777235625685559 | 0.06772150140054956 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | 0.08235240562727555 | 0.052202813528801566 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | 0.030730950692534918 | 0.03580606092242202 |
+| down-out-call-discrete-smoothed-0.005.n8 | 8 | 0.011467466687994955 | 0.028138329194846348 |
+| down-out-call-continuous-bridge.n1 | 1 | 0.8228032417303176 | 0.08385302499364547 |
+| down-out-call-continuous-bridge.n2 | 2 | 0.4627187659332117 | 0.06990891985147951 |
+| down-out-call-continuous-bridge.n4 | 4 | 0.16336141695461132 | 0.05416229916728075 |
+| down-out-call-continuous-bridge.n8 | 8 | 0.07131176645875231 | 0.04462078306163524 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | 0.7925295271525185 | 0.10870308472630082 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | 0.5461319467708224 | 0.11502139787196658 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | 0.3416267290566572 | 0.08470580994923045 |
+| down-out-call-continuous-sampled-crossing.n8 | 8 | 0.05029748031759732 | 0.060929974498722 |
+
+#### Euler bias plan: the ratios Delta(n) / Delta(2n)
+
+`report_lv_bias_ratio`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:36:09Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | substeps (count) | ratio |
+|---|---|---|
+| asian-arithmetic-call.n1 | 1 | 1.6739617759209537 |
+| asian-arithmetic-call.n2 | 2 | 1.8305995602486416 |
+| asian-arithmetic-call.n4 | 4 | 1.7063509524044254 |
+| down-out-call-discrete-one-step.n1 | 1 | 2.468747438901655 |
+| down-out-call-discrete-one-step.n2 | 2 | 1.6290481949123337 |
+| down-out-call-discrete-one-step.n4 | 4 | -1.3900542566311296 |
+| down-out-call-discrete-hard.n1 | 1 | 0.7276907144099369 |
+| down-out-call-discrete-hard.n2 | 2 | -2.248121154784018 |
+| down-out-call-discrete-hard.n4 | 4 | -4.781241372705677 |
+| down-out-call-discrete-smoothed-0.005.n1 | 1 | 1.308672836402982 |
+| down-out-call-discrete-smoothed-0.005.n2 | 2 | 2.67978711271306 |
+| down-out-call-discrete-smoothed-0.005.n4 | 4 | 2.67983779928539 |
+| down-out-call-continuous-bridge.n1 | 1 | 1.7781929377143093 |
+| down-out-call-continuous-bridge.n2 | 2 | 2.832485017326793 |
+| down-out-call-continuous-bridge.n4 | 4 | 2.290805922597665 |
+| down-out-call-continuous-sampled-crossing.n1 | 1 | 1.451168590005766 |
+| down-out-call-continuous-sampled-crossing.n2 | 2 | 1.5986218299688402 |
+| down-out-call-continuous-sampled-crossing.n4 | 4 | 6.792124116347315 |
+
+#### Euler bias left at n = 4, 2 Delta(4), resolved if beyond 2 SE
+
+`report_lv_bias_left`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:36:09Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | bias (index_points) | bias_se (index_points) | resolved |
+|---|---|---|---|
+| asian-arithmetic-call | 0.35547058135564563 | 0.030046018292917993 | yes |
+| down-out-call-discrete-one-step | 0.13112646477224793 | 0.11429426350409409 | no |
+| down-out-call-discrete-hard | -0.11839309464903706 | 0.11215835456140257 | no |
+| down-out-call-discrete-smoothed-0.005 | 0.061461901385069836 | 0.07161212184484404 | no |
+| down-out-call-continuous-bridge | 0.32672283390922263 | 0.1083245983345615 | yes |
+| down-out-call-continuous-sampled-crossing | 0.6832534581133144 | 0.1694116198984609 | yes |
+
+#### Local-volatility prices of the svi-surface contracts, n = 4
+
+`report_lv_price`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:34:19Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | paths (count) | price (index_points) | price_se (index_points) |
+|---|---|---|---|
+| asian-arithmetic-call | 1048576 | 336.7943496230489 | 0.44032859960557547 |
+| down-out-call-discrete-one-step | 1048576 | 570.3559147406875 | 0.8285019189572408 |
+| down-out-call-continuous-bridge | 1048576 | 552.8382668792686 | 0.8198867833877109 |
+
+#### The 15 raw SVI parameter sensitivities of each price, by tape
+
+`report_lv_sensitivities`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:34:19Z. Targets: none. Timings: no. Derived from the option chain: yes.
+
+| row | derivative (index_points/parameter) | derivative_se (index_points/parameter) |
+|---|---|---|
+| asian-arithmetic-call.202411.a | 35314.93570437661 | 590.3105174964356 |
+| asian-arithmetic-call.202411.b | 56.838422886439716 | 0.9267876713480068 |
+| asian-arithmetic-call.202411.rho | -8193.744107845032 | 95.9074088790307 |
+| asian-arithmetic-call.202411.m | 339.79656523525426 | 6.992401870764152 |
+| asian-arithmetic-call.202411.sigma | 6812.844881552842 | 180.69349159305963 |
+| asian-arithmetic-call.202411W4.a | 51787.37948753398 | 231.12851085557742 |
+| asian-arithmetic-call.202411W4.b | 88.33701397520191 | 0.36494953716208134 |
+| asian-arithmetic-call.202411W4.rho | -15568.597677182013 | 54.89235545202124 |
+| asian-arithmetic-call.202411W4.m | 584.561363798122 | 2.060842461306384 |
+| asian-arithmetic-call.202411W4.sigma | 7903.889683748699 | 49.37518747955415 |
+| asian-arithmetic-call.202412.a | 17247.347460957153 | 59.01307224675387 |
+| asian-arithmetic-call.202412.b | 635.7748591830427 | 2.1561909370650554 |
+| asian-arithmetic-call.202412.rho | -20639.51040612049 | 64.56996840427583 |
+| asian-arithmetic-call.202412.m | 330.6298880141133 | 0.6778520300015403 |
+| asian-arithmetic-call.202412.sigma | 8002.181680047989 | 29.963892848930648 |
+| down-out-call-discrete-one-step.202411.a | -3806.8101452052415 | 911.2001815720463 |
+| down-out-call-discrete-one-step.202411.b | -5.884873734927738 | 1.4568884989181754 |
+| down-out-call-discrete-one-step.202411.rho | 486.00364014034255 | 152.317324521927 |
+| down-out-call-discrete-one-step.202411.m | 54.849835043421336 | 12.360316541880694 |
+| down-out-call-discrete-one-step.202411.sigma | -1299.1110454486306 | 285.1426815295826 |
+| down-out-call-discrete-one-step.202411W4.a | 2367.6478813169124 | 411.9994555619789 |
+| down-out-call-discrete-one-step.202411W4.b | 2.618306900163201 | 0.6772088355126353 |
+| down-out-call-discrete-one-step.202411W4.rho | -358.2432675135764 | 99.53705760541345 |
+| down-out-call-discrete-one-step.202411W4.m | 41.37375407873606 | 7.963691216526922 |
+| down-out-call-discrete-one-step.202411W4.sigma | 391.08875372725174 | 100.70759701041491 |
+| down-out-call-discrete-one-step.202412.a | 56777.83711915289 | 164.30647325537458 |
+| down-out-call-discrete-one-step.202412.b | 2088.942543788444 | 5.993972262090513 |
+| down-out-call-discrete-one-step.202412.rho | -67091.81436830101 | 175.75247112249568 |
+| down-out-call-discrete-one-step.202412.m | 1015.6455243911843 | 1.799681556784653 |
+| down-out-call-discrete-one-step.202412.sigma | 26654.323981716134 | 85.29858435794259 |
+| down-out-call-continuous-bridge.202411.a | -2342.496302786091 | 1024.506848731546 |
+| down-out-call-continuous-bridge.202411.b | -4.5611086966550936 | 1.658387871384841 |
+| down-out-call-continuous-bridge.202411.rho | 440.4046738443158 | 197.3275156898018 |
+| down-out-call-continuous-bridge.202411.m | 61.306021291861995 | 13.34045233091597 |
+| down-out-call-continuous-bridge.202411.sigma | -898.153374352619 | 295.94539397286826 |
+| down-out-call-continuous-bridge.202411W4.a | 660.9069126740104 | 499.7228204429392 |
+| down-out-call-continuous-bridge.202411W4.b | -2.157404017830876 | 0.8429064964276736 |
+| down-out-call-continuous-bridge.202411W4.rho | 770.8984133159578 | 138.22111530437672 |
+| down-out-call-continuous-bridge.202411W4.m | 3.564818915896074 | 8.887708058909507 |
+| down-out-call-continuous-bridge.202411W4.sigma | 388.8841559967209 | 107.24324905791121 |
+| down-out-call-continuous-bridge.202412.a | 50695.50246205736 | 152.43273257158535 |
+| down-out-call-continuous-bridge.202412.b | 1863.2665562915524 | 5.5630328786895875 |
+| down-out-call-continuous-bridge.202412.rho | -59513.878327990285 | 164.60974061652456 |
+| down-out-call-continuous-bridge.202412.m | 874.1313709684672 | 2.2164422271381095 |
+| down-out-call-continuous-bridge.202412.sigma | 23939.984632471333 | 78.90885543081161 |
+
+#### Local-variance floors and caps per contract, nothing repaired
+
+`report_lv_floors`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:34:19Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | path_steps (count) | paths (count) | non_finite (count) | non_positive_variance (count) | calendar (count) | butterfly (count) | below_floor (count) | capped (count) | paths_with_floor (count) | paths_with_cap (count) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 138412032 | 1048576 | 0 | 0 | 521608 | 0 | 11325 | 52 | 34156 | 8 |
+| down-out-call-discrete-one-step | 138412032 | 1048576 | 0 | 0 | 523535 | 0 | 11366 | 0 | 34297 | 0 |
+| down-out-call-continuous-bridge | 138412032 | 1048576 | 0 | 0 | 521608 | 0 | 11325 | 52 | 34156 | 8 |
+
+#### Where the floors and caps fell, in k and t, by segment
+
+`report_lv_floor_ranges`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:34:19Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | count (count) | k_min (log_moneyness) | k_max (log_moneyness) | t_min (years) | t_max (years) |
+|---|---|---|---|---|---|
+| asian-arithmetic-call.floored.all | 532933 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| asian-arithmetic-call.floored.seg2 | 181408 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| asian-arithmetic-call.floored.seg3 | 351525 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| asian-arithmetic-call.capped.all | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| asian-arithmetic-call.capped.seg3 | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.floored.all | 534901 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-discrete-one-step.floored.seg2 | 181434 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-discrete-one-step.floored.seg3 | 353467 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.floored.all | 532933 | 0.07125787139597684 | 0.13444151983395258 | 0.013694306074443061 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.floored.seg2 | 181408 | 0.07125787139597684 | 0.11337762050296796 | 0.013694306074443061 | 0.03218161927494119 |
+| down-out-call-continuous-bridge.floored.seg3 | 351525 | 0.12634918198618017 | 0.13444151983395258 | 0.039713487615884877 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.capped.all | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+| down-out-call-continuous-bridge.capped.seg3 | 52 | -1.2013074905724803 | -1.0012987030531981 | 0.07600339871315899 | 0.08969770478760204 |
+
+#### Local-vol price alone and with the 15 sensitivities by tape, one thread
+
+`report_lv_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:39:30Z. Targets: AAD-1. Timings: yes. Derived from the option chain: yes.
+
+| row | price_median (ms) | price_min (ms) | gradient_median (ms) | gradient_min (ms) | ratio | repetitions (count) |
+|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 278.696333 | 278.308292 | 2679.902125 | 2655.278167 | 9.615849968861989 | 5 |
+| down-out-call-discrete-one-step | 427.671208 | 426.254541 | 2852.478375 | 2847.368583 | 6.669792872752847 | 5 |
+| down-out-call-continuous-bridge | 347.967541 | 345.814125 | 3173.669375 | 3154.244584 | 9.120590288046436 | 5 |
+
+#### Stage 9 table, prices only: A and B double, C float32 on the CPU, D float32 on the GPU, on the same uniforms
+
+`report_metal_prices`, commit `c5f3473043b2`, claim `result`, started 2026-11-18T06:38:34Z. Targets: GPU-2, GPU-3. Timings: no. Derived from the option chain: no.
+
+| row | workload | column | mean | standard_error | paths (count) |
+|---|---|---|---|---|---|
+| asian12.A | asian12 | A | 5.631797136663099 | 0.0020102758544695326 | 16777216 |
+| asian12.B | asian12 | B | 5.631795588773441 | 0.002010274827528844 | 16777216 |
+| asian12.C | asian12 | C | 5.631795171978907 | 0.002010274713264954 | 16777216 |
+| asian12.D | asian12 | D | 5.631794978750333 | 0.0020102746905151627 | 16777216 |
+| asian252.A | asian252 | A | 5.298645395956617 | 0.0018916400988750182 | 16777216 |
+| asian252.B | asian252 | B | 5.298644896376724 | 0.001891639976540671 | 16777216 |
+| asian252.C | asian252 | C | 5.298646266732217 | 0.0018916429346081932 | 16777216 |
+| asian252.D | asian252 | D | 5.298646065244988 | 0.0018916429120769997 | 16777216 |
+| barrier156.A | barrier156 | A | 1.053313784131539 | 0.0007763175507537168 | 16777216 |
+| barrier156.B | barrier156 | B | 1.053314197759433 | 0.0007763177815135625 | 16777216 |
+| barrier156.C | barrier156 | C | 1.0533140739658269 | 0.0007763176776905917 | 16777216 |
+| barrier156.D | barrier156 | D | 1.0533140838704211 | 0.0007763176734307763 | 16777216 |
+
+#### Stage 9 table: paired differences of the prices, each relative to the mean of the column it subtracts
+
+`report_metal_differences`, commit `c5f3473043b2`, claim `result`, started 2026-11-18T06:38:34Z. Targets: GPU-2, GPU-3. Timings: no. Derived from the option chain: no.
+
+| row | workload | pair | mean | standard_error | base | relative | relative_se |
+|---|---|---|---|---|---|---|---|
+| asian12.B-A | asian12 | B-A | -1.5478896535189984e-06 | 5.895245440407201e-07 | 5.631797136663099 | -2.748482617461856e-07 | 1.0467787275271419e-07 |
+| asian12.C-B | asian12 | C-B | -4.167946432199155e-07 | 7.663988161501464e-10 | 5.631795588773441 | -7.400741675545968e-08 | 1.3608427437918816e-10 |
+| asian12.D-B | asian12 | D-B | -6.100232162945815e-07 | 7.864377856201972e-10 | 5.631795588773441 | -1.083177126511155e-07 | 1.3964245918085193e-10 |
+| asian12.D-C | asian12 | D-C | -1.9322857307466582e-07 | 6.787823767172029e-10 | 5.631795171978907 | -3.431029843487169e-08 | 1.2052682244100357e-10 |
+| asian252.B-A | asian252 | B-A | -4.995797722342903e-07 | 2.1448796004167042e-07 | 5.298645395956617 | -9.428443213345026e-08 | 4.0479772472667376e-08 |
+| asian252.C-B | asian252 | C-B | 1.3703555957580053e-06 | 4.656547720382256e-09 | 5.298644896376724 | 2.58623784487817e-07 | 8.788186057847466e-10 |
+| asian252.D-B | asian252 | D-B | 1.1688683658809361e-06 | 4.648263213969675e-09 | 5.298644896376724 | 2.205976034891906e-07 | 8.77255091608085e-10 |
+| asian252.D-C | asian252 | D-C | -2.0148722987706852e-07 | 5.803834654181879e-10 | 5.298646266732217 | -3.8026171164154685e-08 | 1.0953429162881677e-10 |
+| barrier156.B-A | barrier156 | B-A | 4.136278820219398e-07 | 3.117778156357396e-07 | 1.053313784131539 | 3.9269198623748904e-07 | 2.959970906417042e-07 |
+| barrier156.C-B | barrier156 | C-B | -1.237935844562233e-07 | 7.955520966318977e-09 | 1.053314197759433 | -1.1752768995191747e-07 | 7.552846988336089e-09 |
+| barrier156.D-B | barrier156 | D-B | -1.1388898729433367e-07 | 7.939433972532269e-09 | 1.053314197759433 | -1.0812442055427876e-07 | 7.537574248425313e-09 |
+| barrier156.D-C | barrier156 | D-C | 9.904597161888733e-09 | 5.195897897967157e-10 | 1.0533140739658269 | 9.403270502782699e-09 | 4.932904654358325e-10 |
+
+#### GPU-2: abs(D - B) / SE_B against 0.01, and the CPU float32 line's abs(C - B) / SE_B, not judged
+
+`report_metal_gpu2`, commit `c5f3473043b2`, claim `result`, started 2026-11-18T06:38:34Z. Targets: GPU-2. Timings: no. Derived from the option chain: no.
+
+| row | workload | ratio | bound | verdict | cpu_ratio | same_bit_spans (count) | spans (count) |
+|---|---|---|---|---|---|---|---|
+| asian12 | asian12 | 0.0003034525922673371 | 0.01 | pass | 0.00020733211613139656 | 431551 | 1048576 |
+| asian252 | asian252 | 0.0006179126461738466 | 0.01 | pass | 0.0007244272219209427 | 548097 | 1048576 |
+| barrier156 | barrier156 | 0.00014670411330118587 | 0.01 | pass | 0.00015946254096023171 | 211804 | 1048576 |
+
+#### The check's run: quotes, refits and bumped levels
+
+`report_qs_check_run`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:46:06Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | stride (count) | refit | levels (count) | unusable_levels (count) |
+|---|---|---|---|---|
+| check | 1 | production | 2160 | 19 |
+
+#### Per slice, the refit error over two alternative start grids
+
+`report_qs_check_refit_error`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:46:06Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | a | b | rho | m | sigma |
+|---|---|---|---|---|---|
+| 202411 | 1.7839336635509795e-09 | 1.6689924997592698e-09 | 1.6535007807405577e-09 | 3.512343983713695e-08 | 5.526181392698226e-09 |
+| 202411W4 | 3.4769433879342643e-09 | 2.7006175074006933e-09 | 2.677745025714273e-09 | 7.825455300425332e-08 | 1.161634101930209e-08 |
+| 202412 | 5.211991731257637e-08 | 9.415684232294552e-09 | 9.08248454223326e-09 | 2.279273744187904e-07 | 7.876276683638217e-08 |
+
+#### The check's comparisons; failed counts those not passed, unresolved included
+
+`report_qs_check_tallies`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:46:06Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | role | comparisons (count) | passed (count) | unresolved (count) | failed (count) | worst_ratio |
+|---|---|---|---|---|---|---|
+| parameters.market-fixed.exact | required | 900 | 900 | 0 | 0 | 0.4583595386460009 |
+| parameters.through-parity.exact | required | 900 | 900 | 0 | 0 | 0.6521991058527722 |
+| parity.through-parity.exact | required | 540 | 540 | 0 | 0 | 0.3388214062334927 |
+| prices.market-fixed.exact | required | 540 | 531 | 0 | 9 | 7.070277119648801 |
+| prices.through-parity.exact | required | 540 | 529 | 0 | 11 | 20.03453500527571 |
+| parameters.market-fixed.gauss-newton | disclosure | 900 | 18 | 0 | 882 | 1391.951284768683 |
+| parameters.through-parity.gauss-newton | disclosure | 900 | 14 | 0 | 886 | 2066.276383626848 |
+| prices.market-fixed.gauss-newton | disclosure | 540 | 518 | 0 | 22 | 7.106269338356665 |
+| prices.through-parity.gauss-newton | disclosure | 540 | 512 | 0 | 28 | 20.12722193419725 |
+
+#### The exact-Hessian price comparisons by contract and chain, with those failed
+
+`report_qs_check_price_failures`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:46:06Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | comparisons (count) | passed (count) | unresolved (count) | failed (count) | worst_ratio |
+|---|---|---|---|---|---|
+| asian-arithmetic-call.market-fixed | 180 | 180 | 0 | 0 | 0.4227932596803331 |
+| down-out-call-discrete-one-step.market-fixed | 180 | 175 | 0 | 5 | 7.070277119648801 |
+| down-out-call-continuous-bridge.market-fixed | 180 | 176 | 0 | 4 | 3.913808442934944 |
+| asian-arithmetic-call.through-parity | 180 | 180 | 0 | 0 | 0.42528441033591263 |
+| down-out-call-discrete-one-step.through-parity | 180 | 174 | 0 | 6 | 20.03453500527571 |
+| down-out-call-continuous-bridge.through-parity | 180 | 175 | 0 | 5 | 7.343350165699387 |
+
+#### The registered verdict: PASS only if every exact-Hessian comparison passes
+
+`report_qs_check_verdict`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:46:06Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | verdict | comparisons (count) | failed (count) | price_comparisons (count) | price_failed (count) |
+|---|---|---|---|---|---|
+| verdict | FAIL | 3420 | 20 | 1080 | 20 |
+
+#### Per slice, the KKT system of the fit, exact Hessian, and the Newton step
+
+`report_qs_slices`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | objective | on_tick_boundary (count) | active_bounds (count) | stationarity | gradient_norm | hessian_asymmetry | hessian_gn_difference | condition | manifold_residual | newton_a | newton_b | newton_rho | newton_m | newton_sigma | gauss_newton |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 202411 | 65 | 12.423749901758493 | 0 | 1 | 1.262117546883494e-07 | 7.279650916621e-06 | 2.6287559068804847e-15 | 0.0015725132471258708 | 1610612.3021442206 | 1.336362448656604e-18 | -1.1574714809439888e-09 | 1.0393102606025603e-09 | -1.0296632431403088e-09 | 2.3469967273858805e-08 | 3.6063012212509563e-09 | ok |
+| 202411W4 | 51 | 106.88795417077615 | 1 | 1 | 1.539215171423597e-07 | 2.563623105142996e-06 | 5.9763167697662146e-15 | 0.00066771071729779 | 407743.2643865714 | 1.8112614471057004e-18 | 2.8150139895729345e-09 | -2.0288195853371246e-09 | 2.0116368480114153e-09 | -6.745081389969e-08 | -9.428728321427954e-09 | ok |
+| 202412 | 64 | 191.03415965774565 | 1 | 1 | 5.679517808252791e-07 | 2.815986774129891e-05 | 4.06350898046874e-15 | 0.0027363322605094766 | 122970843.55593719 | 2.6982271850658324e-19 | 8.797738084293888e-09 | -1.7750513218247413e-09 | 1.7122363013477137e-09 | -3.540841172220573e-08 | -1.2936757343684757e-08 | ok |
+
+#### Per slice, Gauss-Newton: its KKT condition and d theta / d V against the exact Hessian's
+
+`report_qs_gauss_newton`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | condition | manifold_residual | against_exact_a | against_exact_b | against_exact_rho | against_exact_m | against_exact_sigma |
+|---|---|---|---|---|---|---|---|
+| 202411 | 1379262.5675214576 | 1.8106078937516817e-18 | 0.1408748520197598 | 0.15735708458618158 | 0.15735708458609698 | 0.12970031780933713 | 0.13872352491276047 |
+| 202411W4 | 402619.14455013344 | 1.2249420270689184e-18 | 0.011590678947100317 | 0.011596266644512972 | 0.011596266644655809 | 0.01177429044568345 | 0.01146201710707929 |
+| 202412 | 49142033.70991267 | 6.157177927645177e-19 | 0.6074500945724592 | 0.6164562532534409 | 0.6164562532534243 | 0.5995182632358607 | 0.6054149233555288 |
+
+#### Per slice and active bound, the multiplier and how far it is from zero
+
+`report_qs_multipliers`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | newton | least_squares | second_step | margin | significance | quote_distance (noise_units) |
+|---|---|---|---|---|---|---|
+| 202411.slope | 0.0038415937394617006 | 0.0038367592406853422 | 0.003841593741450435 | 1931677755.4739857 | 0.9855001422193577 | 2.937325729398761 |
+| 202411W4.slope | 0.0006642018645150012 | 0.0006786579102301798 | 0.0006642018751955657 | 62187898.7911629 | 0.18237912741828632 | 0.6329321764755691 |
+| 202412.slope | 0.09966414677966537 | 0.1006628046056729 | 0.09966414686681649 | 1143578501.0566394 | 4.877448353566728 | 9.627427808222864 |
+
+#### Per contract, the price the sensitivities are of
+
+`report_qs_price`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | paths (count) | price (index_points) | price_se (index_points) |
+|---|---|---|---|
+| asian-arithmetic-call | 1048576 | 336.7943496230489 | 0.44032859960557547 |
+| down-out-call-discrete-one-step | 1048576 | 570.3559147406875 | 0.8285019189572408 |
+| down-out-call-continuous-bridge | 1048576 | 552.8382668792686 | 0.8198867833877109 |
+
+#### Per contract and expiry, d P / d(F, D) by common-random-number differences
+
+`report_qs_market_derivatives`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | dp_df (index_points/index_point) | dp_df_se (index_points/index_point) | dp_df_level (count) | dp_df_truncation (index_points/index_point) | dp_df_rounding (index_points) | dp_dd (index_points) | dp_dd_se (index_points) | dp_dd_level (count) | dp_dd_truncation (index_points) | dp_dd_rounding (index_points) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| asian-arithmetic-call.202411 | 0.13180054722749282 | 0.00010509514005090182 | 4 | 8.137754624881754e-07 | 5.5121953146385115e-11 | 745.1056322256126 | 0.5940416566304062 | 4 | 0.00013325001646080636 | 1.2548156030843943e-06 |
+| asian-arithmetic-call.202411W4 | 0.23552667401732716 | 0.00018675300978060515 | 4 | 1.972340203632017e-06 | 5.5062445205789e-11 | 0 | 0 | 0 | 0 | 7.846036020485306e-08 |
+| asian-arithmetic-call.202412 | 0.18677151163102645 | 0.00014779420151173457 | 4 | 1.3829494127926e-06 | 5.504589512773236e-11 | 337.37260386560024 | 0.44108461549680444 | 0 | 1.3644012142322026e-08 | 7.855068050921983e-08 |
+| down-out-call-discrete-one-step.202411 | 0.02439685905483837 | 0.00018009521242871323 | 4 | 7.1530444796519266e-09 | 9.334815754565802e-11 | 69.55844175523055 | 0.9140150951045074 | 4 | 1.0786081105607082e-05 | 2.1250104163835057e-06 |
+| down-out-call-discrete-one-step.202411W4 | 0.030180805724372293 | 0.00018191265206351123 | 4 | 3.113516345784606e-08 | 9.324738178759968e-11 | 0 | 0 | 0 | 0 | 1.3287138149915168e-07 |
+| down-out-call-discrete-one-step.202412 | 0.531379166749935 | 0.00047626666700497863 | 4 | 3.435691288133924e-07 | 9.321935449165605e-11 | 571.3351791725933 | 0.8299244034811825 | 0 | 1.1661995813483372e-09 | 1.3302433750887814e-07 |
+| down-out-call-continuous-bridge.202411 | 0.046063648889248306 | 0.0005631460674425997 | 4 | 2.539809513396607e-08 | 9.048110539429997e-11 | 177.3466641476347 | 3.803137116906893 | 4 | 2.9847079701994517e-05 | 2.059743828952782e-06 |
+| down-out-call-continuous-bridge.202411W4 | 0.04196843009698627 | 0.00042074113511247115 | 4 | 1.4903731339332982e-08 | 9.038342481628097e-11 | 0 | 0 | 0 | 0 | 1.2879043132083957e-07 |
+| down-out-call-continuous-bridge.202412 | 0.5094593175393815 | 0.00048820370300908057 | 4 | 2.644445571409193e-07 | 9.035625833774654e-11 | 553.7874546362848 | 0.8212944762760407 | 0 | 3.49848505720729e-09 | 1.2893868951040246e-07 |
+
+#### Quote sensitivities d P / d V summed by expiry and k = ln(K / F) bucket, three versions
+
+`report_qs_quote_buckets`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | k_from | k_to | sum (index_points/index_point) | sum_se (index_points/index_point) | max_abs (index_points/index_point) |
+|---|---|---|---|---|---|---|
+| asian-arithmetic-call.market-fixed.202411.b0 | 10 | open | -0.10 | 0.040063701613649916 | 0.011189263453104087 | 0.005758917644441822 |
+| asian-arithmetic-call.market-fixed.202411.b1 | 9 | -0.10 | -0.05 | 0.06575592162267496 | 0.016475256139420167 | 0.00780681675800057 |
+| asian-arithmetic-call.market-fixed.202411.b2 | 10 | -0.05 | -0.02 | 0.04036991954122426 | 0.002085660433747659 | 0.006547913868708495 |
+| asian-arithmetic-call.market-fixed.202411.b3 | 18 | -0.02 | 0.02 | 0.17057620352765526 | 0.0022455182162254665 | 0.015157707202684292 |
+| asian-arithmetic-call.market-fixed.202411.b4 | 14 | 0.02 | 0.05 | -0.0542212066899299 | 0.022138740093958734 | 0.01530116944918707 |
+| asian-arithmetic-call.market-fixed.202411.b5 | 4 | 0.05 | open | -0.08753837079635446 | 0.02334464015845652 | 0.027149259876491836 |
+| asian-arithmetic-call.market-fixed.202411W4.b0 | 3 | open | -0.10 | -0.02766614892219 | 0.001545184508356957 | 0.009491275566973514 |
+| asian-arithmetic-call.market-fixed.202411W4.b1 | 10 | -0.10 | -0.05 | -0.06672326808213375 | 0.004265456138135261 | 0.009612074032370261 |
+| asian-arithmetic-call.market-fixed.202411W4.b2 | 8 | -0.05 | -0.02 | 0.10319983637045911 | 0.0015290361598388137 | 0.023737778402802015 |
+| asian-arithmetic-call.market-fixed.202411W4.b3 | 11 | -0.02 | 0.02 | 0.34584373498627297 | 0.002840351164892654 | 0.03464924577899517 |
+| asian-arithmetic-call.market-fixed.202411W4.b4 | 11 | 0.02 | 0.05 | 0.0721803345918759 | 0.0038430966689920816 | 0.022596601174082753 |
+| asian-arithmetic-call.market-fixed.202411W4.b5 | 8 | 0.05 | open | -0.06993355526751333 | 0.012187214827798446 | 0.011918849467246926 |
+| asian-arithmetic-call.market-fixed.202412.b0 | 26 | open | -0.10 | -0.09680520959177648 | 0.0011588074490016937 | 0.005704601921388108 |
+| asian-arithmetic-call.market-fixed.202412.b1 | 6 | -0.10 | -0.05 | 0.047897579214913444 | 0.0003811073709807306 | 0.01475734558748365 |
+| asian-arithmetic-call.market-fixed.202412.b2 | 3 | -0.05 | -0.02 | 0.06020997284659785 | 0.00024088718273594529 | 0.021814385527784197 |
+| asian-arithmetic-call.market-fixed.202412.b3 | 5 | -0.02 | 0.02 | 0.09479232045788097 | 0.0001956751893782048 | 0.02378561529964407 |
+| asian-arithmetic-call.market-fixed.202412.b4 | 6 | 0.02 | 0.05 | 0.09661973915651612 | 0.0007309575976229225 | 0.019997149729958863 |
+| asian-arithmetic-call.market-fixed.202412.b5 | 18 | 0.05 | open | -0.04045602939767021 | 0.0015392768815851714 | 0.006622601460006761 |
+| asian-arithmetic-call.market-fixed-gn.202411.b0 | 10 | open | -0.10 | 0.03293141860830309 | 0.00923425418745499 | 0.004719222775441637 |
+| asian-arithmetic-call.market-fixed-gn.202411.b1 | 9 | -0.10 | -0.05 | 0.05371547768730957 | 0.013186502341711273 | 0.00636453864989781 |
+| asian-arithmetic-call.market-fixed-gn.202411.b2 | 10 | -0.05 | -0.02 | 0.03754985139500333 | 0.0027431137545310923 | 0.005414552334854236 |
+| asian-arithmetic-call.market-fixed-gn.202411.b3 | 18 | -0.02 | 0.02 | 0.17392646429737108 | 0.0026669684823233384 | 0.01462393811663132 |
+| asian-arithmetic-call.market-fixed-gn.202411.b4 | 14 | 0.02 | 0.05 | -0.05122184911234361 | 0.021275188328327893 | 0.01385309816891745 |
+| asian-arithmetic-call.market-fixed-gn.202411.b5 | 4 | 0.05 | open | -0.07861029981419387 | 0.02088366693322624 | 0.024296043041386814 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b0 | 3 | open | -0.10 | -0.02725512817857222 | 0.001524165632493856 | 0.009349213564054833 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b1 | 10 | -0.10 | -0.05 | -0.06550357521195016 | 0.004201122302115326 | 0.009466633421854678 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b2 | 8 | -0.05 | -0.02 | 0.10272643886304869 | 0.0015237175388347832 | 0.023589355857460553 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b3 | 11 | -0.02 | 0.02 | 0.34444643386423285 | 0.0027907949286948086 | 0.034486035842098015 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b4 | 11 | 0.02 | 0.05 | 0.07479025423360992 | 0.003836790577707275 | 0.022665412327739793 |
+| asian-arithmetic-call.market-fixed-gn.202411W4.b5 | 8 | 0.05 | open | -0.06853647956813834 | 0.012014002669718955 | 0.011640620125688856 |
+| asian-arithmetic-call.market-fixed-gn.202412.b0 | 26 | open | -0.10 | -0.07360185356645642 | 0.00040685926197039056 | 0.004505998161799668 |
+| asian-arithmetic-call.market-fixed-gn.202412.b1 | 6 | -0.10 | -0.05 | 0.04559223305140296 | 0.0002305252232050357 | 0.013919868830990445 |
+| asian-arithmetic-call.market-fixed-gn.202412.b2 | 3 | -0.05 | -0.02 | 0.057438288055353004 | 0.0001560171022119575 | 0.020923646446204036 |
+| asian-arithmetic-call.market-fixed-gn.202412.b3 | 5 | -0.02 | 0.02 | 0.09328883962671575 | 0.0002035870166635748 | 0.023110054513682726 |
+| asian-arithmetic-call.market-fixed-gn.202412.b4 | 6 | 0.02 | 0.05 | 0.10052255666761176 | 0.0005615653532636364 | 0.020393054828010126 |
+| asian-arithmetic-call.market-fixed-gn.202412.b5 | 18 | 0.05 | open | -0.046218948722046994 | 0.0012962945375225372 | 0.007464975004028707 |
+| asian-arithmetic-call.through-parity.202411.b0 | 10 | open | -0.10 | 0.005813569483349455 | 0.011683229497232349 | 0.002805004842055736 |
+| asian-arithmetic-call.through-parity.202411.b1 | 9 | -0.10 | -0.05 | 0.04503350285045881 | 0.016948702584670364 | 0.00564992702820332 |
+| asian-arithmetic-call.through-parity.202411.b2 | 10 | -0.05 | -0.02 | 0.02614532270480886 | 0.0017001723206668893 | 0.00478192316485445 |
+| asian-arithmetic-call.through-parity.202411.b3 | 18 | -0.02 | 0.02 | 0.16657191773555355 | 0.0022430808197313446 | 0.015586724873246097 |
+| asian-arithmetic-call.through-parity.202411.b4 | 14 | 0.02 | 0.05 | -0.05549369075625047 | 0.022836663314616975 | 0.01571538390634727 |
+| asian-arithmetic-call.through-parity.202411.b5 | 4 | 0.05 | open | -0.08969118063315837 | 0.02357278882928678 | 0.02776189304153274 |
+| asian-arithmetic-call.through-parity.202411W4.b0 | 3 | open | -0.10 | -0.029951098451794778 | 0.0015699470996846747 | 0.010345024342910146 |
+| asian-arithmetic-call.through-parity.202411W4.b1 | 10 | -0.10 | -0.05 | -0.08034493057154563 | 0.004372062080938193 | 0.010621151266771565 |
+| asian-arithmetic-call.through-parity.202411W4.b2 | 8 | -0.05 | -0.02 | 0.08591645823398536 | 0.0013975046259889444 | 0.021299282775629515 |
+| asian-arithmetic-call.through-parity.202411W4.b3 | 11 | -0.02 | 0.02 | 0.3508881890703507 | 0.0028658840874753156 | 0.03754641246165064 |
+| asian-arithmetic-call.through-parity.202411W4.b4 | 11 | 0.02 | 0.05 | 0.1117616819340375 | 0.0036023014056839426 | 0.025912937857090333 |
+| asian-arithmetic-call.through-parity.202411W4.b5 | 8 | 0.05 | open | -0.03382333614879596 | 0.012366004506984617 | 0.0077167141653829196 |
+| asian-arithmetic-call.through-parity.202412.b0 | 26 | open | -0.10 | -0.14662711842951912 | 0.0012276041015734493 | 0.008346422275097406 |
+| asian-arithmetic-call.through-parity.202412.b1 | 6 | -0.10 | -0.05 | 0.03711518099649907 | 0.00036200701644983544 | 0.013260829007447092 |
+| asian-arithmetic-call.through-parity.202412.b2 | 3 | -0.05 | -0.02 | 0.05402208737762698 | 0.00022939202266210088 | 0.019961437220803093 |
+| asian-arithmetic-call.through-parity.202412.b3 | 5 | -0.02 | 0.02 | 0.09341003022084117 | 0.00019661448955792763 | 0.02475511346523296 |
+| asian-arithmetic-call.through-parity.202412.b4 | 6 | 0.02 | 0.05 | 0.10392221222129747 | 0.0007089075628869344 | 0.021577489215851668 |
+| asian-arithmetic-call.through-parity.202412.b5 | 18 | 0.05 | open | -0.016578698164667335 | 0.0015288510628536924 | 0.007605895158107794 |
+| down-out-call-discrete-one-step.market-fixed.202411.b0 | 10 | open | -0.10 | 0.14794243346280467 | 0.019801498277821072 | 0.021206225954449043 |
+| down-out-call-discrete-one-step.market-fixed.202411.b1 | 9 | -0.10 | -0.05 | 0.22833965953552987 | 0.029083133139371293 | 0.0275807889077594 |
+| down-out-call-discrete-one-step.market-fixed.202411.b2 | 10 | -0.05 | -0.02 | 0.005059455989581522 | 0.003963170310969163 | 0.018591133636769 |
+| down-out-call-discrete-one-step.market-fixed.202411.b3 | 18 | -0.02 | 0.02 | -0.020795694333142278 | 0.003941910117493725 | 0.02179696262239983 |
+| down-out-call-discrete-one-step.market-fixed.202411.b4 | 14 | 0.02 | 0.05 | -0.19646079595906732 | 0.038802636499470126 | 0.04545749438296616 |
+| down-out-call-discrete-one-step.market-fixed.202411.b5 | 4 | 0.05 | open | -0.2643749877772053 | 0.041423733807013655 | 0.08263210611494237 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b0 | 3 | open | -0.10 | 0.010601436898350894 | 0.010124815766253103 | 0.0036072372352607893 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b1 | 10 | -0.10 | -0.05 | 0.008570308694613272 | 0.02736195493402141 | 0.0032445457961321413 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b2 | 8 | -0.05 | -0.02 | -0.0443077270506235 | 0.010099627400648398 | 0.006486927098774689 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b3 | 11 | -0.02 | 0.02 | 0.008794524545440743 | 0.015918023255111845 | 0.008296492360005065 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b4 | 11 | 0.02 | 0.05 | 0.06792675901159022 | 0.024860319573178975 | 0.009227273655701734 |
+| down-out-call-discrete-one-step.market-fixed.202411W4.b5 | 8 | 0.05 | open | -0.19933897055671365 | 0.0718409332352107 | 0.06878014222074073 |
+| down-out-call-discrete-one-step.market-fixed.202412.b0 | 26 | open | -0.10 | -0.20098038644654032 | 0.00612401279429486 | 0.011272167537069055 |
+| down-out-call-discrete-one-step.market-fixed.202412.b1 | 6 | -0.10 | -0.05 | 0.08560123582986356 | 0.001802877371667283 | 0.03288764787329446 |
+| down-out-call-discrete-one-step.market-fixed.202412.b2 | 3 | -0.05 | -0.02 | 0.15536225809672666 | 0.0011409973510111292 | 0.058979408017860946 |
+| down-out-call-discrete-one-step.market-fixed.202412.b3 | 5 | -0.02 | 0.02 | 0.29898701494055124 | 0.0005820996613370869 | 0.07821336849667349 |
+| down-out-call-discrete-one-step.market-fixed.202412.b4 | 6 | 0.02 | 0.05 | 0.38911505440604355 | 0.0027633471825158243 | 0.07431751892599503 |
+| down-out-call-discrete-one-step.market-fixed.202412.b5 | 18 | 0.05 | open | -0.18655420441484474 | 0.007384068484983657 | 0.035508747218287784 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b0 | 10 | open | -0.10 | 0.12340462310342061 | 0.016335015649487427 | 0.017626258024587213 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b1 | 9 | -0.10 | -0.05 | 0.1867196129430782 | 0.02325360341108153 | 0.022669204053440455 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b2 | 10 | -0.05 | -0.02 | -0.005304229088902754 | 0.005128465169825947 | 0.014643314225847219 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b3 | 18 | -0.02 | 0.02 | -0.01000415527552411 | 0.004734062011989515 | 0.01865506570853685 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b4 | 14 | 0.02 | 0.05 | -0.18735912102917723 | 0.03726941328839198 | 0.04059035682514624 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411.b5 | 4 | 0.05 | open | -0.23423961456850775 | 0.0370571119920602 | 0.07298691112062078 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b0 | 3 | open | -0.10 | 0.010361518143549783 | 0.009982484405078929 | 0.003530193364911621 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b1 | 10 | -0.10 | -0.05 | 0.007825944860046985 | 0.02692220023431696 | 0.003159978577933523 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b2 | 8 | -0.05 | -0.02 | -0.04430384911308848 | 0.010057521819549437 | 0.006462684010639741 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b3 | 11 | -0.02 | 0.02 | 0.009322650031707257 | 0.01556305677886641 | 0.008339497607962574 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b4 | 11 | 0.02 | 0.05 | 0.06885741713027196 | 0.02492712763807722 | 0.009281783233050104 |
+| down-out-call-discrete-one-step.market-fixed-gn.202411W4.b5 | 8 | 0.05 | open | -0.19654627466307617 | 0.07086528449163297 | 0.06797323805582318 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b0 | 26 | open | -0.10 | -0.23204780410813475 | 0.0020745073711996792 | 0.012893035989019253 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b1 | 6 | -0.10 | -0.05 | 0.09956283061798299 | 0.0009792037176145252 | 0.03576124291600191 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b2 | 3 | -0.05 | -0.02 | 0.16221714825534383 | 0.0006240771424190129 | 0.060849359149537374 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b3 | 5 | -0.02 | 0.02 | 0.2980082303056514 | 0.0006023823162813384 | 0.07688765807237458 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b4 | 6 | 0.02 | 0.05 | 0.37447552135780704 | 0.0018280749318431832 | 0.07206715972975375 |
+| down-out-call-discrete-one-step.market-fixed-gn.202412.b5 | 18 | 0.05 | open | -0.12922303409857033 | 0.005325099221199825 | 0.03401976408611995 |
+| down-out-call-discrete-one-step.through-parity.202411.b0 | 10 | open | -0.10 | 0.14909342561365402 | 0.020671908295185504 | 0.021411578031328964 |
+| down-out-call-discrete-one-step.through-parity.202411.b1 | 9 | -0.10 | -0.05 | 0.23073137131499127 | 0.029921219519886244 | 0.02783408970566829 |
+| down-out-call-discrete-one-step.through-parity.202411.b2 | 10 | -0.05 | -0.02 | 0.008834532874480557 | 0.0032713383170009038 | 0.018942395392177788 |
+| down-out-call-discrete-one-step.through-parity.202411.b3 | 18 | -0.02 | 0.02 | -0.021326948498507785 | 0.003937684221061546 | 0.021288601833881954 |
+| down-out-call-discrete-one-step.through-parity.202411.b4 | 14 | 0.02 | 0.05 | -0.20448747935636832 | 0.04008603023476662 | 0.046057853372883956 |
+| down-out-call-discrete-one-step.through-parity.202411.b5 | 4 | 0.05 | open | -0.266829503026841 | 0.041834425989264824 | 0.08325339971845104 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b0 | 3 | open | -0.10 | 0.011172058460527916 | 0.010361053467692132 | 0.003796680309461413 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b1 | 10 | -0.10 | -0.05 | 0.010430563195583158 | 0.028333003353983217 | 0.00343628120990791 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b2 | 8 | -0.05 | -0.02 | -0.04299423700861537 | 0.009157273482867117 | 0.0063266487495401 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b3 | 11 | -0.02 | 0.02 | 0.008708842369270388 | 0.016101678335483413 | 0.008148149858201389 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b4 | 11 | 0.02 | 0.05 | 0.06641653618684816 | 0.023146820950286102 | 0.009071379241561386 |
+| down-out-call-discrete-one-step.through-parity.202411W4.b5 | 8 | 0.05 | open | -0.2002532026525313 | 0.07324774004959851 | 0.06887315042102442 |
+| down-out-call-discrete-one-step.through-parity.202412.b0 | 26 | open | -0.10 | -0.2995902065900203 | 0.006456445337515714 | 0.016949404166878936 |
+| down-out-call-discrete-one-step.through-parity.202412.b1 | 6 | -0.10 | -0.05 | 0.06050503173891272 | 0.0017178433534180224 | 0.029462974464667623 |
+| down-out-call-discrete-one-step.through-parity.202412.b2 | 3 | -0.05 | -0.02 | 0.1394884105090675 | 0.0010896607817399778 | 0.05427965276581193 |
+| down-out-call-discrete-one-step.through-parity.202412.b3 | 5 | -0.02 | 0.02 | 0.29582074272634445 | 0.0005802047041293791 | 0.08267202495499873 |
+| down-out-call-discrete-one-step.through-parity.202412.b4 | 6 | 0.02 | 0.05 | 0.4080968983787149 | 0.0026796675581366764 | 0.07851777418990809 |
+| down-out-call-discrete-one-step.through-parity.202412.b5 | 18 | 0.05 | open | -0.11219095531338422 | 0.007444623209017406 | 0.03812399051430928 |
+| down-out-call-continuous-bridge.market-fixed.202411.b0 | 10 | open | -0.10 | 0.10659890381591902 | 0.019524470840171136 | 0.015006980195558661 |
+| down-out-call-continuous-bridge.market-fixed.202411.b1 | 9 | -0.10 | -0.05 | 0.1479905346738959 | 0.028834578949297623 | 0.01839294952444488 |
+| down-out-call-continuous-bridge.market-fixed.202411.b2 | 10 | -0.05 | -0.02 | -0.03953764330448718 | 0.005084380330564839 | 0.013519637877532532 |
+| down-out-call-continuous-bridge.market-fixed.202411.b3 | 18 | -0.02 | 0.02 | 0.025902201196711435 | 0.004611169102172071 | 0.0199827114661575 |
+| down-out-call-continuous-bridge.market-fixed.202411.b4 | 14 | 0.02 | 0.05 | -0.22088466959144115 | 0.03812957240142569 | 0.04302611634247837 |
+| down-out-call-continuous-bridge.market-fixed.202411.b5 | 4 | 0.05 | open | -0.24408354191477238 | 0.040594539561599065 | 0.07551865825895043 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b0 | 3 | open | -0.10 | -0.0013434561614372338 | 0.009979366463610802 | 0.00084996786804052 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b1 | 10 | -0.10 | -0.05 | -0.04766908401046411 | 0.026968165309449937 | 0.008660436510811147 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b2 | 8 | -0.05 | -0.02 | -0.08210334664394368 | 0.009989847746217393 | 0.010824014426591661 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b3 | 11 | -0.02 | 0.02 | 0.0174574793166301 | 0.01569920422667933 | 0.011064007744560856 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b4 | 11 | 0.02 | 0.05 | 0.0887068950882194 | 0.02459609636295518 | 0.011909834253866264 |
+| down-out-call-continuous-bridge.market-fixed.202411W4.b5 | 8 | 0.05 | open | -0.20047703764933694 | 0.07086520320844221 | 0.06822920848962018 |
+| down-out-call-continuous-bridge.market-fixed.202412.b0 | 26 | open | -0.10 | -0.11878417215199968 | 0.0062723470774905185 | 0.007929934457374554 |
+| down-out-call-continuous-bridge.market-fixed.202412.b1 | 6 | -0.10 | -0.05 | 0.04080031649384852 | 0.0019483395451912377 | 0.021637848279495442 |
+| down-out-call-continuous-bridge.market-fixed.202412.b2 | 3 | -0.05 | -0.02 | 0.11786044777895355 | 0.00127215109897157 | 0.04645963145268461 |
+| down-out-call-continuous-bridge.market-fixed.202412.b3 | 5 | -0.02 | 0.02 | 0.2614217068529897 | 0.0007123216159590286 | 0.07122042679094548 |
+| down-out-call-continuous-bridge.market-fixed.202412.b4 | 6 | 0.02 | 0.05 | 0.38327506045567117 | 0.002756990349626921 | 0.07076157713502873 |
+| down-out-call-continuous-bridge.market-fixed.202412.b5 | 18 | 0.05 | open | -0.20264749438311727 | 0.00736667573335608 | 0.03832223622452968 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b0 | 10 | open | -0.10 | 0.08700661817168792 | 0.016121383920465058 | 0.012152972631086736 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b1 | 9 | -0.10 | -0.05 | 0.11502347030165933 | 0.023125103365155497 | 0.014533843190644274 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b2 | 10 | -0.05 | -0.02 | -0.04712659952218372 | 0.005929829409645576 | 0.012280489637693277 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b3 | 18 | -0.02 | 0.02 | 0.034319716275087404 | 0.005238093984192057 | 0.017715404231507203 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b4 | 14 | 0.02 | 0.05 | -0.21162598730011914 | 0.036628643271031755 | 0.0389347852382565 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411.b5 | 4 | 0.05 | open | -0.21898276025318944 | 0.036311895082666135 | 0.06751150795720555 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b0 | 3 | open | -0.10 | -0.0015445562618110246 | 0.009839113193548726 | 0.0009193451285760565 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b1 | 10 | -0.10 | -0.05 | -0.04830339336972924 | 0.026534989796458408 | 0.008702873225664343 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b2 | 8 | -0.05 | -0.02 | -0.08213577278888205 | 0.009948201107196299 | 0.010828398295300403 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b3 | 11 | -0.02 | 0.02 | 0.01793180621720792 | 0.015350882642038745 | 0.011117768108734745 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b4 | 11 | 0.02 | 0.05 | 0.08988411043644903 | 0.02466172437806141 | 0.011972073564259772 |
+| down-out-call-continuous-bridge.market-fixed-gn.202411W4.b5 | 8 | 0.05 | open | -0.19771966467225027 | 0.06990263711627753 | 0.06747318440651015 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b0 | 26 | open | -0.10 | -0.20208657962207513 | 0.0021282951896455285 | 0.011010847852355288 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b1 | 6 | -0.10 | -0.05 | 0.06448101634869968 | 0.001126724236379827 | 0.0271253666621305 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b2 | 3 | -0.05 | -0.02 | 0.13225645875326142 | 0.0007568768634424628 | 0.0506137719155465 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b3 | 5 | -0.02 | 0.02 | 0.26256706193414475 | 0.0007059037552603347 | 0.06939150403260183 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b4 | 6 | 0.02 | 0.05 | 0.35593271806366744 | 0.0017803437358545496 | 0.06690193332255279 |
+| down-out-call-continuous-bridge.market-fixed-gn.202412.b5 | 18 | 0.05 | open | -0.11148501480924802 | 0.005354934518907615 | 0.03479284614400513 |
+| down-out-call-continuous-bridge.through-parity.202411.b0 | 10 | open | -0.10 | 0.10212149618950168 | 0.02037688332881516 | 0.014696576949141149 |
+| down-out-call-continuous-bridge.through-parity.202411.b1 | 9 | -0.10 | -0.05 | 0.14667220226344338 | 0.02965109853038888 | 0.018229820742140867 |
+| down-out-call-continuous-bridge.through-parity.202411.b2 | 10 | -0.05 | -0.02 | -0.03866623790403931 | 0.004612097805104944 | 0.013363634060510183 |
+| down-out-call-continuous-bridge.through-parity.202411.b3 | 18 | -0.02 | 0.02 | 0.024830017472215034 | 0.0046066716012073666 | 0.01961209018359187 |
+| down-out-call-continuous-bridge.through-parity.202411.b4 | 14 | 0.02 | 0.05 | -0.22774965870868763 | 0.03937246513587381 | 0.04359664213591415 |
+| down-out-call-continuous-bridge.through-parity.202411.b5 | 4 | 0.05 | open | -0.2464933091668233 | 0.04099520512472789 | 0.07614013793974979 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b0 | 3 | open | -0.10 | -0.0005017976169202608 | 0.010218687032663713 | 0.0005676033519897766 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b1 | 10 | -0.10 | -0.05 | -0.04478571525844342 | 0.027946545871285172 | 0.008371259568521245 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b2 | 8 | -0.05 | -0.02 | -0.07983720589613139 | 0.009061501361787074 | 0.010538895065333096 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b3 | 11 | -0.02 | 0.02 | 0.017192148697927317 | 0.015881240184275315 | 0.010774104747578799 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b4 | 11 | 0.02 | 0.05 | 0.0855617626311766 | 0.022891559970807787 | 0.011628364067874682 |
+| down-out-call-continuous-bridge.through-parity.202411W4.b5 | 8 | 0.05 | open | -0.20273329160067735 | 0.07225258036724855 | 0.06850501564718517 |
+| down-out-call-continuous-bridge.through-parity.202412.b0 | 26 | open | -0.10 | -0.21203380119445797 | 0.006599165945947213 | 0.013173089956093148 |
+| down-out-call-continuous-bridge.through-parity.202412.b1 | 6 | -0.10 | -0.05 | 0.01777818470050333 | 0.0018622901987798077 | 0.018470629112949555 |
+| down-out-call-continuous-bridge.through-parity.202412.b2 | 3 | -0.05 | -0.02 | 0.10359013839227628 | 0.0012185754490705745 | 0.04221699866085409 |
+| down-out-call-continuous-bridge.through-parity.202412.b3 | 5 | -0.02 | 0.02 | 0.25848686162083534 | 0.0007095112583387812 | 0.07522843613125038 |
+| down-out-call-continuous-bridge.through-parity.202412.b4 | 6 | 0.02 | 0.05 | 0.4005315591105349 | 0.0026725311545987493 | 0.07453721254094818 |
+| down-out-call-continuous-bridge.through-parity.202412.b5 | 18 | 0.05 | open | -0.1371843589494024 | 0.0074275390347092254 | 0.0407081270583891 |
+
+#### Quote sensitivities summed over every quote: every settlement up one point
+
+`report_qs_quote_totals`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:40:19Z. Targets: SVI-10. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | sum (index_points/index_point) | sum_se (index_points/index_point) |
+|---|---|---|---|
+| asian-arithmetic-call.market-fixed | 180 | 0.6941654751821528 | 0.018803370468601012 |
+| asian-arithmetic-call.market-fixed-gn | 180 | 0.7059801221762604 | 0.019841228486219 |
+| asian-arithmetic-call.through-parity | 180 | 0.6280900996730776 | 0.018638235602317425 |
+| down-out-call-discrete-one-step.market-fixed | 180 | 0.29348737487295906 | 0.04380755828958548 |
+| down-out-call-discrete-one-step.market-fixed-gn | 180 | 0.30172741480387855 | 0.04396872944009397 |
+| down-out-call-discrete-one-step.through-parity | 180 | 0.24162588092212697 | 0.04451308581150009 |
+| down-out-call-continuous-bridge.market-fixed | 180 | 0.03248309986183899 | 0.04438003190296963 |
+| down-out-call-continuous-bridge.market-fixed-gn | 180 | 0.03839264790237691 | 0.044398160345374124 |
+| down-out-call-continuous-bridge.through-parity | 180 | -0.033221005217169024 | 0.045173288735290404 |
+
+#### Per contract, the price with 15 sensitivities, then the quote sensitivities on top
+
+`report_qs_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T06:05:41Z. Targets: SVI-10. Timings: yes. Derived from the option chain: yes.
+
+| row | gradient_median (ms) | implicit_median (ms) | implicit_ratio | parity_median (ms) | parity_ratio | repetitions (count) |
+|---|---|---|---|---|---|---|
+| asian-arithmetic-call | 2792.2675 | 0.49525 | 1.0001773648119314 | 3387.822625 | 2.21346463940149 | 5 |
+| down-out-call-discrete-one-step | 2961.22125 | 0.519917 | 1.0001755751955381 | 5126.310416 | 2.7313229577155034 | 5 |
+| down-out-call-continuous-bridge | 3251.380583 | 0.501792 | 1.000154331979044 | 4193.113625 | 2.2897953069310066 | 5 |
+
+#### Raw SVI fit error per slice, against settlements
+
+`report_svi_fit_error`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-6, SVI-11. Timings: no. Derived from the option chain: yes.
+
+| row | quotes (count) | svi6 (bp_of_F) | svi11 (vol_points) | objective_per_dof |
+|---|---|---|---|---|
+| 202411 | 65 | 0.2867787183006679 | 0.9576403021731241 | 0.20706249836264154 |
+| 202411W4 | 51 | 1.1317032961911349 | 0.40959494100502025 | 2.3236511776255684 |
+| 202412 | 64 | 1.2311502895553388 | 1.3972749889451608 | 3.2378671128431464 |
+
+#### Fitted slices: butterfly checks, nothing repaired
+
+`report_svi_fit_arbitrage`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | model_triples (count) | model_non_convex (count) | grid_points (count) | min_g | k_min_g (log_moneyness) | martini_mingone | violations (count) |
+|---|---|---|---|---|---|---|---|
+| 202411 | 61 | 0 | 14002 | -28.86046281534699 | 0.13350150903884594 | type-1 | 4 |
+| 202411W4 | 47 | 0 | 14002 | -24.87985088659242 | 0.17500000000000002 | type-1 | 4 |
+| 202412 | 60 | 0 | 14002 | -3.261889385463554 | 0.8670001038834672 | type-1 | 4 |
+
+#### Adjacent fitted slices: calendar checks, nothing repaired
+
+`report_svi_fit_calendar`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | grid_points (count) | min_gap (total_variance) | k_min_gap (log_moneyness) | violations (count) |
+|---|---|---|---|---|
+| 202411-202411W4 | 22003 | -0.1515950175802363 | 3 | 4 |
+| 202411W4-202412 | 22003 | -1.81456676003803 | 6.089991751438618 | 2 |
+
+#### Every violation of the fitted slices and pairs
+
+`report_svi_fit_violations`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-9. Timings: no. Derived from the option chain: yes.
+
+| row | kind | k_begin (log_moneyness) | k_end (log_moneyness) | k_worst (log_moneyness) | value | bound | points (count) |
+|---|---|---|---|---|---|---|---|
+| 202411.1 | density | 0.12037318227579721 | 3 | 0.13350150903884594 | -28.86046281534699 | -4.951111050238315e-13 | 6809 |
+| 202411.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411W4.1 | density | 0.16051865857818337 | 3 | 0.17500000000000002 | -24.87985088659242 | -4.555456844858408e-13 | 6753 |
+| 202411W4.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411W4.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202411W4.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202412.1 | density | 0.6826754052339042 | 6.089991751438618 | 0.8670001038834672 | -3.261889385463554 | -8.738579019220155e-14 | 6250 |
+| 202412.2 | d-plus-limit | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202412.3 | right-wing | +inf | +inf | +inf | 4 | 2 | 0 |
+| 202412.4 | martini-mingone | +inf | +inf | +inf | 1 | 4 | 0 |
+| 202411-202411W4.1 | calendar-crossing | -3 | -0.733 | -3 | -0.003736146046412113 | -8.901649759509281e-14 | 2268 |
+| 202411-202411W4.2 | calendar-crossing | 0.0713643970329835 | 3 | 3 | -0.1515950175802363 | -8.154701499485595e-14 | 11990 |
+| 202411-202411W4.3 | calendar-right-wing | +inf | +inf | +inf | -0.1515981127594312 | 0 | 0 |
+| 202411-202411W4.4 | calendar-left-wing | -inf | -inf | -inf | -0.0016474994336630154 | 1 | 0 |
+| 202411W4-202412.1 | calendar-crossing | 0.12664232813225376 | 6.089991751438618 | 6.089991751438618 | -1.81456676003803 | -1.6286798190662498e-13 | 11419 |
+| 202411W4-202412.2 | calendar-right-wing | +inf | +inf | +inf | -1.8180454717557273 | 0 | 0 |
+
+#### Raw SVI fit time per slice, one thread
+
+`report_svi_fit_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-7. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| 202411 | 80.2683335 | 79.236666 | 50 |
+| 202411W4 | 41.920250499999995 | 41.006041 | 50 |
+| 202412 | 59.2089785 | 58.306542 | 50 |
+
+#### Raw SVI surface time: the three fits and every check, one thread
+
+`report_svi_fit_surface_time`, commit `8bb2116be2fb`, claim `result`, started 2026-11-18T05:33:39Z. Targets: SVI-8. Timings: yes. Derived from the option chain: yes.
+
+| row | median (ms) | min (ms) | repetitions (count) |
+|---|---|---|---|
+| surface | 182.83516600000002 | 181.524792 | 50 |
+
+The tables derived from the option chain keep its terms. The attribution their file carries, as in `NOTICE`:
+
+    金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+    此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+    政府資料開放授權條款：https://data.gov.tw/license
+
+    Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+    The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+    Open Government Data License: https://data.gov.tw/license
+
+    Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+    "提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+    Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+    sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+    Fitted parameters, tables and figures here are derived works and are not endorsed by the
+    Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+    金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+    此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+    政府資料開放授權條款：https://data.gov.tw/license
+
+    Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+    The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+    Open Government Data License: https://data.gov.tw/license

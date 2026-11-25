@@ -1,0 +1,573 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2.1 (build 26B131)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.879
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 5
+batches_per_repetition: 10
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-18T05:14:05Z
+bench_workloads: simd-barrier-onestep
+bench_scale: 1 (the workloads' full sizes)
+bench_seed: 20261119
+bench_mc_batches: 50
+bench_threads: 1 for every variant
+bench_instruction_set: NEON (AADP_SIMD_TARGET=baseline, Highway static dispatch); scalar variants are the scalar pricer and kernels of the same binary
+simd_lane_widths_timed: 1,2
+simd_lane_ceiling: 2 double lanes on NEON: no SIMD speedup over one lane can exceed 2. NEON is 2 wide, SSE2 2, AVX2 4, AVX-512 8; Zen 1 runs each 256-bit AVX2 operation as two 128-bit halves, so about 2 lanes' throughput there
+simd_check: pass
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 3796307401951
+perf_instructions: 9040374634330
+perf_counters_note: none
+peak_rss_bytes: 4014080
+measure_start: measure.sh: start load1=1.17 at=2026-11-18T05:13:48Z
+measure_end: measure.sh: end load1=1.15 exit=0 at=2026-11-18T05:31:37Z
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-17T22:14:40-07:00",
+    "num_cpus": 16,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [
+      1.13232,
+      1.23682,
+      1.49902
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 5.3329709416666660e+09,
+      "cpu_time": 5.3326428999999990e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8751274119777572e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 5.3329295375000010e+09,
+      "cpu_time": 5.3325976000000000e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8751419702214656e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 5.3354500208333340e+09,
+      "cpu_time": 5.3351198000000038e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8742561472702388e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 5.3339709750000010e+09,
+      "cpu_time": 5.3336342999999943e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8747758558997407e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 5.3363648000000019e+09,
+      "cpu_time": 5.3360366000000000e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8739348554281743e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.3343372550000010e+09,
+      "cpu_time": 5.3340062399999990e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8746472481594756e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.3339709750000010e+09,
+      "cpu_time": 5.3336342999999943e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.8747758558997407e-01
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.5274020635706133e+06,
+      "cpu_time": 1.5283716504673744e+06,
+      "time_unit": "ns",
+      "items_per_second": 5.3672862458514000e-05
+    },
+    {
+      "name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.scalar/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 2.8633398875163791e-04,
+      "cpu_time": 2.8653353252683383e-04,
+      "time_unit": "ns",
+      "items_per_second": 2.8630913101763489e-04
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 7.7266557875000019e+09,
+      "cpu_time": 7.7261845999999943e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2942209767099708e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 7.7280941541666660e+09,
+      "cpu_time": 7.7275967999999924e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2939800939936033e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 7.7340434666666670e+09,
+      "cpu_time": 7.7306921999999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2929847166103334e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 7.7300169166666670e+09,
+      "cpu_time": 7.7295341000000000e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2936582297043914e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 7.7281574166666670e+09,
+      "cpu_time": 7.7276751999999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2939695015054742e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time_mean",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 7.7293935483333359e+09,
+      "cpu_time": 7.7283365799999971e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2937627037047547e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time_median",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 7.7281574166666670e+09,
+      "cpu_time": 7.7276751999999981e+09,
+      "time_unit": "ns",
+      "items_per_second": 1.2939695015054742e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time_stddev",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 2.8601621266595307e+06,
+      "cpu_time": 1.7747334699211069e+06,
+      "time_unit": "ns",
+      "items_per_second": 4.7859605881112517e-05
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time_cv",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-1/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 3.7003706807971481e-04,
+      "cpu_time": 2.2963977455561432e-04,
+      "time_unit": "ns",
+      "items_per_second": 3.6992568841306153e-04
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 3.8734749708333335e+09,
+      "cpu_time": 3.8732363000000076e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5816611893192676e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 3.8737976833333335e+09,
+      "cpu_time": 3.8735572999999933e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5814461201791983e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 3.8738686291666665e+09,
+      "cpu_time": 3.8736331999999948e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5813988437060564e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 3.8768169250000010e+09,
+      "cpu_time": 3.8765795999999909e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5794357054918188e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 3.8741951958333335e+09,
+      "cpu_time": 3.8739518999999971e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5811812504323273e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time_mean",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.8744306808333344e+09,
+      "cpu_time": 3.8741916599999971e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5810246218257338e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time_median",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 3.8738686291666665e+09,
+      "cpu_time": 3.8736331999999948e+09,
+      "time_unit": "ns",
+      "items_per_second": 2.5813988437060564e-01
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time_stddev",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.3582694785766117e+06,
+      "cpu_time": 1.3589283654933274e+06,
+      "time_unit": "ns",
+      "items_per_second": 9.0444854582339074e-05
+    },
+    {
+      "name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time_cv",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "simd-barrier-onestep.lanes-2/iterations:10/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 3.5057266227420738e-04,
+      "cpu_time": 3.5076436189874208e-04,
+      "time_unit": "ns",
+      "items_per_second": 3.5042228507824652e-04
+    }
+  ]
+}
+@section histogram_simd-barrier-onestep.scalar
+unit ns
+batch_units 1
+batches 50
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 5326766080
+p50 5335154687
+p90 5339348991
+p99 5360320511
+p99.9 5360320511
+p99.99 5360320511
+max 5360320511
+@section histogram_simd-barrier-onestep.lanes-1
+unit ns
+batch_units 1
+batches 50
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 7721713664
+p50 7730102271
+p90 7734296575
+p99 7797211135
+p99.9 7797211135
+p99.99 7797211135
+max 7797211135
+@section histogram_simd-barrier-onestep.lanes-2
+unit ns
+batch_units 1
+batches 50
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 3867148288
+p50 3875536895
+p90 3877634047
+p99 3902799871
+p99.9 3902799871
+p99.99 3902799871
+max 3902799871
+@section simd_simd-barrier-onestep
+AAD-1's up-and-out call (K 120, H 150, 156 dates, vol 20%, r 3%, T 3) under one-step survival, 500,000 paths
+targets: SIMD-1, SIMD-2
+paths: 500000 in 50 batches, one thread, seed 20261119
+scalar price: 1.0594281861865114 (SE 0.00426)
+check lanes-1-bits: pass, mean, SE and 50 batch means
+check lanes-2-bits: pass, mean, SE and 50 batch means
