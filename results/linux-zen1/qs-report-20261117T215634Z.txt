@@ -1,0 +1,373 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: linux-zen1
+cpu_model: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
+logical_cpus: 8
+arch: x86_64
+kernel: Linux 6.12.117+deb13-amd64
+os: Linux, os-release VERSION_ID 13, name withheld
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: SSE2
+simd_double_lanes: 2
+pinning_state: pinned
+pinned_cpus: 4
+meant_idle_cpus: 5 (not enforced)
+pin_method: inherited mask, read back
+observed_cpu: 4
+qos_class: not applicable
+process_nice: 0
+fp_register: MXCSR
+fp_state: 0x1fb2
+fp_ftz: clear
+fp_daz: clear
+timer_source: rdtscp
+timer_calibrated_hz: 1997961198.8
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 20
+timer_min_delta_ticks: 40
+timer_resolution_ns: 20.020
+timer_read_cost_ns: 24.256
+timer_note: invariant TSC yes
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 1.0
+clock_resolution_ns: 20.0
+repetitions: 1
+batches_per_repetition: 1
+warmup: none
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-17T21:56:35Z
+report_tool: aadp_quote_sensitivity_report --report --mode report
+report_inputs: TAIFEX TXO and TX daily settlement prices of trade date 2024-11-15, not tradable quotes; the raw SVI fit of expiries 202411, 202411W4 and 202412 and its 180 calibration settlements, so maturity reaches 33 days only
+report_run: seed 20261115, paths 1048576, batches 64, threads 8, 33 dates, n 4
+smt_siblings: 4-5
+governor: performance
+cpufreq_driver: acpi-cpufreq
+frequency_khz: cpu4:3593462
+max_frequency_khz: 2000000
+turbo: enabled
+perf_counters_source: perf_event_open
+perf_counters_scope: user space only, this thread (exclude_kernel, exclude_hv), measured repetitions only
+perf_cycles: 1223343822040
+perf_instructions: 1682229554178
+perf_counters_note: time_enabled_ns=345128491946 time_running_ns=345128491946 not multiplexed
+peak_rss_bytes: 12337152
+measure_start: measure.sh: start load1=0.30 at=2026-11-17T21:56:35Z cpus=4 governor=performance freq_khz=cpu4:2736940 perf_event_paranoid=2
+measure_end: measure.sh: end load1=8.00 exit=0 at=2026-11-17T22:42:33Z cpus=4 governor=performance freq_khz=cpu4:2274844 perf_event_paranoid=2
+
+@section attribution
+金融監督管理委員會證券期貨局 2024 選擇權每日交易行情（data.gov.tw 資料集 11320，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Options daily trading information (data.gov.tw dataset 11320, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+
+Data originates from the Taiwan Futures Exchange (TAIFEX), described on the dataset page as
+"提供選擇權每日交易行情資料(臺灣期貨交易所)". No version number is published for this dataset.
+Pinned copy: Internet Archive capture 20241117234312 of the dataset's resource URL,
+sha256 fd9ddc6cafcbdd1b08cd0f80912dcbd9c19de515cdb248163183378715d53f1e.
+Fitted parameters, tables and figures here are derived works and are not endorsed by the
+Securities and Futures Bureau, TAIFEX or the Internet Archive.
+
+金融監督管理委員會證券期貨局 2024 期貨每日交易行情（data.gov.tw 資料集 11319，交易日 2024-11-15）
+此開放資料依政府資料開放授權條款 (Open Government Data License) 進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。
+政府資料開放授權條款：https://data.gov.tw/license
+
+Securities and Futures Bureau, Financial Supervisory Commission, Executive Yuan, R.O.C. 2024 Futures daily trading market (data.gov.tw dataset 11319, trade date 2024-11-15)
+The Open Data is made available to the public under the Open Government Data License, User can make use of it when complying to the condition and obligation of its terms.
+Open Government Data License: https://data.gov.tw/license
+@section report_qs_slices
+type table
+title Per slice, the KKT system of the fit, exact Hessian, and the Newton step
+targets SVI-10
+timing no
+uses_chain yes
+column quotes integer count
+column objective real none
+column on_tick_boundary integer count
+column active_bounds integer count
+column stationarity real none
+column gradient_norm real none
+column hessian_asymmetry real none
+column hessian_gn_difference real none
+column condition real none
+column manifold_residual real none
+column newton_a real none
+column newton_b real none
+column newton_rho real none
+column newton_m real none
+column newton_sigma real none
+column gauss_newton text none
+row 202411 65 12.423749901759981 0 1 1.6931544682285584e-08 7.29140852266126e-06 8.659430146101227e-15 0.001572515561607444 1610617.1253426075 1.6338026108132376e-18 4.1842517425699027e-10 -4.0962412511955893e-10 4.0582193837497774e-10 -7.963525932959416e-09 -1.2871412432380435e-09 ok
+row 202411W4 51 106.88795417077621 1 1 3.106918377309305e-07 2.602805699223066e-06 6.593924011655877e-15 0.0006677086095278522 407740.93760887027 1.5912808343550304e-18 1.2146411514174238e-09 -1.0493191273437695e-09 1.0404321011105292e-09 -2.4405679896409575e-08 -4.052627093944645e-09 ok
+row 202412 64 191.0341596577926 1 1 7.562622281324301e-07 2.8185179550714224e-05 2.6622992021624764e-15 0.002736331625707913 122970182.93326558 3.111513965340706e-19 -5.235909913229271e-09 1.6532246758667778e-09 -1.5947208280848997e-09 8.602861859773896e-09 6.662249041950959e-09 ok
+@section report_qs_gauss_newton
+type table
+title Per slice, Gauss-Newton: its KKT condition and d theta / d V against the exact Hessian's
+targets SVI-10
+timing no
+uses_chain yes
+column condition real none
+column manifold_residual real none
+column against_exact_a real none
+column against_exact_b real none
+column against_exact_rho real none
+column against_exact_m real none
+column against_exact_sigma real none
+row 202411 1379265.5016838813 2.3584957703042015e-18 0.14087586068264968 0.15735809454140567 0.15735809454134142 0.12970132307119103 0.1387245335712043
+row 202411W4 402617.47129870625 1.4704433801879377e-18 0.011588406974250719 0.01159399498413492 0.011593994984429534 0.011772022271341673 0.011459742718438045
+row 202412 49142014.213548794 2.431391809774792e-19 0.6074481889888775 0.6164543487123118 0.6164543487122887 0.599516359059783 0.6054130178745329
+@section report_qs_multipliers
+type table
+title Per slice and active bound, the multiplier and how far it is from zero
+targets SVI-10
+timing no
+uses_chain yes
+column newton real none
+column least_squares real none
+column second_step real none
+column margin real none
+column significance real none
+column quote_distance real noise_units
+row 202411.slope 0.0038415937395838654 0.003843525336576955 0.003841593745401939 660286221.9328645 0.9853800960720269 2.938704062806411
+row 202411W4.slope 0.0006642018587367049 0.0006853401300379455 0.0006642018624783347 177516720.75558025 0.18237627375489746 0.6329443885055525
+row 202412.slope 0.09966414691894732 0.10073748349204126 0.09966414688805715 3226403793.760695 4.883168511077157 9.635255283639992
+@section report_qs_price
+type table
+title Per contract, the price the sensitivities are of
+targets SVI-10
+timing no
+uses_chain yes
+column paths integer count
+column price real index_points
+column price_se real index_points
+row asian-arithmetic-call 1048576 336.79435007497824 0.4403286076332576
+row down-out-call-discrete-one-step 1048576 570.3559156267366 0.8285018873893021
+row down-out-call-continuous-bridge 1048576 552.8382676021347 0.8198867527346113
+@section report_qs_market_derivatives
+type table
+title Per contract and expiry, d P / d(F, D) by common-random-number differences
+targets SVI-10
+timing no
+uses_chain yes
+column dp_df real index_points/index_point
+column dp_df_se real index_points/index_point
+column dp_df_level integer count
+column dp_df_truncation real index_points/index_point
+column dp_df_rounding real index_points
+column dp_dd real index_points
+column dp_dd_se real index_points
+column dp_dd_level integer count
+column dp_dd_truncation real index_points
+column dp_dd_rounding real index_points
+row asian-arithmetic-call.202411 0.1318005473810082 0.00010509512907857524 4 8.137887194670235e-07 5.512195322035081e-11 745.1056328592247 0.5940415767397769 4 0.00013335247490431357 1.2548156047681756e-06
+row asian-arithmetic-call.202411W4 0.2355266742825689 0.000186753001229933 4 1.9723292498108336e-06 5.506244527967484e-11 0 0 0 0 7.846036031013553e-08
+row asian-arithmetic-call.202412 0.18677151184588592 0.00014779419237239487 4 1.382978341790686e-06 5.5045895201595995e-11 337.3726043183223 0.4410846235366781 0 2.332285475858953e-09 7.855068061462348e-08
+row down-out-call-discrete-one-step.202411 0.024396860208564457 0.0001800955272871259 4 7.112127848457606e-09 9.33481576906746e-11 69.55845886352235 0.9140158517884149 4 1.0804709916101274e-05 2.125010419684714e-06
+row down-out-call-discrete-one-step.202411W4 0.030180806155252243 0.00018191266058697995 4 3.1157071093274036e-08 9.324738193245968e-11 0 0 0 0 1.3287138170556768e-07
+row down-out-call-discrete-one-step.202412 0.531379167173162 0.00047626669012554285 4 3.434592966700123e-07 9.321935463647252e-11 571.3351800602023 0.8299243718671448 0 5.364313437894452e-09 1.3302433771553174e-07
+row down-out-call-continuous-bridge.202411 0.04606364881688215 0.0005631460669131345 4 2.5398749797789222e-08 9.048110551260892e-11 177.34666405414143 3.80313701597949 4 2.982472514645451e-05 2.0597438316460094e-06
+row down-out-call-continuous-bridge.202411W4 0.041968430574821004 0.00042074113927640446 4 1.4903731346271876e-08 9.03834249344622e-11 0 0 0 0 1.2879043148924004e-07
+row down-out-call-continuous-bridge.202412 0.5094593178890425 0.00048820370171544144 4 2.6453265167258877e-07 9.035625845589226e-11 553.7874553603702 0.8212944455719148 0 2.2623339646088425e-08 1.289386896789968e-07
+@section report_qs_quote_buckets
+type table
+title Quote sensitivities d P / d V summed by expiry and k = ln(K / F) bucket, three versions
+targets SVI-10
+timing no
+uses_chain yes
+column quotes integer count
+column k_from text none
+column k_to text none
+column sum real index_points/index_point
+column sum_se real index_points/index_point
+column max_abs real index_points/index_point
+row asian-arithmetic-call.market-fixed.202411.b0 10 open -0.10 0.0400614916766895 0.011188342117338634 0.005758601433287212
+row asian-arithmetic-call.market-fixed.202411.b1 9 -0.10 -0.05 0.06575256039126502 0.016473847559236185 0.007806418149221025
+row asian-arithmetic-call.market-fixed.202411.b2 10 -0.05 -0.02 0.040370016617999466 0.0020855954272754294 0.006547649319109592
+row asian-arithmetic-call.market-fixed.202411.b3 18 -0.02 0.02 0.17057632440505038 0.00224543879209669 0.01515738707642741
+row asian-arithmetic-call.market-fixed.202411.b4 14 0.02 0.05 -0.05421813519081085 0.02213753914395492 0.015300451911748768
+row asian-arithmetic-call.market-fixed.202411.b5 4 0.05 open -0.0875341819110959 0.02334298148108988 0.02714794800456967
+row asian-arithmetic-call.market-fixed.202411W4.b0 3 open -0.10 -0.02766599931318475 0.0015451308649591434 0.009491226660742598
+row asian-arithmetic-call.market-fixed.202411W4.b1 10 -0.10 -0.05 -0.06672308333433886 0.004265348615968132 0.009612027312587434
+row asian-arithmetic-call.market-fixed.202411W4.b2 8 -0.05 -0.02 0.10319940497585017 0.0015289432289921443 0.02373771912015668
+row asian-arithmetic-call.market-fixed.202411W4.b3 11 -0.02 0.02 0.3458439750550222 0.0028403496013502997 0.034649268102964696
+row asian-arithmetic-call.market-fixed.202411W4.b4 11 0.02 0.05 0.0721805206065847 0.0038430229958146657 0.022596692090543085
+row asian-arithmetic-call.market-fixed.202411W4.b5 8 0.05 open -0.06993709606556657 0.012186283451390927 0.011919104076867857
+row asian-arithmetic-call.market-fixed.202412.b0 26 open -0.10 -0.09680578224905115 0.001158685037521504 0.005704637051741623
+row asian-arithmetic-call.market-fixed.202412.b1 6 -0.10 -0.05 0.04789774459406024 0.0003810755967255711 0.014757381388197821
+row asian-arithmetic-call.market-fixed.202412.b2 3 -0.05 -0.02 0.06021005640579763 0.00024087480846385616 0.021814407655694923
+row asian-arithmetic-call.market-fixed.202412.b3 5 -0.02 0.02 0.09479229240705783 0.0001956734878486723 0.023785622291012998
+row asian-arithmetic-call.market-fixed.202412.b4 6 0.02 0.05 0.09661952819055697 0.0007309240349345093 0.019997115983408253
+row asian-arithmetic-call.market-fixed.202412.b5 18 0.05 open -0.04045510259745115 0.00153906674100219 0.006622582995601478
+row asian-arithmetic-call.market-fixed-gn.202411.b0 10 open -0.10 0.032929545859416265 0.009233476602851984 0.004718956026456174
+row asian-arithmetic-call.market-fixed-gn.202411.b1 9 -0.10 -0.05 0.053712702253079656 0.013185341330021083 0.006364210397191851
+row asian-arithmetic-call.market-fixed-gn.202411.b2 10 -0.05 -0.02 0.03755012099787568 0.002742991812228313 0.0054143450298407055
+row asian-arithmetic-call.market-fixed-gn.202411.b3 18 -0.02 0.02 0.17392640668366477 0.0026668805025880675 0.014623686133169287
+row asian-arithmetic-call.market-fixed-gn.202411.b4 14 0.02 0.05 -0.05121883344965662 0.02127401956842337 0.013852440552316523
+row asian-arithmetic-call.market-fixed-gn.202411.b5 4 0.05 open -0.07860649314522024 0.020882173987010737 0.024294854909335615
+row asian-arithmetic-call.market-fixed-gn.202411W4.b0 3 open -0.10 -0.027254974112334535 0.0015241150138340202 0.009349163082902841
+row asian-arithmetic-call.market-fixed-gn.202411W4.b1 10 -0.10 -0.05 -0.06550337369560448 0.00420102179781324 0.009466585047779263
+row asian-arithmetic-call.market-fixed-gn.202411W4.b2 8 -0.05 -0.02 0.10272600797668253 0.0015236283963797968 0.023589295525456695
+row asian-arithmetic-call.market-fixed-gn.202411W4.b3 11 -0.02 0.02 0.3444466572156193 0.002790795075265719 0.03448605616256249
+row asian-arithmetic-call.market-fixed-gn.202411W4.b4 11 0.02 0.05 0.07479047684019348 0.00383671689080743 0.022665503672056213
+row asian-arithmetic-call.market-fixed-gn.202411W4.b5 8 0.05 open -0.06853996808676305 0.012013113109893175 0.011640868470615063
+row asian-arithmetic-call.market-fixed-gn.202412.b0 26 open -0.10 -0.07360204537282763 0.00040685290598718184 0.004506011221871359
+row asian-arithmetic-call.market-fixed-gn.202412.b1 6 -0.10 -0.05 0.045592320704606185 0.00023051670640836805 0.013919884664787718
+row asian-arithmetic-call.market-fixed-gn.202412.b2 3 -0.05 -0.02 0.05743831599098609 0.00015601684017097468 0.02092365203636498
+row asian-arithmetic-call.market-fixed-gn.202412.b3 5 -0.02 0.02 0.09328880065909244 0.0002035825064498549 0.023110051584393
+row asian-arithmetic-call.market-fixed-gn.202412.b4 6 0.02 0.05 0.100522444301644 0.0005615555307005563 0.020393034274401062
+row asian-arithmetic-call.market-fixed-gn.202412.b5 18 0.05 open -0.04621833373355584 0.001296209970486251 0.007464970671990506
+row asian-arithmetic-call.through-parity.202411.b0 10 open -0.10 0.005811274475478912 0.011682270591901526 0.002804675954679962
+row asian-arithmetic-call.through-parity.202411.b1 9 -0.10 -0.05 0.04503004734900233 0.016947254109645957 0.005649520465489341
+row asian-arithmetic-call.through-parity.202411.b2 10 -0.05 -0.02 0.026145307457634742 0.0017001325170385643 0.004781645528667153
+row asian-arithmetic-call.through-parity.202411.b3 18 -0.02 0.02 0.1665720448720168 0.002243001788853334 0.01558641774331242
+row asian-arithmetic-call.through-parity.202411.b4 14 0.02 0.05 -0.05549043746146835 0.022835398253634242 0.015714654841344915
+row asian-arithmetic-call.through-parity.202411.b5 4 0.05 open -0.08968694643577088 0.02357111087479265 0.027760569998611966
+row asian-arithmetic-call.through-parity.202411W4.b0 3 open -0.10 -0.02995093209549323 0.0015698901779237534 0.010344969823720086
+row asian-arithmetic-call.through-parity.202411W4.b1 10 -0.10 -0.05 -0.08034468959976585 0.0043719421196991674 0.010621101828569852
+row asian-arithmetic-call.through-parity.202411W4.b2 8 -0.05 -0.02 0.08591606737354389 0.0013974198578308313 0.021299228012257865
+row asian-arithmetic-call.through-parity.202411W4.b3 11 -0.02 0.02 0.3508884260648425 0.0028658826544067533 0.03754642995945799
+row asian-arithmetic-call.through-parity.202411W4.b4 11 0.02 0.05 0.11176181810469066 0.003602236369931818 0.025913024209672213
+row asian-arithmetic-call.through-parity.202411W4.b5 8 0.05 open -0.03382690870721545 0.012365066059619442 0.00771697271038226
+row asian-arithmetic-call.through-parity.202412.b0 26 open -0.10 -0.1466277078876983 0.0012274677116610286 0.00834646014783576
+row asian-arithmetic-call.through-parity.202412.b1 6 -0.10 -0.05 0.03711533873986624 0.00036197759881028324 0.013260864223535325
+row asian-arithmetic-call.through-parity.202412.b2 3 -0.05 -0.02 0.05402216358108057 0.00022938059737708693 0.01996145745841517
+row asian-arithmetic-call.through-parity.202412.b3 5 -0.02 0.02 0.09341000180821005 0.00019661260688115276 0.024755093452516728
+row asian-arithmetic-call.through-parity.202412.b4 6 0.02 0.05 0.10392200439210468 0.000708875766970203 0.02157745698045312
+row asian-arithmetic-call.through-parity.202412.b5 18 0.05 open -0.01657774123380668 0.0015286269064118503 0.0076058767350331334
+row down-out-call-discrete-one-step.market-fixed.202411.b0 10 open -0.10 0.14795494410147977 0.019800443483177742 0.021208014826580815
+row down-out-call-discrete-one-step.market-fixed.202411.b1 9 -0.10 -0.05 0.22835869904258618 0.029081501965559853 0.027583097789630282
+row down-out-call-discrete-one-step.market-fixed.202411.b2 10 -0.05 -0.02 0.005058957714092142 0.003963231457331052 0.018592638749125583
+row down-out-call-discrete-one-step.market-fixed.202411.b3 18 -0.02 0.02 -0.020796360067318515 0.003942215145576699 0.021799057126985634
+row down-out-call-discrete-one-step.market-fixed.202411.b4 14 0.02 0.05 -0.19647428165129885 0.0388031138062472 0.045461160883358345
+row down-out-call-discrete-one-step.market-fixed.202411.b5 4 0.05 open -0.2643964835032886 0.04142235433896731 0.08263884173760125
+row down-out-call-discrete-one-step.market-fixed.202411W4.b0 3 open -0.10 0.010596135127159845 0.010126478847104813 0.003605517087016097
+row down-out-call-discrete-one-step.market-fixed.202411W4.b1 10 -0.10 -0.05 0.008556343589599544 0.027366576403267902 0.0032427211550863956
+row down-out-call-discrete-one-step.market-fixed.202411W4.b2 8 -0.05 -0.02 -0.044301993618812256 0.010101095165843918 0.006485636320034288
+row down-out-call-discrete-one-step.market-fixed.202411W4.b3 11 -0.02 0.02 0.008801890015933398 0.015920787394342738 0.008295535585995988
+row down-out-call-discrete-one-step.market-fixed.202411W4.b4 11 0.02 0.05 0.06791307864187926 0.024864998205162903 0.009225714379637616
+row down-out-call-discrete-one-step.market-fixed.202411W4.b5 8 0.05 open -0.1992997678184003 0.07185063523548675 0.06876537426758315
+row down-out-call-discrete-one-step.market-fixed.202412.b0 26 open -0.10 -0.20097797321955083 0.006124372618089547 0.011272046660486534
+row down-out-call-discrete-one-step.market-fixed.202412.b1 6 -0.10 -0.05 0.08560056657235915 0.0018029593738937992 0.032887487612966115
+row down-out-call-discrete-one-step.market-fixed.202412.b2 3 -0.05 -0.02 0.1553618258130427 0.0011410371748942448 0.05897928163670896
+row down-out-call-discrete-one-step.market-fixed.202412.b3 5 -0.02 0.02 0.2989869804054985 0.0005821033546664285 0.07821342780477236
+row down-out-call-discrete-one-step.market-fixed.202412.b4 6 0.02 0.05 0.3891160639040747 0.0027634907475463538 0.07431765134217927
+row down-out-call-discrete-one-step.market-fixed.202412.b5 18 0.05 open -0.18655535185646357 0.007384712802707776 0.035508921007088246
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b0 10 open -0.10 0.12341494693125926 0.016334111984504292 0.017627728714864004
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b1 9 -0.10 -0.05 0.1867349882712895 0.023252243061784392 0.02267107939857635
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b2 10 -0.05 -0.02 -0.005305549887634453 0.005128424910922923 0.01464447729699684
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b3 18 -0.02 0.02 -0.010003956351238198 0.004734279865298939 0.018656873810264835
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b4 14 0.02 0.05 -0.1873716162982576 0.037269877314821016 0.04059357047229851
+row down-out-call-discrete-one-step.market-fixed-gn.202411.b5 4 0.05 open -0.23425833828225684 0.03705588912352755 0.07299276360080784
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b0 3 open -0.10 0.01035633290383146 0.009984138743539412 0.0035285108665338563
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b1 10 -0.10 -0.05 0.007812307225818917 0.02692678040112868 0.003158194432840146
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b2 8 -0.05 -0.02 -0.044298201617381044 0.01005900708837338 0.0064614165987251495
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b3 11 -0.02 0.02 0.009329795097900717 0.01556576614067458 0.008338544902092605
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b4 11 0.02 0.05 0.06884377642195491 0.02493183729391403 0.009280235811241207
+row down-out-call-discrete-one-step.market-fixed-gn.202411W4.b5 8 0.05 open -0.19650805199798357 0.07087503960450986 0.06795880400978731
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b0 26 open -0.10 -0.23204687530720944 0.0020746201365363153 0.012892983212218545
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b1 6 -0.10 -0.05 0.09956246965469073 0.000979233896221569 0.03576116177476829
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b2 3 -0.05 -0.02 0.16221693709315788 0.0006240876853518787 0.06084929865751709
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b3 5 -0.02 0.02 0.29800824136632037 0.0006023955601481236 0.07688769747699334
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b4 6 0.02 0.05 0.3744761367120021 0.001828161807805164 0.07206723998463482
+row down-out-call-discrete-one-step.market-fixed-gn.202412.b5 18 0.05 open -0.12922303084329761 0.005325524318112366 0.034019879334516334
+row down-out-call-discrete-one-step.through-parity.202411.b0 10 open -0.10 0.1491065064351989 0.020670800855533855 0.021413417005028627
+row down-out-call-discrete-one-step.through-parity.202411.b1 9 -0.10 -0.05 0.23075092518300414 0.029919531583161352 0.027836457063828444
+row down-out-call-discrete-one-step.through-parity.202411.b2 10 -0.05 -0.02 0.008834623511648623 0.003271473122282671 0.0189439542327768
+row down-out-call-discrete-one-step.through-parity.202411.b3 18 -0.02 0.02 -0.02132761628957246 0.003937991847251535 0.02129063318785437
+row down-out-call-discrete-one-step.through-parity.202411.b4 14 0.02 0.05 -0.20450181829178382 0.04008638739914723 0.04606158507942743
+row down-out-call-discrete-one-step.through-parity.202411.b5 4 0.05 open -0.2668512631133614 0.0418330174521211 0.08326020203955099
+row down-out-call-discrete-one-step.through-parity.202411W4.b0 3 open -0.10 0.011166600142871023 0.010362763284562579 0.003794910987023968
+row down-out-call-discrete-one-step.through-parity.202411W4.b1 10 -0.10 -0.05 0.01041594561516502 0.028337793071709635 0.0034343983707818496
+row down-out-call-discrete-one-step.through-parity.202411W4.b2 8 -0.05 -0.02 -0.04298907061776678 0.009158575918642768 0.006325430858428135
+row down-out-call-discrete-one-step.through-parity.202411W4.b3 11 -0.02 0.02 0.008716299357588456 0.016104477605152195 0.008147282171145407
+row down-out-call-discrete-one-step.through-parity.202411W4.b4 11 0.02 0.05 0.06640384577875924 0.02315121285068241 0.009069919339237103
+row down-out-call-discrete-one-step.through-parity.202411W4.b5 8 0.05 open -0.20021321654665775 0.07325768089710732 0.06885828082341207
+row down-out-call-discrete-one-step.through-parity.202412.b0 26 open -0.10 -0.29958763169017405 0.006456833273391363 0.01694931101825289
+row down-out-call-discrete-one-step.through-parity.202412.b1 6 -0.10 -0.05 0.060504391299756016 0.0017179202814539515 0.02946282080671602
+row down-out-call-discrete-one-step.through-parity.202412.b2 3 -0.05 -0.02 0.13948798380757774 0.001089698234321556 0.05427952969391915
+row down-out-call-discrete-one-step.through-parity.202412.b3 5 -0.02 0.02 0.2958207153859891 0.000580208935688942 0.08267208049382625
+row down-out-call-discrete-one-step.through-parity.202412.b4 6 0.02 0.05 0.40809786643187224 0.0026798061389129296 0.07851790224450579
+row down-out-call-discrete-one-step.through-parity.202412.b5 18 0.05 open -0.11219217692404815 0.007445276321722498 0.03812415612314517
+row down-out-call-continuous-bridge.market-fixed.202411.b0 10 open -0.10 0.10661116241107521 0.01952355320504879 0.015008733647546119
+row down-out-call-continuous-bridge.market-fixed.202411.b1 9 -0.10 -0.05 0.148009218866229 0.02883316018982566 0.018395214608219888
+row down-out-call-continuous-bridge.market-fixed.202411.b2 10 -0.05 -0.02 -0.039538075599649 0.005084430813303024 0.01352086576466039
+row down-out-call-continuous-bridge.market-fixed.202411.b3 18 -0.02 0.02 0.025901490040753473 0.0046115278483660335 0.01998470288137745
+row down-out-call-continuous-bridge.market-fixed.202411.b4 14 0.02 0.05 -0.22089783042966096 0.03813023578695119 0.043029703517952794
+row down-out-call-continuous-bridge.market-fixed.202411.b5 4 0.05 open -0.24410458624369705 0.04059341314951544 0.07552525448576443
+row down-out-call-continuous-bridge.market-fixed.202411W4.b0 3 open -0.10 -0.0013489247701647126 0.009981038461848465 0.0008518337476812645
+row down-out-call-continuous-bridge.market-fixed.202411W4.b1 10 -0.10 -0.05 -0.047683501463990606 0.026972763388399473 0.008660996710824998
+row down-out-call-continuous-bridge.market-fixed.202411W4.b2 8 -0.05 -0.02 -0.08209745150746602 0.009991416865994003 0.0108232479944775
+row down-out-call-continuous-bridge.market-fixed.202411W4.b3 11 -0.02 0.02 0.017465103591208148 0.015701964841408553 0.01106302617855308
+row down-out-call-continuous-bridge.market-fixed.202411W4.b4 11 0.02 0.05 0.08869282007105748 0.02460088111507185 0.011908471210494001
+row down-out-call-continuous-bridge.market-fixed.202411W4.b5 8 0.05 open -0.20043665731578436 0.07087517090673014 0.06821399052481435
+row down-out-call-continuous-bridge.market-fixed.202412.b0 26 open -0.10 -0.11878211034616701 0.006272703064844091 0.007929881559356367
+row down-out-call-continuous-bridge.market-fixed.202412.b1 6 -0.10 -0.05 0.040799710185892124 0.0019484193130887826 0.021637705434331966
+row down-out-call-continuous-bridge.market-fixed.202412.b2 3 -0.05 -0.02 0.11786006767204693 0.0012721897324178698 0.046459521243875423
+row down-out-call-continuous-bridge.market-fixed.202412.b3 5 -0.02 0.02 0.26142169490288597 0.0007123312235737495 0.07122048537385156
+row down-out-call-continuous-bridge.market-fixed.202412.b4 6 0.02 0.05 0.3832760035223326 0.002757148902023468 0.07076170183952879
+row down-out-call-continuous-bridge.market-fixed.202412.b5 18 0.05 open -0.20264842186509496 0.007367329852090659 0.03832239884119182
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b0 10 open -0.10 0.08701674425695866 0.016120595044705255 0.012154415691991879
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b1 9 -0.10 -0.05 0.11503857592925179 0.023123918111467166 0.014535659530840347
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b2 10 -0.05 -0.02 -0.047127844956699444 0.0059298092259383595 0.012281582260164875
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b3 18 -0.02 0.02 0.034319858417812696 0.005238380110595892 0.01771714318878183
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b4 14 0.02 0.05 -0.211638205478636 0.03662928536712423 0.03893793293185638
+row down-out-call-continuous-bridge.market-fixed-gn.202411.b5 4 0.05 open -0.21900111027648406 0.03631089782829706 0.06751724525543257
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b0 3 open -0.10 -0.0015499051621798016 0.009840775883906255 0.0009211699761569173
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b1 10 -0.10 -0.05 -0.04831747280755523 0.026539545007836417 0.00870341673930438
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b2 8 -0.05 -0.02 -0.08212996353567847 0.00994978717604644 0.010827642868401521
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b3 11 -0.02 0.02 0.01793920134269418 0.015353586993079078 0.011116790216652113
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b4 11 0.02 0.05 0.08987007547227396 0.024666540661652085 0.011970719561239091
+row down-out-call-continuous-bridge.market-fixed-gn.202411W4.b5 8 0.05 open -0.19768027663379556 0.06991265188289689 0.06745830532814098
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b0 26 open -0.10 -0.20208560838068698 0.0021284056193355584 0.011010804259478868
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b1 6 -0.10 -0.05 0.06448063908060442 0.0011267564268207172 0.027125281937209977
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b2 3 -0.05 -0.02 0.1322562387898385 0.0007568917857888027 0.050613709010575825
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b3 5 -0.02 0.02 0.2625670755825106 0.0007059229735421777 0.06939154579538018
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b4 6 0.02 0.05 0.3559333636310005 0.001780441217154612 0.06690201773979937
+row down-out-call-continuous-bridge.market-fixed-gn.202412.b5 18 0.05 open -0.11148502763868795 0.005355377770560988 0.034792966540348136
+row down-out-call-continuous-bridge.through-parity.202411.b0 10 open -0.10 0.10213430997640523 0.020375919252796 0.014698380172533566
+row down-out-call-continuous-bridge.through-parity.202411.b1 9 -0.10 -0.05 0.1466913904689626 0.029649628809674203 0.0182321429403341
+row down-out-call-continuous-bridge.through-parity.202411.b2 10 -0.05 -0.02 -0.038666092443674374 0.004612187038272423 0.013364804785817358
+row down-out-call-continuous-bridge.through-parity.202411.b3 18 -0.02 0.02 0.02482930324518378 0.00460703223021577 0.019614025514376198
+row down-out-call-continuous-bridge.through-parity.202411.b4 14 0.02 0.05 -0.22776365991425998 0.039373018929813756 0.04360029307943387
+row down-out-call-continuous-bridge.through-parity.202411.b5 4 0.05 open -0.2465146117482921 0.04099405247967632 0.07614679927329339
+row down-out-call-continuous-bridge.through-parity.202411W4.b0 3 open -0.10 -0.0005074266818127321 0.010220408688230239 0.0005695252236288073
+row down-out-call-continuous-bridge.through-parity.202411W4.b1 10 -0.10 -0.05 -0.044800800513582685 0.027951322684061898 0.008371892336178476
+row down-out-call-continuous-bridge.through-parity.202411W4.b2 8 -0.05 -0.02 -0.07983189303495061 0.009062895049341461 0.010538202736847701
+row down-out-call-continuous-bridge.through-parity.202411W4.b3 11 -0.02 0.02 0.01719986773580208 0.015884037213372455 0.010773214628837584
+row down-out-call-continuous-bridge.through-parity.202411W4.b4 11 0.02 0.05 0.0855487053258841 0.022896044956231272 0.01162708728390463
+row down-out-call-continuous-bridge.through-parity.202411W4.b5 8 0.05 open -0.2026921043742387 0.0722627979888384 0.0684896927585248
+row down-out-call-continuous-bridge.through-parity.202412.b0 26 open -0.10 -0.21203158916963774 0.006599552475279194 0.013173010549234754
+row down-out-call-continuous-bridge.through-parity.202412.b1 6 -0.10 -0.05 0.017777605525308073 0.001862364378041486 0.018470492348435414
+row down-out-call-continuous-bridge.through-parity.202412.b2 3 -0.05 -0.02 0.10358976414929387 0.001218611497492938 0.04221689166406133
+row down-out-call-continuous-bridge.through-parity.202412.b3 5 -0.02 0.02 0.2584868562631563 0.0007095213544751602 0.07522849111051554
+row down-out-call-continuous-bridge.through-parity.202412.b4 6 0.02 0.05 0.4005324642224533 0.002672684327714843 0.07453733313003631
+row down-out-call-continuous-bridge.through-parity.202412.b5 18 0.05 open -0.13718535630661033 0.00742820006922393 0.04070828224884685
+@section report_qs_quote_totals
+type table
+title Quote sensitivities summed over every quote: every settlement up one point
+targets SVI-10
+timing no
+uses_chain yes
+column quotes integer count
+column sum real index_points/index_point
+column sum_se real index_points/index_point
+row asian-arithmetic-call.market-fixed 180 0.6941645346644346 0.018802245508890005
+row asian-arithmetic-call.market-fixed-gn 180 0.7059797778868979 0.01984008826521304
+row asian-arithmetic-call.through-parity 180 0.6280891307972524 0.018637095402257962
+row down-out-call-discrete-one-step.market-fixed 180 0.29350327319257224 0.04381140681491985
+row down-out-call-discrete-one-step.market-fixed-gn 180 0.3017403110929669 0.04397216029015361
+row down-out-call-discrete-one-step.through-parity 180 0.2416429094760657 0.04451712368780569
+row down-out-call-continuous-bridge.market-fixed 180 0.03249971172180642 0.044383639908578396
+row down-out-call-continuous-bridge.market-fixed-gn 180 0.03840635763254171 0.044401347166235165
+row down-out-call-continuous-bridge.through-parity 180 -0.033203267274609906 0.045177105914068684
