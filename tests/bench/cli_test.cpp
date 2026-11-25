@@ -402,7 +402,8 @@ void docs_tree(const fs::path& root) {
          "measured_run,run 1,linux-zen1,references/r.csv,,,,,,,\n"
          "oracle_run,run 1,linux-zen1,references/r.csv,,,,,,,\n";
   std::ofstream(root / "references" / "r.csv")
-      << "id,estimate,reference,se,bound,verdict\nA,1,1,1,1,pass\nB,1,1,1,1,FAIL\n";
+      << "# Code run at commit 89abcde.\n"
+         "id,estimate,reference,se,bound,verdict\nA,1,1,1,1,pass\nB,1,1,1,1,FAIL\n";
   std::ofstream(root / "BENCHMARKS.md") << "# BENCHMARKS\n";
   std::ofstream(root / "README.md") << "# r\n\n<!-- BEGIN GENERATED HEADLINE: aadp_results_table "
                                        "--docs . --write; do not edit -->\n<!-- END GENERATED "

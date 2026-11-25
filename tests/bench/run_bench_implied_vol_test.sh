@@ -77,9 +77,11 @@ check "every quote inverted" grep -q '^bench_inversion_check: pass' "$file"
 "$table" --iteration "$file" >"$scratch/table.md" 2>"$scratch/table.err"
 check "the table tool renders it as iteration" test $? -eq 0
 check "under the iteration banner" grep -q '^\*\*ITERATION ONLY: not results.\*\*' "$scratch/table.md"
+# The build column: the file's simd_cmake_target in backticks, then its simd_target.
+build="\`$(awk '$1 == "simd_cmake_target:" { print $2; exit }' "$file")\`, $(awk 'sub(/^simd_target: /, "") { print; exit }' "$file")"
 for name in bm_impliedvolatility bm_black76price; do
   # 2 repetitions of 50 batches each.
-  check "with a row for $name" grep -q "^| $name | 2 | 100 | " "$scratch/table.md"
+  check "with a row for $name" grep -qF "| $name | $build | 2 | 100 | " "$scratch/table.md"
 done
 "$table" "$file" >/dev/null 2>"$scratch/table-plain.err"
 check "the table tool without --iteration refuses it" test $? -ne 0

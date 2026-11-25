@@ -31,7 +31,7 @@ The README's headline rows, chosen in `results/headline.csv`, with how each valu
 | SVI-8: surface time below 1.2 s | 0.0185 s median: eSSVI with its fit and every check | [linux-zen1](results/linux-zen1/essvi-timing-20261117T142319Z.txt), Linux | met, by 1.18 s | `median` of row `fit_and_checks` in report section `essvi_fit_time`, a timing, of the latest result on the host, divided by 1000 |
 | Oracle plan, run 2: all 147 registered comparisons pass the tolerance rule (`BENCHMARKS.md` section 10) | 145 of 147 pass | [mac-m4max](references/measured_results_run2.csv), macOS | 2 failed: P3.DB.d12.rho, P3.CB.d12.rho | rows with verdict `pass`, of the file's rows |
 
-Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. A row from a report section derived from the option chain keeps the chain's terms; the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md. Rows were measured at commit `8bb2116`.
+Hosts: `linux-zen1` is AMD Ryzen Embedded V1605B with Radeon Vega Gfx on Linux; `mac-m4max` is Apple M4 Max on macOS. Each row's host cell links its source file. A results file's header records the pinning, compiler and flags. A row from a report section derived from the option chain keeps the chain's terms; the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md. Each row's commit, as its source file says: `8bb2116` for AAD-1, AAD-3, AAD-4, AAD-5, AAD-6, MC-1, MC-2, MEM-4, SVI-6, SVI-11, SVI-7 and SVI-8; `4398aee` for the oracle plan's run 2.
 
 ## Oracle plan: measured runs
 
@@ -269,159 +269,161 @@ Each plants one bug at a time and records whether its check caught it. The manif
 
 ### Benchmarks
 
+A row's build is its file's `simd_cmake_target` and instruction set (`simd_target`): the `release` preset builds `baseline` and `release-avx2` builds `avx2` (`CMakePresets.json`).
+
 Rows with claim `none` are harness self-tests, not performance results.
 
-| benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
-|---|---|---|---|---|---|---|---|---|---|---|
-| aad1-barrier.price | 3 | 15 | 3.7563016468874793e+09 | 3758096383 | 3774873599 | 3774873599 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape | 3 | 15 | 8.1936321754779882e+09 | 8199864319 | 8220835839 | 8220835839 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-skip | 3 | 15 | 7.4962909083857164e+09 | 7491026943 | 7558135807 | 7558135807 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-record | 3 | 15 | 6.9658344343922348e+09 | 6954156031 | 7121928191 | 7121928191 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.bump-central | 3 | 15 | 4.1708577213549240e+10 | 41406169087 | 45130711039 | 45130711039 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.bump-forward | 3 | 15 | 2.2572134090498028e+10 | 22582132735 | 22632464383 | 22632464383 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.price-lanes | 3 | 15 | 3.9022374640916524e+09 | 3902799871 | 3921674239 | 3921674239 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-lanes | 3 | 15 | 8.0141425384297256e+09 | 8015314943 | 8032092159 | 8032092159 | 0.18 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.price | 3 | 15 | 3.5583049223312669e+09 | 3558866943 | 3565158399 | 3565158399 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape | 3 | 15 | 7.8428178460701590e+09 | 7851737087 | 7939817471 | 7939817471 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-skip | 3 | 15 | 7.3939197415536871e+09 | 7390363647 | 7449083903 | 7449083903 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-record | 3 | 15 | 6.7997289358644495e+09 | 6798966783 | 6828326911 | 6828326911 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.bump-central | 3 | 15 | 3.9544919448799263e+10 | 39191576575 | 41775267839 | 41775267839 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.bump-forward | 3 | 15 | 2.1384710294745274e+10 | 21357395967 | 21676163071 | 21676163071 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.price-lanes | 3 | 15 | 2.3006296603758292e+09 | 2300575743 | 2308964351 | 2308964351 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad1-barrier.tape-lanes | 3 | 15 | 5.4997437072991543e+09 | 5452595199 | 6090129407 | 6090129407 | 0.02 | 1.00 | 8bb2116be2fb | result |
-| aad3-barrier-mt.price | 3 | 30 | 1.9919773790118377e+09 | 1991245823 | 2001731583 | 2001731583 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape | 3 | 30 | 4.3631983380141582e+09 | 4357881855 | 4471128063 | 4471128063 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-skip | 3 | 30 | 4.0133413728204303e+09 | 4013948927 | 4030726143 | 4030726143 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-record | 3 | 30 | 3.7140465952877297e+09 | 3714056191 | 3747610623 | 3747610623 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.bump-central | 3 | 30 | 2.1964552878073383e+10 | 21961375743 | 22129147903 | 22129147903 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.bump-forward | 3 | 30 | 1.1968916148272200e+10 | 11962155007 | 12138315775 | 12138315775 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.price-lanes | 3 | 30 | 2.0778232752498429e+09 | 2079326207 | 2086666239 | 2086666239 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-lanes | 3 | 30 | 4.2579586272210407e+09 | 4257218559 | 4299161599 | 4299161599 | 1.07 | 2.06 | 8bb2116be2fb | result |
-| aad3-barrier-mt.price | 3 | 30 | 1.8945495973651133e+09 | 1893728255 | 1911554047 | 1911554047 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape | 3 | 30 | 4.4252871310044899e+09 | 4232052735 | 5104467967 | 5104467967 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-skip | 3 | 30 | 3.9563873013996491e+09 | 3955228671 | 3990880255 | 3990880255 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-record | 3 | 30 | 3.6388634353854542e+09 | 3638558719 | 3670015999 | 3670015999 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.bump-central | 3 | 30 | 2.0844457375773579e+10 | 20854079487 | 20921188351 | 20921188351 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.bump-forward | 3 | 30 | 1.1379379512678516e+10 | 11374952447 | 11517558783 | 11517558783 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.price-lanes | 3 | 30 | 1.2431650233490565e+09 | 1227882495 | 1589641215 | 1589641215 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad3-barrier-mt.tape-lanes | 3 | 30 | 2.7208777224846978e+09 | 2722103295 | 2734686207 | 2734686207 | 1.00 | 2.09 | 8bb2116be2fb | result |
-| aad4-asian12.price | 3 | 60 | 1.7696690104316866e+08 | 176947199 | 178257919 | 178257919 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape | 3 | 60 | 3.1588802371239877e+08 | 315359231 | 324009983 | 324272127 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-skip | 3 | 60 | 3.0810759324155104e+08 | 301989887 | 352059391 | 463994879 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-record | 3 | 60 | 2.6239648039130238e+08 | 261488639 | 272891903 | 273154047 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.hand | 3 | 60 | 1.8364427840445772e+08 | 183500799 | 184942591 | 191365119 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.bump-central | 3 | 60 | 1.9573139947881916e+09 | 1956642815 | 1970274303 | 1970274303 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.bump-forward | 3 | 60 | 1.0702066795225841e+09 | 1068498943 | 1082130431 | 1110441983 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.price-lanes | 3 | 60 | 1.8596782584214744e+08 | 185729023 | 189005823 | 193069055 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-lanes | 3 | 60 | 3.5078507897163028e+08 | 350748671 | 353107967 | 354156543 | 0.92 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.price | 3 | 60 | 1.7167887810293391e+08 | 171704319 | 172490751 | 172621823 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape | 3 | 60 | 3.1782010413890207e+08 | 317980671 | 324796415 | 326369279 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-skip | 3 | 60 | 2.9594089777483898e+08 | 295960575 | 302514175 | 305397759 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-record | 3 | 60 | 2.5207280240439239e+08 | 251527167 | 260702207 | 263061503 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.hand | 3 | 60 | 1.7680206611079833e+08 | 176685055 | 179699711 | 184156159 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.bump-central | 3 | 60 | 1.8906672802293031e+09 | 1890582527 | 1900019711 | 1936719871 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.bump-forward | 3 | 60 | 1.0303102728831806e+09 | 1030225919 | 1038614527 | 1040187391 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.price-lanes | 3 | 60 | 1.0370251676218079e+08 | 103612415 | 105512959 | 111345663 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad4-asian12.tape-lanes | 3 | 60 | 2.1725363355268309e+08 | 217055231 | 220463103 | 221904895 | 1.00 | 1.01 | 8bb2116be2fb | result |
-| aad8-asian12.price | 3 | 60 | 1.7720245551266357e+08 | 177209343 | 178520063 | 180486143 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-asian12.tape | 3 | 60 | 3.1775146160890877e+08 | 317456383 | 320602111 | 325582847 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-asian12.cond-price | 3 | 60 | 2.1712980631945476e+08 | 217186303 | 218103807 | 218497023 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-asian12.cond-tape | 3 | 60 | 3.8248082223068517e+08 | 382468095 | 387186687 | 389808127 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-asian12.for-spot | 3 | 60 | 7.5104063031793225e+08 | 750780415 | 755499007 | 759693311 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-asian12.for-spot-vol | 3 | 60 | 8.4775622229592144e+08 | 846725119 | 862453759 | 864550911 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.price | 3 | 15 | 8.8753358501063366e+09 | 8875147263 | 8933867519 | 8933867519 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.tape | 3 | 15 | 1.5171997111500298e+10 | 15141437439 | 15418261503 | 15418261503 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.cond-price | 3 | 15 | 9.1377794473965454e+09 | 9126805503 | 9311354879 | 9311354879 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.cond-tape | 3 | 15 | 1.6340336021893585e+10 | 16324231167 | 16559112191 | 16559112191 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.for-spot | 3 | 15 | 2.9099821413358688e+10 | 29058138111 | 29645340671 | 29645340671 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| aad8-barrier.for-spot-vol | 3 | 15 | 3.3124472999584988e+10 | 33118224383 | 33436991487 | 33436991487 | 1.22 | 1.00 | 8bb2116be2fb | result |
-| harness_selftest | 3 | 60000 | 2.1583937846322028e+03 | 2143 | 2353 | 63135 | 1.07 | 1.06 | 93166a082dda | none |
-| lw-worst.price | 3 | 600 | 4.6753403352258942e+05 | 479231 | 623103 | 760319 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.tape | 3 | 600 | 1.2098547088609131e+07 | 12107775 | 12804095 | 19578879 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.tape-skip | 3 | 600 | 1.3126970804936917e+07 | 13164543 | 13991935 | 14335999 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.tape-record | 3 | 600 | 4.8290479734757915e+06 | 4792319 | 5083135 | 5218303 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.hand | 3 | 600 | 2.9393064705069875e+05 | 291839 | 311807 | 349439 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.bump-central | 3 | 600 | 2.6613467006984245e+07 | 26542079 | 29294591 | 31195135 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| lw-worst.bump-forward | 3 | 600 | 1.3305300159019710e+07 | 13295615 | 13672447 | 14082047 | 1.07 | 1.08 | 8bb2116be2fb | result |
-| mc-asian252.price | 3 | 15 | 3.6050516234136300e+09 | 3600809983 | 3638558719 | 3638558719 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.tape | 3 | 15 | 6.1295364763166590e+09 | 6123683839 | 6211764223 | 6211764223 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.tape-skip | 3 | 15 | 5.8392797691154413e+09 | 5804916735 | 6085935103 | 6085935103 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.tape-record | 3 | 15 | 5.1063641432039480e+09 | 5079302143 | 5318377471 | 5318377471 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.hand | 3 | 15 | 3.6365452390690150e+09 | 3634364415 | 3651141631 | 3651141631 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.bump-central | 3 | 15 | 3.9476824488090080e+10 | 39493566463 | 39560675327 | 39560675327 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.bump-forward | 3 | 15 | 2.1514669688002766e+10 | 21525168127 | 21558722559 | 21558722559 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.price-lanes | 3 | 15 | 3.8103480047863994e+09 | 3806330879 | 3841982463 | 3841982463 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.tape-lanes | 3 | 15 | 7.1781647703512335e+09 | 7180648447 | 7201619967 | 7201619967 | 1.01 | 1.07 | 8bb2116be2fb | result |
-| mc-asian252.price | 3 | 15 | 3.4053759042247105e+09 | 3405774847 | 3414163455 | 3414163455 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.tape | 3 | 15 | 5.7130911563678522e+09 | 5687476223 | 5909774335 | 5909774335 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.tape-skip | 3 | 15 | 5.6180980105988483e+09 | 5611978751 | 5700059135 | 5700059135 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.tape-record | 3 | 15 | 4.8678468163888969e+09 | 4844421119 | 4970250239 | 4970250239 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.hand | 3 | 15 | 3.4622739822467752e+09 | 3458203647 | 3512729599 | 3512729599 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.bump-central | 3 | 15 | 3.7592140024573662e+10 | 37614518271 | 37782290431 | 37782290431 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.bump-forward | 3 | 15 | 2.0481556088638573e+10 | 20484980735 | 20552089599 | 20552089599 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.price-lanes | 3 | 15 | 2.1787238648926253e+09 | 2151677951 | 2564816895 | 2564816895 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc-asian252.tape-lanes | 3 | 15 | 4.4483115835268736e+09 | 4450156543 | 4462739455 | 4462739455 | 1.09 | 1.00 | 8bb2116be2fb | result |
-| mc3-asian252-mt.price | 3 | 30 | 1.9046329239397469e+09 | 1905262591 | 1916796927 | 1916796927 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape | 3 | 30 | 3.2183979103694115e+09 | 3217031167 | 3254779903 | 3254779903 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-skip | 3 | 30 | 3.1178801536340604e+09 | 3099590655 | 3504340991 | 3504340991 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-record | 3 | 30 | 2.7050039403335910e+09 | 2690646015 | 3152019455 | 3152019455 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.hand | 3 | 30 | 1.9359940901800661e+09 | 1937768447 | 1949302783 | 1949302783 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.bump-central | 3 | 30 | 2.1002490199137188e+10 | 21005074431 | 21139292159 | 21139292159 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.bump-forward | 3 | 30 | 1.1448658779360968e+10 | 11450449919 | 11484004351 | 11484004351 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.price-lanes | 3 | 30 | 2.0282296511328590e+09 | 2027945983 | 2045771775 | 2045771775 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-lanes | 3 | 30 | 3.7573938154129682e+09 | 3758096383 | 3774873599 | 3774873599 | 1.23 | 2.04 | 8bb2116be2fb | result |
-| mc3-asian252-mt.price | 3 | 30 | 1.8144120350556314e+09 | 1812987903 | 1833959423 | 1833959423 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape | 3 | 30 | 3.0606382378320708e+09 | 3061841919 | 3097493503 | 3097493503 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-skip | 3 | 30 | 3.0136399342597671e+09 | 3001024511 | 3103784959 | 3103784959 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-record | 3 | 30 | 2.5981294038977528e+09 | 2598371327 | 2654994431 | 2654994431 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.hand | 3 | 30 | 1.8424838678509827e+09 | 1841299455 | 1852833791 | 1852833791 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.bump-central | 3 | 30 | 2.0132047814066463e+10 | 19981664255 | 21575499775 | 21575499775 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.bump-forward | 3 | 30 | 1.0893061845404572e+10 | 10888413183 | 10963910655 | 10963910655 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.price-lanes | 3 | 30 | 1.1458588907361488e+09 | 1145044991 | 1164967935 | 1164967935 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| mc3-asian252-mt.tape-lanes | 3 | 30 | 2.3789218560478964e+09 | 2380267519 | 2394947583 | 2394947583 | 1.43 | 2.02 | 8bb2116be2fb | result |
-| simd-asian252.scalar | 5 | 25 | 3.4179966200143375e+09 | 3414163455 | 3437232127 | 3437232127 | 1.23 | 1.04 | 8bb2116be2fb | result |
-| simd-asian252.lanes-1 | 5 | 25 | 9.6173694100134296e+09 | 9621733375 | 9697230847 | 9697230847 | 1.23 | 1.04 | 8bb2116be2fb | result |
-| simd-asian252.lanes-2 | 5 | 25 | 3.3235775140014248e+09 | 3319791615 | 3349151743 | 3349151743 | 1.23 | 1.04 | 8bb2116be2fb | result |
-| simd-asian252.lanes-4 | 5 | 25 | 2.1728858420754137e+09 | 2149580799 | 2732589055 | 2732589055 | 1.23 | 1.04 | 8bb2116be2fb | result |
-| simd-barrier-onestep.scalar | 5 | 50 | 8.1789855921213703e+09 | 8174698495 | 8317304831 | 8317304831 | 1.04 | 1.01 | 8bb2116be2fb | result |
-| simd-barrier-onestep.lanes-1 | 5 | 50 | 1.2691906826573812e+10 | 12599689215 | 14101250047 | 14101250047 | 1.04 | 1.01 | 8bb2116be2fb | result |
-| simd-barrier-onestep.lanes-2 | 5 | 50 | 6.1095238464525280e+09 | 6098518015 | 6543114239 | 6543114239 | 1.04 | 1.01 | 8bb2116be2fb | result |
-| simd-barrier-onestep.lanes-4 | 5 | 50 | 3.8078335061801362e+09 | 3800039423 | 4148166655 | 4148166655 | 1.04 | 1.01 | 8bb2116be2fb | result |
-| simd-european.scalar | 5 | 100 | 8.0683462866498873e+07 | 79953919 | 92733439 | 100859903 | 1.37 | 1.23 | 8bb2116be2fb | result |
-| simd-european.lanes-1 | 5 | 100 | 1.4061337838689858e+08 | 139984895 | 163971071 | 172883967 | 1.37 | 1.23 | 8bb2116be2fb | result |
-| simd-european.lanes-2 | 5 | 100 | 5.3785147609148525e+07 | 53739519 | 54493183 | 56623103 | 1.37 | 1.23 | 8bb2116be2fb | result |
-| simd-european.lanes-4 | 5 | 100 | 3.3739155937801436e+07 | 33587199 | 33751039 | 51085311 | 1.37 | 1.23 | 8bb2116be2fb | result |
-| simd-math.exp-scalar | 5 | 250 | 1.4133466752576012e+07 | 13148159 | 26492927 | 26689535 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.exp-lanes-1 | 5 | 250 | 1.3238372017019808e+07 | 13230079 | 13385727 | 13959167 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.exp-lanes-4 | 5 | 250 | 5.5816319305394059e+06 | 5582847 | 5648383 | 5664767 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.log-scalar | 5 | 250 | 1.9031198278111927e+07 | 18907135 | 20234239 | 37060607 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.log-lanes-1 | 5 | 250 | 1.6566288279922392e+07 | 16547839 | 17154047 | 17711103 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.log-lanes-4 | 5 | 250 | 6.9536040727837440e+06 | 6946815 | 7086079 | 7110655 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-scalar | 5 | 250 | 1.6171008333318854e+07 | 16048127 | 18513919 | 35160063 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-lanes-1 | 5 | 250 | 5.5143305718363926e+07 | 55115775 | 56131583 | 59310079 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-lanes-4 | 5 | 250 | 1.7560749949685361e+07 | 17547263 | 17858559 | 18333695 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-scalar | 5 | 250 | 3.7202991842916153e+07 | 37191679 | 37617663 | 37715967 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-lanes-1 | 5 | 250 | 5.8392736853879914e+07 | 58294271 | 59998207 | 75366399 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-lanes-4 | 5 | 250 | 2.3374748433646455e+07 | 23347199 | 24051711 | 27377663 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.philox-scalar | 5 | 250 | 1.3634362007438825e+06 | 1359871 | 1393663 | 1423359 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.philox-lanes-1 | 5 | 250 | 3.1522542338185129e+06 | 3149823 | 3196927 | 3198975 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.philox-lanes-4 | 5 | 250 | 1.4971780165506774e+06 | 1496063 | 1571839 | 1586175 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.xoshiro256pp-scalar | 5 | 250 | 5.6948100638205244e+05 | 570367 | 603647 | 618495 | 1.01 | 1.00 | 8bb2116be2fb | result |
-| simd-math.exp-lanes-1 | 5 | 250 | 1.3297546779507112e+07 | 13238271 | 14852095 | 17170431 | 1.00 | 1.00 | 8bb2116be2fb | result |
-| simd-math.exp-scalar | 5 | 250 | 1.3255855412491588e+07 | 13172735 | 14991359 | 24117247 | 1.00 | 1.00 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-lanes-1 | 5 | 250 | 5.5020801589145161e+07 | 54951935 | 57180159 | 62717951 | 1.06 | 1.04 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-lanes-4 | 5 | 250 | 1.8798267335228760e+07 | 17514495 | 38961151 | 39059455 | 1.04 | 1.04 | 8bb2116be2fb | result |
-| simd-math.inverse-normal-scalar | 5 | 250 | 1.6465444145600894e+07 | 16326655 | 18808831 | 19546111 | 1.07 | 1.06 | 8bb2116be2fb | result |
-| simd-math.log-lanes-4 | 5 | 250 | 7.4595304138081940e+06 | 6918143 | 10600447 | 10641407 | 1.07 | 1.07 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-lanes-1 | 5 | 250 | 5.8281478177879199e+07 | 58195967 | 60817407 | 62947327 | 1.03 | 1.02 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-lanes-4 | 5 | 250 | 2.3619115939669482e+07 | 23298047 | 31014911 | 37093375 | 1.02 | 1.02 | 8bb2116be2fb | result |
-| simd-math.normal-cdf-scalar | 5 | 250 | 3.7431820923178010e+07 | 37421055 | 38699007 | 41680895 | 1.04 | 1.03 | 8bb2116be2fb | result |
-| simd-math.philox-lanes-1 | 5 | 250 | 4.4230311510546710e+06 | 4032511 | 7045119 | 7077887 | 1.01 | 1.01 | 8bb2116be2fb | result |
-| simd-math.philox-lanes-4 | 5 | 250 | 2.6442629308974165e+06 | 3233791 | 3444735 | 3473407 | 1.01 | 1.01 | 8bb2116be2fb | result |
-| simd-math.philox-scalar | 5 | 250 | 3.7735951344048269e+06 | 2916351 | 12099583 | 12271615 | 1.02 | 1.01 | 8bb2116be2fb | result |
-| simd-math.xoshiro256pp-scalar | 5 | 250 | 1.2270993796002935e+06 | 1228799 | 1281023 | 1300479 | 1.01 | 1.01 | 8bb2116be2fb | result |
-| bm_impliedvolatility | 5 | 100000 | 1.4300826033924855e+05 | 138623 | 237823 | 320255 | 1.00 | 1.12 | 8bb2116be2fb | result |
-| bm_black76price | 5 | 100000 | 2.7866601685057576e+04 | 27471 | 34335 | 120831 | 1.00 | 1.12 | 8bb2116be2fb | result |
+| benchmark | build | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| aad1-barrier.price | `baseline`, SSE2 | 3 | 15 | 3.7563016468874793e+09 | 3758096383 | 3774873599 | 3774873599 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape | `baseline`, SSE2 | 3 | 15 | 8.1936321754779882e+09 | 8199864319 | 8220835839 | 8220835839 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-skip | `baseline`, SSE2 | 3 | 15 | 7.4962909083857164e+09 | 7491026943 | 7558135807 | 7558135807 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-record | `baseline`, SSE2 | 3 | 15 | 6.9658344343922348e+09 | 6954156031 | 7121928191 | 7121928191 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-central | `baseline`, SSE2 | 3 | 15 | 4.1708577213549240e+10 | 41406169087 | 45130711039 | 45130711039 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-forward | `baseline`, SSE2 | 3 | 15 | 2.2572134090498028e+10 | 22582132735 | 22632464383 | 22632464383 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price-lanes | `baseline`, SSE2 | 3 | 15 | 3.9022374640916524e+09 | 3902799871 | 3921674239 | 3921674239 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-lanes | `baseline`, SSE2 | 3 | 15 | 8.0141425384297256e+09 | 8015314943 | 8032092159 | 8032092159 | 0.18 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price | `avx2`, AVX2 | 3 | 15 | 3.5583049223312669e+09 | 3558866943 | 3565158399 | 3565158399 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape | `avx2`, AVX2 | 3 | 15 | 7.8428178460701590e+09 | 7851737087 | 7939817471 | 7939817471 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-skip | `avx2`, AVX2 | 3 | 15 | 7.3939197415536871e+09 | 7390363647 | 7449083903 | 7449083903 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-record | `avx2`, AVX2 | 3 | 15 | 6.7997289358644495e+09 | 6798966783 | 6828326911 | 6828326911 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-central | `avx2`, AVX2 | 3 | 15 | 3.9544919448799263e+10 | 39191576575 | 41775267839 | 41775267839 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.bump-forward | `avx2`, AVX2 | 3 | 15 | 2.1384710294745274e+10 | 21357395967 | 21676163071 | 21676163071 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.price-lanes | `avx2`, AVX2 | 3 | 15 | 2.3006296603758292e+09 | 2300575743 | 2308964351 | 2308964351 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad1-barrier.tape-lanes | `avx2`, AVX2 | 3 | 15 | 5.4997437072991543e+09 | 5452595199 | 6090129407 | 6090129407 | 0.02 | 1.00 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price | `baseline`, SSE2 | 3 | 30 | 1.9919773790118377e+09 | 1991245823 | 2001731583 | 2001731583 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape | `baseline`, SSE2 | 3 | 30 | 4.3631983380141582e+09 | 4357881855 | 4471128063 | 4471128063 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-skip | `baseline`, SSE2 | 3 | 30 | 4.0133413728204303e+09 | 4013948927 | 4030726143 | 4030726143 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-record | `baseline`, SSE2 | 3 | 30 | 3.7140465952877297e+09 | 3714056191 | 3747610623 | 3747610623 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-central | `baseline`, SSE2 | 3 | 30 | 2.1964552878073383e+10 | 21961375743 | 22129147903 | 22129147903 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-forward | `baseline`, SSE2 | 3 | 30 | 1.1968916148272200e+10 | 11962155007 | 12138315775 | 12138315775 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price-lanes | `baseline`, SSE2 | 3 | 30 | 2.0778232752498429e+09 | 2079326207 | 2086666239 | 2086666239 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-lanes | `baseline`, SSE2 | 3 | 30 | 4.2579586272210407e+09 | 4257218559 | 4299161599 | 4299161599 | 1.07 | 2.06 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price | `avx2`, AVX2 | 3 | 30 | 1.8945495973651133e+09 | 1893728255 | 1911554047 | 1911554047 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape | `avx2`, AVX2 | 3 | 30 | 4.4252871310044899e+09 | 4232052735 | 5104467967 | 5104467967 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-skip | `avx2`, AVX2 | 3 | 30 | 3.9563873013996491e+09 | 3955228671 | 3990880255 | 3990880255 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-record | `avx2`, AVX2 | 3 | 30 | 3.6388634353854542e+09 | 3638558719 | 3670015999 | 3670015999 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-central | `avx2`, AVX2 | 3 | 30 | 2.0844457375773579e+10 | 20854079487 | 20921188351 | 20921188351 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.bump-forward | `avx2`, AVX2 | 3 | 30 | 1.1379379512678516e+10 | 11374952447 | 11517558783 | 11517558783 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.price-lanes | `avx2`, AVX2 | 3 | 30 | 1.2431650233490565e+09 | 1227882495 | 1589641215 | 1589641215 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad3-barrier-mt.tape-lanes | `avx2`, AVX2 | 3 | 30 | 2.7208777224846978e+09 | 2722103295 | 2734686207 | 2734686207 | 1.00 | 2.09 | 8bb2116be2fb | result |
+| aad4-asian12.price | `baseline`, SSE2 | 3 | 60 | 1.7696690104316866e+08 | 176947199 | 178257919 | 178257919 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape | `baseline`, SSE2 | 3 | 60 | 3.1588802371239877e+08 | 315359231 | 324009983 | 324272127 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-skip | `baseline`, SSE2 | 3 | 60 | 3.0810759324155104e+08 | 301989887 | 352059391 | 463994879 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-record | `baseline`, SSE2 | 3 | 60 | 2.6239648039130238e+08 | 261488639 | 272891903 | 273154047 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.hand | `baseline`, SSE2 | 3 | 60 | 1.8364427840445772e+08 | 183500799 | 184942591 | 191365119 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-central | `baseline`, SSE2 | 3 | 60 | 1.9573139947881916e+09 | 1956642815 | 1970274303 | 1970274303 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-forward | `baseline`, SSE2 | 3 | 60 | 1.0702066795225841e+09 | 1068498943 | 1082130431 | 1110441983 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price-lanes | `baseline`, SSE2 | 3 | 60 | 1.8596782584214744e+08 | 185729023 | 189005823 | 193069055 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-lanes | `baseline`, SSE2 | 3 | 60 | 3.5078507897163028e+08 | 350748671 | 353107967 | 354156543 | 0.92 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price | `avx2`, AVX2 | 3 | 60 | 1.7167887810293391e+08 | 171704319 | 172490751 | 172621823 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape | `avx2`, AVX2 | 3 | 60 | 3.1782010413890207e+08 | 317980671 | 324796415 | 326369279 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-skip | `avx2`, AVX2 | 3 | 60 | 2.9594089777483898e+08 | 295960575 | 302514175 | 305397759 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-record | `avx2`, AVX2 | 3 | 60 | 2.5207280240439239e+08 | 251527167 | 260702207 | 263061503 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.hand | `avx2`, AVX2 | 3 | 60 | 1.7680206611079833e+08 | 176685055 | 179699711 | 184156159 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-central | `avx2`, AVX2 | 3 | 60 | 1.8906672802293031e+09 | 1890582527 | 1900019711 | 1936719871 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.bump-forward | `avx2`, AVX2 | 3 | 60 | 1.0303102728831806e+09 | 1030225919 | 1038614527 | 1040187391 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.price-lanes | `avx2`, AVX2 | 3 | 60 | 1.0370251676218079e+08 | 103612415 | 105512959 | 111345663 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad4-asian12.tape-lanes | `avx2`, AVX2 | 3 | 60 | 2.1725363355268309e+08 | 217055231 | 220463103 | 221904895 | 1.00 | 1.01 | 8bb2116be2fb | result |
+| aad8-asian12.price | `baseline`, SSE2 | 3 | 60 | 1.7720245551266357e+08 | 177209343 | 178520063 | 180486143 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.tape | `baseline`, SSE2 | 3 | 60 | 3.1775146160890877e+08 | 317456383 | 320602111 | 325582847 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.cond-price | `baseline`, SSE2 | 3 | 60 | 2.1712980631945476e+08 | 217186303 | 218103807 | 218497023 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.cond-tape | `baseline`, SSE2 | 3 | 60 | 3.8248082223068517e+08 | 382468095 | 387186687 | 389808127 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot | `baseline`, SSE2 | 3 | 60 | 7.5104063031793225e+08 | 750780415 | 755499007 | 759693311 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-asian12.for-spot-vol | `baseline`, SSE2 | 3 | 60 | 8.4775622229592144e+08 | 846725119 | 862453759 | 864550911 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.price | `baseline`, SSE2 | 3 | 15 | 8.8753358501063366e+09 | 8875147263 | 8933867519 | 8933867519 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.tape | `baseline`, SSE2 | 3 | 15 | 1.5171997111500298e+10 | 15141437439 | 15418261503 | 15418261503 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.cond-price | `baseline`, SSE2 | 3 | 15 | 9.1377794473965454e+09 | 9126805503 | 9311354879 | 9311354879 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.cond-tape | `baseline`, SSE2 | 3 | 15 | 1.6340336021893585e+10 | 16324231167 | 16559112191 | 16559112191 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot | `baseline`, SSE2 | 3 | 15 | 2.9099821413358688e+10 | 29058138111 | 29645340671 | 29645340671 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| aad8-barrier.for-spot-vol | `baseline`, SSE2 | 3 | 15 | 3.3124472999584988e+10 | 33118224383 | 33436991487 | 33436991487 | 1.22 | 1.00 | 8bb2116be2fb | result |
+| harness_selftest | `baseline`, SSE2 | 3 | 60000 | 2.1583937846322028e+03 | 2143 | 2353 | 63135 | 1.07 | 1.06 | 93166a082dda | none |
+| lw-worst.price | `baseline`, SSE2 | 3 | 600 | 4.6753403352258942e+05 | 479231 | 623103 | 760319 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape | `baseline`, SSE2 | 3 | 600 | 1.2098547088609131e+07 | 12107775 | 12804095 | 19578879 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape-skip | `baseline`, SSE2 | 3 | 600 | 1.3126970804936917e+07 | 13164543 | 13991935 | 14335999 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.tape-record | `baseline`, SSE2 | 3 | 600 | 4.8290479734757915e+06 | 4792319 | 5083135 | 5218303 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.hand | `baseline`, SSE2 | 3 | 600 | 2.9393064705069875e+05 | 291839 | 311807 | 349439 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.bump-central | `baseline`, SSE2 | 3 | 600 | 2.6613467006984245e+07 | 26542079 | 29294591 | 31195135 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| lw-worst.bump-forward | `baseline`, SSE2 | 3 | 600 | 1.3305300159019710e+07 | 13295615 | 13672447 | 14082047 | 1.07 | 1.08 | 8bb2116be2fb | result |
+| mc-asian252.price | `baseline`, SSE2 | 3 | 15 | 3.6050516234136300e+09 | 3600809983 | 3638558719 | 3638558719 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape | `baseline`, SSE2 | 3 | 15 | 6.1295364763166590e+09 | 6123683839 | 6211764223 | 6211764223 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-skip | `baseline`, SSE2 | 3 | 15 | 5.8392797691154413e+09 | 5804916735 | 6085935103 | 6085935103 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-record | `baseline`, SSE2 | 3 | 15 | 5.1063641432039480e+09 | 5079302143 | 5318377471 | 5318377471 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.hand | `baseline`, SSE2 | 3 | 15 | 3.6365452390690150e+09 | 3634364415 | 3651141631 | 3651141631 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.bump-central | `baseline`, SSE2 | 3 | 15 | 3.9476824488090080e+10 | 39493566463 | 39560675327 | 39560675327 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.bump-forward | `baseline`, SSE2 | 3 | 15 | 2.1514669688002766e+10 | 21525168127 | 21558722559 | 21558722559 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.price-lanes | `baseline`, SSE2 | 3 | 15 | 3.8103480047863994e+09 | 3806330879 | 3841982463 | 3841982463 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.tape-lanes | `baseline`, SSE2 | 3 | 15 | 7.1781647703512335e+09 | 7180648447 | 7201619967 | 7201619967 | 1.01 | 1.07 | 8bb2116be2fb | result |
+| mc-asian252.price | `avx2`, AVX2 | 3 | 15 | 3.4053759042247105e+09 | 3405774847 | 3414163455 | 3414163455 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape | `avx2`, AVX2 | 3 | 15 | 5.7130911563678522e+09 | 5687476223 | 5909774335 | 5909774335 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-skip | `avx2`, AVX2 | 3 | 15 | 5.6180980105988483e+09 | 5611978751 | 5700059135 | 5700059135 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-record | `avx2`, AVX2 | 3 | 15 | 4.8678468163888969e+09 | 4844421119 | 4970250239 | 4970250239 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.hand | `avx2`, AVX2 | 3 | 15 | 3.4622739822467752e+09 | 3458203647 | 3512729599 | 3512729599 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.bump-central | `avx2`, AVX2 | 3 | 15 | 3.7592140024573662e+10 | 37614518271 | 37782290431 | 37782290431 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.bump-forward | `avx2`, AVX2 | 3 | 15 | 2.0481556088638573e+10 | 20484980735 | 20552089599 | 20552089599 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.price-lanes | `avx2`, AVX2 | 3 | 15 | 2.1787238648926253e+09 | 2151677951 | 2564816895 | 2564816895 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc-asian252.tape-lanes | `avx2`, AVX2 | 3 | 15 | 4.4483115835268736e+09 | 4450156543 | 4462739455 | 4462739455 | 1.09 | 1.00 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price | `baseline`, SSE2 | 3 | 30 | 1.9046329239397469e+09 | 1905262591 | 1916796927 | 1916796927 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape | `baseline`, SSE2 | 3 | 30 | 3.2183979103694115e+09 | 3217031167 | 3254779903 | 3254779903 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-skip | `baseline`, SSE2 | 3 | 30 | 3.1178801536340604e+09 | 3099590655 | 3504340991 | 3504340991 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-record | `baseline`, SSE2 | 3 | 30 | 2.7050039403335910e+09 | 2690646015 | 3152019455 | 3152019455 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.hand | `baseline`, SSE2 | 3 | 30 | 1.9359940901800661e+09 | 1937768447 | 1949302783 | 1949302783 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-central | `baseline`, SSE2 | 3 | 30 | 2.1002490199137188e+10 | 21005074431 | 21139292159 | 21139292159 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-forward | `baseline`, SSE2 | 3 | 30 | 1.1448658779360968e+10 | 11450449919 | 11484004351 | 11484004351 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price-lanes | `baseline`, SSE2 | 3 | 30 | 2.0282296511328590e+09 | 2027945983 | 2045771775 | 2045771775 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-lanes | `baseline`, SSE2 | 3 | 30 | 3.7573938154129682e+09 | 3758096383 | 3774873599 | 3774873599 | 1.23 | 2.04 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price | `avx2`, AVX2 | 3 | 30 | 1.8144120350556314e+09 | 1812987903 | 1833959423 | 1833959423 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape | `avx2`, AVX2 | 3 | 30 | 3.0606382378320708e+09 | 3061841919 | 3097493503 | 3097493503 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-skip | `avx2`, AVX2 | 3 | 30 | 3.0136399342597671e+09 | 3001024511 | 3103784959 | 3103784959 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-record | `avx2`, AVX2 | 3 | 30 | 2.5981294038977528e+09 | 2598371327 | 2654994431 | 2654994431 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.hand | `avx2`, AVX2 | 3 | 30 | 1.8424838678509827e+09 | 1841299455 | 1852833791 | 1852833791 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-central | `avx2`, AVX2 | 3 | 30 | 2.0132047814066463e+10 | 19981664255 | 21575499775 | 21575499775 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.bump-forward | `avx2`, AVX2 | 3 | 30 | 1.0893061845404572e+10 | 10888413183 | 10963910655 | 10963910655 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.price-lanes | `avx2`, AVX2 | 3 | 30 | 1.1458588907361488e+09 | 1145044991 | 1164967935 | 1164967935 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| mc3-asian252-mt.tape-lanes | `avx2`, AVX2 | 3 | 30 | 2.3789218560478964e+09 | 2380267519 | 2394947583 | 2394947583 | 1.43 | 2.02 | 8bb2116be2fb | result |
+| simd-asian252.scalar | `avx2`, AVX2 | 5 | 25 | 3.4179966200143375e+09 | 3414163455 | 3437232127 | 3437232127 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-1 | `avx2`, AVX2 | 5 | 25 | 9.6173694100134296e+09 | 9621733375 | 9697230847 | 9697230847 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-2 | `avx2`, AVX2 | 5 | 25 | 3.3235775140014248e+09 | 3319791615 | 3349151743 | 3349151743 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-asian252.lanes-4 | `avx2`, AVX2 | 5 | 25 | 2.1728858420754137e+09 | 2149580799 | 2732589055 | 2732589055 | 1.23 | 1.04 | 8bb2116be2fb | result |
+| simd-barrier-onestep.scalar | `avx2`, AVX2 | 5 | 50 | 8.1789855921213703e+09 | 8174698495 | 8317304831 | 8317304831 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-1 | `avx2`, AVX2 | 5 | 50 | 1.2691906826573812e+10 | 12599689215 | 14101250047 | 14101250047 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-2 | `avx2`, AVX2 | 5 | 50 | 6.1095238464525280e+09 | 6098518015 | 6543114239 | 6543114239 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-barrier-onestep.lanes-4 | `avx2`, AVX2 | 5 | 50 | 3.8078335061801362e+09 | 3800039423 | 4148166655 | 4148166655 | 1.04 | 1.01 | 8bb2116be2fb | result |
+| simd-european.scalar | `avx2`, AVX2 | 5 | 100 | 8.0683462866498873e+07 | 79953919 | 92733439 | 100859903 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-1 | `avx2`, AVX2 | 5 | 100 | 1.4061337838689858e+08 | 139984895 | 163971071 | 172883967 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-2 | `avx2`, AVX2 | 5 | 100 | 5.3785147609148525e+07 | 53739519 | 54493183 | 56623103 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-european.lanes-4 | `avx2`, AVX2 | 5 | 100 | 3.3739155937801436e+07 | 33587199 | 33751039 | 51085311 | 1.37 | 1.23 | 8bb2116be2fb | result |
+| simd-math.exp-scalar | `avx2`, AVX2 | 5 | 250 | 1.4133466752576012e+07 | 13148159 | 26492927 | 26689535 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-1 | `avx2`, AVX2 | 5 | 250 | 1.3238372017019808e+07 | 13230079 | 13385727 | 13959167 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-4 | `avx2`, AVX2 | 5 | 250 | 5.5816319305394059e+06 | 5582847 | 5648383 | 5664767 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-scalar | `avx2`, AVX2 | 5 | 250 | 1.9031198278111927e+07 | 18907135 | 20234239 | 37060607 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-lanes-1 | `avx2`, AVX2 | 5 | 250 | 1.6566288279922392e+07 | 16547839 | 17154047 | 17711103 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.log-lanes-4 | `avx2`, AVX2 | 5 | 250 | 6.9536040727837440e+06 | 6946815 | 7086079 | 7110655 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-scalar | `avx2`, AVX2 | 5 | 250 | 1.6171008333318854e+07 | 16048127 | 18513919 | 35160063 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-1 | `avx2`, AVX2 | 5 | 250 | 5.5143305718363926e+07 | 55115775 | 56131583 | 59310079 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-4 | `avx2`, AVX2 | 5 | 250 | 1.7560749949685361e+07 | 17547263 | 17858559 | 18333695 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | `avx2`, AVX2 | 5 | 250 | 3.7202991842916153e+07 | 37191679 | 37617663 | 37715967 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | `avx2`, AVX2 | 5 | 250 | 5.8392736853879914e+07 | 58294271 | 59998207 | 75366399 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-4 | `avx2`, AVX2 | 5 | 250 | 2.3374748433646455e+07 | 23347199 | 24051711 | 27377663 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-scalar | `avx2`, AVX2 | 5 | 250 | 1.3634362007438825e+06 | 1359871 | 1393663 | 1423359 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-1 | `avx2`, AVX2 | 5 | 250 | 3.1522542338185129e+06 | 3149823 | 3196927 | 3198975 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-4 | `avx2`, AVX2 | 5 | 250 | 1.4971780165506774e+06 | 1496063 | 1571839 | 1586175 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.xoshiro256pp-scalar | `avx2`, AVX2 | 5 | 250 | 5.6948100638205244e+05 | 570367 | 603647 | 618495 | 1.01 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-lanes-1 | `avx2`, AVX2 | 5 | 250 | 1.3297546779507112e+07 | 13238271 | 14852095 | 17170431 | 1.00 | 1.00 | 8bb2116be2fb | result |
+| simd-math.exp-scalar | `avx2`, AVX2 | 5 | 250 | 1.3255855412491588e+07 | 13172735 | 14991359 | 24117247 | 1.00 | 1.00 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-1 | `avx2`, AVX2 | 5 | 250 | 5.5020801589145161e+07 | 54951935 | 57180159 | 62717951 | 1.06 | 1.04 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-lanes-4 | `avx2`, AVX2 | 5 | 250 | 1.8798267335228760e+07 | 17514495 | 38961151 | 39059455 | 1.04 | 1.04 | 8bb2116be2fb | result |
+| simd-math.inverse-normal-scalar | `avx2`, AVX2 | 5 | 250 | 1.6465444145600894e+07 | 16326655 | 18808831 | 19546111 | 1.07 | 1.06 | 8bb2116be2fb | result |
+| simd-math.log-lanes-4 | `avx2`, AVX2 | 5 | 250 | 7.4595304138081940e+06 | 6918143 | 10600447 | 10641407 | 1.07 | 1.07 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-1 | `avx2`, AVX2 | 5 | 250 | 5.8281478177879199e+07 | 58195967 | 60817407 | 62947327 | 1.03 | 1.02 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-lanes-4 | `avx2`, AVX2 | 5 | 250 | 2.3619115939669482e+07 | 23298047 | 31014911 | 37093375 | 1.02 | 1.02 | 8bb2116be2fb | result |
+| simd-math.normal-cdf-scalar | `avx2`, AVX2 | 5 | 250 | 3.7431820923178010e+07 | 37421055 | 38699007 | 41680895 | 1.04 | 1.03 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-1 | `avx2`, AVX2 | 5 | 250 | 4.4230311510546710e+06 | 4032511 | 7045119 | 7077887 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| simd-math.philox-lanes-4 | `avx2`, AVX2 | 5 | 250 | 2.6442629308974165e+06 | 3233791 | 3444735 | 3473407 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| simd-math.philox-scalar | `avx2`, AVX2 | 5 | 250 | 3.7735951344048269e+06 | 2916351 | 12099583 | 12271615 | 1.02 | 1.01 | 8bb2116be2fb | result |
+| simd-math.xoshiro256pp-scalar | `avx2`, AVX2 | 5 | 250 | 1.2270993796002935e+06 | 1228799 | 1281023 | 1300479 | 1.01 | 1.01 | 8bb2116be2fb | result |
+| bm_impliedvolatility | `baseline`, SSE2 | 5 | 100000 | 1.4300826033924855e+05 | 138623 | 237823 | 320255 | 1.00 | 1.12 | 8bb2116be2fb | result |
+| bm_black76price | `baseline`, SSE2 | 5 | 100000 | 2.7866601685057576e+04 | 27471 | 34335 | 120831 | 1.00 | 1.12 | 8bb2116be2fb | result |
 
 #### AAD cost and accuracy
 
@@ -1684,51 +1686,53 @@ Each plants one bug at a time and records whether its check caught it. The manif
 
 ### Benchmarks
 
+A row's build is its file's `simd_cmake_target` and instruction set (`simd_target`): the `release` preset builds `baseline` and `release-avx2` builds `avx2` (`CMakePresets.json`).
+
 Rows with claim `none` are harness self-tests, not performance results.
 
-| benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
-|---|---|---|---|---|---|---|---|---|---|---|
-| aad1-barrier.price | 3 | 15 | 2.2509612194149022e+09 | 2252341247 | 2254438399 | 2254438399 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape | 3 | 15 | 6.1753724052722197e+09 | 6182404095 | 6220152831 | 6220152831 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape-skip | 3 | 15 | 4.7562088497983179e+09 | 4760535039 | 4773117951 | 4773117951 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.tape-record | 3 | 15 | 4.4284959996106043e+09 | 4429185023 | 4441767935 | 4441767935 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.bump-central | 3 | 15 | 2.4789079176502655e+10 | 24796725247 | 24830279679 | 24830279679 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad1-barrier.bump-forward | 3 | 15 | 1.3560054211902132e+10 | 13564379135 | 13581156351 | 13581156351 | 3.93 | 1.20 | d1596e0e0668 | result |
-| aad3-barrier-mt.price | 3 | 30 | 3.2387828055555558e+08 | 324009983 | 324796415 | 324796415 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape | 3 | 30 | 8.6927965000000000e+08 | 869269503 | 871890943 | 871890943 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-skip | 3 | 30 | 6.5699101527777767e+08 | 656932863 | 660078591 | 660078591 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.tape-record | 3 | 30 | 6.1303946111111116e+08 | 613416959 | 613941247 | 613941247 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-central | 3 | 30 | 3.5594386847222219e+09 | 3560964095 | 3560964095 | 3560964095 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad3-barrier-mt.bump-forward | 3 | 30 | 1.9414594513888891e+09 | 1941962751 | 1943011327 | 1943011327 | 1.20 | 8.94 | d1596e0e0668 | result |
-| aad4-asian12.price | 3 | 60 | 1.0469107777777779e+08 | 104595455 | 106954751 | 111869951 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape | 3 | 60 | 2.7908835347222221e+08 | 279183359 | 282853375 | 283377663 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape-skip | 3 | 60 | 2.4961188888888884e+08 | 249561087 | 252575743 | 252706815 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.tape-record | 3 | 60 | 2.0301261527777779e+08 | 202768383 | 206438399 | 207749119 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.hand | 3 | 60 | 1.0846883611111109e+08 | 108396543 | 110624767 | 110952447 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.bump-central | 3 | 60 | 1.1249515979166667e+09 | 1125122047 | 1131413503 | 1134559231 | 3.88 | 1.35 | d1596e0e0668 | result |
-| aad4-asian12.bump-forward | 3 | 60 | 6.1169924444444454e+08 | 612368383 | 615514111 | 618659839 | 3.88 | 1.35 | d1596e0e0668 | result |
-| harness_selftest | 3 | 60000 | 6.0920939530601318e+03 | 6083 | 6127 | 42303 | 2.88 | 2.88 | 93166a082dda | none |
-| lw-worst.price | 3 | 600 | 5.4752220397209108e+04 | 53599 | 72063 | 76287 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.tape | 3 | 600 | 9.1081539325160906e+06 | 9142271 | 9592831 | 9846783 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.tape-skip | 3 | 600 | 9.3371087165511865e+06 | 9347071 | 9920511 | 10297343 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.tape-record | 3 | 600 | 3.6286146707168724e+06 | 3622911 | 3780607 | 3940351 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.hand | 3 | 600 | 1.8447103551783689e+05 | 183551 | 194559 | 200831 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.bump-central | 3 | 600 | 1.0750263252780935e+07 | 10723327 | 11231231 | 11444223 | 3.78 | 2.94 | d1596e0e0668 | result |
-| lw-worst.bump-forward | 3 | 600 | 5.4089169724865509e+06 | 5398527 | 5677055 | 5820415 | 3.78 | 2.94 | d1596e0e0668 | result |
-| mc-asian252.price | 3 | 15 | 2.0165507111111109e+09 | 2016411647 | 2025848831 | 2025848831 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape | 3 | 15 | 5.5252071888888884e+09 | 5523898367 | 5540675583 | 5540675583 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape-skip | 3 | 15 | 4.8980964388888893e+09 | 4898947071 | 4907335679 | 4907335679 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.tape-record | 3 | 15 | 4.0246624722222219e+09 | 4026531839 | 4034920447 | 4034920447 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.hand | 3 | 15 | 2.0585806194444444e+09 | 2060451839 | 2064646143 | 2064646143 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.bump-central | 3 | 15 | 2.2237715105555553e+10 | 22246588415 | 22263365631 | 22263365631 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc-asian252.bump-forward | 3 | 15 | 1.2434187830555555e+10 | 12138315775 | 13681819647 | 13681819647 | 1.34 | 1.74 | d1596e0e0668 | result |
-| mc3-asian252-mt.price | 3 | 30 | 2.8783540416666663e+08 | 288358399 | 288620543 | 288620543 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape | 3 | 30 | 7.6643064166666663e+08 | 767033343 | 769130495 | 769130495 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-skip | 3 | 30 | 6.7191386805555558e+08 | 672137215 | 675282943 | 675282943 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.tape-record | 3 | 30 | 5.4820345972222221e+08 | 548929535 | 549453823 | 549453823 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.hand | 3 | 30 | 2.9313154444444448e+08 | 293339135 | 294125567 | 294125567 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-central | 3 | 30 | 3.1720821902777781e+09 | 3172990975 | 3175088127 | 3175088127 | 1.74 | 8.18 | d1596e0e0668 | result |
-| mc3-asian252-mt.bump-forward | 3 | 30 | 1.7301431111111109e+09 | 1730150399 | 1734344703 | 1734344703 | 1.74 | 8.18 | d1596e0e0668 | result |
+| benchmark | build | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | load1 start | load1 end | commit | claim |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| aad1-barrier.price | `baseline`, NEON | 3 | 15 | 2.2509612194149022e+09 | 2252341247 | 2254438399 | 2254438399 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad1-barrier.tape | `baseline`, NEON | 3 | 15 | 6.1753724052722197e+09 | 6182404095 | 6220152831 | 6220152831 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad1-barrier.tape-skip | `baseline`, NEON | 3 | 15 | 4.7562088497983179e+09 | 4760535039 | 4773117951 | 4773117951 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad1-barrier.tape-record | `baseline`, NEON | 3 | 15 | 4.4284959996106043e+09 | 4429185023 | 4441767935 | 4441767935 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad1-barrier.bump-central | `baseline`, NEON | 3 | 15 | 2.4789079176502655e+10 | 24796725247 | 24830279679 | 24830279679 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad1-barrier.bump-forward | `baseline`, NEON | 3 | 15 | 1.3560054211902132e+10 | 13564379135 | 13581156351 | 13581156351 | 3.93 | 1.20 | d1596e0e0668 | result |
+| aad3-barrier-mt.price | `baseline`, NEON | 3 | 30 | 3.2387828055555558e+08 | 324009983 | 324796415 | 324796415 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad3-barrier-mt.tape | `baseline`, NEON | 3 | 30 | 8.6927965000000000e+08 | 869269503 | 871890943 | 871890943 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad3-barrier-mt.tape-skip | `baseline`, NEON | 3 | 30 | 6.5699101527777767e+08 | 656932863 | 660078591 | 660078591 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad3-barrier-mt.tape-record | `baseline`, NEON | 3 | 30 | 6.1303946111111116e+08 | 613416959 | 613941247 | 613941247 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad3-barrier-mt.bump-central | `baseline`, NEON | 3 | 30 | 3.5594386847222219e+09 | 3560964095 | 3560964095 | 3560964095 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad3-barrier-mt.bump-forward | `baseline`, NEON | 3 | 30 | 1.9414594513888891e+09 | 1941962751 | 1943011327 | 1943011327 | 1.20 | 8.94 | d1596e0e0668 | result |
+| aad4-asian12.price | `baseline`, NEON | 3 | 60 | 1.0469107777777779e+08 | 104595455 | 106954751 | 111869951 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.tape | `baseline`, NEON | 3 | 60 | 2.7908835347222221e+08 | 279183359 | 282853375 | 283377663 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.tape-skip | `baseline`, NEON | 3 | 60 | 2.4961188888888884e+08 | 249561087 | 252575743 | 252706815 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.tape-record | `baseline`, NEON | 3 | 60 | 2.0301261527777779e+08 | 202768383 | 206438399 | 207749119 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.hand | `baseline`, NEON | 3 | 60 | 1.0846883611111109e+08 | 108396543 | 110624767 | 110952447 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.bump-central | `baseline`, NEON | 3 | 60 | 1.1249515979166667e+09 | 1125122047 | 1131413503 | 1134559231 | 3.88 | 1.35 | d1596e0e0668 | result |
+| aad4-asian12.bump-forward | `baseline`, NEON | 3 | 60 | 6.1169924444444454e+08 | 612368383 | 615514111 | 618659839 | 3.88 | 1.35 | d1596e0e0668 | result |
+| harness_selftest | `baseline`, NEON | 3 | 60000 | 6.0920939530601318e+03 | 6083 | 6127 | 42303 | 2.88 | 2.88 | 93166a082dda | none |
+| lw-worst.price | `baseline`, NEON | 3 | 600 | 5.4752220397209108e+04 | 53599 | 72063 | 76287 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.tape | `baseline`, NEON | 3 | 600 | 9.1081539325160906e+06 | 9142271 | 9592831 | 9846783 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.tape-skip | `baseline`, NEON | 3 | 600 | 9.3371087165511865e+06 | 9347071 | 9920511 | 10297343 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.tape-record | `baseline`, NEON | 3 | 600 | 3.6286146707168724e+06 | 3622911 | 3780607 | 3940351 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.hand | `baseline`, NEON | 3 | 600 | 1.8447103551783689e+05 | 183551 | 194559 | 200831 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.bump-central | `baseline`, NEON | 3 | 600 | 1.0750263252780935e+07 | 10723327 | 11231231 | 11444223 | 3.78 | 2.94 | d1596e0e0668 | result |
+| lw-worst.bump-forward | `baseline`, NEON | 3 | 600 | 5.4089169724865509e+06 | 5398527 | 5677055 | 5820415 | 3.78 | 2.94 | d1596e0e0668 | result |
+| mc-asian252.price | `baseline`, NEON | 3 | 15 | 2.0165507111111109e+09 | 2016411647 | 2025848831 | 2025848831 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.tape | `baseline`, NEON | 3 | 15 | 5.5252071888888884e+09 | 5523898367 | 5540675583 | 5540675583 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.tape-skip | `baseline`, NEON | 3 | 15 | 4.8980964388888893e+09 | 4898947071 | 4907335679 | 4907335679 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.tape-record | `baseline`, NEON | 3 | 15 | 4.0246624722222219e+09 | 4026531839 | 4034920447 | 4034920447 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.hand | `baseline`, NEON | 3 | 15 | 2.0585806194444444e+09 | 2060451839 | 2064646143 | 2064646143 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.bump-central | `baseline`, NEON | 3 | 15 | 2.2237715105555553e+10 | 22246588415 | 22263365631 | 22263365631 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc-asian252.bump-forward | `baseline`, NEON | 3 | 15 | 1.2434187830555555e+10 | 12138315775 | 13681819647 | 13681819647 | 1.34 | 1.74 | d1596e0e0668 | result |
+| mc3-asian252-mt.price | `baseline`, NEON | 3 | 30 | 2.8783540416666663e+08 | 288358399 | 288620543 | 288620543 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.tape | `baseline`, NEON | 3 | 30 | 7.6643064166666663e+08 | 767033343 | 769130495 | 769130495 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.tape-skip | `baseline`, NEON | 3 | 30 | 6.7191386805555558e+08 | 672137215 | 675282943 | 675282943 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.tape-record | `baseline`, NEON | 3 | 30 | 5.4820345972222221e+08 | 548929535 | 549453823 | 549453823 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.hand | `baseline`, NEON | 3 | 30 | 2.9313154444444448e+08 | 293339135 | 294125567 | 294125567 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.bump-central | `baseline`, NEON | 3 | 30 | 3.1720821902777781e+09 | 3172990975 | 3175088127 | 3175088127 | 1.74 | 8.18 | d1596e0e0668 | result |
+| mc3-asian252-mt.bump-forward | `baseline`, NEON | 3 | 30 | 1.7301431111111109e+09 | 1730150399 | 1734344703 | 1734344703 | 1.74 | 8.18 | d1596e0e0668 | result |
 
 #### AAD cost and accuracy
 

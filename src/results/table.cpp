@@ -128,6 +128,10 @@ std::expected<std::string, std::string> file_rows(const ResultsFile& file,
   // An iteration run need not have gone through measure.sh, so its load can be absent.
   const std::string load_start = start ? start->load1 : std::string("absent");
   const std::string load_end = end ? end->load1 : std::string("absent");
+  // One host may run a benchmark in two builds (linux-zen1's release and release-avx2), so each
+  // row names its file's build and instruction set.
+  const std::string build =
+      "`" + cell(file.required("simd_cmake_target")) + "`, " + cell(file.required("simd_target"));
   std::string rows;
   bool any_histogram = false;
   for (const ResultsSection& section : file.sections) {
@@ -142,7 +146,7 @@ std::expected<std::string, std::string> file_rows(const ResultsFile& file,
       return std::unexpected("no benchmark entry for " + name);
     }
     rows += "| ";
-    rows += cell(name) + " | " + cell(file.required("repetitions")) + " | " +
+    rows += cell(name) + " | " + build + " | " + cell(file.required("repetitions")) + " | " +
             cell(histogram_value(values, "batches")) + " | " + cell(*mean) + " | " +
             cell(histogram_value(values, "p50")) + " | " + cell(histogram_value(values, "p99")) +
             " | " + cell(histogram_value(values, "max")) + " | " + cell(load_start) + " | " +
@@ -257,9 +261,9 @@ std::expected<std::string, std::string> render_host_table(std::span<const Result
   }
   if (!benchmarks.empty()) {
     out +=
-        "| benchmark | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | max (ns) | "
-        "load1 start | load1 end | commit | claim |\n"
-        "|---|---|---|---|---|---|---|---|---|---|---|\n";
+        "| benchmark | build | repetitions | batches | mean batch (ns) | p50 (ns) | p99 (ns) | "
+        "max (ns) | load1 start | load1 end | commit | claim |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|---|\n";
     out += rows;
     auto aad = render_aad_tables(benchmarks);
     if (!aad) {

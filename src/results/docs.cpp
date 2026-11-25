@@ -267,11 +267,25 @@ std::expected<void, std::string> check_run_summary(const MeasuredRun& run,
   return {};
 }
 
-// The host a comment names, and the summary counts, checked against the rows.
+bool is_commit_text(std::string_view text) {
+  constexpr std::size_t kShortest = 7;
+  constexpr std::size_t kLongest = 40;
+  return text.size() >= kShortest && text.size() <= kLongest &&
+         std::ranges::all_of(
+             text, [](char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'); });
+}
+
+// The host and the commit a comment names, and the summary counts, checked against the rows.
 std::expected<void, std::string> read_run_comments(MeasuredRun& run) {
   for (const std::string& comment : run.comments) {
     if (run.host.empty()) {
       run.host = std::string(token_value(comment, "Host ").value_or(""));
+    }
+    if (const auto commit = token_value(comment, "run at commit "); commit && run.commit.empty()) {
+      if (!is_commit_text(*commit)) {
+        return std::unexpected("a `run at commit` comment does not name a commit");
+      }
+      run.commit = std::string(*commit);
     }
     if (!token_value(comment, "run=")) {
       continue;
@@ -539,9 +553,8 @@ struct Evaluated {
   std::string host;  // a link to the source, the label and the OS
   std::string verdict;
   std::string how;
-  std::string commit;        // a results file's, or empty
-  bool from_report = false;  // a report_cell row
-  bool uses_chain = false;   // a report_cell row whose section is derived from the option chain
+  std::string commit;       // the source file's, short
+  bool uses_chain = false;  // a report_cell row whose section is derived from the option chain
 };
 
 std::string link(std::string_view path) {
@@ -782,14 +795,18 @@ std::expected<Evaluated, std::string> evaluate_report_cell(const HeadlineRow& ro
             " of the latest result on the host" +
             (row.scale == 1.0 ? std::string() : ", divided by " + format("%g", row.scale));
   out.commit = short_commit(found->entry->file.required("commit"));
-  out.from_report = true;
   out.uses_chain = table.uses_chain;
   return out;
 }
 
 using Runs = std::map<std::string, MeasuredRun, std::less<>>;
 
-Evaluated evaluate_oracle_run(const HeadlineRow& row, const MeasuredRun& run, const Hosts& hosts) {
+std::expected<Evaluated, std::string> evaluate_oracle_run(const HeadlineRow& row,
+                                                          const MeasuredRun& run,
+                                                          const Hosts& hosts) {
+  if (run.commit.empty()) {
+    return std::unexpected(row.source + " names no commit it ran at (a `run at commit` comment)");
+  }
   const std::string total = std::to_string(run.rows.size());
   std::string failures;
   for (const MeasuredRow& r : run.rows) {
@@ -805,6 +822,7 @@ Evaluated evaluate_oracle_run(const HeadlineRow& row, const MeasuredRun& run, co
   out.host = host_cell(row.host, row.source, hosts);
   out.verdict = failed == 0 ? std::string("met") : std::to_string(failed) + " failed: " + failures;
   out.how = "rows with verdict `pass`, of the file's rows";
+  out.commit = short_commit(run.commit);
   return out;
 }
 
@@ -840,18 +858,59 @@ std::expected<Evaluated, std::string> evaluate(const HeadlineRow& row, const Hos
 
 // --- rendering ---
 
+// "a", "a and b", "a, b and c".
+std::string joined(const std::vector<std::string>& items) {
+  std::string out;
+  for (std::size_t i = 0; i < items.size(); ++i) {
+    if (i > 0) {
+      out += i + 1 == items.size() ? " and " : ", ";
+    }
+    out += items[i];
+  }
+  return out;
+}
+
+// Which rows were measured at which commit, each commit from the row's own source file, in the
+// order the rows first name them.
+std::string commits_note(const std::vector<HeadlineRow>& rows,
+                         const std::vector<Evaluated>& cells) {
+  std::vector<std::pair<std::string, std::vector<std::string>>> commits;
+  for (std::size_t i = 0; i < rows.size(); ++i) {
+    const std::string name =
+        rows[i].kind == kOracleRunKind ? "the oracle plan's " + rows[i].id : rows[i].id;
+    auto at = std::ranges::find(commits, cells[i].commit,
+                                &std::pair<std::string, std::vector<std::string>>::first);
+    if (at == commits.end()) {
+      commits.push_back({cells[i].commit, {}});
+      at = commits.end() - 1;
+    }
+    if (std::ranges::find(at->second, name) == at->second.end()) {
+      at->second.push_back(name);
+    }
+  }
+  if (commits.size() == 1) {
+    return " Every row was measured at commit `" + commits.front().first +
+           "`, as its source file says.";
+  }
+  std::string out = " Each row's commit, as its source file says:";
+  std::string_view separator = " ";
+  for (const auto& [commit, names] : commits) {
+    out += separator;
+    out += '`';
+    out += commit;
+    out += "` for ";
+    out += joined(names);
+    separator = "; ";
+  }
+  return out + ".";
+}
+
 std::string hosts_note(const std::vector<HeadlineRow>& rows, const std::vector<Evaluated>& cells,
                        const Hosts& hosts) {
   std::set<std::string, std::less<>> labels;
-  std::set<std::string, std::less<>> commits;
-  bool any_report = false;
   bool any_chain = false;
   for (std::size_t i = 0; i < rows.size(); ++i) {
     labels.insert(rows[i].host);
-    if (!cells[i].commit.empty()) {
-      commits.insert(cells[i].commit);
-    }
-    any_report = any_report || cells[i].from_report;
     any_chain = any_chain || cells[i].uses_chain;
   }
   std::string out = "Hosts:";
@@ -875,19 +934,7 @@ std::string hosts_note(const std::vector<HeadlineRow>& rows, const std::vector<E
         " A row from a report section derived from the option chain keeps the chain's terms; "
         "the attribution is in [NOTICE](NOTICE) and beside the section in RESULTS.md.";
   }
-  if (commits.empty()) {
-    return out + "\n";
-  }
-  const std::string_view rows_word = any_report ? " Rows" : " Benchmark rows";
-  out += std::string(rows_word) +
-         (commits.size() == 1 ? " were measured at commit" : " were measured at commits");
-  separator = " ";
-  for (const std::string& commit : commits) {
-    out += separator;
-    out += "`" + commit + "`";
-    separator = ", ";
-  }
-  return out + ".\n";
+  return out + commits_note(rows, cells) + "\n";
 }
 
 std::string headline_table(const std::vector<Evaluated>& cells, bool sources) {
@@ -1008,7 +1055,11 @@ std::expected<std::string, std::string> host_section(std::string_view label,
     if (!table) {
       return std::unexpected(std::string(label) + ": " + table.error());
     }
-    out += "\n### Benchmarks\n\n" + *table;
+    out +=
+        "\n### Benchmarks\n\nA row's build is its file's `simd_cmake_target` and instruction set "
+        "(`simd_target`): the `release` preset builds `baseline` and `release-avx2` builds `avx2` "
+        "(`CMakePresets.json`).\n\n" +
+        *table;
   }
   if (!reports.empty()) {
     auto tables = render_report_tables(reports, options);

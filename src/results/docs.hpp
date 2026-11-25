@@ -77,12 +77,14 @@ struct MeasuredRow {
 };
 
 // references/measured_results*.csv: `#` comment lines, the header, then one row per comparison.
-// A `run=N passed=N failed=N` comment must agree with the rows, and a `Host <label>,` comment
-// names the host.
+// A `run=N passed=N failed=N` comment must agree with the rows, a `Host <label>,` comment names
+// the host, and a `run at commit <hash>` comment the commit the run ran at. An oracle_run headline
+// row takes its commit from there, and is refused without one.
 struct MeasuredRun {
   std::vector<std::string> comments;  // without the leading "# "
   std::vector<MeasuredRow> rows;
-  std::string host;  // empty if no comment names it
+  std::string host;    // empty if no comment names it
+  std::string commit;  // empty if no comment names it; else 7 to 40 hex digits
   std::size_t passed = 0;
 };
 

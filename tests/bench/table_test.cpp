@@ -27,9 +27,28 @@ TEST(Table, RendersOneRowPerBenchmark) {
   const auto table = render_host_table(files);
   ASSERT_TRUE(table.has_value()) << table.error();
   EXPECT_NE(table->find("### linux-zen1"), std::string::npos);
-  EXPECT_NE(table->find("| harness_selftest | 3 | 60000 | 4100.5 | 4100 | 4300 | 90000 | 0.31 | "
-                        "0.42 | 0123456789ab | none |"),
+  EXPECT_NE(table->find("| harness_selftest | `synthetic`, synthetic | 3 | 60000 | 4100.5 | 4100 | "
+                        "4300 | 90000 | 0.31 | 0.42 | 0123456789ab | none |"),
             std::string::npos)
+      << *table;
+}
+
+// Two files of one benchmark from two builds differ in the build column, not only by load.
+TEST(Table, EachRowNamesItsBuild) {
+  ResultsFile avx2 = stamped();
+  for (HeaderField& field : avx2.header) {
+    if (field.key == "simd_cmake_target") {
+      field.value = "avx2";
+    } else if (field.key == "simd_target") {
+      field.value = "AVX2";
+    }
+  }
+  const std::vector<ResultsFile> files = {stamped(), avx2};
+  const auto table = render_host_table(files);
+  ASSERT_TRUE(table.has_value()) << table.error();
+  EXPECT_NE(table->find("| benchmark | build | repetitions |"), std::string::npos) << *table;
+  EXPECT_NE(table->find("| harness_selftest | `avx2`, AVX2 | 3 |"), std::string::npos) << *table;
+  EXPECT_NE(table->find("| harness_selftest | `synthetic`, synthetic | 3 |"), std::string::npos)
       << *table;
 }
 

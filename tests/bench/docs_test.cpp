@@ -34,6 +34,7 @@ constexpr std::string_view kBenchmarks =
 
 constexpr std::string_view kRun =
     "# Measured run 1. Host linux-zen1, Linux.\n"
+    "# Code of 1234567 run at commit 89abcde, seed 1.\n"
     "# run=3 passed=2 failed=1 skipped=0.\n"
     "id,estimate,reference,se,bound,verdict\n"
     "A.value,1.0,1.0,0.1,0.5,pass\n"
@@ -139,7 +140,29 @@ TEST(Docs, TheHeadlineComesFromTheFiles) {
       << h;
   EXPECT_TRUE(has(h, "| 2 of 3 pass | [linux-zen1](references/r.csv), Linux | 1 failed: A.delta |"))
       << h;
-  EXPECT_TRUE(has(h, "measured at commit `0123456`.")) << h;
+}
+
+// The results files' rows were measured at 0123456 and the oracle run at 89abcde, which its own
+// file names; no commit is said of a row whose file does not give it.
+TEST(Docs, EachRowSaysTheCommitItsSourceFileGives) {
+  const auto docs = render_docs(inputs());
+  ASSERT_TRUE(docs.has_value()) << docs.error();
+  EXPECT_TRUE(has(docs->headline,
+                  " Each row's commit, as its source file says: `0123456` for AAD-1, AAD-5, MC-1 "
+                  "and MEM-4; `89abcde` for the oracle plan's run 1.\n"))
+      << docs->headline;
+
+  DocsInputs in = inputs();
+  std::string& run = in.measured_runs["references/r.csv"];
+  run.erase(run.find("# Code of"), run.find("# run=") - run.find("# Code of"));
+  const auto none = render_docs(in);
+  ASSERT_FALSE(none.has_value());
+  EXPECT_TRUE(has(none.error(), "references/r.csv names no commit it ran at")) << none.error();
+
+  run.insert(0, "# Code run at commit 89abcdX.\n");
+  const auto bad = render_docs(in);
+  ASSERT_FALSE(bad.has_value());
+  EXPECT_TRUE(has(bad.error(), "does not name a commit")) << bad.error();
 }
 
 TEST(Docs, ResultsMdHoldsEachHostApartAndTheRunsSideBySide) {
@@ -176,6 +199,9 @@ TEST(Docs, ResultsMdHoldsEachHostApartAndTheRunsSideBySide) {
                   "1 |"))
       << r;
   EXPECT_TRUE(has(r, "| target | measured | host | verdict | computed as |")) << r;
+  EXPECT_TRUE(has(r, "| harness_selftest | `baseline`, SSE2 | 3 |")) << r;
+  EXPECT_TRUE(has(r, "the `release` preset builds `baseline` and `release-avx2` builds `avx2`"))
+      << r;
 }
 
 TEST(Docs, TheLatestRunOfAWorkloadAnswersItsTarget) {
@@ -337,7 +363,8 @@ TEST(DocsReport, AReportCellAnswersItsTarget) {
                   "| `error` of row `s1` in report section `fit_error` of the latest result on "
                   "the host |"))
       << docs->results_md;
-  EXPECT_TRUE(has(docs->headline, " Rows were measured at commit `0123456`.")) << docs->headline;
+  EXPECT_TRUE(has(docs->headline, "`0123456` for AAD-1, AAD-5, MC-1, MEM-4 and SVI-6;"))
+      << docs->headline;
   EXPECT_FALSE(has(docs->headline, "NOTICE")) << docs->headline;
 }
 
@@ -362,7 +389,7 @@ TEST(DocsReport, NothingChangesWithoutAReportFile) {
   const auto before = render_docs(plain);
   ASSERT_TRUE(before.has_value()) << before.error();
   EXPECT_FALSE(has(before->results_md, "### Reports"));
-  EXPECT_TRUE(has(before->headline, " Benchmark rows were measured at commit `0123456`."));
+  EXPECT_FALSE(has(before->headline, "the attribution is in")) << before->headline;
 }
 
 TEST(DocsReport, TheLatestRunAnswersAndTiesAreRefused) {
@@ -535,6 +562,7 @@ TEST(MeasuredRun, ReadsTheRowsTheHostAndTheCounts) {
   EXPECT_EQ(run->rows.size(), 3U);
   EXPECT_EQ(run->passed, 2U);
   EXPECT_EQ(run->host, "linux-zen1");
+  EXPECT_EQ(run->commit, "89abcde");
   EXPECT_EQ(run->comments.front(), "Measured run 1. Host linux-zen1, Linux.");
 }
 

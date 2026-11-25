@@ -910,8 +910,8 @@
       "edits": [
         {
           "file": "RESULTS.md",
-          "find": "| aad1-barrier.tape | 3 | 15 | 8.1936321754779882e+09 |",
-          "replace": "| aad1-barrier.tape | 3 | 15 | 8.0936321754779882e+09 |"
+          "find": "| aad1-barrier.tape | `baseline`, SSE2 | 3 | 15 | 8.1936321754779882e+09 |",
+          "replace": "| aad1-barrier.tape | `baseline`, SSE2 | 3 | 15 | 8.0936321754779882e+09 |"
         }
       ],
       "preset": "release",
@@ -9288,6 +9288,82 @@
       "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=HeadlineSpec.*"],
       "detect": "test",
       "reason": "\\[  FAILED  \\] HeadlineSpec\\.RefusesWhatIsNotASpec",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-oracle-run-commit",
+      "kind": "check",
+      "covers": "the headline says the oracle run's commit as its own file gives it",
+      "bug": "The oracle run's row carries no commit of its own, so the note gives only the results files' commit and reads as if every row ran there.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  out.commit = short_commit(run.commit);\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Docs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Docs\\.EachRowSaysTheCommitItsSourceFileGives",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-oracle-run-no-commit",
+      "kind": "check",
+      "covers": "an oracle_run row whose file names no commit is refused",
+      "bug": "An oracle run whose file has no `run at commit` comment is rendered, with no commit to say.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "  if (run.commit.empty()) {",
+          "replace": "  if (run.commit.empty() && run.rows.empty()) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Docs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Docs\\.EachRowSaysTheCommitItsSourceFileGives",
+      "timeout_s": 300
+    },
+    {
+      "id": "docs-run-commit-text",
+      "kind": "check",
+      "covers": "a measured run's `run at commit` comment must name a commit",
+      "bug": "Any word after `run at commit` is taken as the commit.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "      if (!is_commit_text(*commit)) {",
+          "replace": "      if (commit->empty() && !is_commit_text(*commit)) {"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Docs.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Docs\\.EachRowSaysTheCommitItsSourceFileGives",
+      "timeout_s": 300
+    },
+    {
+      "id": "table-build-column",
+      "kind": "check",
+      "covers": "each benchmark row names its file's build and instruction set",
+      "bug": "The build cell is left empty, so a release row and a release-avx2 row of one benchmark differ only by load.",
+      "edits": [
+        {
+          "file": "src/results/table.cpp",
+          "find": "    rows += cell(name) + \" | \" + build + \" | \" + cell(file.required(\"repetitions\")) + \" | \" +",
+          "replace": "    rows += cell(name) + \" | \" + \" | \" + cell(file.required(\"repetitions\")) + \" | \" +"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Table.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Table\\.EachRowNamesItsBuild",
       "timeout_s": 300
     },
     {
