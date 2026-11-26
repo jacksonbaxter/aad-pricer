@@ -18,7 +18,7 @@ Each target states the number, one source with a URL that was opened, a verbatim
 
 `Lead check` records that the session lead opened the source personally, not only the subagent. `done` means the URL was re-downloaded and the quoted text was found (`verify/verify_sources.log`, `verify/rerun/`), or, for scans and figures, that the value was read from the page image. Derived values marked `done` were recomputed from their scripts, with output in `verify/rerun/`.
 
-Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz counter. `linux-zen1` is the `debian` host, AMD Ryzen Embedded V1605B (Zen 1), pinned with `taskset -c 4`. Pinned headline numbers come from `linux-zen1`. Wall-time ratios are valid on `mac-m4max` if the results header says so. Metal numbers come only from `mac-m4max`. Published server-class figures will beat this embedded chip, and any such gap is reported with the hardware difference as the reason. No target is shrunk to hide it.
+Hosts are never mixed. `mac-m4max` is Apple M4 Max, macOS, unpinned, 24 MHz counter. `linux-zen1` runs Debian 13 on an AMD Ryzen Embedded V1605B (Zen 1), pinned with `taskset -c 4`. Pinned headline numbers come from `linux-zen1`. Wall-time ratios are valid on `mac-m4max` if the results header says so. Metal numbers come only from `mac-m4max`. Published server-class figures will beat this embedded chip, and any such gap is reported with the hardware difference as the reason. No target is shrunk to hide it.
 
 ## 1. AAD cost
 
