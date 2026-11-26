@@ -16,6 +16,7 @@
 #include <string_view>
 
 #include "fixtures.hpp"
+#include "git_environment.hpp"
 #include "results/results_file.hpp"
 
 #ifdef __APPLE__
@@ -238,6 +239,7 @@ TEST(HarnessSelftest, ReportableRefusesAnUnknownTree) {
 
 TEST(HarnessSelftest, ReportableRefusesADirtyTree) {
   const fs::path dir = fresh_dir();
+  clear_git_location_variables();
   const std::string git = "git -C " + quoted(dir) + " ";
   ASSERT_EQ(run(git + "init -q"), 0);
   ASSERT_EQ(run(git + "-c user.name=t -c user.email=t@example.invalid commit -q --allow-empty "

@@ -17,6 +17,7 @@ SCAN = os.path.join(HERE, "..", "..", "scripts", "scan_repo.py")
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(SCAN))
 
+import git_environment  # noqa: E402
 import scan_repo  # noqa: E402
 
 # Split, so that this file does not match the scan's own markers.
@@ -112,6 +113,8 @@ def main():
     if len(sys.argv) != 2:
         print("usage: scan_repo_test.py <scratch-dir>", file=sys.stderr)
         return 2
+    # So that the scratch repo is the one git acts on, even from a hook or rebase --exec.
+    git_environment.clear()
     scratch = os.path.abspath(sys.argv[1])
     results = [(name, got, expected, "") for name, got, expected in cases()]
     results += list(repo_cases(scratch))

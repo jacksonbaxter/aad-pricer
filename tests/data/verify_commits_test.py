@@ -19,6 +19,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.normpath(os.path.join(HERE, "..", "..", "scripts"))
 SYNC = os.path.join(SCRIPTS, "sync_tree.py")
 VERIFY = os.path.join(SCRIPTS, "verify_commits.sh")
+GIT_ENVIRONMENT = os.path.join(SCRIPTS, "git_environment.sh")  # The verifier sources it.
+
+sys.dont_write_bytecode = True  # no scripts/__pycache__ in the tracked tree
+sys.path.insert(0, SCRIPTS)
+import git_environment  # noqa: E402
 
 # 2001-09-09: older than anything a run writes, so a rewritten file cannot keep it by chance.
 OLD = 1_000_000_000
@@ -239,7 +244,7 @@ def verify_cases(scratch):
     yield "verify_commits: rsync is not on its PATH", shutil.which("rsync", path=bin_dir), None, ""
 
     os.makedirs(os.path.join(repo, "scripts"))
-    for script in (VERIFY, SYNC):
+    for script in (VERIFY, SYNC, GIT_ENVIRONMENT):
         shutil.copy2(script, os.path.join(repo, "scripts"))
     git(repo, "init", "-q")
     write(os.path.join(repo, "CMakeLists.txt"), "cmake_minimum_required(VERSION 3.25)\n")
@@ -320,6 +325,8 @@ def main():
     if len(sys.argv) != 2:
         print("usage: verify_commits_test.py <scratch-dir>", file=sys.stderr)
         return 2
+    # So that the scratch repo is the one git acts on, even from a hook or rebase --exec.
+    git_environment.clear()
     # Physical, as the verifier resolves its own root with pwd -P.
     scratch = os.path.realpath(sys.argv[1])
     shutil.rmtree(scratch, ignore_errors=True)

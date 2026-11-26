@@ -3,6 +3,8 @@
 # lines, run flags, refusals and stamp, against a stand-in measure.sh so that it runs anywhere.
 # Usage: run_bench_report_test.sh <report emitter> <scratch dir>
 set -uo pipefail
+# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.
+. scripts/git_environment.sh
 
 binary=$1
 scratch=$2

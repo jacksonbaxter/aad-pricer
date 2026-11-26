@@ -11873,6 +11873,86 @@
       "reason": "FAILED: metal-table: it says it holds prices only",
       "timeout_s": 600,
       "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-shell-test",
+      "kind": "check",
+      "covers": "tests/bench/run_bench_test.sh clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The run_bench.sh script test no longer sources scripts/git_environment.sh, so started from a hook or rebase --exec its scratch init and commit land in the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/bench/run_bench_test.sh",
+          "find": "# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.\n. scripts/git_environment.sh\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED run_bench_test\\.sh: the caller is untouched$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-python-test",
+      "kind": "check",
+      "covers": "faults/test_fault_injection.py clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The fault runner's tests no longer clear git's location variables, so started from a hook or rebase --exec each project's init, add and commit land in the caller's repository.",
+      "edits": [
+        {
+          "file": "faults/test_fault_injection.py",
+          "find": "    git_environment.clear()\n    SCRATCH.mkdir(parents=True, exist_ok=True)",
+          "replace": "    SCRATCH.mkdir(parents=True, exist_ok=True)"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED test_fault_injection\\.py git field: the caller is untouched$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-provenance",
+      "kind": "check",
+      "covers": "src/results/provenance.cpp runs git without the location variables, tests/bench/git_environment_test.py",
+      "bug": "read_provenance starts git with the environment it inherited, so a run started from a hook or rebase --exec records the caller's commit and tree state, not those of its source root.",
+      "edits": [
+        {
+          "file": "src/results/provenance.cpp",
+          "find": "  return spawn_git(std::move(words), environment.data());",
+          "replace": "  return spawn_git(std::move(words), environ);"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED harness provenance of home: commit [0-9a-f]{40}, home is [0-9a-f]{40}$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-cpp-test",
+      "kind": "check",
+      "covers": "tests/bench/cli_test.cpp clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The dirty-tree test of the harness no longer clears git's location variables, so started from a hook or rebase --exec its scratch init and commit land in the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/bench/cli_test.cpp",
+          "find": "  clear_git_location_variables();\n  const std::string git = \"git -C \" + quoted(dir) + \" \";",
+          "replace": "  const std::string git = \"git -C \" + quoted(dir) + \" \";"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED aadp_bench_cli dirty tree: the caller is untouched$",
+      "timeout_s": 600,
+      "mutated_exit": 1
     }
   ]
 }

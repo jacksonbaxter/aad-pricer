@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstddef>
@@ -19,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include "results/results_file.hpp"
@@ -32,12 +34,9 @@ extern "C" char** environ;
 namespace aadp::results {
 namespace {
 
-// Output of `git -C <root> <args>`, or nothing if git failed. Started directly, not through a
-// shell, so the path needs no quoting.
-std::optional<std::string> run_git(const std::filesystem::path& root,
-                                   std::vector<std::string> arguments) {
-  std::vector<std::string> words = {"git", "-C", root.string()};
-  words.insert(words.end(), arguments.begin(), arguments.end());
+// Output of git with these words and this environment, or nothing if git failed. Started
+// directly, not through a shell, so no word needs quoting.
+std::optional<std::string> spawn_git(std::vector<std::string> words, char* const* environment) {
   std::vector<char*> argv;
   argv.reserve(words.size() + 1);
   for (std::string& word : words) {
@@ -56,7 +55,7 @@ std::optional<std::string> run_git(const std::filesystem::path& root,
   posix_spawn_file_actions_addclose(&actions, pipe_ends[1]);
   posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
   pid_t child = 0;
-  const int spawned = posix_spawnp(&child, "git", &actions, nullptr, argv.data(), environ);
+  const int spawned = posix_spawnp(&child, "git", &actions, nullptr, argv.data(), environment);
   posix_spawn_file_actions_destroy(&actions);
   close(pipe_ends[1]);
   if (spawned != 0) {
@@ -88,7 +87,48 @@ std::optional<std::string> run_git(const std::filesystem::path& root,
   return output;
 }
 
+// Output of `git -C <root> <args>`, or nothing if git failed. Run with git's
+// repository-location variables removed from the environment, so that the repository git reads
+// is the one at root, never one a hook or rebase --exec named for its own command.
+std::optional<std::string> run_git(const std::filesystem::path& root,
+                                   const std::vector<std::string>& arguments) {
+  const auto& names = git_location_variables();
+  if (!names) {
+    return std::nullopt;
+  }
+  std::vector<char*> environment;
+  for (char* const* entry = environ; *entry != nullptr; ++entry) {
+    const std::string_view text(*entry);
+    if (std::ranges::find(*names, text.substr(0, text.find('='))) == names->end()) {
+      environment.push_back(*entry);
+    }
+  }
+  environment.push_back(nullptr);
+  std::vector<std::string> words = {"git", "-C", root.string()};
+  words.insert(words.end(), arguments.begin(), arguments.end());
+  return spawn_git(std::move(words), environment.data());
+}
+
 }  // namespace
+
+const std::optional<std::vector<std::string>>& git_location_variables() {
+  // That command reads no repository, so the variables it names cannot mislead it.
+  static const std::optional<std::vector<std::string>> names =
+      [] -> std::optional<std::vector<std::string>> {
+    const auto output = spawn_git({"git", "rev-parse", "--local-env-vars"}, environ);
+    if (!output) {
+      return std::nullopt;
+    }
+    std::vector<std::string> out;
+    std::istringstream words(*output);
+    std::string name;
+    while (words >> name) {
+      out.push_back(name);
+    }
+    return out;
+  }();
+  return names;
+}
 
 std::optional<std::string> parse_commit_file(std::string_view text) {
   while (text.ends_with('\n') || text.ends_with('\r')) {

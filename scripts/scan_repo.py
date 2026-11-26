@@ -42,6 +42,10 @@ import socket
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True  # importing leaves no scripts/__pycache__ in the tracked tree
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import git_environment  # noqa: E402
+
 try:
     import pwd
 except ImportError:  # Not on Windows.
@@ -356,6 +360,8 @@ def run(root):
 
 
 def main():
+    # So that git lists the files of --root, even when this is started from a hook or rebase --exec.
+    git_environment.clear()
     parser = argparse.ArgumentParser(description="Scans tracked files for private content.")
     default_root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     parser.add_argument("--root", default=default_root, help="repository root")

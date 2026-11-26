@@ -55,6 +55,8 @@ done
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_root" || exit 2
+# So that git reads this repository's history even when started from a hook or rebase --exec.
+. "$repo_root/scripts/git_environment.sh"
 
 for tool in cmake ctest git ninja python3 tar; do
   if ! command -v "$tool" >/dev/null 2>&1; then

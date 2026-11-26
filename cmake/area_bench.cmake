@@ -118,6 +118,18 @@ if(TARGET aadp_bench_cli)
       "$<TARGET_FILE:aadp_report_selftest>" "${_aadp_bench_scratch}/report-script"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(aadp_run_bench_report_script PROPERTIES LABELS "unit;cli")
+
+  # The tests and checks that start git, with GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE naming a
+  # scratch caller repository, as a hook or rebase --exec would: the caller must stay as it was.
+  # Alone, as it reruns tests that write to fixed scratch directories of their own.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_test(NAME aadp_git_environment_script
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tests/bench/git_environment_test.py"
+      "${_aadp_bench_scratch}/git-environment" "$<TARGET_FILE:aadp_harness_selftest>"
+      "$<TARGET_FILE:aadp_report_selftest>" "$<TARGET_FILE:aadp_results_unit>"
+      "$<TARGET_FILE:aadp_bench_cli>"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(aadp_git_environment_script PROPERTIES LABELS "unit;cli" RUN_SERIAL TRUE)
 endif()
 
 aadp_fuzz(fuzz_measure_line

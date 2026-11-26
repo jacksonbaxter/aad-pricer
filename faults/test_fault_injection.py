@@ -20,7 +20,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 RUNNER = REPO / "scripts" / "fault_injection.py"
+GIT_ENVIRONMENT = REPO / "scripts" / "git_environment.py"  # The runner imports it.
 SCRATCH = REPO / "build" / "fault-selftest"
+
+sys.dont_write_bytecode = True  # no scripts/__pycache__ in the tracked tree
+sys.path.insert(0, str(GIT_ENVIRONMENT.parent))
+import git_environment  # noqa: E402
 
 PRESETS = {
     "version": 6,
@@ -88,6 +93,7 @@ class Project:
         (self.root / "scripts").mkdir(parents=True)
         (self.root / "faults").mkdir()
         shutil.copy(RUNNER, self.root / "scripts" / "fault_injection.py")
+        shutil.copy(GIT_ENVIRONMENT, self.root / "scripts" / "git_environment.py")
         (self.root / "CMakePresets.json").write_text(json.dumps(PRESETS))
         (self.root / "CMakeLists.txt").write_text(LISTS)
         (self.root / "main.cpp").write_text(MAIN)
@@ -847,5 +853,7 @@ class Symbolizer(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    # So that each project's git is its own, even when this is started from a hook or rebase --exec.
+    git_environment.clear()
     SCRATCH.mkdir(parents=True, exist_ok=True)
     unittest.main()

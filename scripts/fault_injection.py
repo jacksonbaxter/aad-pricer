@@ -131,6 +131,10 @@ import sys
 import time
 from pathlib import Path
 
+sys.dont_write_bytecode = True  # importing leaves no scripts/__pycache__ in the tracked tree
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import git_environment  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
 MAX_JOBS = 6
 BUILD_TIMEOUT_S = 1800
@@ -1043,6 +1047,9 @@ def parse_arguments():
 
 
 def main():
+    # So that git acts on REPO and on each copy's own tree, and so do the commands, even when
+    # this is started from a hook or rebase --exec.
+    git_environment.clear()
     args = parse_arguments()
     os.environ["AADP_JOBS"] = str(args.jobs)
     try:

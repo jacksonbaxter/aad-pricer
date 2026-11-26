@@ -2,6 +2,8 @@
 # End-to-end checks of scripts/run_bench.sh against a stand-in measure.sh, so that they run
 # anywhere. Usage: run_bench_test.sh <harness binary> <scratch dir>
 set -uo pipefail
+# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.
+. scripts/git_environment.sh
 
 binary=$1
 scratch=$2
