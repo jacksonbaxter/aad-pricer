@@ -3,7 +3,12 @@
 # anywhere. Usage: run_bench_test.sh <harness binary> <scratch dir>
 set -uo pipefail
 # So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.
-. scripts/git_environment.sh
+# Found from this file's own place, and a test that cannot clear the variables stops.
+helper=$(dirname -- "${BASH_SOURCE[0]}")/../../scripts/git_environment.sh
+if ! . "$helper"; then
+  printf 'run_bench_test: cannot clear git location variables: %s\n' "$helper" >&2
+  exit 2
+fi
 
 binary=$1
 scratch=$2

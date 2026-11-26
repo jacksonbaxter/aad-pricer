@@ -11882,7 +11882,7 @@
       "edits": [
         {
           "file": "tests/bench/run_bench_test.sh",
-          "find": "# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.\n. scripts/git_environment.sh\n",
+          "find": "# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.\n# Found from this file's own place, and a test that cannot clear the variables stops.\nhelper=$(dirname -- \"${BASH_SOURCE[0]}\")/../../scripts/git_environment.sh\nif ! . \"$helper\"; then\n  printf 'run_bench_test: cannot clear git location variables: %s\\n' \"$helper\" >&2\n  exit 2\nfi\n",
           "replace": ""
         }
       ],
@@ -11902,8 +11902,8 @@
       "edits": [
         {
           "file": "faults/test_fault_injection.py",
-          "find": "    git_environment.clear()\n    SCRATCH.mkdir(parents=True, exist_ok=True)",
-          "replace": "    SCRATCH.mkdir(parents=True, exist_ok=True)"
+          "find": "# and however its tests are started: as a script, by unittest or by any other runner's import.\ngit_environment.clear()\n",
+          "replace": "# and however its tests are started: as a script, by unittest or by any other runner's import.\n"
         }
       ],
       "preset": "release",
@@ -11942,8 +11942,8 @@
       "edits": [
         {
           "file": "tests/bench/cli_test.cpp",
-          "find": "  clear_git_location_variables();\n  const std::string git = \"git -C \" + quoted(dir) + \" \";",
-          "replace": "  const std::string git = \"git -C \" + quoted(dir) + \" \";"
+          "find": "  ASSERT_TRUE(clear_git_location_variables()) << kCannotClearGitLocationVariables;\n",
+          "replace": ""
         }
       ],
       "preset": "release",
@@ -11951,6 +11951,166 @@
       "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
       "detect": "test",
       "reason": "^FAILED aadp_bench_cli dirty tree: the caller is untouched$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-report-shell-test",
+      "kind": "check",
+      "covers": "tests/bench/run_bench_report_test.sh clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The report emitters' run_bench.sh test no longer sources scripts/git_environment.sh, so started from a hook or rebase --exec its scratch init and commit land in the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/bench/run_bench_report_test.sh",
+          "find": "# So that the scratch repository below is the one git acts on, even from a hook or rebase --exec.\n# Found from this file's own place, and a test that cannot clear the variables stops.\nhelper=$(dirname -- \"${BASH_SOURCE[0]}\")/../../scripts/git_environment.sh\nif ! . \"$helper\"; then\n  printf 'run_bench_report_test: cannot clear git location variables: %s\\n' \"$helper\" >&2\n  exit 2\nfi\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED run_bench_report_test\\.sh: the caller is untouched$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-provenance-test",
+      "kind": "check",
+      "covers": "tests/bench/provenance_test.cpp clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The provenance test no longer clears git's location variables, so started from a hook or rebase --exec its scratch init and commit land in the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/bench/provenance_test.cpp",
+          "find": "  ASSERT_TRUE(testing::clear_git_location_variables()) << testing::kCannotClearGitLocationVariables;\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED aadp_results_unit Provenance: exit 1$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-scan",
+      "kind": "check",
+      "covers": "scripts/scan_repo.py clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The repo scan no longer clears git's location variables, so started from a hook or rebase --exec it lists the caller's files instead of those of --root.",
+      "edits": [
+        {
+          "file": "scripts/scan_repo.py",
+          "find": "    git_environment.clear()\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED scan_repo\\.py --root home: it scans home's two files$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-scan-test",
+      "kind": "check",
+      "covers": "tests/data/scan_repo_test.py clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The repo scan's test no longer clears git's location variables, so started from a hook or rebase --exec its scratch repositories' git acts on the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/data/scan_repo_test.py",
+          "find": "    git_environment.clear()\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED scan_repo_test\\.py: exit 1$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-verify-test",
+      "kind": "check",
+      "covers": "tests/data/verify_commits_test.py clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The commit verifier's test no longer clears git's location variables, so started from a hook or rebase --exec its scratch repositories' git acts on the caller's repository.",
+      "edits": [
+        {
+          "file": "tests/data/verify_commits_test.py",
+          "find": "    git_environment.clear()\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED verify_commits_test\\.py: exit 1$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-fault-runner",
+      "kind": "check",
+      "covers": "scripts/fault_injection.py clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The fault runner no longer clears git's location variables, so started from a hook or rebase --exec its static check lists the caller's files and finds no file of --source.",
+      "edits": [
+        {
+          "file": "scripts/fault_injection.py",
+          "find": "    git_environment.clear()\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED fault_injection\\.py --static on home: the fault's edit applies to home's one\\.txt$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-format",
+      "kind": "check",
+      "covers": "scripts/check_format.sh clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The format check no longer sources scripts/git_environment.sh, so started from a hook or rebase --exec git lists the caller's files, not this repository's.",
+      "edits": [
+        {
+          "file": "scripts/check_format.sh",
+          "find": ". \"$repo_root/scripts/git_environment.sh\" || exit 2\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED check_format\\.sh: it checks \\[\\], its home has \\['src/one\\.cpp'\\]$",
+      "timeout_s": 600,
+      "mutated_exit": 1
+    },
+    {
+      "id": "check-git-env-verify-commits",
+      "kind": "check",
+      "covers": "scripts/verify_commits.sh clears git's location variables, tests/bench/git_environment_test.py",
+      "bug": "The commit verifier no longer sources scripts/git_environment.sh, so started from a hook or rebase --exec it reads the caller's history, not this repository's.",
+      "edits": [
+        {
+          "file": "scripts/verify_commits.sh",
+          "find": ". \"$repo_root/scripts/git_environment.sh\" || exit 2\n",
+          "replace": ""
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_bench_cli", "aadp_results_unit", "aadp_harness_selftest", "aadp_report_selftest", "aadp_results_stamp", "aadp_results_table"],
+      "command": ["python3", "-I", "tests/bench/git_environment_test.py", "{build}/bench-test-scratch/fault-git-environment", "{build}/bin/aadp_harness_selftest", "{build}/bin/aadp_report_selftest", "{build}/bin/aadp_results_unit", "{build}/bin/aadp_bench_cli"],
+      "detect": "test",
+      "reason": "^FAILED verify_commits\\.sh: it reads its own history$",
       "timeout_s": 600,
       "mutated_exit": 1
     }

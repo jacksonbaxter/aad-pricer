@@ -27,6 +27,10 @@ sys.dont_write_bytecode = True  # no scripts/__pycache__ in the tracked tree
 sys.path.insert(0, str(GIT_ENVIRONMENT.parent))
 import git_environment  # noqa: E402
 
+# So that each project's git is its own, even when this is started from a hook or rebase --exec,
+# and however its tests are started: as a script, by unittest or by any other runner's import.
+git_environment.clear()
+
 PRESETS = {
     "version": 6,
     "configurePresets": [
@@ -853,7 +857,5 @@ class Symbolizer(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # So that each project's git is its own, even when this is started from a hook or rebase --exec.
-    git_environment.clear()
     SCRATCH.mkdir(parents=True, exist_ok=True)
     unittest.main()

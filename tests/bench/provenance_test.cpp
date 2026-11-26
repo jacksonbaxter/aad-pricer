@@ -58,7 +58,7 @@ TEST(Provenance, AGarbledCommitFileMeansUnknown) {
 
 TEST(Provenance, GitCheckoutReportsCleanThenDirty) {
   const fs::path dir = fresh_dir("repo");
-  testing::clear_git_location_variables();
+  ASSERT_TRUE(testing::clear_git_location_variables()) << testing::kCannotClearGitLocationVariables;
   const std::string git = "git -C '" + dir.string() + "' ";
   const std::string identity = "-c user.name=t -c user.email=t@example.invalid ";
   ASSERT_EQ(std::system((git + "init -q").c_str()), 0);

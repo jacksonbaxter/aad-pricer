@@ -13,7 +13,8 @@ readonly PINNED_VERSION=23.1.4
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd -- "$repo_root" || exit 2
 # So that git lists this repository's files even when started from a hook or rebase --exec.
-. "$repo_root/scripts/git_environment.sh"
+# Without the helper the variables would stay set, so its absence stops the check.
+. "$repo_root/scripts/git_environment.sh" || exit 2
 
 clang_format=${CLANG_FORMAT:-clang-format}
 if ! command -v "$clang_format" >/dev/null 2>&1; then
