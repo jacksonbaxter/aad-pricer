@@ -1,0 +1,408 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2.1 (build 26B131)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.8
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.435
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 5
+batches_per_repetition: 20000
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-26T08:01:18Z
+bench_quotes: 400 out-of-the-money Black-76 quotes: F 100, D exp(-0.03 T), T 0.0137, 0.0833, 0.5 and 2, sigma 0.1, 0.2, 0.4 and 0.8, z = ln(K/F) / (sigma sqrt(T)) from -3 to 3 by 0.25, calls for z >= 0
+bench_unit: one unit inverts every quote once (bm_impliedvolatility) or prices every quote once at its inverted vol (bm_black76price); a batch is one unit, so the time per quote is a batch's over the quotes
+bench_inversion_check: pass: every quote inverts with status ok
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 28551242177
+perf_instructions: 108281342817
+perf_counters_note: none
+peak_rss_bytes: 6078464
+measure_start: measure.sh: start load1=1.50 at=2026-11-26T08:01:18Z
+measure_end: measure.sh: end load1=1.67 exit=0 at=2026-11-26T08:01:27Z
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-26T02:01:19-06:00",
+    "num_cpus": 16,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [
+      1.50293,
+      1.55664,
+      1.59082
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 5.5781012724025997e+04,
+      "cpu_time": 5.5783949999999990e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7927247125244106e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 5.5863008554625856e+04,
+      "cpu_time": 5.5869750000000015e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7900933477690269e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 5.5703958559927152e+04,
+      "cpu_time": 5.5709399999999980e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7952045525170081e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 5.5953923134929813e+04,
+      "cpu_time": 5.5957950000000033e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7871847834307431e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 5.5646621061838247e+04,
+      "cpu_time": 5.5650900000000009e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7970543061163287e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5789704807069407e+04,
+      "cpu_time": 5.5794389999999999e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7924523404715033e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 5.5781012724026004e+04,
+      "cpu_time": 5.5783949999999975e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7927247125244106e+04
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.2272125730124010e+02,
+      "cpu_time": 1.2283390920307943e+02,
+      "time_unit": "ns",
+      "items_per_second": 3.9414131103055169e+01
+    },
+    {
+      "name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "bm_impliedvolatility/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 2.1997115368441499e-03,
+      "cpu_time": 2.2015458759040009e-03,
+      "time_unit": "ns",
+      "items_per_second": 2.1988942307212089e-03
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 7.8463809884635184e+03,
+      "cpu_time": 7.8554999999999700e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2744729085552860e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 7.8398393220148100e+03,
+      "cpu_time": 7.8496999999999598e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2755363457410803e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 7.8346622388539854e+03,
+      "cpu_time": 7.8435999999999958e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2763792101218585e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 7.8584539047279804e+03,
+      "cpu_time": 7.8671499999999569e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2725149401186378e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 20000,
+      "real_time": 7.8698351543484259e+03,
+      "cpu_time": 7.8786499999999642e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2706746461486637e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time_mean",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 7.8498343216817448e+03,
+      "cpu_time": 7.8589199999999691e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2739156101371053e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time_median",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 7.8463809884635175e+03,
+      "cpu_time": 7.8554999999999709e+03,
+      "time_unit": "ns",
+      "items_per_second": 1.2744729085552860e+05
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time_stddev",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.4285903412507523e+01,
+      "cpu_time": 1.4039346495059059e+01,
+      "time_unit": "ns",
+      "items_per_second": 2.3169168298514512e+02
+    },
+    {
+      "name": "bm_black76price/iterations:20000/repeats:5/manual_time_cv",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "bm_black76price/iterations:20000/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 1.8198987172313873e-03,
+      "cpu_time": 1.7864218614083249e-03,
+      "time_unit": "ns",
+      "items_per_second": 1.8187365092434129e-03
+    }
+  ]
+}
+@section histogram_bm_impliedvolatility
+unit ns
+batch_units 1
+batches 100000
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 54848
+p50 55231
+p90 56319
+p99 67903
+p99.9 79295
+p99.99 118335
+max 149119
+@section histogram_bm_black76price
+unit ns
+batch_units 1
+batches 100000
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 7664
+p50 7795
+p90 7835
+p99 9463
+p99.9 14631
+p99.99 35967
+max 71615

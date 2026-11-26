@@ -1,0 +1,279 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2.1 (build 26B131)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.434
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 5
+batches_per_repetition: 50
+warmup: harness 50 ms, then Google Benchmark min_warmup_time 0.05 s; samples from both discarded
+commit: 8bb2116be2fb3a66129edff1e0b1d7b2e5efcb6c
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-26T08:00:28Z
+bench_workloads: simd-math
+bench_scale: 1 (the workloads' full sizes)
+bench_seed: 20261119
+bench_mc_batches: 50
+bench_threads: 1 for every variant
+bench_instruction_set: NEON (AADP_SIMD_TARGET=baseline, Highway static dispatch); scalar variants are the scalar pricer and kernels of the same binary
+simd_lane_widths_timed: 1,2
+simd_lane_ceiling: 2 double lanes on NEON: no SIMD speedup over one lane can exceed 2. NEON is 2 wide, SSE2 2, AVX2 4, AVX-512 8; Zen 1 runs each 256-bit AVX2 operation as two 128-bit halves, so about 2 lanes' throughput there
+simd_check: pass
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 4959322687
+perf_instructions: 39062346076
+perf_counters_note: none
+peak_rss_bytes: 155058176
+measure_start: measure.sh: start load1=1.50 at=2026-11-26T08:00:28Z
+measure_end: measure.sh: end load1=1.46 exit=0 at=2026-11-26T08:00:31Z
+
+@section benchmark_json
+{
+  "context": {
+    "date": "2026-11-26T02:00:30-06:00",
+    "num_cpus": 16,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [
+      1.49658,
+      1.56836,
+      1.60059
+    ],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 4.4629975000000009e+06,
+      "cpu_time": 4.4626399999999842e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2406465609716338e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 4.4878800000000000e+06,
+      "cpu_time": 4.4872999999999944e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2282235710402239e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 4.5016291666666679e+06,
+      "cpu_time": 4.5014999999999981e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2214179866363193e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 3,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 4.4757158333333330e+06,
+      "cpu_time": 4.4749800000000037e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2342794700065670e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "iteration",
+      "repetitions": 5,
+      "repetition_index": 4,
+      "threads": 1,
+      "iterations": 50,
+      "real_time": 4.4559683333333330e+06,
+      "cpu_time": 4.4556599999999944e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2441811188813804e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 4.4768381666666679e+06,
+      "cpu_time": 4.4764159999999953e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2337497415072249e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 4.4757158333333330e+06,
+      "cpu_time": 4.4749800000000037e+06,
+      "time_unit": "ns",
+      "items_per_second": 2.2342794700065670e+02
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 5,
+      "real_time": 1.8472204752033049e+04,
+      "cpu_time": 1.8508918931107848e+04,
+      "time_unit": "ns",
+      "items_per_second": 9.2096566597140661e-01
+    },
+    {
+      "name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "simd-math.exp-scalar/iterations:50/repeats:5/manual_time",
+      "run_type": "aggregate",
+      "repetitions": 5,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 5,
+      "real_time": 4.1261721027961466e-03,
+      "cpu_time": 4.1347629288939784e-03,
+      "time_unit": "ns",
+      "items_per_second": 4.1229581311556596e-03
+    }
+  ]
+}
+@section histogram_simd-math.exp-scalar
+unit ns
+batch_units 1
+batches 250
+gate_ns 416.7
+timer_resolution_ns 41.667
+min 4370432
+p50 4481023
+p90 4546559
+p99 4599807
+p99.9 4763647
+p99.99 4763647
+max 4763647
+@section simd_simd-math
+each math kernel over 2^20 doubles: exp on [-5, 5], log on (0, 4], inverse normal on Philox-grid uniforms, normal CDF on [-6, 6]; and the pricer's Philox4x32-10 generator alone, its raw words, 2^18 blocks of 16 bytes (2^20 32-bit words), and xoshiro256++ over as many bytes
+targets: RNG-1, RNG-2, RNG-4, SIMD-1, SIMD-2
+values per call: 1048576; time per call, so ns per value is the time over 1048576
+check exp-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check exp-lanes-2-bits: pass, 1048576 values, 2 lanes against the scalar kernel
+check log-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check log-lanes-2-bits: pass, 1048576 values, 2 lanes against the scalar kernel
+check inverse-normal-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check inverse-normal-lanes-2-bits: pass, 1048576 values, 2 lanes against the scalar kernel
+check normal-cdf-lanes-1-bits: pass, 1048576 values, 1 lanes against the scalar kernel
+check normal-cdf-lanes-2-bits: pass, 1048576 values, 2 lanes against the scalar kernel
+philox: 262144 Philox4x32-10 blocks a call, counters 0 to 262144 - 1, key the seed, 4194304 bytes a call; time per byte is the time over 4194304
+check philox-lanes-1-bits: pass, 1048576 words, 1 lanes against the scalar generator
+check philox-lanes-2-bits: pass, 1048576 words, 2 lanes against the scalar generator
+xoshiro256pp: 524288 outputs of 64 bits a call from the state (1, 2, 3, 4), 4194304 bytes a call; time per 64 bits is the time over 524288
+check xoshiro256pp-kat: pass, the first 4 outputs against the published ones

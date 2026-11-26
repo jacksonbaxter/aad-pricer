@@ -1,0 +1,98 @@
+aadp-results 1
+claim: result
+reportable: yes
+reportable_reason: none
+host_label: mac-m4max
+cpu_model: Apple M4 Max
+logical_cpus: 16
+arch: arm64
+kernel: Darwin 27.2.0
+os: macOS 27.2.1 (build 26B131)
+compiler_id: Clang
+compiler_version: 23.1.4
+cxx_standard: 23
+cxx_flags: -ffp-contract=off -flto=thin -DHWY_COMPILE_ONLY_STATIC -O3 -DNDEBUG
+build_type: Release
+simd_cmake_target: baseline
+simd_target: NEON
+simd_double_lanes: 2
+pinning_state: not pinned
+pinned_cpus: none
+meant_idle_cpus: none
+pin_method: none
+observed_cpu: unavailable
+qos_class: 0x21 (influence on placement, not a pin)
+process_nice: 0
+fp_register: FPCR
+fp_state: 0x0
+fp_ftz: clear
+fp_daz: clear
+timer_source: mach_absolute_time
+timer_calibrated_hz: 24000000.0
+timer_calibration_spread: 0.000000
+timer_granularity_ticks: 1
+timer_min_delta_ticks: 1
+timer_resolution_ns: 41.667
+timer_read_cost_ns: 4.636
+timer_note: mach_timebase 125/3, not used
+clock_source: CLOCK_MONOTONIC_RAW
+clock_getres_ns: 42.0
+clock_resolution_ns: 41.0
+repetitions: 3
+batches_per_repetition: 1
+warmup: one call of each estimator
+commit: c5f3473043b2ce1b3964fe520d3c728ff6e23aa0
+commit_source: COMMIT file
+tree_state: exported
+run_started_at: 2026-11-26T08:07:46Z
+report_tool: aadp_bench_quantlib speed --report --ql tuned --ours no --repetitions 3 --scale 1
+report_inputs: no market data: R1 to R9 on the protocol's GBM contracts, R10 to R12 on a synthetic raw SVI surface written in the bench (docs/NOTES.md, Stage 10)
+report_timing: one timed call is one NPV() for QuantLib (two for a bump row), the instrument and engine built outside it, and one Price or PriceLanes call for ours, accumulation included on both sides; steady_clock, one thread on both sides, one warm-up call then 3 repetitions, median with min and max; seed 20261113, 1048576 paths on R1 to R9 and 262144 on R10 to R12, 64 batches
+ql_column: ql-tuned
+ql_link: QuantLib static library; LTO yes (-flto in CMAKE_CXX_FLAGS)
+ql_flags: the bench's flags, the same for QuantLib (scripts/check_quantlib_flags.py)
+ql_version_record: QL_VERSION 1.44; QL_HEX_VERSION 0x014400f0; BOOST_LIB_VERSION 1_92; BOOST_VERSION 109200; config.hpp QL_FASTER_LAZY_OBJECTS defined; config.hpp QL_ENABLE_SESSIONS undefined; config.hpp QL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN undefined; config.hpp QL_EXTRA_SAFETY_CHECKS undefined; config.hpp QL_HIGH_RESOLUTION_DATE undefined; config.hpp QL_NULL_AS_FUNCTIONS undefined; config.hpp QL_USE_STD_SHARED_PTR undefined; config.hpp QL_ENABLE_TRACING undefined
+ql_cache_values: QL_BUILD_EXAMPLES=OFF; QL_BUILD_FUZZ_TEST_SUITE=OFF; QL_BUILD_TEST_SUITE=OFF; QL_COMPILE_WARNING_AS_ERROR=OFF; QL_ENABLE_DEFAULT_WARNING_LEVEL=ON; QL_ENABLE_OPENMP=OFF; QL_ENABLE_PARALLEL_UNIT_TEST_RUNNER=OFF; QL_ENABLE_SESSIONS=OFF; QL_ENABLE_THREAD_SAFE_OBSERVER_PATTERN=OFF; QL_ENABLE_TRACING=OFF; QL_ERROR_FUNCTIONS=OFF; QL_ERROR_LINES=OFF; QL_EXTERNAL_SUBDIRECTORIES=; QL_EXTRA_LINK_LIBRARIES=; QL_EXTRA_SAFETY_CHECKS=OFF; QL_FASTER_LAZY_OBJECTS=ON; QL_HIGH_RESOLUTION_DATE=OFF; QL_INSTALL_BENCHMARK=ON; QL_INSTALL_BINDIR=bin; QL_INSTALL_CMAKEDIR=lib/cmake/QuantLib; QL_INSTALL_EXAMPLES=ON; QL_INSTALL_EXAMPLESDIR=lib/QuantLib/examples; QL_INSTALL_INCLUDEDIR=include; QL_INSTALL_LIBDIR=lib; QL_INSTALL_TEST_SUITE=ON; QL_NULL_AS_FUNCTIONS=OFF; QL_TAGGED_LAYOUT=OFF; QL_THROW_IN_CYCLES=OFF; QL_USE_CLANG_TIDY=OFF; QL_USE_INDEXED_COUPON=OFF; QL_USE_STD_CLASSES=OFF; QL_USE_STD_SHARED_PTR=OFF
+ours_lanes: NEON, 2 double lanes, the ceiling of this build
+smt_siblings: unavailable
+governor: unavailable
+cpufreq_driver: unavailable
+frequency_khz: unavailable
+max_frequency_khz: unavailable
+turbo: unavailable
+perf_counters_source: proc_pid_rusage
+perf_counters_scope: process-wide, user and kernel, all threads, measured repetitions only
+perf_cycles: 551453524560
+perf_instructions: 2628763932019
+perf_counters_note: none
+peak_rss_bytes: 4423680
+measure_start: measure.sh: start load1=1.39 at=2026-11-26T08:07:46Z
+measure_end: measure.sh: end load1=1.31 exit=0 at=2026-11-26T08:09:59Z
+
+@section report_ql_speed
+type table
+title QuantLib against this project on one thread: one timed pricing of every path
+targets QL-1,QL-3
+timing yes
+uses_chain no
+column row text none
+column column text none
+column paths integer count
+column steps integer count
+column median real s
+column min real s
+column max real s
+column paths_per_s real paths/s
+column ns_per_path_step real ns
+column repetitions integer count
+row R1.ql-tuned R1 ql-tuned 1048576 10 0.897338167 0.894795458 0.898251584 1168540.5107704506 85.57683629989624 3
+row R2.K100.ql-tuned R2.K100 ql-tuned 1048576 12 0.864843791 0.863596958 0.867432792 1212445.5432437742 68.73160926500957 3
+row R3.ql-tuned R3 ql-tuned 1048576 12 0.878866042 0.878428916 0.882442583 1193101.0528223368 69.84599765141805 3
+row R4.ql-tuned R4 ql-tuned 1048576 50 3.593343375 3.587658417 3.598436084 291810.6873101155 68.53758573532104 3
+row R5.H095.ql-tuned R5.H095 ql-tuned 1048576 50 4.404030125 4.397660959 4.407307542 238094.6474565725 84.00020837783813 3
+row R7.H095.ql-tuned R7.H095 ql-tuned 1048576 50 3.63290325 3.627102667 3.653239375 288633.0650286379 69.29213047027588 3
+row R9a.ql-tuned R9a ql-tuned 1048576 12 1.748433125 1.748217917 1.753381708 599723.2522118911 138.9529804388682 3
+row R9b.ql-tuned R9b ql-tuned 1048576 50 7.287273292 7.284077916 7.2890655 143891.40601480272 138.99370750427246 3
+row R10.ql-tuned R10 ql-tuned 262144 50 2.250893959 2.237803708 2.267305958 116462.17226353132 171.72958061218262 3
+row R11.ql-tuned R11 ql-tuned 262144 50 1.970053291 1.95561025 1.984723292 133064.42074312395 150.30313804626465 3
+row R12.ql-tuned R12 ql-tuned 262144 50 5.558513084 5.556291917 5.56328825 47160.813699363775 424.08089324951175 3
