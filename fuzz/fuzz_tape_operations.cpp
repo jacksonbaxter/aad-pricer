@@ -1,4 +1,4 @@
-// Operation sequences on the tape against central differences (EVIDENCE B23, the "exceeds" item).
+// Operation sequences on the tape against central differences (bar item B23, the "exceeds" item).
 //
 // The input decodes to a random straight-line program over every operation the tape supports, on
 // safe domains (tests/ad/random_program.hpp gives the byte layout). The tape records it at the

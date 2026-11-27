@@ -1,4 +1,4 @@
-// Threaded gradients (EVIDENCE B10, B11, B14), small enough for the tsan preset (label tsan).
+// Threaded gradients (bar item B10, B11, B14), small enough for the tsan preset (label tsan).
 // Each worker of RunBatches builds its own tape and records its own set-up
 // (src/ad/gradient.hpp, "Threads"). Checked here:
 //   - the value, every Greek, every batch mean and so every SE are the same bits for 1, 2, 3 and

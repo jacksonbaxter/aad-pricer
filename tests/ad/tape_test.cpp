@@ -1,5 +1,5 @@
 // Unit tests of the tape itself: every operation's partial in reverse and tangent mode
-// (EVIDENCE B18), passive constants, Select, chunk boundaries, mark and rewind, the set-up sweep,
+// (bar item B18), passive constants, Select, chunk boundaries, mark and rewind, the set-up sweep,
 // and activation (B10).
 #include "ad/tape.hpp"
 

@@ -1,4 +1,4 @@
-// The pricer entry point on the tape (EVIDENCE B23), beside fuzz_pricer.cpp, whose input layout
+// The pricer entry point on the tape (bar item B23), beside fuzz_pricer.cpp, whose input layout
 // and seed corpus it shares: 88 bytes decode to a contract, a market, a seed and a thread count.
 //
 // Properties on a valid contract with at most kMaxPricedSteps steps:

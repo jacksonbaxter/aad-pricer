@@ -1845,7 +1845,7 @@
     {
       "id": "ad-second-activation",
       "kind": "check",
-      "covers": "one active tape per thread, EVIDENCE B10",
+      "covers": "one active tape per thread, bar item B10",
       "bug": "A second TapeScope on a thread silently replaces the active tape.",
       "edits": [
         {
@@ -2183,7 +2183,7 @@
     {
       "id": "ad-thread-merge-per-worker",
       "kind": "check",
-      "covers": "threaded gradient, thread-count invariance, EVIDENCE B11 and B14",
+      "covers": "threaded gradient, thread-count invariance, bar items B11 and B14",
       "bug": "Each worker carries one running sum across all the blocks it takes, so what a block's slot holds depends on which blocks the same worker ran before it, and the merge is by worker rather than by block.",
       "edits": [
         {

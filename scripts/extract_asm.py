@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extracts the hot loops of the AAD benchmark binary, for EVIDENCE B15 and B17.
+"""Extracts the hot loops of the AAD benchmark binary, for bar item B15 and B17.
 
     python3 -I scripts/extract_asm.py --build <build dir> --label <label> --out <file>
 

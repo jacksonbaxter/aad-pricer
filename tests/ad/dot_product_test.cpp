@@ -1,4 +1,4 @@
-// Check 2: the tangent-adjoint dot-product identity (EVIDENCE B20). For a program y = F(x) on the
+// Check 2: the tangent-adjoint dot-product identity (bar item B20). For a program y = F(x) on the
 // tape, a direction x' and a seed y-bar, the forward tangent sweep gives y' = J x' and the reverse
 // sweep x-bar = J^T y-bar, and <y', y-bar> = <x', x-bar> exactly in real arithmetic.
 //

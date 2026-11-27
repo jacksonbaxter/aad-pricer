@@ -1,4 +1,4 @@
-// Pricer entry point (EVIDENCE B23). The input is a contract and a market as raw bytes, so every
+// Pricer entry point (bar item B23). The input is a contract and a market as raw bytes, so every
 // field can take any value, NaN and infinities included:
 //
 //   offset  0  u8 x 8   product, option type, direction, knock, monitoring, treatment,

@@ -229,7 +229,7 @@ TEST(SecondOrder, BatchEstimatesAreExact) {
   }
 }
 
-// The same bits for any thread count (EVIDENCE B11), as the first-order tape.
+// The same bits for any thread count (bar item B11), as the first-order tape.
 TEST(SecondOrder, ThreadCountChangesNoBit) {
   const Case c = Cases(12, kMarket.spot)[9];
   const auto base = PriceWithHessian<2>(

@@ -1,5 +1,5 @@
 // Random straight-line programs over the tape's operations, for the dot-product test and the
-// operation-sequence fuzzer (EVIDENCE B20, B23).
+// operation-sequence fuzzer (bar item B20, B23).
 //
 // Bytes, all read modulo what they choose from, so every byte string is a program:
 //   [0]          inputs n = 1 + b % 4        [1]    outputs m = 1 + b % 3

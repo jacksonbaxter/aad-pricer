@@ -1,4 +1,4 @@
-// MEM-6 (EVIDENCE B5): no heap allocation after warm-up. This binary replaces the global
+// MEM-6 (bar item B5): no heap allocation after warm-up. This binary replaces the global
 // allocation functions with ones that count while counting is on, warms each worker's tape up
 // with one path, and then counts across many paths and block-end set-up sweeps, exactly as
 // RunBatches drives them. The expectation, stated before measuring, is zero. The vector tape's

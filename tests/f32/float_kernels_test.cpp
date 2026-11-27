@@ -4,7 +4,7 @@
 // Tolerances, stated before measuring, each with its reason:
 // - InverseNormalF against AS241 in double, on all 2^23 uniforms of the grid: within 16 ULP of
 //   max(|z|, 1) in float. Giles gives about 4 ULP in the centre and about 6 in the tail for his
-//   single-precision erfinv (metal-gpu/EVIDENCE.md, E47); writing w from 4 q (1 - q) and the final
+//   single-precision erfinv (his published figures); writing w from 4 q (1 - q) and the final
 //   sqrt(2) product add about two roundings, and the host's logf is not CUDA's. A factor of two on
 //   that leaves room; a mistyped coefficient is off by far more.
 // - NormalCdfF against pricer::NormalCdf in double: |p_f - p_d| <= (16 + 4 y^2) 2^-24 p_d, y =

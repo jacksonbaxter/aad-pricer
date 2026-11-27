@@ -263,7 +263,7 @@ TEST(RealFutures, TxSettlementsAndThePublishedForwards) {
   EXPECT_LE(std::abs(22792.92 - settlements["202412"]), kPublishedGap);
 }
 
-// Phase 1's chain profile, chain-verify/output/parity.csv in the research cache, at the precision
+// Phase 1's chain profile of the parity forwards (not published), at the precision
 // it printed (Python repr of a double).
 struct PhaseOneParity {
   std::string_view expiry;
