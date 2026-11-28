@@ -2890,6 +2890,12 @@ An independent check of the two commits, by a reviewer who wrote neither, compar
 - The count by real sleep, from an independent check afterwards. Counting only the time the Mac was asleep, from each power-log Sleep entry to the next wake, 33 faults overlap it, 26 in the first span and 7 in the second, and 149 of the 182 ran wholly inside dark wakes; 10 of the 33 were not rerun: `simd-kernel-copy-drift`, `svi-mm-reflection`, `svi-parameters-positivity`, `qs-realdata-slope-dropped`, `qs-bump-exact-is-gauss-newton`, `essvi-convert-sigma`, `essvi-map-p-branch`, `essvi-map-psi-lower`, `essvi-fit-weights` and `essvi-fit-jacobian`. Both counts are reproduced here with each fault's interval ended by its logs' change times to the sub-second; with whole seconds they are 31 and 9, the two others overlapping a sleep by under a second. Each of the 10 is a test among the 133 above, and none reads a clock.
 - For the record. The check's own log ends at 23:29:26Z; a line written by the job that watched it says 23:29:29Z, 3 s later; "to 23:29Z" in `docs/TASKS.md` holds for both. The reruns' own output folder was overwritten at 00:06Z on 2026-11-27 by a later run of seven docs faults in the same scratch paths, so the copies saved from it, unpublished, are the only ones; from now on every rerun's output goes to a folder of its own. No `git status` was recorded while the check ran: the tree was clean at its start and its commit is in the fault log's header, and the independent check found no tracked file whose change time falls inside the check.
 
+#### A negated verdict word in a "Measured" line (2026-11-27)
+
+- The defect. The reader of `BENCHMARKS.md`'s "Measured" lines (`read_verdict_words` in `src/results/docs.cpp`) took any whole word met, meets or meeting as met, with no reading of negation, so "1.05, not met" beside a met row in `results/verdicts.csv` passed `aadp_results_table --docs`, and a line saying a target was not met could be counted met. No line of `BENCHMARKS.md` had one.
+- The fix. A verdict word just after "not" or "never", with no letter between them, is refused, and the line must say met or missed. `Verdicts.RefusesANegatedVerdictWord` failed before the fix, on "not met" beside a met row, and passes after it; fault `docs-measured-negation-read` undoes the refusal and is caught by that test.
+- Still not read: a negation further off ("not yet met"), and "missing" in another sense, which still reads as missed.
+
 ### Rule slips
 
 None affected a number.

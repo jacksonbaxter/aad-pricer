@@ -360,9 +360,11 @@ bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
 char ascii_lower(char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c; }
 
-// Sets met or missed for each verdict word in the text.
-void read_verdict_words(std::string_view text, bool& met, bool& missed) {
+// Sets met or missed for each verdict word in the text, and negated for a verdict word just
+// after "not" or "never", with no letter between them.
+void read_verdict_words(std::string_view text, bool& met, bool& missed, bool& negated) {
   std::size_t at = 0;
+  std::string previous;
   while (at < text.size()) {
     if (!is_letter(text[at])) {
       ++at;
@@ -375,6 +377,10 @@ void read_verdict_words(std::string_view text, bool& met, bool& missed) {
     }
     met = met || word == "met" || word == "meets" || word == "meeting";
     missed = missed || word == "missed" || word == "misses" || word == "missing";
+    const bool verdict_word = word == "met" || word == "meets" || word == "meeting" ||
+                              word == "missed" || word == "misses" || word == "missing";
+    negated = negated || (verdict_word && (previous == "not" || previous == "never"));
+    previous = std::move(word);
     at = end;
   }
 }
@@ -412,7 +418,8 @@ MeasuredLine read_measured_line(std::string_view body, std::size_t number,
                         .met = false,
                         .missed = false,
                         .not_counted = false,
-                        .waiting = body.starts_with("Waiting")};
+                        .waiting = body.starts_with("Waiting"),
+                        .negated = false};
   for (const std::string_view host : kHostLabels) {
     if (body.contains("`" + std::string(host) + "`")) {
       measured.hosts.emplace_back(host);
@@ -426,7 +433,7 @@ MeasuredLine read_measured_line(std::string_view body, std::size_t number,
   // A verdict not counted: its verdict words are the outcomes of its runs.
   measured.not_counted = lower.contains("not counted");
   if (!measured.not_counted) {
-    read_verdict_words(body, measured.met, measured.missed);
+    read_verdict_words(body, measured.met, measured.missed, measured.negated);
   }
   return measured;
 }
@@ -1512,6 +1519,13 @@ std::string left_out(const TargetHost& key, const Stated& s, const Stated& g) {
 // that states it.
 std::expected<void, std::string> check_against_benchmarks(const std::vector<VerdictRow>& rows,
                                                           const std::vector<MeasuredLine>& lines) {
+  for (const MeasuredLine& m : lines) {
+    if (m.negated) {
+      return std::unexpected("BENCHMARKS.md line " + std::to_string(m.line) +
+                             ": a verdict word just after \"not\" or \"never\", which the reader "
+                             "would take as that verdict; say met or missed");
+    }
+  }
   const std::map<TargetHost, Stated> stated = stated_by_lines(lines);
   const std::map<TargetHost, Stated> given = given_by_rows(rows);
   for (const auto& [key, s] : stated) {

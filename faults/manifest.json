@@ -9557,6 +9557,25 @@
       "timeout_s": 300
     },
     {
+      "id": "docs-measured-negation-read",
+      "kind": "check",
+      "covers": "a verdict word just after \"not\" or \"never\" in a \"Measured\" line is refused",
+      "bug": "The refusal is gone, so \"not met\" reads as met again and a line that says a target was not met can be counted met.",
+      "edits": [
+        {
+          "file": "src/results/docs.cpp",
+          "find": "(previous == \"not\" || previous == \"never\")",
+          "replace": "(previous == \"not\" && previous == \"never\")"
+        }
+      ],
+      "preset": "release",
+      "targets": ["aadp_results_unit"],
+      "command": ["{build}/bin/aadp_results_unit", "--gtest_filter=Verdicts.*"],
+      "detect": "test",
+      "reason": "\\[  FAILED  \\] Verdicts\\.RefusesANegatedVerdictWord \\(",
+      "timeout_s": 300
+    },
+    {
       "id": "docs-measured-bar-item",
       "kind": "check",
       "covers": "a bar item's \"Measured\" lines end where the item ends",

@@ -181,6 +181,7 @@ struct MeasuredLine {
   bool missed = false;
   bool not_counted = false;
   bool waiting = false;
+  bool negated = false;  // a verdict word just after "not" or "never", which render_docs refuses
 };
 
 std::vector<MeasuredLine> measured_lines(std::string_view benchmarks);

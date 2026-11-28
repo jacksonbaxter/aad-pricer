@@ -1105,5 +1105,26 @@ TEST(Verdicts, MeasuredLinesGiveTheTargetHostsVerdictsAndAnchor) {
   EXPECT_FALSE(lines[3].met);
 }
 
+// "not met" states the other outcome, or none, and the word reader takes the word after "not";
+// so a verdict word just after "not" or "never" is refused, and the line must say met or missed.
+TEST(Verdicts, RefusesANegatedVerdictWord) {
+  for (const std::string_view words : {"not met", "Not met", "never met", "not missed",
+                                       "never missing", "not, met", "NOT MEETING"}) {
+    DocsInputs in = judged_inputs();
+    state(in.benchmarks, "MEM-4", "on `linux-zen1`: 1.05, " + std::string(words) + ".");
+    const auto docs = render_docs(in);
+    ASSERT_FALSE(docs.has_value()) << words;
+    EXPECT_TRUE(has(docs.error(), "a verdict word just after \"not\" or \"never\""))
+        << docs.error();
+  }
+  // A word that only ends in "not" negates nothing, and a negation before another word is left.
+  for (const std::string_view words : {"met; knot met", "met, not by much", "met, never twice"}) {
+    DocsInputs in = judged_inputs();
+    state(in.benchmarks, "MEM-4", "on `linux-zen1`: 1.05, " + std::string(words) + ".");
+    const auto docs = render_docs(in);
+    EXPECT_TRUE(docs.has_value()) << words << ": " << docs.error();
+  }
+}
+
 }  // namespace
 }  // namespace aadp::results
