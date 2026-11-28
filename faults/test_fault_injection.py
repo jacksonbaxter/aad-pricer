@@ -813,14 +813,18 @@ class Symbolizer(unittest.TestCase):
             done.stdout,
         )
 
-    @unittest.skipUnless(platform.system() == "Darwin", "dSYM bundles are for macOS")
-    def test_on_macos_a_program_of_the_build_tree_that_the_command_names_gets_a_dsym_bundle(self):
+    def test_a_program_the_command_names_gets_a_dsym_bundle_on_macos_and_none_elsewhere(self):
         done, got, path = self.run_probe("symbolizer-dsym", True, program=True)
         self.assertEqual(got, [path] * 3, done.stdout)
-        dwarf = Path(f"{self.program}.dSYM") / "Contents" / "Resources" / "DWARF" / "program"
-        self.assertTrue(dwarf.is_file(), done.stdout)
-        written = r"fault_injection: dSYM bundles written for \['\S*/bin/program'\], failed \[\]"
-        self.assertRegex(self.log, written)
+        bundle = Path(f"{self.program}.dSYM")
+        if platform.system() == "Darwin":
+            dwarf = bundle / "Contents" / "Resources" / "DWARF" / "program"
+            self.assertTrue(dwarf.is_file(), done.stdout)
+            written = r"dSYM bundles written for \['\S*/bin/program'\], failed \[\]"
+            self.assertRegex(self.log, "fault_injection: " + written)
+        else:  # dSYM bundles are for macOS: elsewhere none is written and the log says nothing
+            self.assertFalse(bundle.exists(), done.stdout)
+            self.assertNotIn("dSYM bundles", self.log)
 
     def test_only_mach_o_programs_of_the_build_tree_get_a_bundle_and_only_until_it_is_current(self):
         module = load_fault_injection()

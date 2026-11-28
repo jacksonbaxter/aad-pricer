@@ -1126,5 +1126,53 @@ TEST(Verdicts, RefusesANegatedVerdictWord) {
   }
 }
 
+// The pages check catches a weakened word reader only through the words the pages use today; this
+// holds both readers in ctest, the layer a developer runs first (docs/NOTES.md, "The verdict
+// readers and the fault runner's tests in ctest").
+TEST(Verdicts, AVerdictWordIsOneOfItsFormsAndNoWordThatBeginsWithIt) {
+  const auto read = [](std::string_view word) {
+    const std::vector<MeasuredLine> lines = measured_lines(
+        "### AAD-1: x\n- Measured on `linux-zen1`: 2.18, " + std::string(word) + ".\n");
+    EXPECT_EQ(lines.size(), 1U) << word;
+    return lines.empty() ? std::pair{false, false} : std::pair{lines[0].met, lines[0].missed};
+  };
+  for (const std::string_view word : {"met", "Met", "MET", "meets", "meeting"}) {
+    EXPECT_EQ(read(word), std::pair(true, false)) << word;
+  }
+  for (const std::string_view word : {"missed", "Missed", "misses", "missing"}) {
+    EXPECT_EQ(read(word), std::pair(false, true)) << word;
+  }
+  for (const std::string_view word :
+       {"metal", "method", "metric", "metre", "mets", "meted", "metadata", "meet", "unmet", "miss",
+        "mission", "missile", "missive", "dismissed", "missedx", "metx"}) {
+    EXPECT_EQ(read(word), std::pair(false, false)) << word;
+  }
+
+  // A row's verdict is one of its six words exactly.
+  const std::string header = std::string(kVerdictsHeader) + "\n";
+  const auto row = [&](std::string_view verdict, std::string_view rest) {
+    return header + "RNG-4,mac-m4max,," + std::string(verdict) + "," + std::string(rest) + "\n";
+  };
+  constexpr std::string_view kFiles = "files,results/mac-m4max/a.txt,,,,";
+  EXPECT_TRUE(parse_verdicts(row("met", kFiles)).has_value());
+  EXPECT_TRUE(parse_verdicts(row("missed", kFiles)).has_value());
+  EXPECT_TRUE(parse_verdicts(row("none", kFiles)).has_value());
+  EXPECT_TRUE(parse_verdicts(row("waiting", "pending,,,,,")).has_value());
+  EXPECT_TRUE(parse_verdicts(row("split", "files,results/mac-m4max/a.txt,,met 1.9,missed 2.2,"))
+                  .has_value());
+  EXPECT_TRUE(
+      parse_verdicts(row("marked", "files,results/mac-m4max/a.txt,,,missed 2.2,")).has_value());
+  for (const std::string_view bad :
+       {"met in part",    "Met",     "MET",    "mets",       "metal",   "meets",
+        "missed in part", "Missed",  "miss",   "misses",     "missing", "none stated",
+        "None",           "nothing", "wait",   "waited",     "Waiting", "splits",
+        "Split",          "mark",    "Marked", "met missed", ""}) {
+    EXPECT_FALSE(parse_verdicts(row(bad, kFiles)).has_value()) << bad;
+  }
+  for (const std::string_view bad : {"waiting for a run", "waitingx"}) {
+    EXPECT_FALSE(parse_verdicts(row(bad, "pending,,,,,")).has_value()) << bad;
+  }
+}
+
 }  // namespace
 }  // namespace aadp::results

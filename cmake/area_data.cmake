@@ -68,6 +68,22 @@ if(AADP_BUILD_TESTS)
             "${PROJECT_BINARY_DIR}/data_test_scratch/run_tests"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(data_run_tests_script PROPERTIES LABELS "unit")
+
+  # The fault runner's own tests: what caught means, on small projects that the file configures
+  # and builds, so it needs cmake, ninja and a compiler. Alone, since its scratch directory,
+  # build/fault-selftest/, is fixed and aadp_git_environment_script runs one of its tests too.
+  add_test(NAME data_fault_injection_script
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/faults/test_fault_injection.py"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(data_fault_injection_script PROPERTIES
+    LABELS "unit" RUN_SERIAL TRUE TIMEOUT 900)
+
+  # The test above is registered; fault ctest-fault-runner-tests-dropped removes it.
+  add_test(NAME data_fault_injection_registered
+    COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${PROJECT_BINARY_DIR}" -N
+            -R "^data_fault_injection_script$")
+  set_tests_properties(data_fault_injection_registered PROPERTIES
+    LABELS "unit;fast" PASS_REGULAR_EXPRESSION "Total Tests: 1")
 endif()
 
 aadp_fuzz(fuzz_cp950
